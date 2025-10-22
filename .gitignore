@@ -1,0 +1,35 @@
+# JetBrains IDE folder
+.idea/
+
+
+# Data folder (adjust if your data folder has a different name or path)
+data/
+
+# Output folder (adjust if your output folder has a different name or path)
+output/
+
+
+*.run
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.so
+*.dylib
+
+# Environment files
+.env
+venv/
+env/
+*.env
+
+# Operating System files
+.DS_Store
+Thumbs.db
