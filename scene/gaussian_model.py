@@ -3,7 +3,7 @@
 # GRAPHDECO research group, https://team.inria.fr/graphdeco
 # All rights reserved.
 #
-# This software is free for non-commercial, research and evaluation use 
+# This software is free for non-commercial, research and evaluation use
 # under the terms of the LICENSE.md file.
 #
 # For inquiries contact  george.drettakis@inria.fr
@@ -30,7 +30,7 @@ class GaussianModel:
             actual_covariance = L.transpose(1, 2) @ L
             symm = strip_symmetric(actual_covariance)
             return symm
-        
+
         def build_covariance_from_scaling_rotation_4d(scaling, scaling_modifier, rotation_l, rotation_r, dt=0.0):
             L = build_scaling_rotation_4d(scaling_modifier * scaling, rotation_l, rotation_r)
             actual_covariance = L @ L.transpose(1, 2)
@@ -45,7 +45,7 @@ class GaussianModel:
             else:
                 mean_offset = cov_12.squeeze(-1) / cov_t.squeeze(-1) * dt
             return symm, mean_offset.squeeze(-1)
-        
+
         self.scaling_activation = torch.exp
         self.scaling_inverse_activation = torch.log
 
@@ -62,7 +62,7 @@ class GaussianModel:
 
     def __init__(self, sh_degree : int, gaussian_dim : int = 3, time_duration: list = [-0.5, 0.5], rot_4d: bool = False, force_sh_3d: bool = False, sh_degree_t : int = 0):
         self.active_sh_degree = 0
-        self.max_sh_degree = sh_degree  
+        self.max_sh_degree = sh_degree
         self._xyz = torch.empty(0)
         self._features_dc = torch.empty(0)
         self._features_rest = torch.empty(0)
@@ -75,7 +75,7 @@ class GaussianModel:
         self.optimizer = None
         self.percent_dense = 0
         self.spatial_lr_scale = 0
-        
+
         self.gaussian_dim = gaussian_dim
         self._t = torch.empty(0)
         self._scaling_t = torch.empty(0)
@@ -87,7 +87,7 @@ class GaussianModel:
         if self.rot_4d or self.force_sh_3d:
             assert self.gaussian_dim == 4
         self.env_map = torch.empty(0)
-        
+
         self.active_sh_degree_t = 0
         self.max_sh_degree_t = sh_degree_t
 
@@ -100,10 +100,14 @@ class GaussianModel:
         self.static_max_radii2D = torch.empty(0)
         self.static_denom = torch.empty(0)
         self.static_xyz_gradient_accum = torch.empty(0)
-        
+
+        self.gate_mlp = None
+        self._staticness_score = torch.empty(0)
+
         self.setup_functions()
 
     def capture(self):
+        gate_mlp_state_dict = self.gate_mlp.state_dict() if self.gate_mlp is not None else None
         if self.gaussian_dim == 3:
             return (
                 self.active_sh_degree,
@@ -148,54 +152,58 @@ class GaussianModel:
                 self.static_opacity,
                 self.static_max_radii2D,
                 self.static_xyz_gradient_accum,
-                self.static_denom
+                self.static_denom,
+                gate_mlp_state_dict
             )
-    
+
     def restore(self, model_args, training_args):
         if self.gaussian_dim == 3:
-            (self.active_sh_degree, 
-            self._xyz, 
-            self._features_dc, 
-            self._features_rest,
-            self._scaling, 
-            self._rotation, 
-            self._opacity,
-            self.max_radii2D, 
-            xyz_gradient_accum, 
-            denom,
-            opt_dict, 
-            self.spatial_lr_scale) = model_args
+            (self.active_sh_degree,
+             self._xyz,
+             self._features_dc,
+             self._features_rest,
+             self._scaling,
+             self._rotation,
+             self._opacity,
+             self.max_radii2D,
+             xyz_gradient_accum,
+             denom,
+             opt_dict,
+             self.spatial_lr_scale) = model_args
         elif self.gaussian_dim == 4:
-            (self.active_sh_degree, 
-            self._xyz, 
-            self._features_dc, 
-            self._features_rest,
-            self._scaling, 
-            self._rotation, 
-            self._opacity,
-            self.max_radii2D, 
-            xyz_gradient_accum, 
-            t_gradient_accum,
-            denom,
-            opt_dict, 
-            self.spatial_lr_scale,
-            self._t,
-            self._scaling_t,
-            self._rotation_r,
-            self.rot_4d,
-            self.env_map,
-            self.active_sh_degree_t,
-            self.static_xyz,
-            self.static_features_dc,
-            self.static_features_rest,
-            self.static_scaling,
-            self.static_rotation,
-            self.static_opacity,
-            self.static_max_radii2D,
-            self.static_denom,
-            self.static_xyz_gradient_accum) = model_args
+            (self.active_sh_degree,
+             self._xyz,
+             self._features_dc,
+             self._features_rest,
+             self._scaling,
+             self._rotation,
+             self._opacity,
+             self.max_radii2D,
+             xyz_gradient_accum,
+             t_gradient_accum,
+             denom,
+             opt_dict,
+             self.spatial_lr_scale,
+             self._t,
+             self._scaling_t,
+             self._rotation_r,
+             self.rot_4d,
+             self.env_map,
+             self.active_sh_degree_t,
+             self.static_xyz,
+             self.static_features_dc,
+             self.static_features_rest,
+             self.static_scaling,
+             self.static_rotation,
+             self.static_opacity,
+             self.static_max_radii2D,
+             self.static_denom,
+             self.static_xyz_gradient_accum,
+             gate_mlp_state_dict) = model_args
         if training_args is not None:
             self.training_setup(training_args)
+            if gate_mlp_state_dict:
+                self.gate_mlp.load_state_dict(gate_mlp_state_dict)
             self.xyz_gradient_accum = xyz_gradient_accum
             self.t_gradient_accum = t_gradient_accum
             self.denom = denom
@@ -204,69 +212,69 @@ class GaussianModel:
     @property
     def get_scaling(self):
         return self.scaling_activation(self._scaling)
-    
+
     @property
     def get_scaling_t(self):
         return self.scaling_activation(self._scaling_t)
-    
+
     @property
     def get_scaling_xyzt(self):
         return self.scaling_activation(torch.cat([self._scaling, self._scaling_t], dim = 1))
-    
+
     @property
     def get_rotation(self):
         return self.rotation_activation(self._rotation)
-    
+
     @property
     def get_rotation_r(self):
         return self.rotation_activation(self._rotation_r)
-    
+
     @property
     def get_xyz(self):
         return self._xyz
-    
+
     @property
     def get_t(self):
         return self._t
-    
+
     @property
     def get_xyzt(self):
         return torch.cat([self._xyz, self._t], dim = 1)
-    
+
     @property
     def get_features(self):
         features_dc = self._features_dc
         features_rest = self._features_rest
         return torch.cat((features_dc, features_rest), dim=1)
-    
+
     @property
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
-    
+
     @property
     def get_static_xyz(self):
         return self.static_xyz
-    
+
     @property
     def get_static_features(self):
         features_dc = self.static_features_dc
         features_rest = self.static_features_rest
         return torch.cat((features_dc, features_rest), dim=1)
-    
+
     @property
     def get_static_opacity(self):
         return self.opacity_activation(self.static_opacity)
-    
+
     @property
     def get_static_scaling(self):
         return self.scaling_activation(self.static_scaling)
-    
+
     @property
     def get_static_rotation(self):
         if len(self.static_rotation) == 0:
             return self.static_rotation
         return self.rotation_activation(self.static_rotation)
-    
+
     @property
     def get_max_sh_channels(self):
         if self.gaussian_dim == 3 or self.force_sh_3d:
@@ -275,7 +283,7 @@ class GaussianModel:
             return sh_channels_4d[self.max_sh_degree]
         elif self.gaussian_dim == 4 and self.max_sh_degree_t > 0:
             return (self.max_sh_degree+1)**2 * (self.max_sh_degree_t + 1)
-    
+
     def get_cov_t(self, scaling_modifier = 1):
         if self.rot_4d:
             L = build_scaling_rotation_4d(scaling_modifier * self.get_scaling_xyzt, self._rotation, self._rotation_r)
@@ -287,15 +295,33 @@ class GaussianModel:
     def get_marginal_t(self, timestamp, scaling_modifier = 1): # Standard
         sigma = self.get_cov_t(scaling_modifier)
         return torch.exp(-0.5*(self.get_t-timestamp)**2/sigma) # / torch.sqrt(2*torch.pi*sigma)
-    
+
     def get_covariance(self, scaling_modifier = 1):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
-    
+
     def get_current_covariance_and_mean_offset(self, scaling_modifier = 1, timestamp = 0.0):
-        return self.covariance_activation(self.get_scaling_xyzt, scaling_modifier, 
-                                                              self._rotation, 
-                                                              self._rotation_r,
-                                                              dt = timestamp - self.get_t)
+        return self.covariance_activation(self.get_scaling_xyzt, scaling_modifier,
+                                          self._rotation,
+                                          self._rotation_r,
+                                          dt = timestamp - self.get_t)
+
+    def get_gate_inputs(self):
+        return torch.cat([self._scaling_t.detach(), self._scaling.detach(), self.get_opacity.detach()], dim=1)
+
+    @torch.no_grad()
+    def update_staticness_score(self):
+        if self.gate_mlp is not None and self._xyz.shape[0] > 0:
+            inputs = self.get_gate_inputs()
+            scores = torch.sigmoid(self.gate_mlp(inputs))
+            self._staticness_score = scores
+
+    def get_gate_loss(self):
+        if self.gate_mlp is None or self._xyz.shape[0] == 0:
+            return torch.tensor(0.0, device="cuda")
+
+        inputs = torch.cat([self._scaling_t, self._scaling, self.get_opacity], dim=1)
+        scores = torch.sigmoid(self.gate_mlp(inputs))
+        return (1.0 - scores).mean()
 
     def construct_list_of_attributes(self):
         l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
@@ -305,14 +331,14 @@ class GaussianModel:
 
         if self.active_sh_degree > 0:
             for i in range(self._features_rest.shape[1]*self._features_rest.shape[2]):
-               l.append('f_rest_{}'.format(i))
+                l.append('f_rest_{}'.format(i))
         l.append('opacity')
         for i in range(self._scaling.shape[1]):
             l.append('scale_{}'.format(i))
         for i in range(self._rotation.shape[1]):
             l.append('rot_{}'.format(i))
         return l
-    
+
     def save_ply(self, path):
         mkdir_p(os.path.dirname(path))
         xyz = self.get_xyz.detach().cpu().numpy()
@@ -336,9 +362,9 @@ class GaussianModel:
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
-        
 
-    
+
+
     def oneupSHdegree(self):
         if self.active_sh_degree < self.max_sh_degree:
             self.active_sh_degree += 1
@@ -357,7 +383,7 @@ class GaussianModel:
                 fused_times = (torch.rand(fused_point_cloud.shape[0], 1, device="cuda") * 1.2 - 0.1) * (self.time_duration[1] - self.time_duration[0]) + self.time_duration[0]
             else:
                 fused_times = torch.from_numpy(pcd.time).cuda().float()
-            
+
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(pcd.points)).float().cuda()), 0.0000001)
@@ -381,7 +407,7 @@ class GaussianModel:
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
-        
+
         if self.gaussian_dim == 4:
             self._t = nn.Parameter(fused_times.requires_grad_(True))
             self._scaling_t = nn.Parameter(scales_t.requires_grad_(True))
@@ -420,7 +446,7 @@ class GaussianModel:
             self.static_scaling = nn.Parameter(static_scaling.requires_grad_(True))
             self.static_rotation = nn.Parameter(static_rotation.requires_grad_(True))
             self.static_opacity = nn.Parameter(static_opacity.requires_grad_(True))
-        
+
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._features_dc = nn.Parameter(features_dc.transpose(1, 2).requires_grad_(True))
         self._features_rest = nn.Parameter(features_rest.transpose(1, 2).requires_grad_(True))
@@ -428,7 +454,7 @@ class GaussianModel:
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
-        
+
         self._t = nn.Parameter(fused_times.requires_grad_(True))
         self._scaling_t = nn.Parameter(scales_t.requires_grad_(True))
         self._rotation_r = nn.Parameter(rots_r.requires_grad_(True))
@@ -461,6 +487,14 @@ class GaussianModel:
             l.append({'params': [self.static_opacity], 'lr': training_args.opacity_lr, "name": "static_opacity"}),
             l.append({'params': [self.static_scaling], 'lr': training_args.scaling_lr, "name": "static_scaling"}),
             l.append({'params': [self.static_rotation], 'lr': training_args.rotation_lr, "name": "static_rotation"})
+
+            self.gate_mlp = nn.Sequential(
+                nn.Linear(5, 16), nn.ReLU(),
+                nn.Linear(16, 8), nn.ReLU(),
+                nn.Linear(8, 1)
+            ).to("cuda")
+            l.append({'params': self.gate_mlp.parameters(), 'lr': training_args.feature_lr, "name": "gate_mlp"})
+            self._staticness_score = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
 
         self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
         self.xyz_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init*self.spatial_lr_scale,
@@ -495,13 +529,14 @@ class GaussianModel:
         for group in self.optimizer.param_groups:
             if group["name"] == name:
                 stored_state = self.optimizer.state.get(group['params'][0], None)
-                stored_state["exp_avg"] = torch.zeros_like(tensor)
-                stored_state["exp_avg_sq"] = torch.zeros_like(tensor)
-
-                del self.optimizer.state[group['params'][0]]
-                group["params"][0] = nn.Parameter(tensor.requires_grad_(True))
-                self.optimizer.state[group['params'][0]] = stored_state
-
+                if stored_state is not None:
+                    stored_state["exp_avg"] = torch.zeros_like(tensor)
+                    stored_state["exp_avg_sq"] = torch.zeros_like(tensor)
+                    del self.optimizer.state[group['params'][0]]
+                    group["params"][0] = nn.Parameter(tensor.requires_grad_(True))
+                    self.optimizer.state[group['params'][0]] = stored_state
+                else:
+                    group["params"][0] = nn.Parameter(tensor.requires_grad_(True))
                 optimizable_tensors[group["name"]] = group["params"][0]
         return optimizable_tensors
 
@@ -512,6 +547,12 @@ class GaussianModel:
                 continue
             elif not static and 'static' in group["name"]:
                 continue
+
+            # Skip gate_mlp as it is not per-Gaussian
+            if group["name"] == "gate_mlp":
+                optimizable_tensors[group["name"]] = group["params"]
+                continue
+
             stored_state = self.optimizer.state.get(group['params'][0], None)
             if stored_state is not None:
                 stored_state["exp_avg"] = stored_state["exp_avg"][mask]
@@ -542,13 +583,14 @@ class GaussianModel:
 
         self.denom = self.denom[valid_points_mask]
         self.max_radii2D = self.max_radii2D[valid_points_mask]
-        
+
         if self.gaussian_dim == 4:
             self._t = optimizable_tensors['t']
             self._scaling_t = optimizable_tensors['scaling_t']
             if self.rot_4d:
                 self._rotation_r = optimizable_tensors['rotation_r']
             self.t_gradient_accum = self.t_gradient_accum[valid_points_mask]
+            self._staticness_score = self._staticness_score[valid_points_mask]
 
     def prune_static_points(self, mask):
         valid_points_mask = ~mask
@@ -564,12 +606,14 @@ class GaussianModel:
         self.static_xyz_gradient_accum = self.static_xyz_gradient_accum[valid_points_mask]
         self.static_denom = self.static_denom[valid_points_mask]
         self.static_max_radii2D = self.static_max_radii2D[valid_points_mask]
-        
+
 
     def cat_tensors_to_optimizer(self, tensors_dict):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
             assert len(group["params"]) == 1
+            if group["name"] == "gate_mlp":
+                continue
             try:
                 extension_tensor = tensors_dict[group["name"]]
             except:
@@ -593,12 +637,12 @@ class GaussianModel:
 
     def densification_postfix(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation, new_t, new_scaling_t, new_rotation_r):
         d = {"xyz": new_xyz,
-        "f_dc": new_features_dc,
-        "f_rest": new_features_rest,
-        "opacity": new_opacities,
-        "scaling" : new_scaling,
-        "rotation" : new_rotation,
-        }
+             "f_dc": new_features_dc,
+             "f_rest": new_features_rest,
+             "opacity": new_opacities,
+             "scaling" : new_scaling,
+             "rotation" : new_rotation,
+             }
         if self.gaussian_dim == 4:
             d["t"] = new_t
             d["scaling_t"] = new_scaling_t
@@ -618,6 +662,7 @@ class GaussianModel:
             if self.rot_4d:
                 self._rotation_r = optimizable_tensors['rotation_r']
             self.t_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+            self._staticness_score = torch.cat([self._staticness_score, torch.zeros((new_xyz.shape[0], 1), device="cuda")], dim=0)
 
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
@@ -625,12 +670,12 @@ class GaussianModel:
 
     def densification_postfix_static(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
         d = {"static_xyz": new_xyz,
-        "static_f_dc": new_features_dc,
-        "static_f_rest": new_features_rest,
-        "static_opacity": new_opacities,
-        "static_scaling" : new_scaling,
-        "static_rotation" : new_rotation,
-        }
+             "static_f_dc": new_features_dc,
+             "static_f_rest": new_features_rest,
+             "static_opacity": new_opacities,
+             "static_scaling" : new_scaling,
+             "static_rotation" : new_rotation,
+             }
         optimizable_tensors = self.cat_tensors_to_optimizer(d)
         self.static_xyz = optimizable_tensors["static_xyz"]
         self.static_features_dc = optimizable_tensors["static_f_dc"]
@@ -655,12 +700,12 @@ class GaussianModel:
                                               torch.max(self.get_scaling, dim=1).values > self.percent_dense*scene_extent)
         # print(f"num_to_densify_pos: {torch.where(padded_grad >= grad_threshold, True, False).sum()}, num_to_split_pos: {selected_pts_mask.sum()}")
 
-        new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N,1) / (0.8*N)) 
+        new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N,1) / (0.8*N))
         new_rotation = self._rotation[selected_pts_mask].repeat(N,1)
         new_features_dc = self._features_dc[selected_pts_mask].repeat(N,1,1)
         new_features_rest = self._features_rest[selected_pts_mask].repeat(N,1,1)
-        new_opacity = self._opacity[selected_pts_mask].repeat(N,1) 
-        
+        new_opacity = self._opacity[selected_pts_mask].repeat(N,1)
+
         if not self.rot_4d:
             stds = self.get_scaling[selected_pts_mask].repeat(N,1)
             means = torch.zeros((stds.size(0), 3),device="cuda")
@@ -681,9 +726,9 @@ class GaussianModel:
             means = torch.zeros((stds.size(0), 4),device="cuda")
             samples = torch.normal(mean=means, std=stds)
             rots = build_rotation_4d(self._rotation[selected_pts_mask], self._rotation_r[selected_pts_mask]).repeat(N,1,1)
-            new_xyzt = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyzt[selected_pts_mask].repeat(N, 1) 
+            new_xyzt = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyzt[selected_pts_mask].repeat(N, 1)
 
-            new_xyz = new_xyzt[...,0:3] 
+            new_xyz = new_xyzt[...,0:3]
             new_scaling_t = self.scaling_inverse_activation(self.get_scaling_t[selected_pts_mask].repeat(N,1) / (0.8*N))
             new_t = new_xyzt[...,3:4]
             new_rotation_r = self._rotation_r[selected_pts_mask].repeat(N,1)
@@ -699,14 +744,14 @@ class GaussianModel:
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_scaling, dim=1).values <= self.percent_dense*scene_extent)
         # print(f"num_to_densify_pos: {torch.where(grads >= grad_threshold, True, False).sum()}, num_to_clone_pos: {selected_pts_mask.sum()}")
-        
+
         new_xyz = self._xyz[selected_pts_mask]
         new_features_dc = self._features_dc[selected_pts_mask]
         new_features_rest = self._features_rest[selected_pts_mask]
 
         new_opacities = self._opacity[selected_pts_mask]
         new_scaling = self._scaling[selected_pts_mask]
-        
+
         new_rotation = self._rotation[selected_pts_mask]
         new_t = None
         new_scaling_t = None
@@ -728,11 +773,11 @@ class GaussianModel:
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_static_scaling, dim=1).values > self.percent_dense*scene_extent)
 
-        new_scaling = self.scaling_inverse_activation(self.get_static_scaling[selected_pts_mask].repeat(N,1) / (0.8*N)) 
+        new_scaling = self.scaling_inverse_activation(self.get_static_scaling[selected_pts_mask].repeat(N,1) / (0.8*N))
         new_rotation = self.static_rotation[selected_pts_mask].repeat(N,1)
         new_features_dc = self.static_features_dc[selected_pts_mask].repeat(N,1,1)
         new_features_rest = self.static_features_rest[selected_pts_mask].repeat(N,1,1)
-        new_opacity = self.static_opacity[selected_pts_mask].repeat(N,1) 
+        new_opacity = self.static_opacity[selected_pts_mask].repeat(N,1)
 
         stds = self.get_static_scaling[selected_pts_mask].repeat(N,1)
         means = torch.zeros((stds.size(0), 3),device="cuda")
@@ -750,7 +795,7 @@ class GaussianModel:
         selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_static_scaling, dim=1).values <= self.percent_dense*scene_extent)
-        
+
         new_xyz = self.static_xyz[selected_pts_mask]
         new_features_dc = self.static_features_dc[selected_pts_mask]
         new_features_rest = self.static_features_rest[selected_pts_mask]
@@ -761,39 +806,39 @@ class GaussianModel:
         self.densification_postfix_static(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation)
 
 
-    def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size, max_grad_t=None, prune_only=False, dynamic_only=False):
-        if not prune_only:
-            grads = self.xyz_gradient_accum / self.denom
-            grads[grads.isnan()] = 0.0
-            # if self.gaussian_dim == 4:
-            #     grads_t = self.t_gradient_accum / self.denom
-            #     grads_t[grads_t.isnan()] = 0.0
-            # else:
-            #     grads_t = None
+    def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size, max_grad_t=None, static_conversion_threshold=0.99):
+        grads = self.xyz_gradient_accum / self.denom
+        grads[grads.isnan()] = 0.0
+        # if self.gaussian_dim == 4:
+        #     grads_t = self.t_gradient_accum / self.denom
+        #     grads_t[grads_t.isnan()] = 0.0
+        # else:
+        #     grads_t = None
+        self.densify_and_clone(grads, max_grad, extent)
+        self.densify_and_split(grads, max_grad, extent)
 
-            self.densify_and_clone(grads, max_grad, extent)
-            self.densify_and_split(grads, max_grad, extent)
-            if len(self.static_xyz) != 0 and not dynamic_only:
-                static_grads = self.static_xyz_gradient_accum / self.static_denom
-                static_grads[static_grads.isnan()] = 0.0
-                self.densify_and_clone_static(static_grads, max_grad, extent)
-                self.densify_and_split_static(static_grads, max_grad, extent)
+        if len(self.static_xyz) != 0:
+            static_grads = self.static_xyz_gradient_accum / self.static_denom
+            static_grads[static_grads.isnan()] = 0.0
+            self.densify_and_clone_static(static_grads, max_grad, extent)
+            self.densify_and_split_static(static_grads, max_grad, extent)
 
         prune_mask = (self.get_opacity < min_opacity).squeeze()
-        if len(self.static_xyz) != 0 and not dynamic_only:
-            prune_static_mask = (self.get_static_opacity < min_opacity).squeeze()
         if max_screen_size:
             big_points_vs = self.max_radii2D > max_screen_size
             big_points_ws = self.get_scaling.max(dim=1).values > 0.1 * extent
             prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
+        self.prune_points(prune_mask)
 
-            if len(self.static_xyz) != 0 and not dynamic_only:
+        if len(self.static_xyz) != 0:
+            prune_static_mask = (self.get_static_opacity < min_opacity).squeeze()
+            if max_screen_size:
                 big_points_vs_static = self.static_max_radii2D > max_screen_size
                 big_points_ws_static = self.get_static_scaling.max(dim=1).values > 0.1 * extent
                 prune_static_mask = torch.logical_or(torch.logical_or(prune_static_mask, big_points_vs_static), big_points_ws_static)
-        self.prune_points(prune_mask)
-        if len(self.static_xyz) != 0 and not dynamic_only:
-            self.prune_static_points(prune_static_mask) 
+            self.prune_static_points(prune_static_mask)
+
+        self.dynamic2static(static_conversion_threshold)
 
         torch.cuda.empty_cache()
 
@@ -802,7 +847,7 @@ class GaussianModel:
         self.denom[update_filter] += 1
         if self.gaussian_dim == 4:
             self.t_gradient_accum[update_filter] += avg_t_grad[update_filter]
-        
+
     def add_densification_stats_grad(self, viewspace_point_grad, update_filter, avg_t_grad=None):
         self.xyz_gradient_accum[update_filter] += viewspace_point_grad[update_filter]
         self.denom[update_filter] += 1
@@ -814,12 +859,10 @@ class GaussianModel:
         self.static_denom[update_filter] += 1
 
 
-
-
-# TODO: modify this to have a learnable threshold for dynamic to static conversion
-
-    def dynamic2static(self, scale_threshold=3):
-        static_mask = (self.get_scaling_t > scale_threshold).squeeze()
+    def dynamic2static(self, conversion_threshold):
+        if self._staticness_score.numel() == 0:
+            return
+        static_mask = (self._staticness_score > conversion_threshold).squeeze()
         if static_mask.sum() == 0:
             return
         new_xyz = self._xyz[static_mask]
