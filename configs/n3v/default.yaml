@@ -28,13 +28,13 @@ PipelineParams:
   convert_SHs_python: False
   compute_cov3D_python: False
   debug: False
-  env_map_res: 0 
+  env_map_res: 0
   env_optimize_until: 5000000000
   env_optimize_from: 0
   eval_shfs_4d: True
 
 OptimizationParams:
-  iterations: 8_000
+  iterations: 6_000
   position_lr_init: 0.00016
   position_t_lr_init: -1.0
   position_lr_final: 0.0000016
@@ -47,15 +47,17 @@ OptimizationParams:
   percent_dense: 0.01
   lambda_dssim: 0.2
   thresh_opa_prune: 0.005
-  densification_interval: 100 
+  densification_interval: 100
   opacity_reset_interval: 30000
-  densify_from_iter: 500 
+  densify_from_iter: 500
   densify_until_iter: 15_000
   densify_grad_threshold: 0.0002
-  densify_grad_t_threshold: 0.0002 / 40 
+  densify_grad_t_threshold: 0.0002 / 40
   densify_until_num_points: -1
   final_prune_from_iter: -1
   sh_increase_interval: 1000
   lambda_opa_mask: 0.0
   lambda_rigid: 0.0
   lambda_motion: 0.0
+  static_conversion_threshold: 0.99
+  lambda_gate_sparsity: 0.01
