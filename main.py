@@ -105,14 +105,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     ema_loss_for_log = 0.0
     ema_l1loss_for_log = 0.0
     ema_ssimloss_for_log = 0.0
-    ema_Lgate_for_log = 0.0
     lambda_all = [key for key in opt.__dict__.keys() if key.startswith('lambda') and key!='lambda_dssim']
     for lambda_name in lambda_all:
         vars()[f"ema_{lambda_name.replace('lambda_','')}_for_log"] = 0.0
 
     progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
     first_iter += 1
-        
+
     if pipe.env_map_res:
         env_map = nn.Parameter(torch.zeros((3,pipe.env_map_res, pipe.env_map_res),dtype=torch.float, device="cuda").requires_grad_(True))
         env_map_optimizer = torch.optim.Adam([env_map], lr=opt.feature_lr, eps=1e-15)
@@ -127,7 +126,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         training_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=0 if dataset.dataloader else 0,
+        num_workers=2 if dataset.dataloader else 0,
         collate_fn=identity_collate,
         drop_last=True
     )
@@ -220,8 +219,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 ########################
 
                 if opt.lambda_gate_sparsity > 0:
-                    Lgate = gaussians.get_gate_loss()
-                    loss = loss + opt.lambda_gate_sparsity * Lgate
+                    Lgate_sparsity = gaussians.get_gate_loss()
+                    loss = loss + opt.lambda_gate_sparsity * Lgate_sparsity
 
                 loss = loss / batch_size
                 loss.backward()
@@ -278,15 +277,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
                 ema_l1loss_for_log = 0.4 * Ll1.item() + 0.6 * ema_l1loss_for_log
                 ema_ssimloss_for_log = 0.4 * Lssim.item() + 0.6 * ema_ssimloss_for_log
-                if opt.lambda_gate_sparsity > 0:
-                    ema_Lgate_for_log = 0.4 * Lgate.item() + 0.6 * ema_Lgate_for_log
-                    loss_dict["Lgate"] = Lgate
 
                 for lambda_name in lambda_all:
                     if opt.__dict__[lambda_name] > 0:
-                        ema = vars()[f"ema_{lambda_name.replace('lambda_', '')}_for_log"]
-                        vars()[f"ema_{lambda_name.replace('lambda_', '')}_for_log"] = 0.4 * vars()[f"L{lambda_name.replace('lambda_', '')}"].item() + 0.6*ema
-                        loss_dict[lambda_name.replace("lambda_", "L")] = vars()[lambda_name.replace("lambda_", "L")]
+                        loss_key = f"L{lambda_name.replace('lambda_', '')}"
+                        if loss_key in locals():
+                            ema = vars()[f"ema_{lambda_name.replace('lambda_', '')}_for_log"]
+                            vars()[f"ema_{lambda_name.replace('lambda_', '')}_for_log"] = 0.4 * vars()[loss_key].item() + 0.6 * ema
+                            loss_dict[loss_key] = vars()[loss_key]
 
                 if iteration % 10 == 0:
                     postfix = {"Loss": f"{ema_loss_for_log:.{7}f}",
@@ -295,8 +293,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                                "Lssim": f"{ema_ssimloss_for_log:.{4}f}",
                                "points": scene.gaussians.get_xyz.shape[0],
                                "static": scene.gaussians.get_static_xyz.shape[0]}
-                    if opt.lambda_gate_sparsity > 0:
-                        postfix["Lgate"] = f"{ema_Lgate_for_log:.{4}f}"
 
                     for lambda_name in lambda_all:
                         if opt.__dict__[lambda_name] > 0:
@@ -395,8 +391,8 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                 tb_writer.add_scalar('train_loss_patches/smooth_loss', loss_dict['Lsmooth'].item(), iteration)
             if "Llaplacian" in loss_dict:
                 tb_writer.add_scalar('train_loss_patches/laplacian_loss', loss_dict['Llaplacian'].item(), iteration)
-            if "Lgate" in loss_dict:
-                tb_writer.add_scalar('train_loss_patches/gate_loss', loss_dict['Lgate'].item(), iteration)
+            if "Lgate_sparsity" in loss_dict:
+                tb_writer.add_scalar('train_loss_patches/gate_sparsity_loss', loss_dict['Lgate_sparsity'].item(), iteration)
 
 
         tb_writer.add_scalar('gpu/memory_allocated_MB', torch.cuda.memory_allocated() / 1e6, iteration)

@@ -197,8 +197,8 @@ class GaussianModel:
              self.static_rotation,
              self.static_opacity,
              self.static_max_radii2D,
-             self.static_denom,
              self.static_xyz_gradient_accum,
+             self.static_denom,
              gate_mlp_state_dict) = model_args
         if training_args is not None:
             self.training_setup(training_args)
