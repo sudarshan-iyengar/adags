@@ -22,6 +22,7 @@ from utils.graphics_utils import BasicPointCloud
 from utils.general_utils import strip_symmetric, build_scaling_rotation
 from utils.sh_utils import sh_channels_4d
 
+
 class GaussianModel:
 
     def setup_functions(self):
@@ -548,9 +549,7 @@ class GaussianModel:
             elif not static and 'static' in group["name"]:
                 continue
 
-            # Skip gate_mlp as it is not per-Gaussian
-            if group["name"] == "gate_mlp":
-                optimizable_tensors[group["name"]] = group["params"]
+            if group['name'] == 'gate_mlp':
                 continue
 
             stored_state = self.optimizer.state.get(group['params'][0], None)
@@ -611,9 +610,9 @@ class GaussianModel:
     def cat_tensors_to_optimizer(self, tensors_dict):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
-            assert len(group["params"]) == 1
             if group["name"] == "gate_mlp":
                 continue
+            assert len(group["params"]) == 1
             try:
                 extension_tensor = tensors_dict[group["name"]]
             except:
