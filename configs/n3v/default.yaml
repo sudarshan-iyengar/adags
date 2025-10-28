@@ -26,7 +26,7 @@ ModelParams:
 
 PipelineParams:
   convert_SHs_python: False
-  compute_cov3D_python: False
+  compute_cov3D_python: True
   debug: False
   env_map_res: 0
   env_optimize_until: 5000000000
@@ -60,4 +60,6 @@ OptimizationParams:
   lambda_rigid: 0.0
   lambda_motion: 0.0
   static_conversion_threshold: 0.99
-  lambda_gate_sparsity: 0.01
+  lambda_gate_sparsity: 0.0001
+  gate_activation_iter: 500
+  gate_warmup_until_iter: 1500

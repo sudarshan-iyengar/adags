@@ -66,7 +66,7 @@ def validation(dataset, opt, pipe,checkpoint, gaussian_dim, time_duration, rot_4
     gaussExtractor.export_image(test_dir,mode = "validation")
 
     # #########    2. Render Trajectory       ############
-    
+
     # print("rendering trajectory ...")
     # traj_dir = os.path.join(test_dir, 'traj')
     # os.makedirs(traj_dir, exist_ok=True)
@@ -126,7 +126,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         training_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=2 if dataset.dataloader else 0,
+        num_workers=0 if dataset.dataloader else 0,
         collate_fn=identity_collate,
         drop_last=True
     )
@@ -148,6 +148,26 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             # Render
             if (iteration - 1) == debug_from:
                 pipe.debug = True
+
+            if iteration >= opt.gate_activation_iter:
+                gaussians.compute_differentiable_staticness()
+            else:
+                if gaussians._xyz.shape[0] > 0:
+                    gaussians.differentiable_s = torch.zeros((gaussians._xyz.shape[0], 1), device="cuda", requires_grad=False)
+
+            if iteration > opt.gate_activation_iter:
+                if opt.gate_warmup_until_iter > opt.gate_activation_iter:
+                    annealing = min(1.0, (iteration - opt.gate_activation_iter) / (opt.gate_warmup_until_iter - opt.gate_activation_iter))
+                else:
+                    annealing = 1.0
+                annealed_lambda = opt.lambda_gate_sparsity * annealing
+                Lgate_sparsity = gaussians.get_gate_loss()
+                scaled_gate_loss = annealed_lambda * Lgate_sparsity
+            else:
+                Lgate_sparsity = torch.tensor(0.0, device="cuda")
+                scaled_gate_loss = torch.tensor(0.0, device="cuda")
+
+            total_loss = 0.0
 
             batch_point_grad = []
             batch_visibility_filter = []
@@ -173,7 +193,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 # Loss
                 Ll1 = l1_loss(image, gt_image)
                 Lssim = 1.0 - ssim(image, gt_image)
-                loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
+                loss_recon = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
+                loss = loss_recon
 
                 ###### opa mask Loss ######
                 if opt.lambda_opa_mask > 0:
@@ -218,15 +239,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     loss = loss + opt.lambda_motion * Lmotion
                 ########################
 
-                if opt.lambda_gate_sparsity > 0:
-                    Lgate_sparsity = gaussians.get_gate_loss()
-                    loss = loss + opt.lambda_gate_sparsity * Lgate_sparsity
-
-                loss = loss / batch_size
-                loss.backward()
-
-                if opt.lambda_gate_sparsity > 0:
-                    gaussians.update_staticness_score()
+                total_loss += loss.item()
+                (loss / batch_size).backward(retain_graph=True)
 
                 batch_point_grad.append(torch.norm(viewspace_point_tensor.grad[:,:2], dim=-1))
                 batch_radii.append(radii)
@@ -239,6 +253,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     batch_point_grad_static.append(torch.norm(viewspace_point_tensor_static.grad[:,:2], dim=-1))
                     batch_radii_static.append(radii_static)
                     batch_visibility_filter_static.append(visibility_filter_static)
+
+            if iteration > opt.gate_activation_iter:
+                total_loss += scaled_gate_loss.item()
+                scaled_gate_loss.backward()
 
             if batch_size > 1:
                 visibility_count = torch.stack(batch_visibility_filter,1).sum(1)
@@ -274,7 +292,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             with torch.no_grad():
                 psnr_for_log = psnr(image, gt_image).mean().double()
                 # Progress bar
-                ema_loss_for_log = 0.4 * loss.item() + 0.6 * ema_loss_for_log
+                ema_loss_for_log = 0.4 * total_loss + 0.6 * ema_loss_for_log
                 ema_l1loss_for_log = 0.4 * Ll1.item() + 0.6 * ema_l1loss_for_log
                 ema_ssimloss_for_log = 0.4 * Lssim.item() + 0.6 * ema_ssimloss_for_log
 
@@ -305,7 +323,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     progress_bar.close()
 
                 # Log and save
-                test_psnr = training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background), loss_dict)
+                test_psnr = training_report(tb_writer, iteration, Ll1, total_loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background), loss_dict)
                 if (iteration in testing_iterations):
                     if test_psnr >= best_psnr:
                         best_psnr = test_psnr
@@ -332,6 +350,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     if iteration > opt.densify_from_iter:
                         size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                         if iteration % opt.densification_interval == 0:
+                            gaussians.update_staticness_score()
                             gaussians.densify_and_prune(opt.densify_grad_threshold, opt.thresh_opa_prune, scene.cameras_extent, size_threshold, opt.densify_grad_t_threshold, opt.static_conversion_threshold)
                     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                         gaussians.reset_opacity()
@@ -372,7 +391,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/ssim_loss', Ll1.item(), iteration)
-        tb_writer.add_scalar('train_loss_patches/total_loss', loss.item(), iteration)
+        tb_writer.add_scalar('train_loss_patches/total_loss', loss, iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
         tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)
         tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)

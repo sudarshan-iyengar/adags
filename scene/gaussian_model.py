@@ -21,7 +21,7 @@ from simple_knn._C import distCUDA2
 from utils.graphics_utils import BasicPointCloud
 from utils.general_utils import strip_symmetric, build_scaling_rotation
 from utils.sh_utils import sh_channels_4d
-
+import torch.nn.functional as F
 
 class GaussianModel:
 
@@ -103,6 +103,7 @@ class GaussianModel:
         self.static_xyz_gradient_accum = torch.empty(0)
 
         self.gate_mlp = None
+        self.differentiable_s = None
         self._staticness_score = torch.empty(0)
 
         self.setup_functions()
@@ -248,6 +249,11 @@ class GaussianModel:
         features_rest = self._features_rest
         return torch.cat((features_dc, features_rest), dim=1)
 
+    # if self.active_sh_degree == 0:
+    #         return torch.cat((features_dc, features_rest.detach()), dim=1)
+    #     else:
+    #         return torch.cat((features_dc, features_rest), dim=1)
+
     @property
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
@@ -261,6 +267,10 @@ class GaussianModel:
         features_dc = self.static_features_dc
         features_rest = self.static_features_rest
         return torch.cat((features_dc, features_rest), dim=1)
+        # if self.active_sh_degree == 0:
+        #     return torch.cat((features_dc, features_rest.detach()), dim=1)
+        # else:
+        #     return torch.cat((features_dc, features_rest), dim=1)
 
     @property
     def get_static_opacity(self):
@@ -301,28 +311,44 @@ class GaussianModel:
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
     def get_current_covariance_and_mean_offset(self, scaling_modifier = 1, timestamp = 0.0):
-        return self.covariance_activation(self.get_scaling_xyzt, scaling_modifier,
-                                          self._rotation,
-                                          self._rotation_r,
-                                          dt = timestamp - self.get_t)
+        if self.differentiable_s is not None and self.differentiable_s.shape[0] > 0:
+            s = self.differentiable_s
 
-    def get_gate_inputs(self):
-        return torch.cat([self._scaling_t.detach(), self._scaling.detach(), self.get_opacity.detach()], dim=1)
+            soft_scaling_t_raw = self._scaling_t * (1.0 - s)
+            soft_scaling_t = self.scaling_activation(soft_scaling_t_raw)
+
+            identity_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device="cuda").expand_as(self._rotation_r)
+            soft_rotation_r_unnormalized = (1.0 - s) * self._rotation_r + s * identity_quat
+            soft_rotation_r = F.normalize(soft_rotation_r_unnormalized, dim=1)
+
+            soft_scaling_xyzt = torch.cat([self.get_scaling, soft_scaling_t], dim=1)
+            return self.covariance_activation(soft_scaling_xyzt, scaling_modifier,
+                                              self._rotation,
+                                              soft_rotation_r,
+                                              dt = timestamp - self.get_t)
+        else:
+            return self.covariance_activation(self.get_scaling_xyzt, scaling_modifier,
+                                              self._rotation,
+                                              self._rotation_r,
+                                              dt = timestamp - self.get_t)
+
+    def compute_differentiable_staticness(self):
+        if self.gate_mlp is not None and self._xyz.shape[0] > 0:
+            inputs = torch.cat([self._scaling_t.detach(), self._scaling.detach(), self._opacity.detach()], dim=1)
+            scores = torch.sigmoid(self.gate_mlp(inputs))
+            self.differentiable_s = scores
+        else:
+            self.differentiable_s = torch.zeros((self._xyz.shape[0], 1), device="cuda")
+
+    def get_gate_loss(self):
+        if self.differentiable_s is None:
+            return torch.tensor(0.0, device="cuda")
+        return (1.0 - self.differentiable_s).mean()
 
     @torch.no_grad()
     def update_staticness_score(self):
-        if self.gate_mlp is not None and self._xyz.shape[0] > 0:
-            inputs = self.get_gate_inputs()
-            scores = torch.sigmoid(self.gate_mlp(inputs))
-            self._staticness_score = scores
-
-    def get_gate_loss(self):
-        if self.gate_mlp is None or self._xyz.shape[0] == 0:
-            return torch.tensor(0.0, device="cuda")
-
-        inputs = torch.cat([self._scaling_t, self._scaling, self.get_opacity], dim=1)
-        scores = torch.sigmoid(self.gate_mlp(inputs))
-        return (1.0 - scores).mean()
+        if self.differentiable_s is not None:
+            self._staticness_score = self.differentiable_s.detach()
 
     def construct_list_of_attributes(self):
         l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
@@ -612,7 +638,7 @@ class GaussianModel:
         for group in self.optimizer.param_groups:
             if group["name"] == "gate_mlp":
                 continue
-            assert len(group["params"]) == 1
+            assert len(group["params"]) == 1, f"Group {group['name']} has more than one param"
             try:
                 extension_tensor = tensors_dict[group["name"]]
             except:

@@ -112,7 +112,8 @@ class OptimizationParams(ParamGroup):
         self.static_conversion_threshold = 0.99
         self.lambda_gate_sparsity = 0.0
 
-
+        self.gate_activation_iter = 500
+        self.gate_warmup_until_iter = 1500
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
