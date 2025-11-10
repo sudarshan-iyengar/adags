@@ -305,11 +305,19 @@ class GaussianModel:
     def get_covariance(self, scaling_modifier = 1):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
-    def get_current_covariance_and_mean_offset(self, scaling_modifier = 1, timestamp = 0.0):
-        return self.covariance_activation(self.get_scaling_xyzt, scaling_modifier,
-                                          self._rotation,
-                                          self._rotation_r,
-                                          dt = timestamp - self.get_t)
+    def get_current_covariance_and_mean_offset(self, scaling_modifier=1, timestamp=0.0):
+        if self.rot_4d:
+            return self.covariance_activation(
+                self.get_scaling_xyzt,
+                scaling_modifier,
+                self._rotation,
+                self._rotation_r,
+                dt = timestamp - self.get_t
+            )
+        else:
+            covariance = self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
+            mean_offset = torch.zeros_like(self._xyz, device=self._xyz.device)
+            return covariance, mean_offset
 
     def compute_differentiable_staticness(self):
         if self.gate_mlp is not None and self._xyz.shape[0] > 0:
@@ -804,14 +812,21 @@ class GaussianModel:
         self.densification_postfix_static(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation)
 
 
-    def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size, max_grad_t=None, static_conversion_threshold=0.99):
+    def densify_and_prune(
+            self,
+            max_grad,
+            min_opacity,
+            extent,
+            max_screen_size,
+            max_grad_t=None,
+            static_conversion_threshold=0.99,
+            gate_activation_iter=None,
+            gate_warmup_until_iter=None,
+            iteration=None,
+    ):
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
-        # if self.gaussian_dim == 4:
-        #     grads_t = self.t_gradient_accum / self.denom
-        #     grads_t[grads_t.isnan()] = 0.0
-        # else:
-        #     grads_t = None
+
         self.densify_and_clone(grads, max_grad, extent)
         self.densify_and_split(grads, max_grad, extent)
 
@@ -836,7 +851,16 @@ class GaussianModel:
                 prune_static_mask = torch.logical_or(torch.logical_or(prune_static_mask, big_points_vs_static), big_points_ws_static)
             self.prune_static_points(prune_static_mask)
 
-        self.dynamic2static(static_conversion_threshold)
+        # ---- gated static conversion ----
+        if (
+                static_conversion_threshold is not None
+                and iteration is not None
+                and gate_activation_iter is not None
+                and gate_warmup_until_iter is not None
+                and iteration >= max(gate_activation_iter, gate_warmup_until_iter)
+                and self._staticness_score.numel() > 0
+        ):
+            self.dynamic2static(static_conversion_threshold)
 
         torch.cuda.empty_cache()
 
@@ -858,20 +882,42 @@ class GaussianModel:
 
 
     def dynamic2static(self, conversion_threshold):
+        """Move 'static-enough' Gaussians to the static set.
+        When rot_4d=True, project the 3x3 spatial block of the 4D rotation to the
+        nearest SO(3) via SVD to avoid shear/reflection artifacts.
+        """
         if self._staticness_score.numel() == 0:
             return
-        static_mask = (self._staticness_score > conversion_threshold).squeeze()
+        static_mask = (self._staticness_score > conversion_threshold).squeeze().to(self._xyz.device)
         if static_mask.sum() == 0:
             return
+
         new_xyz = self._xyz[static_mask]
         new_features_dc = self._features_dc[static_mask]
         new_features_rest = self._features_rest[static_mask]
         new_opacities = self._opacity[static_mask]
-        r_4d = build_rotation_4d(self._rotation[static_mask], self._rotation_r[static_mask])
-        r_3d = r_4d[:,:3,:3]
-        new_rotation = rotation_matrix_to_rotation_3d(r_3d)
         new_scaling = self._scaling[static_mask]
 
-        self.prune_points(static_mask)
+        if self.rot_4d:
+            # Build 4D rotation, extract 3x3 spatial block, then project to SO(3)
+            r_4d = build_rotation_4d(self._rotation[static_mask], self._rotation_r[static_mask])  # [N,4,4]
+            R = r_4d[:, :3, :3]                                                                    # [N,3,3]
+            R = torch.nan_to_num(R)  # guard against any NaNs/Infs
+            # SVD projection to the nearest rotation (U @ Vh)
+            U, _, Vh = torch.linalg.svd(R)
+            R_clean = U @ Vh
+            # Ensure right-handed (det=+1). If det<0, flip the last column of U.
+            det = torch.det(R_clean)
+            if (det < 0).any():
+                flip = (det < 0).nonzero(as_tuple=False).squeeze(-1)
+                U[flip, :, -1] *= -1
+                R_clean = U @ Vh
+            new_rotation = rotation_matrix_to_rotation_3d(R_clean)
+        else:
+            new_rotation = self._rotation[static_mask]
 
-        self.densification_postfix_static(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation)
+        # Remove these from dynamic cloud
+        self.prune_points(static_mask)
+        # Insert into static cloud
+        self.densification_postfix_static(new_xyz, new_features_dc, new_features_rest,
+                                          new_opacities, new_scaling, new_rotation)
