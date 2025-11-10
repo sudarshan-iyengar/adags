@@ -26,6 +26,10 @@ import torch.nn.functional as F
 class GaussianModel:
 
     def setup_functions(self):
+        def safe_normalize(x):
+            x = torch.where(torch.isnan(x), torch.zeros_like(x), x)
+            return F.normalize(x, p=2, dim=-1, eps=1e-6)
+
         def build_covariance_from_scaling_rotation(scaling, scaling_modifier, rotation):
             L = build_scaling_rotation(scaling_modifier * scaling, rotation)
             actual_covariance = L.transpose(1, 2) @ L
@@ -58,7 +62,7 @@ class GaussianModel:
         self.opacity_activation = torch.sigmoid
         self.inverse_opacity_activation = inverse_sigmoid
 
-        self.rotation_activation = torch.nn.functional.normalize
+        self.rotation_activation = safe_normalize
 
 
     def __init__(self, sh_degree : int, gaussian_dim : int = 3, time_duration: list = [-0.5, 0.5], rot_4d: bool = False, force_sh_3d: bool = False, sh_degree_t : int = 0):
@@ -249,11 +253,6 @@ class GaussianModel:
         features_rest = self._features_rest
         return torch.cat((features_dc, features_rest), dim=1)
 
-    # if self.active_sh_degree == 0:
-    #         return torch.cat((features_dc, features_rest.detach()), dim=1)
-    #     else:
-    #         return torch.cat((features_dc, features_rest), dim=1)
-
     @property
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
@@ -267,10 +266,6 @@ class GaussianModel:
         features_dc = self.static_features_dc
         features_rest = self.static_features_rest
         return torch.cat((features_dc, features_rest), dim=1)
-        # if self.active_sh_degree == 0:
-        #     return torch.cat((features_dc, features_rest.detach()), dim=1)
-        # else:
-        #     return torch.cat((features_dc, features_rest), dim=1)
 
     @property
     def get_static_opacity(self):
@@ -311,26 +306,10 @@ class GaussianModel:
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
     def get_current_covariance_and_mean_offset(self, scaling_modifier = 1, timestamp = 0.0):
-        if self.differentiable_s is not None and self.differentiable_s.shape[0] > 0:
-            s = self.differentiable_s
-
-            soft_scaling_t_raw = self._scaling_t * (1.0 - s)
-            soft_scaling_t = self.scaling_activation(soft_scaling_t_raw)
-
-            identity_quat = torch.tensor([1.0, 0.0, 0.0, 0.0], device="cuda").expand_as(self._rotation_r)
-            soft_rotation_r_unnormalized = (1.0 - s) * self._rotation_r + s * identity_quat
-            soft_rotation_r = F.normalize(soft_rotation_r_unnormalized, dim=1)
-
-            soft_scaling_xyzt = torch.cat([self.get_scaling, soft_scaling_t], dim=1)
-            return self.covariance_activation(soft_scaling_xyzt, scaling_modifier,
-                                              self._rotation,
-                                              soft_rotation_r,
-                                              dt = timestamp - self.get_t)
-        else:
-            return self.covariance_activation(self.get_scaling_xyzt, scaling_modifier,
-                                              self._rotation,
-                                              self._rotation_r,
-                                              dt = timestamp - self.get_t)
+        return self.covariance_activation(self.get_scaling_xyzt, scaling_modifier,
+                                          self._rotation,
+                                          self._rotation_r,
+                                          dt = timestamp - self.get_t)
 
     def compute_differentiable_staticness(self):
         if self.gate_mlp is not None and self._xyz.shape[0] > 0:
@@ -536,10 +515,6 @@ class GaussianModel:
                 lr = self.xyz_scheduler_args(iteration)
                 param_group['lr'] = lr
                 return lr
-            # if param_group["name"] == "t" and self.gaussian_dim == 4:
-            #     lr = self.xyz_scheduler_args(iteration)
-            #     param_group['lr'] = lr
-            #     return lr
 
     def reset_opacity(self):
         opacities_new = inverse_sigmoid(torch.min(self.get_opacity, torch.ones_like(self.get_opacity)*0.01))
@@ -723,7 +698,6 @@ class GaussianModel:
         #if not tsplit:
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_scaling, dim=1).values > self.percent_dense*scene_extent)
-        # print(f"num_to_densify_pos: {torch.where(padded_grad >= grad_threshold, True, False).sum()}, num_to_split_pos: {selected_pts_mask.sum()}")
 
         new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N,1) / (0.8*N))
         new_rotation = self._rotation[selected_pts_mask].repeat(N,1)
@@ -768,7 +742,6 @@ class GaussianModel:
         selected_pts_mask = torch.where(torch.norm(grads, dim=-1) >= grad_threshold, True, False)
         selected_pts_mask = torch.logical_and(selected_pts_mask,
                                               torch.max(self.get_scaling, dim=1).values <= self.percent_dense*scene_extent)
-        # print(f"num_to_densify_pos: {torch.where(grads >= grad_threshold, True, False).sum()}, num_to_clone_pos: {selected_pts_mask.sum()}")
 
         new_xyz = self._xyz[selected_pts_mask]
         new_features_dc = self._features_dc[selected_pts_mask]

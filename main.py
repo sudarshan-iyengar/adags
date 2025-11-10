@@ -126,11 +126,15 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         training_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=0 if dataset.dataloader else 0,
+        num_workers=12 if dataset.dataloader else 0,
         collate_fn=identity_collate,
         drop_last=True
     )
     iteration = first_iter
+
+    # Initialize placeholders for new gate losses (for logging continuity)
+    Lsparsity = torch.tensor(0.0, device="cuda")
+    Lmotion_gate = torch.tensor(0.0, device="cuda")
 
     while iteration < opt.iterations + 1:
         for batch_data in training_dataloader:
@@ -149,23 +153,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if (iteration - 1) == debug_from:
                 pipe.debug = True
 
+            # Compute gate inputs / scores (but do not add any legacy gate loss here)
             if iteration >= opt.gate_activation_iter:
                 gaussians.compute_differentiable_staticness()
             else:
                 if gaussians._xyz.shape[0] > 0:
                     gaussians.differentiable_s = torch.zeros((gaussians._xyz.shape[0], 1), device="cuda", requires_grad=False)
-
-            if iteration > opt.gate_activation_iter:
-                if opt.gate_warmup_until_iter > opt.gate_activation_iter:
-                    annealing = min(1.0, (iteration - opt.gate_activation_iter) / (opt.gate_warmup_until_iter - opt.gate_activation_iter))
-                else:
-                    annealing = 1.0
-                annealed_lambda = opt.lambda_gate_sparsity * annealing
-                Lgate_sparsity = gaussians.get_gate_loss()
-                scaled_gate_loss = annealed_lambda * Lgate_sparsity
-            else:
-                Lgate_sparsity = torch.tensor(0.0, device="cuda")
-                scaled_gate_loss = torch.tensor(0.0, device="cuda")
 
             total_loss = 0.0
 
@@ -177,6 +170,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             batch_visibility_filter_static = []
             batch_radii_static = []
 
+            # --------- Inner micro-batch loop (reconstruction + other regularizers) ---------
             for batch_idx in range(batch_size):
                 gt_image, viewpoint_cam = batch_data[batch_idx]
                 gt_image = gt_image.cuda()
@@ -190,7 +184,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 visibility_filter_static = render_pkg["visibility_filter_static"]
                 radii_static = render_pkg["radii_static"]
 
-                # Loss
+                # Reconstruction Loss
                 Ll1 = l1_loss(image, gt_image)
                 Lssim = 1.0 - ssim(image, gt_image)
                 loss_recon = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
@@ -200,10 +194,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 if opt.lambda_opa_mask > 0:
                     o = alpha.clamp(1e-6, 1-1e-6)
                     sky = 1 - viewpoint_cam.gt_alpha_mask
-
                     Lopa_mask = (- sky * torch.log(1 - o)).mean()
-
-                    # lambda_opa_mask = opt.lambda_opa_mask * (1 - 0.99 * min(1, iteration/opt.iterations))
                     lambda_opa_mask = opt.lambda_opa_mask
                     loss = loss + lambda_opa_mask * Lopa_mask
                 ###### opa mask Loss ######
@@ -232,12 +223,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     loss = loss + opt.lambda_rigid * Lrigid
                 ########################
 
-                ###### motion loss ######
-                if opt.lambda_motion > 0:
-                    _, velocity = gaussians.get_current_covariance_and_mean_offset(1.0, gaussians.get_t + 0.1)
-                    Lmotion = velocity.norm(p=2, dim=1).mean()
-                    loss = loss + opt.lambda_motion * Lmotion
-                ########################
+                # ---- NOTE: Step 1 removes legacy motion loss from total training loss ----
+                # Keep lambda_motion = 0 for Step 1 (see config). We still compute motion later
+                # (once per iteration) for Lmotion_gate, but do NOT add a global Lmotion here.
 
                 total_loss += loss.item()
                 (loss / batch_size).backward(retain_graph=True)
@@ -254,10 +242,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     batch_radii_static.append(radii_static)
                     batch_visibility_filter_static.append(visibility_filter_static)
 
-            if iteration > opt.gate_activation_iter:
-                total_loss += scaled_gate_loss.item()
-                scaled_gate_loss.backward()
+            # --------- End inner micro-batch loop ---------
 
+            # Aggregate per-pixel grads across micro-batches (unchanged)
             if batch_size > 1:
                 visibility_count = torch.stack(batch_visibility_filter,1).sum(1)
                 visibility_filter = visibility_count > 0
@@ -285,9 +272,47 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 if gaussians.gaussian_dim == 4:
                     batch_t_grad = gaussians._t.grad.clone().detach()
 
+            # ---------------------- Step 1: Dueling gate losses (once per iteration) ----------------------
+            # Defaults (in case of early iterations or empty set)
+            Lsparsity = torch.tensor(0.0, device="cuda")
+            Lmotion_gate = torch.tensor(0.0, device="cuda")
+
+            if iteration > opt.gate_activation_iter and gaussians._xyz.shape[0] > 0:
+                s = gaussians.differentiable_s
+                if s is not None and s.numel() > 0:
+                    # Annealed sparsity
+                    if opt.gate_warmup_until_iter > opt.gate_activation_iter:
+                        annealing = min(1.0, (iteration - opt.gate_activation_iter) / (opt.gate_warmup_until_iter - opt.gate_activation_iter))
+                    else:
+                        annealing = 1.0
+                    lambda_sparsity_eff = opt.lambda_sparsity * annealing
+                    Lsparsity = lambda_sparsity_eff * (1.0 - s).mean()
+
+                    # Motion magnitude for each Gaussian (normalized), detached for Step 1
+                    with torch.no_grad():
+                        _, velocity = gaussians.get_current_covariance_and_mean_offset(1.0, gaussians.get_t + 0.1)  # [N,3]
+                        motion_mag = velocity.norm(p=2, dim=1, keepdim=True)                                   # [N,1]
+                        scale = torch.quantile(motion_mag, getattr(opt, "motion_gate_quantile", 0.8)).clamp_min(1e-6)
+                        Lmotion_per_point = motion_mag / scale
+
+                    Lmotion_gate = opt.lambda_motion_gate * (s * Lmotion_per_point.detach()).mean()
+
+                    # Backprop these gate-only losses (after micro-batch backward)
+                    total_loss += (Lsparsity + Lmotion_gate).item()
+                    (Lsparsity + Lmotion_gate).backward()
+
             iter_end.record()
+
+            # ---------------------- Logging ----------------------
+            # Build loss_dict with available pieces (avoid referencing undefined names)
             loss_dict = {"Ll1": Ll1,
                          "Lssim": Lssim}
+
+            if 'Lrigid' in locals():
+                loss_dict["Lrigid"] = Lrigid
+            # Step 1: add new terms
+            loss_dict["Lsparsity"] = Lsparsity
+            loss_dict["Lmotion_gate"] = Lmotion_gate
 
             with torch.no_grad():
                 psnr_for_log = psnr(image, gt_image).mean().double()
@@ -325,6 +350,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 # Log and save
                 test_psnr = training_report(tb_writer, iteration, Ll1, total_loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background), loss_dict)
                 if (iteration in testing_iterations):
+                    if test_psnr is None:
+                        test_psnr = 0.0 # or 0.0 if you prefer
                     if test_psnr >= best_psnr:
                         best_psnr = test_psnr
                         print("\n[ITER {}] Saving best checkpoint".format(iteration))
@@ -351,7 +378,17 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                         if iteration % opt.densification_interval == 0:
                             gaussians.update_staticness_score()
-                            gaussians.densify_and_prune(opt.densify_grad_threshold, opt.thresh_opa_prune, scene.cameras_extent, size_threshold, opt.densify_grad_t_threshold, opt.static_conversion_threshold)
+                            gaussians.densify_and_prune(
+                                max_grad=opt.densify_grad_threshold,
+                                min_opacity=opt.thresh_opa_prune,
+                                extent=scene.cameras_extent,
+                                max_screen_size=size_threshold,
+                                max_grad_t=opt.densify_grad_t_threshold,
+                                static_conversion_threshold=opt.static_conversion_threshold,
+                                gate_activation_iter=opt.gate_activation_iter,
+                                gate_warmup_until_iter=opt.gate_warmup_until_iter,
+                                iteration=iteration,
+                            )
                     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                         gaussians.reset_opacity()
 
@@ -387,7 +424,7 @@ def prepare_output_and_logger(args):
         print("Tensorboard not available: not logging progress")
     return tb_writer
 
-def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs, loss_dict=None):
+def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene: Scene, renderFunc, renderArgs, loss_dict=None):
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/ssim_loss', Ll1.item(), iteration)
@@ -395,6 +432,42 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
         tb_writer.add_scalar('iter_time', elapsed, iteration)
         tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)
         tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)
+
+        gaussians = scene.gaussians
+        opt = getattr(scene, 'opt', None)  # if you pass opt through Scene
+
+        # ---- POINT COUNTS ----
+        total_points = gaussians.get_xyz.shape[0]
+        static_points = gaussians.get_static_xyz.shape[0] if hasattr(gaussians, 'get_static_xyz') else 0
+        dynamic_points = total_points - static_points
+
+        tb_writer.add_scalar('points/total', total_points, iteration)
+        tb_writer.add_scalar('points/static', static_points, iteration)
+        tb_writer.add_scalar('points/dynamic', dynamic_points, iteration)
+
+        if hasattr(gaussians, '_staticness_score') and opt is not None:
+            conversion_rate = (gaussians._staticness_score > opt.static_conversion_threshold).float().mean().item() * 100
+            tb_writer.add_scalar('points/static_conversion_rate', conversion_rate, iteration)
+
+        # ---- GATE SCALARS ----
+        if hasattr(gaussians, 'differentiable_s') and gaussians.differentiable_s is not None and gaussians.differentiable_s.numel() > 0:
+            s = gaussians.differentiable_s.detach()
+
+            tb_writer.add_scalar('gate/scalars/mean_s', s.mean().item(), iteration)
+            tb_writer.add_scalar('gate/scalars/median_s', s.median().item(), iteration)
+            tb_writer.add_scalar('gate/scalars/min_s', s.min().item(), iteration)
+            tb_writer.add_scalar('gate/scalars/max_s', s.max().item(), iteration)
+            tb_writer.add_scalar('gate/scalars/percent_s>0.9', (s > 0.9).float().mean().item() * 100, iteration)
+            tb_writer.add_scalar('gate/scalars/percent_s<0.1', (s < 0.1).float().mean().item() * 100, iteration)
+
+            tb_writer.add_histogram('gate/hist/s_distribution', s, iteration, bins=50)
+
+            # Optional: check how gating affects timestamps
+            if hasattr(gaussians, 'get_t'):
+                ts = gaussians.get_t.detach()
+                tb_writer.add_histogram('gate/ts/timestamps_after_gating', ts, iteration, bins=50)
+        # ---------------------------------------------------------------------------------
+
         if loss_dict is not None:
             if "Lrigid" in loss_dict:
                 tb_writer.add_scalar('train_loss_patches/rigid_loss', loss_dict['Lrigid'].item(), iteration)
@@ -410,62 +483,13 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                 tb_writer.add_scalar('train_loss_patches/smooth_loss', loss_dict['Lsmooth'].item(), iteration)
             if "Llaplacian" in loss_dict:
                 tb_writer.add_scalar('train_loss_patches/laplacian_loss', loss_dict['Llaplacian'].item(), iteration)
-            if "Lgate_sparsity" in loss_dict:
-                tb_writer.add_scalar('train_loss_patches/gate_sparsity_loss', loss_dict['Lgate_sparsity'].item(), iteration)
-
+            if "Lsparsity" in loss_dict:
+                tb_writer.add_scalar('train_loss_patches/gate_sparsity_loss', loss_dict['Lsparsity'].item(), iteration)
+            if "Lmotion_gate" in loss_dict:
+                tb_writer.add_scalar('train_loss_patches/motion_gate_loss', loss_dict['Lmotion_gate'].item(), iteration)
 
         tb_writer.add_scalar('gpu/memory_allocated_MB', torch.cuda.memory_allocated() / 1e6, iteration)
         tb_writer.add_scalar('gpu/memory_reserved_MB', torch.cuda.memory_reserved() / 1e6, iteration)
-
-    psnr_test_iter = 0.0
-    # Report test and samples of training set
-    if iteration in testing_iterations:
-        validation_configs = ({'name': 'train', 'cameras' : [scene.getTrainCameras()[idx % len(scene.getTrainCameras())] for idx in range(5, 30, 5)]},
-                              {'name': 'test', 'cameras' : [scene.getTestCameras()[idx] for idx in range(len(scene.getTestCameras()))]})
-
-        for config in validation_configs:
-            if config['cameras'] and len(config['cameras']) > 0:
-                l1_test = 0.0
-                psnr_test = 0.0
-                ssim_test = 0.0
-                msssim_test = 0.0
-                for idx, batch_data in enumerate(tqdm(config['cameras'])):
-                    gt_image, viewpoint = batch_data
-                    gt_image = gt_image.cuda()
-                    viewpoint = viewpoint.cuda()
-
-                    render_pkg = renderFunc(viewpoint, scene.gaussians, *renderArgs)
-                    image = torch.clamp(render_pkg["render"], 0.0, 1.0)
-
-                    depth = easy_cmap(render_pkg['depth'][0])
-                    alpha = torch.clamp(render_pkg['alpha'], 0.0, 1.0).repeat(3,1,1)
-                    image_4d = torch.clamp(render_pkg["render_4d"], 0.0, 1.0)
-                    image_3d = torch.clamp(render_pkg["render_3d"], 0.0, 1.0)
-
-                    if tb_writer and (idx < 5):
-                        grid = [gt_image, image, image_4d, image_3d]
-                        grid = make_grid(grid, nrow=2)
-                        tb_writer.add_images(config['name'] + "_view_{}/gt_vs_render".format(viewpoint.image_name), grid[None], global_step=iteration)
-
-                    l1_test += l1_loss(image, gt_image).mean().double()
-                    psnr_test += psnr(image, gt_image).mean().double()
-                    ssim_test += ssim(image, gt_image).mean().double()
-                    msssim_test += msssim(image[None].cpu(), gt_image[None].cpu())
-                psnr_test /= len(config['cameras'])
-                l1_test /= len(config['cameras'])
-                ssim_test /= len(config['cameras'])
-                msssim_test /= len(config['cameras'])
-                print("\n[ITER {}] Evaluating {}: L1 {} PSNR {}".format(iteration, config['name'], l1_test, psnr_test))
-                if tb_writer:
-                    tb_writer.add_scalar(config['name'] + '/loss_viewpoint - l1_loss', l1_test, iteration)
-                    tb_writer.add_scalar(config['name'] + '/loss_viewpoint - psnr', psnr_test, iteration)
-                    tb_writer.add_scalar(config['name'] + '/loss_viewpoint - ssim', ssim_test, iteration)
-                    tb_writer.add_scalar(config['name'] + '/loss_viewpoint - msssim', msssim_test, iteration)
-                if config['name'] == 'test':
-                    psnr_test_iter = psnr_test.item()
-
-    torch.cuda.empty_cache()
-    return psnr_test_iter
 
 
 def setup_seed(seed):
@@ -484,8 +508,8 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str)
     parser.add_argument('--debug_from', type=int, default=-1)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
-    parser.add_argument("--test_iterations", nargs="+", type=int, default=[6_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[6_000])
+    parser.add_argument("--test_iterations", nargs="+", type=int, default=[2_000, 4_000, 6_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[2_000, 3_000, 4_000, 5_000, 6_000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--start_checkpoint", type=str, default = None)
 

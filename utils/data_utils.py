@@ -20,7 +20,7 @@ class CameraDataset(Dataset):
         if viewpoint_cam.meta_only:
             with Image.open(viewpoint_cam.image_path) as image_load:
                 im_data = np.array(image_load.convert("RGBA"))
-            norm_data = im_data.astype(np.float32)/ 255.0
+            norm_data = im_data.astype(np.float32, copy=False) / 255.0
             arr = norm_data[:,:,:3] * norm_data[:, :, 3:4] + self.bg * (1 - norm_data[:, :, 3:4])
             image_load = Image.fromarray(np.array(arr*255.0, dtype=np.byte), "RGB")
             resized_image_rgb = PILtoTorch(image_load, viewpoint_cam.resolution)
