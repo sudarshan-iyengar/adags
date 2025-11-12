@@ -114,6 +114,11 @@ class OptimizationParams(ParamGroup):
 
         self.gate_activation_iter = 500
         self.gate_warmup_until_iter = 1500
+
+        self.lambda_sparsity = 0.0
+        self.lambda_motion_gate = 0.0
+        self.motion_gate_quantile = 0.8
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
