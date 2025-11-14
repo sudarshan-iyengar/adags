@@ -47,13 +47,13 @@ OptimizationParams:
   percent_dense: 0.01
   lambda_dssim: 0.2
   thresh_opa_prune: 0.005
-  densification_interval: 100
-  opacity_reset_interval: 30000
+  densification_interval: 200
+  opacity_reset_interval: 400
   densify_from_iter: 500
-  densify_until_iter: 15_000
+  densify_until_iter: 3600
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.0002 / 40
-  densify_until_num_points: -1
+  densify_until_num_points: 550000
   final_prune_from_iter: -1
   sh_increase_interval: 1000
   lambda_rigid: 0.0

@@ -42,27 +42,26 @@ OptimizationParams:
   position_lr_max_steps: 30_000
   feature_lr: 0.0025
   opacity_lr: 0.05
-  scaling_lr: 0.005
-  rotation_lr: 0.001
-  percent_dense: 0.01
+  scaling_lr: 0.004
+  rotation_lr: 0.008
+  percent_dense: 0.008
   lambda_dssim: 0.2
-  thresh_opa_prune: 0.005
-  densification_interval: 100
-  opacity_reset_interval: 30000
+  thresh_opa_prune: 0.007
+  densification_interval: 150
+  opacity_reset_interval: 500
   densify_from_iter: 500
-  densify_until_iter: 15000
-  densify_grad_threshold: 0.0002
+  densify_until_iter: 4800
+  densify_grad_threshold: 0.00015
   densify_grad_t_threshold: 0.0002 / 40
-  densify_until_num_points: -1
+  densify_until_num_points: 700000
   final_prune_from_iter: -1
   sh_increase_interval: 1000
-  lambda_opa_mask: 0.0
   lambda_rigid: 0.0
-#  lambda_motion: 0.0
-#  lambda_gate_sparsity: 0.0
-  lambda_sparsity: 0.001       # stronger push to static
-  lambda_motion_gate: 0.001
-  static_conversion_threshold: 0.97
-  gate_activation_iter: 500
-  gate_warmup_until_iter: 1500
+  lambda_motion: 0.0
+  lambda_gate_sparsity: 0.0
+  lambda_sparsity: 0.0012
+  lambda_motion_gate: 0.0008
+  static_conversion_threshold: 0.96
+  gate_activation_iter: 2500   # wait longer
+  gate_warmup_until_iter: 4500
   motion_gate_quantile: 0.8
