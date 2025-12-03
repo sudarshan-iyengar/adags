@@ -1165,6 +1165,7 @@ class GaussianModel:
             gate_activation_iter=None,
             gate_warmup_until_iter=None,
             iteration=None,
+            static_motion_quantile=None,
     ):
         grads = self.xyz_gradient_accum / self.denom.clamp_min(1.0)
         grads[grads.isnan()] = 0.0
@@ -1220,7 +1221,7 @@ class GaussianModel:
         )
                 and self._staticness_score.numel() > 0
         ):
-            self.dynamic2static(static_conversion_threshold)
+            self.dynamic2static(conversion_threshold=static_conversion_threshold, motion_quantile=static_motion_quantile,)
 
         torch.cuda.empty_cache()
 
@@ -1258,17 +1259,56 @@ class GaussianModel:
 
     # ----------------- Dynamic → Static -----------------
 
-    def dynamic2static(self, conversion_threshold):
+    def dynamic2static(self, conversion_threshold, motion_quantile=None):
         """
         Move 'static-enough' Gaussians to the static set.
-        Uses self._staticness_score (derived from gate) as indicator.
+
+        Dual-condition rule:
+          1) Gate condition:   s > conversion_threshold
+          2) Motion condition: motion_mag < motion_threshold (quantile-based)
+        Motion condition is applied only if:
+          - motion_quantile is not None, and
+          - compute_motion_magnitude returns a valid tensor.
+        Otherwise, we fall back to the original gate-only rule.
         """
         if self._staticness_score.numel() == 0:
             return
 
-        static_mask = (
-                self._staticness_score > conversion_threshold
-        ).squeeze().to(self._xyz.device)
+        device = self._xyz.device
+
+        # --- Gate condition: high staticness score ---
+        s = self._staticness_score.squeeze()
+        if s.ndim == 0:
+            s = s.unsqueeze(0)
+        gate_mask = (s > conversion_threshold).to(device)
+
+        if not gate_mask.any():
+            return
+
+        static_mask = gate_mask.clone()
+
+        # --- Motion condition (optional) ---
+        if motion_quantile is not None:
+            motion_mag = self.compute_motion_magnitude(dt=0.1, scaling_modifier=1.0)
+            if motion_mag is not None and motion_mag.numel() > 0:
+                motion_mag = motion_mag.squeeze()
+                if motion_mag.ndim == 0:
+                    motion_mag = motion_mag.unsqueeze(0)
+
+                # consider only gate-eligible points when computing threshold
+                eligible_mask = gate_mask & torch.isfinite(motion_mag)
+                if eligible_mask.any():
+                    motion_subset = motion_mag[eligible_mask]
+                    # quantile in [0,1], e.g. 0.6 or 0.7
+                    motion_threshold = torch.quantile(
+                        motion_subset, motion_quantile
+                    ).clamp_min(0.0)
+
+                    low_motion = motion_mag < motion_threshold
+                    static_mask = gate_mask & low_motion
+
+        # If motion info is unavailable or no eligible subset, we keep gate-only behavior.
+
         if static_mask.sum() == 0:
             return
 

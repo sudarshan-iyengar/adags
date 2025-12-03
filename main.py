@@ -346,6 +346,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                                 gate_activation_iter=opt.gate_activation_iter,
                                 gate_warmup_until_iter=opt.gate_warmup_until_iter,
                                 iteration=iteration,
+                                static_motion_quantile=getattr(opt, "static_motion_quantile", None)
                             )
                     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                         gaussians.reset_opacity()

@@ -119,6 +119,10 @@ class OptimizationParams(ParamGroup):
         self.lambda_motion_gate = 0.0
         self.motion_gate_quantile = 0.8
 
+        # NEW: quantile for motion-based static conversion (for dual-condition)
+        self.static_motion_quantile = 0.6
+
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
