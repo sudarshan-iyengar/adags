@@ -303,7 +303,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 if iteration == opt.iterations:
                     progress_bar.close()
 
-                test_psnr = training_report(tb_writer, iteration, Ll1, total_loss, l1_loss, iter_start.elapsed_time(iter_end),
+                test_psnr = training_report(tb_writer, iteration, Ll1, Lssim, total_loss, l1_loss, iter_start.elapsed_time(iter_end),
                                             testing_iterations, scene, render, (pipe, background), loss_dict)
 
                 if iteration in testing_iterations:
@@ -376,12 +376,12 @@ def prepare_output_and_logger(args):
         return None
 
 
-def training_report(tb_writer, iteration, Ll1, loss, l1_loss_fn, elapsed, testing_iterations, scene: Scene, renderFunc, renderArgs, loss_dict=None):
+def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed, testing_iterations, scene: Scene, renderFunc, renderArgs, loss_dict=None):
     test_psnr = None
 
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
-        tb_writer.add_scalar('train_loss_patches/ssim_loss', Ll1.item(), iteration)
+        tb_writer.add_scalar('train_loss_patches/ssim_loss', Lssim.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss, iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
         tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)

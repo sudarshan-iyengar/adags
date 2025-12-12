@@ -1220,6 +1220,27 @@ class GaussianModel:
         )
                 and self._staticness_score.numel() > 0
         ):
+            # ---- Phase-2: dynamicness-aware conversion ----
+            # Use accumulated temporal gradients to estimate how "dynamic" each Gaussian is.
+            if self.gaussian_dim == 4 and self.t_gradient_accum.numel() > 0:
+                with torch.no_grad():
+                    # average |dL/dt| over views
+                    avg_t_grad = self.t_gradient_accum / self.denom.clamp_min(1.0)
+                    avg_t_grad = torch.abs(avg_t_grad)
+                    avg_t_grad = torch.nan_to_num(avg_t_grad)
+
+                    if avg_t_grad.numel() > 0:
+                        # robust scale: normalise by a high quantile (e.g. 90th percentile)
+                        # This is a *normalisation*, not a target static fraction.
+                        scale = torch.quantile(avg_t_grad, 0.9).clamp_min(1e-6)
+                    else:
+                        scale = torch.tensor(1.0, device=avg_t_grad.device)
+
+                    dynamicness = (avg_t_grad / scale).clamp(0.0, 1.0)
+                    # High dynamicness -> reduce staticness score before thresholding
+                    self._staticness_score = self._staticness_score * (1.0 - dynamicness)
+
+            # now do the usual thresholding, but on the adjusted score
             self.dynamic2static(static_conversion_threshold)
 
         torch.cuda.empty_cache()
