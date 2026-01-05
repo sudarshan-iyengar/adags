@@ -1169,9 +1169,6 @@ class GaussianModel:
             gate_warmup_until_iter=None,
             iteration=None,
     ):
-        grads = self.xyz_gradient_accum / self.denom.clamp_min(1.0)
-        grads[grads.isnan()] = 0.0
-
         # 1) Snapshot temporal gradients BEFORE we touch the point set
         avg_t_grad_snapshot = None
         if self.gaussian_dim == 4 and self.t_gradient_accum.numel() > 0:
@@ -1199,23 +1196,29 @@ class GaussianModel:
                     # High dynamicness -> reduce staticness score before thresholding
                     self._staticness_score = self._staticness_score * (1.0 - dynamicness)
 
-            # now do the usual thresholding, but on the adjusted score and with a t-grad veto
+            # thresholding with t-grad veto
             self.dynamic2static(
                 static_conversion_threshold,
                 t_grad_quantile=0.5,
                 avg_t_grad_snapshot=avg_t_grad_snapshot,
             )
 
-        # 3) Only now densify & prune the (updated) dynamic + static sets
+        # 3) NOW compute grads for densification on the updated dynamic set
+        grads = self.xyz_gradient_accum / self.denom.clamp_min(1.0)
+        grads[grads.isnan()] = 0.0
+
+        # 4) Densify dynamic gaussians
         self.densify_and_clone(grads, max_grad, extent)
         self.densify_and_split(grads, max_grad, extent)
 
+        # 5) Densify static gaussians (unchanged)
         if len(self.static_xyz) != 0:
             static_grads = self.static_xyz_gradient_accum / self.static_denom.clamp_min(1.0)
             static_grads[static_grads.isnan()] = 0.0
             self.densify_and_clone_static(static_grads, max_grad, extent)
             self.densify_and_split_static(static_grads, max_grad, extent)
 
+        # 6) Prune dynamic
         prune_mask = (self.get_opacity < min_opacity).squeeze()
         if max_screen_size:
             big_points_vs = self.max_radii2D > max_screen_size
@@ -1223,6 +1226,7 @@ class GaussianModel:
             prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
         self.prune_points(prune_mask)
 
+        # 7) Prune static
         if len(self.static_xyz) != 0:
             prune_static_mask = (self.get_static_opacity < min_opacity).squeeze()
             if max_screen_size:
