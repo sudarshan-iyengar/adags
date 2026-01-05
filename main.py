@@ -68,6 +68,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     tb_writer = prepare_output_and_logger(dataset)
     gaussians = GaussianModel(dataset.sh_degree, gaussian_dim=gaussian_dim, time_duration=time_duration, rot_4d=rot_4d, force_sh_3d=force_sh_3d, sh_degree_t=2 if pipe.eval_shfs_4d else 0)
     scene = Scene(dataset, gaussians, num_pts=num_pts, num_pts_ratio=num_pts_ratio, time_duration=time_duration)
+    scene.opt = opt
     gaussians.training_setup(opt)
 
     if checkpoint:
@@ -414,6 +415,14 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
                 ts = gaussians.get_t.detach()
                 tb_writer.add_histogram('gate/ts/timestamps_after_gating', ts, iteration, bins=50)
+        # Static conversion diagnostics (if available)
+        if hasattr(gaussians, "num_static_candidates_last"):
+            tb_writer.add_scalar('static_conversion/num_candidates',gaussians.num_static_candidates_last,iteration,)
+        if hasattr(gaussians, "num_converted_last"):
+            tb_writer.add_scalar('static_conversion/num_converted',gaussians.num_converted_last,iteration,)
+            if gaussians.num_static_candidates_last > 0:
+                frac = gaussians.num_converted_last / max(1, gaussians.num_static_candidates_last)
+                tb_writer.add_scalar('static_conversion/frac_converted',frac,iteration,)
 
         if loss_dict is not None:
             if "Lrigid" in loss_dict: tb_writer.add_scalar('train_loss_patches/rigid_loss', loss_dict['Lrigid'].item(), iteration)

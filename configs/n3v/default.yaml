@@ -58,9 +58,13 @@ OptimizationParams:
   sh_increase_interval: 1000
   lambda_opa_mask: 0.0
   lambda_rigid: 0.0
-  lambda_motion: 0.001
+
+  lambda_sparsity: 0.0          # start with 0.0 if you want to debug safely
+  lambda_motion_gate: 0.001     # reuse your old lambda_motion value
 
   static_conversion_threshold: 0.99
-  lambda_gate_sparsity: 0 # effectively UNUSED in your current main.py
   gate_activation_iter: 1000
   gate_warmup_until_iter: 2000
+
+  # lambda_motion: 0.001
+  # lambda_gate_sparsity: 0
