@@ -49,7 +49,7 @@ class GaussianModel:
             actual_covariance = L @ L.transpose(1, 2)
             cov_11 = actual_covariance[:,:3,:3]
             cov_12 = actual_covariance[:,0:3,3:4]
-            cov_t = actual_covariance[:,3:4,3:4]
+            cov_t = actual_covariance[:,3:4,3:4].clamp_min(1e-6)
             current_covariance = cov_11 - cov_12 @ cov_12.transpose(1, 2) / cov_t
             symm = strip_symmetric(current_covariance)
 
@@ -348,7 +348,7 @@ class GaussianModel:
                 scaling_modifier * self.get_scaling_xyzt, self._rotation, self._rotation_r
             )
             actual_covariance = L @ L.transpose(1, 2)
-            return actual_covariance[:,3,3].unsqueeze(1)
+            return actual_covariance[:,3,3].unsqueeze(1).clamp_min(1e-6)
         else:
             return self.get_scaling_t * scaling_modifier
 
@@ -357,7 +357,11 @@ class GaussianModel:
         return torch.exp(-0.5*(self.get_t-timestamp)**2/sigma) # / torch.sqrt(2*torch.pi*sigma)
 
     def get_covariance(self, scaling_modifier = 1):
-        return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
+        if self.rot_4d:
+            cov, _ = self.covariance_activation(self.get_scaling_xyzt, scaling_modifier, self._rotation, self._rotation_r,dt=0.0,)
+            return cov
+        else:
+            return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
     def get_current_covariance_and_mean_offset(self, scaling_modifier=1, timestamp=0.0):
         if self.rot_4d:
@@ -573,6 +577,7 @@ class GaussianModel:
     # ----------------- Training setup -----------------
 
     def training_setup(self, training_args):
+        self.training_args = training_args
         self.percent_dense = training_args.percent_dense
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
@@ -596,11 +601,11 @@ class GaussianModel:
 
                 # Static sets (if any)
             if self.static_xyz.numel() > 0:
-                l.append({'params': [self.static_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "static_xyz"}),
-                l.append({'params': [self.static_features_dc], 'lr': training_args.feature_lr, "name": "static_f_dc"}),
-                l.append({'params': [self.static_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "static_f_rest"}),
-                l.append({'params': [self.static_opacity], 'lr': training_args.opacity_lr, "name": "static_opacity"}),
-                l.append({'params': [self.static_scaling], 'lr': training_args.scaling_lr, "name": "static_scaling"}),
+                l.append({'params': [self.static_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "static_xyz"})
+                l.append({'params': [self.static_features_dc], 'lr': training_args.feature_lr, "name": "static_f_dc"})
+                l.append({'params': [self.static_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "static_f_rest"})
+                l.append({'params': [self.static_opacity], 'lr': training_args.opacity_lr, "name": "static_opacity"})
+                l.append({'params': [self.static_scaling], 'lr': training_args.scaling_lr, "name": "static_scaling"})
                 l.append({'params': [self.static_rotation], 'lr': training_args.rotation_lr, "name": "static_rotation"})
 
             # Gate params: monotonic logistic on log sigma_t
@@ -623,6 +628,11 @@ class GaussianModel:
                                                     lr_final=training_args.position_lr_final*self.spatial_lr_scale,
                                                     lr_delay_mult=training_args.position_lr_delay_mult,
                                                     max_steps=training_args.position_lr_max_steps)
+        if self.static_xyz.numel() > 0:
+            n_static = self.static_xyz.shape[0]
+            self.static_xyz_gradient_accum = torch.zeros((n_static, 1), device="cuda")
+            self.static_denom = torch.zeros((n_static, 1), device="cuda")
+            self.static_max_radii2D = torch.zeros((n_static,), device="cuda")
 
     def update_learning_rate(self, iteration):
         for param_group in self.optimizer.param_groups:
@@ -894,13 +904,15 @@ class GaussianModel:
             self.static_rotation = torch.empty((0, new_rotation.shape[1]),
                                                device="cuda", dtype=torch.float32, requires_grad=True)
 
-            base_lr = self.optimizer.param_groups[0]["lr"]
-            self.optimizer.add_param_group({"params": [self.static_xyz],          "lr": base_lr, "name": "static_xyz"})
-            self.optimizer.add_param_group({"params": [self.static_features_dc],  "lr": base_lr, "name": "static_f_dc"})
-            self.optimizer.add_param_group({"params": [self.static_features_rest],"lr": base_lr, "name": "static_f_rest"})
-            self.optimizer.add_param_group({"params": [self.static_opacity],      "lr": base_lr, "name": "static_opacity"})
-            self.optimizer.add_param_group({"params": [self.static_scaling],      "lr": base_lr, "name": "static_scaling"})
-            self.optimizer.add_param_group({"params": [self.static_rotation],     "lr": base_lr, "name": "static_rotation"})
+            # base_lr = self.optimizer.param_groups[0]["lr"]
+            ta = self.training_args
+            self.optimizer.add_param_group({"params":[self.static_xyz], "lr": ta.position_lr_init * self.spatial_lr_scale, "name":"static_xyz"})
+            self.optimizer.add_param_group({"params":[self.static_features_dc], "lr": ta.feature_lr, "name":"static_f_dc"})
+            self.optimizer.add_param_group({"params":[self.static_features_rest], "lr": ta.feature_lr / 20.0, "name":"static_f_rest"})
+            self.optimizer.add_param_group({"params":[self.static_opacity], "lr": ta.opacity_lr, "name":"static_opacity"})
+            self.optimizer.add_param_group({"params":[self.static_scaling], "lr": ta.scaling_lr, "name":"static_scaling"})
+            self.optimizer.add_param_group({"params":[self.static_rotation], "lr": ta.rotation_lr, "name":"static_rotation"})
+
 
         # --- Build dictionary for concatenation ---
         d = {
@@ -1273,90 +1285,132 @@ class GaussianModel:
         self.static_denom[update_filter] += 1
 
     # ----------------- Dynamic → Static -----------------
-    def dynamic2static(self, conversion_threshold, t_grad_quantile=0.5, avg_t_grad_snapshot=None):
+
+    def dynamic2static(
+            self,
+            conversion_threshold,
+            t_grad_quantile=0.5,
+            avg_t_grad_snapshot=None,
+            coupling_thr=0.05,
+            eps=1e-6,
+    ):
         """
         Move 'static-enough' Gaussians to the static set.
 
         conversion_threshold: threshold on staticness_score (s).
         t_grad_quantile: among candidates with s>threshold, only convert those
                          whose avg t-grad is below this quantile (0.5 = median).
+        coupling_thr: (rot_4d only) veto conversion if ||Sigma_xt|| / Sigma_tt is too large.
+        eps: numerical stability.
         """
         if self._staticness_score.numel() == 0:
             self.num_static_candidates_last = 0
             self.num_converted_last = 0
             return
+
         device = self._xyz.device
-        # 1) σ_t-based static candidates (same as before)
-        candidates_mask = (self._staticness_score > conversion_threshold).squeeze().to(device)
-        if candidates_mask.dim() == 0:
-            candidates_mask = candidates_mask.unsqueeze(0)
+
+        # 1) Candidates from staticness score (shape-stable)
+        candidates_mask = (self._staticness_score > conversion_threshold).view(-1).to(device)
 
         num_candidates = int(candidates_mask.sum().item())
         self.num_static_candidates_last = num_candidates
-
         if num_candidates == 0:
             self.num_converted_last = 0
             return
 
-        # 2) Optional t-grad veto: only keep low-motion candidates
+        # 2) Optional t-grad veto (shape-stable)
         final_mask = candidates_mask
-        if (
-                self.gaussian_dim == 4
-                and avg_t_grad_snapshot is not None
-                and t_grad_quantile is not None
-        ):
-            avg_t_grad = avg_t_grad_snapshot
-
+        if self.gaussian_dim == 4 and avg_t_grad_snapshot is not None and t_grad_quantile is not None:
+            avg_t_grad = avg_t_grad_snapshot.view(-1)  # [N]
             candidate_vals = avg_t_grad[candidates_mask]
             if candidate_vals.numel() > 0:
-                # e.g. 0.5 ⇒ median t-grad among candidates
                 thr = torch.quantile(candidate_vals.detach(), t_grad_quantile)
-                low_motion = avg_t_grad <= thr
-                final_mask = candidates_mask & low_motion.squeeze()
+                low_motion = (avg_t_grad <= thr)  # [N]
+                final_mask = candidates_mask & low_motion
 
-        num_converted = int(final_mask.sum().item())
-        self.num_converted_last = num_converted
-
-        if num_converted == 0:
+        static_mask = final_mask
+        if int(static_mask.sum().item()) == 0:
+            self.num_converted_last = 0
             return
 
-        # Below is same as old code except final_mask is used instead of static_mask
+        # 3) rot_4d coupling veto
+        if self.rot_4d:
+            with torch.no_grad():
+                sc_xyzt = self.get_scaling_xyzt[static_mask]      # [M,4] (stds)
+                rotL = self.get_rotation[static_mask]             # [M,4] normalized quat
+                rotR = self.get_rotation_r[static_mask]           # [M,4] normalized quat
 
-        # static_mask = (
-        #         self._staticness_score > conversion_threshold
-        # ).squeeze().to(self._xyz.device)
-        # if static_mask.sum() == 0:
-        #     return
-        static_mask = final_mask
+                L4 = build_scaling_rotation_4d(sc_xyzt, rotL, rotR)  # [M,4,4]
+                C4 = L4 @ L4.transpose(1, 2)                         # [M,4,4]
 
+                cov12 = C4[:, :3, 3:4]                               # [M,3,1]
+                covtt = C4[:, 3:4, 3:4].clamp_min(eps)               # [M,1,1]
+
+                coupling = torch.linalg.norm(cov12.squeeze(-1), dim=-1) / covtt.view(-1)
+                ok = coupling < coupling_thr
+
+            if ok.sum().item() == 0:
+                self.num_converted_last = 0
+                return
+
+            idx = static_mask.nonzero(as_tuple=False).view(-1)   # indices in full set
+            keep_idx = idx[ok]
+
+            refined_mask = torch.zeros_like(static_mask)
+            refined_mask[keep_idx] = True
+            static_mask = refined_mask
+
+        # IMPORTANT: update converted count AFTER refinement
+        num_to_convert = int(static_mask.sum().item())
+        self.num_converted_last = num_to_convert
+        if num_to_convert == 0:
+            return
+
+        # 4) Gather tensors to move
         new_xyz = self._xyz[static_mask]
         new_features_dc = self._features_dc[static_mask]
         new_features_rest = self._features_rest[static_mask]
         new_opacities = self._opacity[static_mask]
-        new_scaling = self._scaling[static_mask]
 
+        # 5) Compute scaling/rotation for the static set
         if self.rot_4d:
-            r_4d = build_rotation_4d(
-                self._rotation[static_mask],
-                self._rotation_r[static_mask],
-            )
-            R = r_4d[:, :3, :3]
-            R = torch.nan_to_num(R)
-            U, _, Vh = torch.linalg.svd(R)
-            R_clean = U @ Vh
-            det = torch.det(R_clean)
-            if (det < 0).any():
-                flip = (det < 0).nonzero(as_tuple=False).squeeze(-1)
-                U[flip, :, -1] *= -1
-                R_clean = U @ Vh
-            new_rotation = rotation_matrix_to_rotation_3d(R_clean)
+            with torch.no_grad():
+                sc_xyzt = self.get_scaling_xyzt[static_mask]
+                rotL = self.get_rotation[static_mask]
+                rotR = self.get_rotation_r[static_mask]
+
+                L4 = build_scaling_rotation_4d(sc_xyzt, rotL, rotR)
+                C4 = L4 @ L4.transpose(1, 2)
+
+                cov11 = C4[:, :3, :3]
+                cov12 = C4[:, :3, 3:4]
+                covtt = C4[:, 3:4, 3:4].clamp_min(eps)
+
+                Sigma = cov11 - (cov12 @ cov12.transpose(1, 2)) / covtt  # conditional cov
+                Sigma = torch.nan_to_num(Sigma)
+                Sigma = 0.5 * (Sigma + Sigma.transpose(-1, -2))          # symmetrize
+
+                Sigma = Sigma + eps * torch.eye(3, device=Sigma.device)[None]
+
+                evals, evecs = torch.linalg.eigh(Sigma)
+                evals = evals.clamp_min(eps)
+
+                stds = torch.sqrt(evals)
+                new_scaling = torch.log(stds)
+
+                R = evecs
+                det = torch.det(R)
+                if (det < 0).any():
+                    flip = (det < 0).nonzero(as_tuple=False).view(-1)
+                    R[flip, :, -1] *= -1.0
+                new_rotation = rotation_matrix_to_rotation_3d(R)
         else:
+            new_scaling = self._scaling[static_mask]
             new_rotation = self._rotation[static_mask]
 
-        # remove from dynamic cloud
+        # 6) Remove from dynamic, append to static
         self.prune_points(static_mask)
-
-        # append into static cloud
         self.densification_postfix_static(
             new_xyz,
             new_features_dc,

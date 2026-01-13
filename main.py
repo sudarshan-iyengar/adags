@@ -104,7 +104,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
     training_dataset = scene.getTrainCameras()
     training_dataloader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True,
-                                     num_workers=0 if dataset.dataloader else 0,
+                                     num_workers=12 if dataset.dataloader else 0,
                                      collate_fn=identity_collate, drop_last=True)
     iteration = first_iter
 
