@@ -601,11 +601,11 @@ class GaussianModel:
 
                 # Static sets (if any)
             if self.static_xyz.numel() > 0:
-                l.append({'params': [self.static_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "static_xyz"})
-                l.append({'params': [self.static_features_dc], 'lr': training_args.feature_lr, "name": "static_f_dc"})
-                l.append({'params': [self.static_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "static_f_rest"})
-                l.append({'params': [self.static_opacity], 'lr': training_args.opacity_lr, "name": "static_opacity"})
-                l.append({'params': [self.static_scaling], 'lr': training_args.scaling_lr, "name": "static_scaling"})
+                l.append({'params': [self.static_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "static_xyz"}),
+                l.append({'params': [self.static_features_dc], 'lr': training_args.feature_lr, "name": "static_f_dc"}),
+                l.append({'params': [self.static_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "static_f_rest"}),
+                l.append({'params': [self.static_opacity], 'lr': training_args.opacity_lr, "name": "static_opacity"}),
+                l.append({'params': [self.static_scaling], 'lr': training_args.scaling_lr, "name": "static_scaling"}),
                 l.append({'params': [self.static_rotation], 'lr': training_args.rotation_lr, "name": "static_rotation"})
 
             # Gate params: monotonic logistic on log sigma_t
@@ -904,14 +904,13 @@ class GaussianModel:
             self.static_rotation = torch.empty((0, new_rotation.shape[1]),
                                                device="cuda", dtype=torch.float32, requires_grad=True)
 
-            # base_lr = self.optimizer.param_groups[0]["lr"]
-            ta = self.training_args
-            self.optimizer.add_param_group({"params":[self.static_xyz], "lr": ta.position_lr_init * self.spatial_lr_scale, "name":"static_xyz"})
-            self.optimizer.add_param_group({"params":[self.static_features_dc], "lr": ta.feature_lr, "name":"static_f_dc"})
-            self.optimizer.add_param_group({"params":[self.static_features_rest], "lr": ta.feature_lr / 20.0, "name":"static_f_rest"})
-            self.optimizer.add_param_group({"params":[self.static_opacity], "lr": ta.opacity_lr, "name":"static_opacity"})
-            self.optimizer.add_param_group({"params":[self.static_scaling], "lr": ta.scaling_lr, "name":"static_scaling"})
-            self.optimizer.add_param_group({"params":[self.static_rotation], "lr": ta.rotation_lr, "name":"static_rotation"})
+            base_lr = self.optimizer.param_groups[0]["lr"]
+            self.optimizer.add_param_group({"params": [self.static_xyz],          "lr": base_lr, "name": "static_xyz"})
+            self.optimizer.add_param_group({"params": [self.static_features_dc],  "lr": base_lr, "name": "static_f_dc"})
+            self.optimizer.add_param_group({"params": [self.static_features_rest],"lr": base_lr, "name": "static_f_rest"})
+            self.optimizer.add_param_group({"params": [self.static_opacity],      "lr": base_lr, "name": "static_opacity"})
+            self.optimizer.add_param_group({"params": [self.static_scaling],      "lr": base_lr, "name": "static_scaling"})
+            self.optimizer.add_param_group({"params": [self.static_rotation],     "lr": base_lr, "name": "static_rotation"})
 
 
         # --- Build dictionary for concatenation ---
