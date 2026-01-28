@@ -54,6 +54,9 @@ OptimizationParams:
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.0002 / 40
   densify_until_num_points: -1
+
+  densify_until_num_points_total: 900000
+
   final_prune_from_iter: -1
   sh_increase_interval: 1000
   lambda_opa_mask: 0.0

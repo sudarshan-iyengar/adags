@@ -318,46 +318,72 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     print(f"\n[ITER {iteration}] Saving Gaussians")
                     scene.save(iteration)
 
-                # ================= densification =================
-                if iteration < opt.densify_until_iter and (opt.densify_until_num_points < 0 or gaussians.get_xyz.shape[0] < opt.densify_until_num_points):
-                    gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+                if iteration % 500 == 0:
+                    Nd = gaussians.get_xyz.shape[0]
+                    Ns = gaussians.get_static_xyz.shape[0]
+                    print(f"[iter {iteration}] Nd={Nd} Ns={Ns} Ntot={Nd+Ns} cap_total={getattr(opt,'densify_until_num_points_total',None)}")
+
+
+    # ================= densification =================
+            if iteration < opt.densify_until_iter:
+                Nd = gaussians.get_xyz.shape[0]
+                Ns = gaussians.get_static_xyz.shape[0] if hasattr(gaussians, "get_static_xyz") else 0
+                Ntot = Nd + Ns
+
+                cap_total = getattr(opt, "densify_until_num_points_total", -1)
+                cap_dyn = getattr(opt, "densify_until_num_points", -1)
+
+                under_total_cap = (cap_total < 0) or (Ntot < cap_total)
+                under_dyn_cap = (cap_dyn < 0) or (Nd < cap_dyn)
+
+                under_cap = under_total_cap and under_dyn_cap
+
+            # ---- always update pruning stats (safe under cap or not) ----
+                gaussians.max_radii2D[visibility_filter] = torch.max(gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
+                if static:
+                    gaussians.static_max_radii2D[visibility_filter_static] = torch.max(
+                        gaussians.static_max_radii2D[visibility_filter_static], radii_static[visibility_filter_static]
+                    )
+            # ---- always accumulate densification stats (even if we end up prune-only) ----
+                if batch_size == 1:
+                    gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter,
+                                                      batch_t_grad if gaussians.gaussian_dim == 4 else None,
+                    )
+                else:
+                    gaussians.add_densification_stats_grad(batch_viewspace_point_grad, visibility_filter,
+                                                           batch_t_grad if gaussians.gaussian_dim == 4 else None)
                     if static:
-                        gaussians.static_max_radii2D[visibility_filter_static] = torch.max(gaussians.static_max_radii2D[visibility_filter_static], radii_static[visibility_filter_static])
+                        gaussians.add_densification_stats_grad_static(batch_viewspace_point_grad_static, visibility_filter_static)
 
-                    if batch_size == 1:
-                        gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter,
-                                                          batch_t_grad if gaussians.gaussian_dim == 4 else None)
-                    else:
-                        gaussians.add_densification_stats_grad(batch_viewspace_point_grad, visibility_filter,
-                                                               batch_t_grad if gaussians.gaussian_dim == 4 else None)
-                        if static:
-                            gaussians.add_densification_stats_grad_static(batch_viewspace_point_grad_static, visibility_filter_static)
-
-                    if iteration > opt.densify_from_iter:
-                        size_threshold = 20 if iteration > opt.opacity_reset_interval else None
-                        if iteration % opt.densification_interval == 0:
-                            gaussians.update_staticness_score()
-                            gaussians.densify_and_prune(
-                                max_grad=opt.densify_grad_threshold,
-                                min_opacity=opt.thresh_opa_prune,
-                                extent=scene.cameras_extent,
-                                max_screen_size=size_threshold,
-                                max_grad_t=opt.densify_grad_t_threshold,
-                                static_conversion_threshold=opt.static_conversion_threshold,
-                                gate_activation_iter=opt.gate_activation_iter,
-                                gate_warmup_until_iter=opt.gate_warmup_until_iter,
-                                iteration=iteration,
-                            )
-                    if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
-                        gaussians.reset_opacity()
+                if iteration > opt.densify_from_iter:
+                    size_threshold = 20 if iteration > opt.opacity_reset_interval else None
+                    if iteration % opt.densification_interval == 0:
+                        gaussians.update_staticness_score()
+                        # KEY IDEA:
+                        # - under_cap: do your normal densify+prune
+                        # - at/over cap: prune-only (no clone/split) so budget stays matched
+                        gaussians.densify_and_prune(
+                            max_grad=opt.densify_grad_threshold,
+                            min_opacity=opt.thresh_opa_prune,
+                            extent=scene.cameras_extent,
+                            max_screen_size=size_threshold,
+                            max_grad_t=opt.densify_grad_t_threshold,
+                            static_conversion_threshold=opt.static_conversion_threshold,
+                            gate_activation_iter=opt.gate_activation_iter,
+                            gate_warmup_until_iter=opt.gate_warmup_until_iter,
+                            iteration=iteration,
+                            prune_only=(not under_cap),   # <---- ADD THIS
+                        )
+                if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
+                    gaussians.reset_opacity()
 
                 # ================= optimizer step =================
-                if iteration < opt.iterations:
-                    gaussians.optimizer.step()
-                    gaussians.optimizer.zero_grad(set_to_none=True)
-                    if pipe.env_map_res and iteration < pipe.env_optimize_until and env_map_optimizer is not None:
-                        env_map_optimizer.step()
-                        env_map_optimizer.zero_grad(set_to_none=True)
+            if iteration < opt.iterations:
+                gaussians.optimizer.step()
+                gaussians.optimizer.zero_grad(set_to_none=True)
+                if pipe.env_map_res and iteration < pipe.env_optimize_until and env_map_optimizer is not None:
+                    env_map_optimizer.step()
+                    env_map_optimizer.zero_grad(set_to_none=True)
 
 
 def prepare_output_and_logger(args):

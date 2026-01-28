@@ -1168,6 +1168,7 @@ class GaussianModel:
             gate_activation_iter=None,
             gate_warmup_until_iter=None,
             iteration=None,
+            prune_only: bool = False
     ):
         # 1) Snapshot temporal gradients BEFORE we touch the point set
         avg_t_grad_snapshot = None
@@ -1208,15 +1209,16 @@ class GaussianModel:
         grads[grads.isnan()] = 0.0
 
         # 4) Densify dynamic gaussians
-        self.densify_and_clone(grads, max_grad, extent)
-        self.densify_and_split(grads, max_grad, extent)
+        if not prune_only:
+            self.densify_and_clone(grads, max_grad, extent)
+            self.densify_and_split(grads, max_grad, extent)
 
-        # 5) Densify static gaussians (unchanged)
-        if len(self.static_xyz) != 0:
-            static_grads = self.static_xyz_gradient_accum / self.static_denom.clamp_min(1.0)
-            static_grads[static_grads.isnan()] = 0.0
-            self.densify_and_clone_static(static_grads, max_grad, extent)
-            self.densify_and_split_static(static_grads, max_grad, extent)
+            # 5) Densify static gaussians (unchanged)
+            if len(self.static_xyz) != 0:
+                static_grads = self.static_xyz_gradient_accum / self.static_denom.clamp_min(1.0)
+                static_grads[static_grads.isnan()] = 0.0
+                self.densify_and_clone_static(static_grads, max_grad, extent)
+                self.densify_and_split_static(static_grads, max_grad, extent)
 
         # 6) Prune dynamic
         prune_mask = (self.get_opacity < min_opacity).squeeze()
