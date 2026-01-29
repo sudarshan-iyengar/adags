@@ -27,6 +27,8 @@ from utils.image_utils import psnr, easy_cmap
 from utils.general_utils import safe_state, knn
 from utils.mesh_utils import GaussianExtractor
 from utils.render_utils import generate_path, create_videos
+from utils.exp1_analysis import Exp1Config, run_exp1_over_testset
+
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -509,6 +511,17 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=6666)
     parser.add_argument("--exhaust_test", action="store_true")
     parser.add_argument("--val", action="store_true", default=False)
+    # === Exp1 analysis args ===
+    parser.add_argument("--exp1", action="store_true", default=False)
+    parser.add_argument("--exp1_out_dir", type=str, default="exp1")
+    parser.add_argument("--exp1_num_views", type=int, default=20)
+    parser.add_argument("--exp1_view_indices", nargs="*", type=int, default=None)
+    parser.add_argument("--exp1_top_err_q", type=float, default=0.95)
+    parser.add_argument("--exp1_marginal_thr", type=float, default=0.05)
+    parser.add_argument("--exp1_use_alpha_mask", action="store_true", default=False)
+    parser.add_argument("--exp1_save_images", action="store_true", default=True)
+    parser.add_argument("--exp1_save_jsonl", action="store_true", default=True)
+    parser.add_argument("--exp1_save_summary_json", action="store_true", default=True)
 
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
@@ -532,6 +545,58 @@ if __name__ == "__main__":
 
     safe_state(args.quiet)
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
+    # ==========================
+    # Exp1: temporal-support vs ghosting analysis (checkpoint required)
+    # ==========================
+    if args.exp1:
+        assert args.start_checkpoint is not None, "Exp1 requires --start_checkpoint pointing to a .pth checkpoint"
+
+        # Build dataset + scene exactly like validation path
+        dataset = lp.extract(args)
+        pipe = pp.extract(args)
+
+        bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
+        background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+
+        gaussians = GaussianModel(
+            dataset.sh_degree,
+            gaussian_dim=args.gaussian_dim,
+            time_duration=args.time_duration,
+            rot_4d=args.rot_4d,
+            force_sh_3d=args.force_sh_3d,
+            sh_degree_t=2 if pipe.eval_shfs_4d else 0,
+        )
+
+        scene = Scene(dataset, gaussians, shuffle=False,
+                      num_pts=args.num_pts, num_pts_ratio=args.num_pts_ratio,
+                      time_duration=args.time_duration)
+
+        (model_params, first_iter) = torch.load(args.start_checkpoint)
+        gaussians.restore(model_params, None)
+
+        # Configure Exp1
+        exp1_cfg = Exp1Config(
+            out_dir=args.exp1_out_dir,
+            num_views=args.exp1_num_views,
+            view_indices=args.exp1_view_indices,
+            top_err_q=args.exp1_top_err_q,
+            marginal_thr=args.exp1_marginal_thr,
+            use_alpha_mask=args.exp1_use_alpha_mask,
+            save_images=args.exp1_save_images,
+            save_jsonl=args.exp1_save_jsonl,
+            save_summary_json=args.exp1_save_summary_json,
+        )
+
+        summary = run_exp1_over_testset(
+            scene=scene,
+            gaussians=gaussians,
+            pipe=pipe,
+            background=background,
+            render_fn=render,
+            cfg=exp1_cfg,
+        )
+        print("[Exp1] Summary:", summary)
+        sys.exit(0)
 
     if not args.val:
         training(lp.extract(args), op.extract(args), pp.extract(args),
