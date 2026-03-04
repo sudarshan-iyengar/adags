@@ -46,6 +46,7 @@ class ParamGroup:
 
 class ModelParams(ParamGroup):
     def __init__(self, parser, sentinel=False):
+        self.source_path = None
         self.sh_degree = 3
         self._source_path = ""
         self._model_path = ""
@@ -118,6 +119,10 @@ class OptimizationParams(ParamGroup):
         self.lambda_sparsity = 0.0
         self.lambda_motion_gate = 0.0
         self.motion_gate_quantile = 0.8
+
+        # Format: "{ iteration: resolution_divisor }"
+        # e.g., 8.0 means 1/8th resolution. 1.0 means full resolution.
+        self.resolution_schedule = "{0: 1.0}"
 
         super().__init__(parser, "Optimization Parameters")
 

@@ -34,7 +34,7 @@ PipelineParams:
   eval_shfs_4d: True
 
 OptimizationParams:
-  iterations: 6_000
+  iterations: 15_000
   position_lr_init: 0.00016
   position_t_lr_init: -1.0
   position_lr_final: 0.0000016
@@ -48,9 +48,9 @@ OptimizationParams:
   lambda_dssim: 0.2
   thresh_opa_prune: 0.005
   densification_interval: 100
-  opacity_reset_interval: 30000
+  opacity_reset_interval: 3000
   densify_from_iter: 500
-  densify_until_iter: 15_000
+  densify_until_iter: 12_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.0002 / 40
   densify_until_num_points: -1
@@ -61,6 +61,8 @@ OptimizationParams:
 
   lambda_sparsity: 0.0          # start with 0.0 if you want to debug safely
   lambda_motion_gate: 0.001     # reuse your old lambda_motion value
+
+  resolution_schedule: "{0: 8.0, 3000: 4.0, 6000: 2.0, 9000: 1.0}"
 
   static_conversion_threshold: 0.99
   gate_activation_iter: 1000
