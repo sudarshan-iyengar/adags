@@ -119,6 +119,9 @@ class OptimizationParams(ParamGroup):
         self.lambda_motion_gate = 0.0
         self.motion_gate_quantile = 0.8
 
+        self.blur_until_iter = 0       # Set > 0 to enable blurring
+        self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):

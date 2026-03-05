@@ -27,6 +27,8 @@ from utils.image_utils import psnr, easy_cmap
 from utils.general_utils import safe_state, knn
 from utils.mesh_utils import GaussianExtractor
 from utils.render_utils import generate_path, create_videos
+import torchvision.transforms.functional as TF
+import math
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -158,9 +160,20 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 visibility_filter_static = render_pkg["visibility_filter_static"]
                 radii_static = render_pkg["radii_static"]
 
+                if opt.blur_until_iter > 0 and iteration < opt.blur_until_iter:
+                    progress = iteration / float(opt.blur_until_iter)
+                    current_sigma = opt.blur_start_sigma * (1.0 - progress) + 0.1 * progress
+
+                    k_size = int(2 * math.ceil(2 * current_sigma)) + 1
+                    image_for_loss = TF.gaussian_blur(image, [k_size, k_size], [current_sigma, current_sigma])
+                    gt_image_for_loss = TF.gaussian_blur(gt_image, [k_size, k_size], [current_sigma, current_sigma])
+                else:
+                    image_for_loss = image
+                    gt_image_for_loss = gt_image
+
                 # Reconstruction Loss
-                Ll1 = l1_loss(image, gt_image)
-                Lssim = 1.0 - ssim(image, gt_image)
+                Ll1 = l1_loss(image_for_loss, gt_image_for_loss)
+                Lssim = 1.0 - ssim(image_for_loss, gt_image_for_loss)
                 loss_recon = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
                 loss = loss_recon
 

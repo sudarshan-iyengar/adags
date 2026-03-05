@@ -14,7 +14,7 @@ ModelParams:
   # source_path: ".../$dataset"
   # model_path: "output/$dataset"
   images: "images"
-  resolution: 1 # use 2 for the original resolution dataset!
+  resolution: 2 # use 2 for the original resolution dataset!
   white_background: False
   data_device: "cuda"
   eval: True
@@ -34,7 +34,7 @@ PipelineParams:
   eval_shfs_4d: True
 
 OptimizationParams:
-  iterations: 6_000
+  iterations: 15_000
   position_lr_init: 0.00016
   position_t_lr_init: -1.0
   position_lr_final: 0.0000016
@@ -50,7 +50,7 @@ OptimizationParams:
   densification_interval: 100
   opacity_reset_interval: 30000
   densify_from_iter: 500
-  densify_until_iter: 15_000
+  densify_until_iter: 12_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.0002 / 40
   densify_until_num_points: -1
@@ -66,5 +66,7 @@ OptimizationParams:
   gate_activation_iter: 1000
   gate_warmup_until_iter: 2000
 
+  blur_until_iter: 9000
+  blur_start_sigma: 8.0        # Simulate roughly an 8x downsample
   # lambda_motion: 0.001
   # lambda_gate_sparsity: 0
