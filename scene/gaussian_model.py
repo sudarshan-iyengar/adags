@@ -594,15 +594,6 @@ class GaussianModel:
             if self.rot_4d:
                 l.append({'params': [self._rotation_r], 'lr': training_args.rotation_lr, "name": "rotation_r"})
 
-                # Static sets (if any)
-            if self.static_xyz.numel() > 0:
-                l.append({'params': [self.static_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "static_xyz"}),
-                l.append({'params': [self.static_features_dc], 'lr': training_args.feature_lr, "name": "static_f_dc"}),
-                l.append({'params': [self.static_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "static_f_rest"}),
-                l.append({'params': [self.static_opacity], 'lr': training_args.opacity_lr, "name": "static_opacity"}),
-                l.append({'params': [self.static_scaling], 'lr': training_args.scaling_lr, "name": "static_scaling"}),
-                l.append({'params': [self.static_rotation], 'lr': training_args.rotation_lr, "name": "static_rotation"})
-
             # Gate params: monotonic logistic on log sigma_t
             if self.logit_a is None:
                 self.logit_a = nn.Parameter(
@@ -613,6 +604,16 @@ class GaussianModel:
                     torch.tensor(-2.0, device="cuda"), requires_grad=True
                 )
             l.append({'params': [self.logit_a, self.logit_b],'lr': training_args.feature_lr,'name': "gate_params",})
+
+                # Static sets (if any)
+            if self.static_xyz.numel() > 0:
+                l.append({'params': [self.static_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "static_xyz"}),
+                l.append({'params': [self.static_features_dc], 'lr': training_args.feature_lr, "name": "static_f_dc"}),
+                l.append({'params': [self.static_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "static_f_rest"}),
+                l.append({'params': [self.static_opacity], 'lr': training_args.opacity_lr, "name": "static_opacity"}),
+                l.append({'params': [self.static_scaling], 'lr': training_args.scaling_lr, "name": "static_scaling"}),
+                l.append({'params': [self.static_rotation], 'lr': training_args.rotation_lr, "name": "static_rotation"})
+
 
             self._staticness_score = torch.zeros(
                 (self.get_xyz.shape[0], 1), device="cuda"
