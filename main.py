@@ -199,22 +199,35 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         # 1. get teacher pos and velocity (no grad)
                         with torch.no_grad():
                             teacher_xyz = teacher_gaussians.get_xyz.detach()
-                            # Evaluate dt=1.0 to get the exact velocity vector
-                            _, teacher_vel= teacher_gaussians.get_current_covariance_and_mean_offset(1.0, teacher_gaussians.get_t + 1.0)
 
                         # 2. Find nearest 1 Teacher point for each visible Student point
                         idx, dist = knn(student_xyz_vis[None].contiguous().detach(), teacher_xyz[None].contiguous().detach(), 1)
                         idx = idx.view(-1)
                         dist = dist.view(-1)
+                        weight = torch.exp(-100 * dist)
 
                         # 3. Get Student velocities
-                        _, student_vel_full = gaussians.get_current_covariance_and_mean_offset(1.0, gaussians.get_t + 1.0)
-                        student_vel_vis = student_vel_full[visible_mask]
-                        target_vel = teacher_vel[idx].detach()
+                        if gaussians.rot_4d:
+                            with torch.no_grad():
+                                _, teacher_dyn = teacher_gaussians.get_current_covariance_and_mean_offset(1.0, teacher_gaussians.get_t + 1.0)
+                            _, student_dyn_full = gaussians.get_current_covariance_and_mean_offset(1.0, gaussians.get_t + 1.0)
+                            student_dyn_vis = student_dyn_full[visible_mask]
+                            target_dyn = teacher_dyn[idx].detach()
+                        else:
+                            # Architecture uses pulsing opacities. Distill time center (_t) and duration (_scaling_t).
+                            student_t_vis = gaussians.get_t[visible_mask]
+                            student_scale_t_vis = gaussians.get_scaling_t[visible_mask]
+                            student_dyn_vis = torch.cat([student_t_vis, student_scale_t_vis], dim=-1)
 
-                        # 4. Compute Loss (Weighted by spatial proximity so we don't punish new outliers)
-                        weight = torch.exp(-100 * dist)
-                        Ldistill = (weight.unsqueeze(-1) * torch.abs(student_vel_vis - target_vel)).mean()
+                            with torch.no_grad():
+                                teacher_t = teacher_gaussians.get_t.detach()
+                                teacher_scale_t = teacher_gaussians.get_scaling_t.detach()
+                                teacher_dyn_full = torch.cat([teacher_t, teacher_scale_t], dim=-1)
+
+                            target_dyn = teacher_dyn_full[idx]
+
+
+                        Ldistill = (weight.unsqueeze(-1) * torch.abs(student_dyn_vis - target_dyn)).mean()
                         loss = loss + opt.lambda_distill * Ldistill
                 # ================================================================
 
