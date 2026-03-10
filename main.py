@@ -200,7 +200,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         with torch.no_grad():
                             teacher_xyz = teacher_gaussians.get_xyz.detach()
                             # Evaluate dt=1.0 to get the exact velocity vector
-                            _, teacher_velocity = teacher_gaussians.get_current_covariance_and_mean_offset(1.0, teacher_gaussians.get_t + 1.0)
+                            _, teacher_vel= teacher_gaussians.get_current_covariance_and_mean_offset(1.0, teacher_gaussians.get_t + 1.0)
 
                         # 2. Find nearest 1 Teacher point for each visible Student point
                         idx, dist = knn(student_xyz_vis[None].contiguous().detach(), teacher_xyz[None].contiguous().detach(), 1)
