@@ -119,6 +119,10 @@ class OptimizationParams(ParamGroup):
         self.lambda_motion_gate = 0.0
         self.motion_gate_quantile = 0.8
 
+        # --- NEW PARAMS FOR TEACHER-STUDENT DISTILLATION ---
+        self.teacher_ckpt = ""       # Path to the fully trained 8x checkpoint
+        self.lambda_distill = 0.0    # Weight for the velocity distillation loss
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):

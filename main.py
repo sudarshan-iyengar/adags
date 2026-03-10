@@ -71,6 +71,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     scene.opt = opt
     gaussians.training_setup(opt)
 
+    # ================= LOAD TEACHER MODEL =================
+    teacher_gaussians = None
+    if getattr(opt, "teacher_ckpt", ""):
+        print(f"\n[DISTILLATION] Loading Teacher Model from {opt.teacher_ckpt}")
+        teacher_gaussians = GaussianModel(dataset.sh_degree, gaussian_dim=gaussian_dim, time_duration=time_duration, rot_4d=rot_4d, force_sh_3d=force_sh_3d, sh_degree_t=2 if pipe.eval_shfs_4d else 0)
+        (teacher_params, _) = torch.load(opt.teacher_ckpt)
+        teacher_gaussians.restore(teacher_params, None)
+    # ======================================================
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
         gaussians.restore(model_params, opt)
@@ -182,6 +190,35 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     Lrigid = (weight * vel_dist).sum() / k / xyz_cur.shape[0]
                     loss = loss + opt.lambda_rigid * Lrigid
 
+                # ================= TEACHER-STUDENT DISTILLATION =================
+                if opt.lambda_distill > 0 and teacher_gaussians is not None and gaussians.gaussian_dim == 4:
+                    visible_mask = visibility_filter.squeeze()
+                    if visible_mask.sum() > 0:
+                        student_xyz_vis = gaussians.get_xyz[visible_mask]
+
+                        # 1. get teacher pos and velocity (no grad)
+                        with torch.no_grad():
+                            teacher_xyz = teacher_gaussians.get_xyz.detach()
+                            # Evaluate dt=1.0 to get the exact velocity vector
+                            _, teacher_velocity = teacher_gaussians.get_current_covariance_and_mean_offset(1.0, teacher_gaussians.get_t + 1.0)
+
+                        # 2. Find nearest 1 Teacher point for each visible Student point
+                        idx, dist = knn(student_xyz_vis[None].contiguous().detach(), teacher_xyz[None].contiguous().detach(), 1)
+                        idx = idx.view(-1)
+                        dist = dist.view(-1)
+
+                        # 3. Get Student velocities
+                        _, student_vel_full = gaussians.get_current_covariance_and_mean_offset(1.0, gaussians.get_t + 1.0)
+                        student_vel_vis = student_vel_full[visible_mask]
+                        target_vel = teacher_vel[idx].detach()
+
+                        # 4. Compute Loss (Weighted by spatial proximity so we don't punish new outliers)
+                        weight = torch.exp(-100 * dist)
+                        Ldistill = (weight.unsqueeze(-1) * torch.abs(student_vel_vis - target_vel)).mean()
+                        loss = loss + opt.lambda_distill * Ldistill
+                # ================================================================
+
+
                 total_loss += loss.item()
                 (loss / batch_size).backward(retain_graph=True)
 
@@ -268,7 +305,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             # ================= logging dictionary =================
             loss_dict = {"Ll1": Ll1, "Lssim": Lssim, "Lsparsity": Lsparsity, "Lmotion_gate": Lmotion_gate}
             if 'Lrigid' in locals(): loss_dict["Lrigid"] = Lrigid
-
+            # ======== DISTILL LOSS LOGGING
+            if 'Ldistill' in locals(): loss_dict["Ldistill"] = Ldistill
+            # ======================
             with torch.no_grad():
                 psnr_for_log = psnr(image, gt_image).mean().double()
 

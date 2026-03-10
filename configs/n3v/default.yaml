@@ -34,7 +34,7 @@ PipelineParams:
   eval_shfs_4d: True
 
 OptimizationParams:
-  iterations: 6_000
+  iterations: 15_000
   position_lr_init: 0.00016
   position_t_lr_init: -1.0
   position_lr_final: 0.0000016
@@ -50,7 +50,7 @@ OptimizationParams:
   densification_interval: 100
   opacity_reset_interval: 30000
   densify_from_iter: 500
-  densify_until_iter: 15_000
+  densify_until_iter: 12_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.0002 / 40
   densify_until_num_points: -1
@@ -65,6 +65,9 @@ OptimizationParams:
   static_conversion_threshold: 0.99
   gate_activation_iter: 1000
   gate_warmup_until_iter: 2000
+
+  lambda_distill: 0.1
+
 
   # lambda_motion: 0.001
   # lambda_gate_sparsity: 0
