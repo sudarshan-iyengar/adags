@@ -16,6 +16,7 @@ from utils.graphics_utils import getWorld2View2, getProjectionMatrix, getProject
 from kornia import create_meshgrid
 from copy import deepcopy
 import torch.nn.functional as F
+import os
 
 class Camera:
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
