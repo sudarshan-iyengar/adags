@@ -15,6 +15,7 @@ import numpy as np
 from utils.graphics_utils import getWorld2View2, getProjectionMatrix, getProjectionMatrixCenterShift, getProjectionMatrixCV, pix2ndc
 from kornia import create_meshgrid
 from copy import deepcopy
+import torch.nn.functional as F
 
 class Camera:
     def __init__(self, colmap_id, R, T, FoVx, FoVy, image, gt_alpha_mask,
@@ -40,7 +41,49 @@ class Camera:
         self.image = image
         self.gt_alpha_mask = gt_alpha_mask
         self.meta_only = meta_only
-        
+
+        # --- NEW CODE: Auto-Load and Scale Optical Flow ---
+        self.optical_flow = None
+        self.flow_mask = None
+        if self.image_path is not None:
+            # Swap 'images' folder for 'flow' folder and change extension
+            flow_path = self.image_path.replace("images", "flow").replace(".png", ".npz").replace(".jpg", ".npz")
+
+            if os.path.exists(flow_path):
+                flow_data = np.load(flow_path)
+                flow_tensor = torch.from_numpy(flow_data['flow']).float()
+                mask_tensor = torch.from_numpy(flow_data['mask']).bool()
+
+                orig_h, orig_w = flow_tensor.shape[0], flow_tensor.shape[1]
+
+                # Handle resolution scaling (if -r 2 or -r 4 is used)
+                if self.image_width != orig_w or self.image_height != orig_h:
+                    scale_x = self.image_width / orig_w
+                    scale_y = self.image_height / orig_h
+
+                    flow_tensor = flow_tensor.permute(2, 0, 1).unsqueeze(0)
+                    mask_tensor = mask_tensor.unsqueeze(0).unsqueeze(0).float()
+
+                    flow_tensor = F.interpolate(flow_tensor, size=(self.image_height, self.image_width), mode='bilinear', align_corners=False)
+                    mask_tensor = F.interpolate(mask_tensor, size=(self.image_height, self.image_width), mode='nearest')
+
+                    flow_tensor = flow_tensor.squeeze(0).permute(1, 2, 0)
+                    mask_tensor = mask_tensor.squeeze(0).squeeze(0).bool()
+
+                    # Scale the flow vectors to match the new pixel dimensions
+                    flow_tensor[:, :, 0] *= scale_x
+                    flow_tensor[:, :, 1] *= scale_y
+
+                # Move to GPU
+                try:
+                    self.data_device = torch.device(data_device)
+                except:
+                    self.data_device = torch.device("cuda")
+
+                self.optical_flow = flow_tensor.to(self.data_device)
+                self.flow_mask = mask_tensor.to(self.data_device)
+        # --------------------------------------------------
+
         try:
             self.data_device = torch.device(data_device)
         except Exception as e:

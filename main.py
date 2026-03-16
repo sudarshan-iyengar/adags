@@ -18,6 +18,7 @@ from argparse import ArgumentParser, Namespace
 from omegaconf import OmegaConf
 from omegaconf.dictconfig import DictConfig
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 
 from gaussian_renderer import render
 from scene import Scene, GaussianModel
@@ -164,6 +165,100 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 loss_recon = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
                 loss = loss_recon
 
+                # ==========================================================
+                # NEW CODE: 3D-to-2D Optical Flow Regularization
+                # ==========================================================
+                Lflow = torch.tensor(0.0, device="cuda")
+
+                if (opt.lambda_flow > 0 and
+                        iteration > opt.flow_activation_iter and
+                        gaussians.gaussian_dim == 4 and
+                        hasattr(viewpoint_cam, 'optical_flow') and
+                        viewpoint_cam.optical_flow is not None):
+
+                    # We only care about points that are actually visible
+                    visible_mask = visibility_filter.squeeze()
+
+                    if visible_mask.sum() > 0:
+                        dt = 1.0 / 30.0 # Assuming N3V is roughly 30fps
+                        xyz_t = gaussians.get_xyz[visible_mask]
+
+                        if gaussians.rot_4d:
+                            # Architecture uses physical motion. Extract velocity vectors.
+                            _, velocity_full = gaussians.get_current_covariance_and_mean_offset(1.0, viewpoint_cam.timestamp + dt)
+                            velocity = velocity_full[visible_mask]
+                            velocity = torch.clamp(velocity, min=-0.5, max=0.5)
+                        else:
+                            # Architecture uses pulsing opacities.
+                            # We calculate the "apparent velocity" by looking at the spatial gradient of the temporal centers.
+                            # We find the nearest neighbor to approximate dx/dt.
+                            with torch.no_grad():
+                                # We need full unmasked xyz to search against
+                                xyz_full = gaussians.get_xyz.detach()
+                                t_full = gaussians.get_t.detach()
+
+                            # Find the nearest 1 neighbor for each visible point (excluding itself by taking k=2 and grabbing the second)
+                            idx, dist = knn(xyz_t[None].contiguous().detach(), xyz_full[None].contiguous().detach(), 2)
+                            idx_neighbor = idx[0, :, 1] # Get the 2nd closest point (the closest is itself)
+
+                            xyz_neighbor = xyz_full[idx_neighbor]
+                            t_neighbor = t_full[idx_neighbor]
+
+                            # Apparent velocity: dx / dt
+                            dt_neighbor = (t_neighbor - gaussians.get_t[visible_mask]).clamp_min(1e-4) # Avoid div by zero
+                            dx_neighbor = xyz_neighbor - xyz_t
+
+                            # Weight it by distance so far away neighbors don't cause wild velocities
+                            weight = torch.exp(-100 * dist[0, :, 1].unsqueeze(-1))
+                            velocity = (dx_neighbor / dt_neighbor) * weight * dt
+                            velocity = torch.clamp(velocity, min=-0.5, max=0.5)
+
+                        xyz_next = xyz_t + velocity
+
+                        # 2. Project 3D points to Screen Space
+                        def project_to_screen(pts_3d, cam):
+                            pts_homo = torch.cat([pts_3d, torch.ones((pts_3d.shape[0], 1), device=pts_3d.device)], dim=1)
+                            p_clip = pts_homo @ cam.full_proj_transform
+                            # Perspective divide, avoiding div-by-zero
+                            w = p_clip[:, 3:4].clamp_min(1e-6)
+                            p_ndc = p_clip[:, :2] / w
+
+                            p_screen = torch.zeros_like(p_ndc)
+                            p_screen[:, 0] = ((p_ndc[:, 0] + 1.0) * cam.image_width - 1.0) * 0.5
+                            p_screen[:, 1] = ((p_ndc[:, 1] + 1.0) * cam.image_height - 1.0) * 0.5
+                            return p_screen
+
+                        screen_t = project_to_screen(xyz_t, viewpoint_cam)
+                        screen_next = project_to_screen(xyz_next, viewpoint_cam)
+
+                        # 3. Calculate predicted 2D pixel velocity
+                        flow_pred_pts = screen_next - screen_t # [N_vis, 2]
+
+                        # 4. Get ground truth flow at Gaussian locations
+                        grid_x = 2.0 * screen_t[:, 0] / max(viewpoint_cam.image_width - 1, 1) - 1.0
+                        grid_y = 2.0 * screen_t[:, 1] / max(viewpoint_cam.image_height - 1, 1) - 1.0
+                        grid = torch.stack([grid_x, grid_y], dim=-1).unsqueeze(0).unsqueeze(0) # [1, 1, N_vis, 2]
+
+                        flow_gt = viewpoint_cam.optical_flow.permute(2, 0, 1).unsqueeze(0)
+                        mask_gt = viewpoint_cam.flow_mask.unsqueeze(0).unsqueeze(0).float()
+
+                        # Explicitly grab Batch 0 and Height 0, resulting in [2, N_vis], then transpose to [N_vis, 2]
+                        sampled_flow_gt = F.grid_sample(flow_gt, grid, align_corners=True)[0, :, 0, :].transpose(0, 1)
+
+                        # Explicitly grab Batch 0, Channel 0, Height 0, resulting in [N_vis]
+                        sampled_mask = F.grid_sample(mask_gt, grid, mode='nearest', align_corners=True)[0, 0, 0, :]
+
+                        # 5. Filter: Inside image bounds AND not occluded
+                        valid_idx = (grid_x >= -1.0) & (grid_x <= 1.0) & (grid_y >= -1.0) & (grid_y <= 1.0)
+                        valid_idx = valid_idx & (sampled_mask > 0.5)
+
+                        if valid_idx.sum() > 0:
+                            # 6. Apply Loss
+                            Lflow = l1_loss(flow_pred_pts[valid_idx], sampled_flow_gt[valid_idx])
+                            loss = loss + opt.lambda_flow * Lflow
+                # ==========================================================
+
+
                 # opa mask loss
                 if opt.lambda_opa_mask > 0:
                     o = alpha.clamp(1e-6, 1 - 1e-6)
@@ -268,6 +363,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             # ================= logging dictionary =================
             loss_dict = {"Ll1": Ll1, "Lssim": Lssim, "Lsparsity": Lsparsity, "Lmotion_gate": Lmotion_gate}
             if 'Lrigid' in locals(): loss_dict["Lrigid"] = Lrigid
+            if 'Lflow' in locals() and Lflow.item() > 0: loss_dict["Lflow"] = Lflow # <--- ADDED THIS FOR OPTICAL FLOW LOSS
 
             with torch.no_grad():
                 psnr_for_log = psnr(image, gt_image).mean().double()
@@ -294,6 +390,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         "points": scene.gaussians.get_xyz.shape[0],
                         "static": scene.gaussians.get_static_xyz.shape[0]
                     }
+                    if 'Lflow' in loss_dict:
+                        postfix["Lflow"] = f"{loss_dict['Lflow']:.4f}"
                     for lambda_name in lambda_all:
                         if opt.__dict__[lambda_name] > 0:
                             key = lambda_name.replace("lambda_", "L")

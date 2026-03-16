@@ -119,6 +119,10 @@ class OptimizationParams(ParamGroup):
         self.lambda_motion_gate = 0.0
         self.motion_gate_quantile = 0.8
 
+        # --- NEW FLOW PARAMS ---
+        self.lambda_flow = 0.1              # Weight for the L1 flow loss
+        self.flow_activation_iter = 1000    # Wait until basic geometry forms before applying flow
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
