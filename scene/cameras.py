@@ -94,8 +94,8 @@ class Camera:
                     flow_tensor[:, :, 1] *= scale_y
 
                 # Move to GPU
-                self.optical_flow = flow_tensor.to(self.data_device)
-                self.flow_mask = mask_tensor.to(self.data_device)
+                self.optical_flow = flow_tensor
+                self.flow_mask = mask_tensor
         # --------------------------------------------------
 
         self.zfar = far
