@@ -43,6 +43,22 @@ class Camera:
         self.gt_alpha_mask = gt_alpha_mask
         self.meta_only = meta_only
 
+        try:
+            self.data_device = torch.device(data_device)
+        except Exception as e:
+            print(e)
+            print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device")
+            self.data_device = torch.device("cuda")
+
+        self.image_width = resolution[0]
+        self.image_height = resolution[1]
+
+        if not self.meta_only:
+            if gt_alpha_mask is not None:
+                self.image *= gt_alpha_mask.to(self.image.device)
+            else:
+                self.image *= torch.ones((1, self.image_height, self.image_width), device=self.image.device)
+
         # --- NEW CODE: Auto-Load and Scale Optical Flow ---
         self.optical_flow = None
         self.flow_mask = None
@@ -51,6 +67,8 @@ class Camera:
             flow_path = self.image_path.replace("images", "flow").replace(".png", ".npz").replace(".jpg", ".npz")
 
             if os.path.exists(flow_path):
+
+
                 flow_data = np.load(flow_path)
                 flow_tensor = torch.from_numpy(flow_data['flow']).float()
                 mask_tensor = torch.from_numpy(flow_data['mask']).bool()
@@ -76,30 +94,9 @@ class Camera:
                     flow_tensor[:, :, 1] *= scale_y
 
                 # Move to GPU
-                try:
-                    self.data_device = torch.device(data_device)
-                except:
-                    self.data_device = torch.device("cuda")
-
                 self.optical_flow = flow_tensor.to(self.data_device)
                 self.flow_mask = mask_tensor.to(self.data_device)
         # --------------------------------------------------
-
-        try:
-            self.data_device = torch.device(data_device)
-        except Exception as e:
-            print(e)
-            print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device")
-            self.data_device = torch.device("cuda")
-
-        self.image_width = resolution[0]
-        self.image_height = resolution[1]
-        
-        if not self.meta_only:
-            if gt_alpha_mask is not None:
-                self.image *= gt_alpha_mask.to(self.image.device)
-            else:
-                self.image *= torch.ones((1, self.image_height, self.image_width), device=self.image.device)
 
         self.zfar = far
         self.znear = 0.01
