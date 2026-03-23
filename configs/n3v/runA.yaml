@@ -34,7 +34,7 @@ PipelineParams:
   eval_shfs_4d: True
 
 OptimizationParams:
-  iterations: 6_000
+  iterations: 15_000
   position_lr_init: 0.00016
   position_t_lr_init: -1.0
   position_lr_final: 0.0000016
@@ -66,8 +66,11 @@ OptimizationParams:
   gate_activation_iter: 1000
   gate_warmup_until_iter: 2000
 
-  lambda_flow: 0.01
+  lambda_flow: 0.005
   flow_activation_iter: 1000
+
+  blur_until_iter: 12000
+  blur_start_sigma: 5.0
 
   # lambda_motion: 0.001
   # lambda_gate_sparsity: 0
