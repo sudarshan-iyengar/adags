@@ -123,6 +123,10 @@ class OptimizationParams(ParamGroup):
         self.lambda_flow = 0.1              # Weight for the L1 flow loss
         self.flow_activation_iter = 1000    # Wait until basic geometry forms before applying flow
 
+        # --- NEW BLUR PARAMS ---
+        self.blur_until_iter = 15000
+        self.blur_start_sigma = 5.0
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):

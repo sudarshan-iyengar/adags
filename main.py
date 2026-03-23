@@ -19,6 +19,8 @@ from omegaconf import OmegaConf
 from omegaconf.dictconfig import DictConfig
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+import math
+import torchvision.transforms.functional as TF
 
 from gaussian_renderer import render
 from scene import Scene, GaussianModel
@@ -159,14 +161,31 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 visibility_filter_static = render_pkg["visibility_filter_static"]
                 radii_static = render_pkg["radii_static"]
 
-                # Reconstruction Loss
-                Ll1 = l1_loss(image, gt_image)
-                Lssim = 1.0 - ssim(image, gt_image)
+                # ================= SYNTHETIC BLUR ANNEALING =================
+                if opt.blur_until_iter > 0 and iteration < opt.blur_until_iter:
+                    # Linearly decay sigma from start_sigma down to 0.1
+                    progress = iteration / float(opt.blur_until_iter)
+                    current_sigma = opt.blur_start_sigma * (1.0 - progress) + 0.1 * progress
+
+                    # Kernel size must be odd. Standard practice: 2 * ceil(2 * sigma) + 1
+                    k_size = int(2 * math.ceil(2 * current_sigma)) + 1
+
+                    # Apply identical blur to BOTH prediction and ground truth
+                    image_for_loss = TF.gaussian_blur(image, [k_size, k_size], [current_sigma, current_sigma])
+                    gt_image_for_loss = TF.gaussian_blur(gt_image, [k_size, k_size], [current_sigma, current_sigma])
+                else:
+                    image_for_loss = image
+                    gt_image_for_loss = gt_image
+                # ============================================================
+
+                # Reconstruction Loss (using the potentially blurred images)
+                Ll1 = l1_loss(image_for_loss, gt_image_for_loss)
+                Lssim = 1.0 - ssim(image_for_loss, gt_image_for_loss)
                 loss_recon = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
                 loss = loss_recon
 
                 # ==========================================================
-                # NEW CODE: 3D-to-2D Optical Flow Regularization
+                # 3D-to-2D Optical Flow Regularization
                 # ==========================================================
                 Lflow = torch.tensor(0.0, device="cuda")
 
@@ -204,8 +223,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                             xyz_neighbor = xyz_full[idx_neighbor]
                             t_neighbor = t_full[idx_neighbor]
 
-                            # Apparent velocity: dx / dt
-                            dt_neighbor = (t_neighbor - gaussians.get_t[visible_mask]).clamp_min(1e-4) # Avoid div by zero
+                            dt_raw = t_neighbor - gaussians.get_t[visible_mask]
+
+                            # Preserve sign, but clamp the magnitude to avoid div-by-zero
+                            sign_dt = torch.sign(dt_raw)
+                            sign_dt[sign_dt == 0] = 1.0 # Fallback for exact zero
+                            dt_neighbor = sign_dt * torch.clamp(torch.abs(dt_raw), min=1e-4)
+
                             dx_neighbor = xyz_neighbor - xyz_t
 
                             # Weight it by distance so far away neighbors don't cause wild velocities
@@ -592,8 +616,8 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str)
     parser.add_argument("--debug_from", type=int, default=-1)
     parser.add_argument("--detect_anomaly", action='store_true', default=False)
-    parser.add_argument("--test_iterations", nargs="+", type=int, default=[2_000, 4_000, 6_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[2_000, 3_000, 4_000, 5_000, 6_000])
+    parser.add_argument("--test_iterations", nargs="+", type=int, default=[2_000, 4_000, 6_000, 8_000, 10_000, 12_000, 13_000, 14_000, 15_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[2_000, 4_000, 6_000, 8_000, 10_000, 12_000, 13_000, 14_000, 15_000])
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--start_checkpoint", type=str, default=None)
 
