@@ -20,5 +20,6 @@ dependencies:
     - kornia==0.6.12
     - omegaconf==2.3.0
     - lpips
+    - wandb
     - ./simple-knn
     - ./pointops2

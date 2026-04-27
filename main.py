@@ -9,7 +9,13 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
-import os, sys, uuid, random
+import math
+import os
+import random
+import socket
+import subprocess
+import sys
+import uuid
 import torch
 from torch import nn
 import numpy as np
@@ -28,7 +34,6 @@ from utils.general_utils import safe_state, knn
 from utils.mesh_utils import GaussianExtractor
 from utils.render_utils import generate_path, create_videos
 import torchvision.transforms.functional as TF
-import math
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -36,11 +41,144 @@ try:
 except ImportError:
     TENSORBOARD_FOUND = False
 
+try:
+    import wandb
+    WANDB_FOUND = True
+except ImportError:
+    wandb = None
+    WANDB_FOUND = False
+
 def identity_collate(x):
     return x
 
 
-def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_4d, force_sh_3d, num_pts, num_pts_ratio):
+def ensure_model_path(args):
+    if not args.model_path:
+        unique_str = os.getenv('OAR_JOB_ID') if os.getenv('OAR_JOB_ID') else str(uuid.uuid4())
+        args.model_path = os.path.join("./output/", unique_str[0:10])
+    return args.model_path
+
+
+def get_git_commit():
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def get_job_metadata():
+    job_id = None
+    job_env_var = None
+    for env_name in ("OAR_JOB_ID", "SLURM_JOB_ID", "PBS_JOBID", "JOB_ID"):
+        env_value = os.getenv(env_name)
+        if env_value:
+            job_id = env_value
+            job_env_var = env_name
+            break
+
+    return {
+        "hostname": socket.gethostname(),
+        "cuda_visible_devices": os.getenv("CUDA_VISIBLE_DEVICES"),
+        "job_id": job_id,
+        "job_id_env": job_env_var,
+        "git_commit": get_git_commit(),
+    }
+
+
+def build_wandb_config(args):
+    config = {}
+    for key, value in vars(args).items():
+        if key == "wandb_tags":
+            config[key] = value if value is not None else []
+        elif isinstance(value, tuple):
+            config[key] = list(value)
+        else:
+            config[key] = value
+
+    for key, value in get_job_metadata().items():
+        config[f"runtime_{key}"] = value
+    return config
+
+
+def init_wandb(args):
+    if not args.use_wandb or args.wandb_mode == "disabled":
+        return None
+
+    if not WANDB_FOUND:
+        raise ImportError("Weights & Biases logging requested, but `wandb` is not installed.")
+
+    if args.wandb_mode == "online" and not os.getenv("WANDB_API_KEY"):
+        raise RuntimeError(
+            "Weights & Biases online mode requires WANDB_API_KEY in the environment. "
+            "Use `--wandb_mode offline` for local dry runs without an API key."
+        )
+
+    ensure_model_path(args)
+    run = wandb.init(
+        project=args.wandb_project,
+        entity=args.wandb_entity,
+        name=args.wandb_run_name,
+        group=args.wandb_group,
+        tags=args.wandb_tags,
+        mode=args.wandb_mode,
+        id=args.wandb_resume,
+        resume="allow" if args.wandb_resume else None,
+        dir=args.model_path,
+        config=build_wandb_config(args),
+    )
+    run.summary["model_path"] = args.model_path
+    run.summary["config_path"] = args.config
+    if args.start_checkpoint:
+        run.summary["start_checkpoint"] = args.start_checkpoint
+    return run
+
+
+def finish_wandb_run(wandb_run, summary_updates=None):
+    if wandb_run is None:
+        return
+
+    if summary_updates:
+        for key, value in summary_updates.items():
+            if value is not None:
+                wandb_run.summary[key] = value
+    wandb_run.finish()
+
+
+def maybe_wandb_histogram(values):
+    if values is None or not WANDB_FOUND:
+        return None
+    values = values.detach()
+    if values.numel() == 0:
+        return None
+    return wandb.Histogram(values.float().cpu().numpy())
+
+
+def log_wandb_metrics(wandb_run, metrics, step):
+    if wandb_run is None:
+        return
+
+    clean_metrics = {}
+    for key, value in metrics.items():
+        if value is None:
+            continue
+        if torch.is_tensor(value):
+            if value.numel() == 1:
+                clean_metrics[key] = value.item()
+            else:
+                clean_metrics[key] = maybe_wandb_histogram(value)
+        else:
+            clean_metrics[key] = value
+
+    clean_metrics = {key: value for key, value in clean_metrics.items() if value is not None}
+    if clean_metrics:
+        wandb_run.log(clean_metrics, step=step)
+
+
+def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_4d, force_sh_3d, num_pts, num_pts_ratio, wandb_run=None):
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
@@ -58,10 +196,14 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     os.makedirs(test_dir, exist_ok=True)
     gaussExtractor.reconstruction(scene.getTestCameras(), test_dir, stage="validation")
     gaussExtractor.export_image(test_dir, mode="validation")
+    if wandb_run is not None:
+        wandb_run.summary["validation_checkpoint"] = checkpoint
+        wandb_run.summary["validation_output_dir"] = test_dir
+        wandb_run.summary["validation_train_dir"] = train_dir
 
 
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint, debug_from,
-             gaussian_dim, time_duration, num_pts, num_pts_ratio, rot_4d, force_sh_3d, batch_size):
+             gaussian_dim, time_duration, num_pts, num_pts_ratio, rot_4d, force_sh_3d, batch_size, wandb_run=None):
 
     if dataset.frame_ratio > 1:
         time_duration = [time_duration[0] / dataset.frame_ratio, time_duration[1] / dataset.frame_ratio]
@@ -284,6 +426,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
             with torch.no_grad():
                 psnr_for_log = psnr(image, gt_image).mean().double()
+                log_wandb_metrics(wandb_run, {"train/psnr": psnr_for_log}, iteration)
 
                 ema_loss_for_log = 0.4 * total_loss + 0.6 * ema_loss_for_log
                 ema_l1loss_for_log = 0.4 * Ll1.item() + 0.6 * ema_l1loss_for_log
@@ -318,7 +461,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     progress_bar.close()
 
                 test_psnr = training_report(tb_writer, iteration, Ll1, Lssim, total_loss, l1_loss, iter_start.elapsed_time(iter_end),
-                                            testing_iterations, scene, render, (pipe, background), loss_dict)
+                                            testing_iterations, scene, render, (pipe, background), loss_dict, wandb_run)
 
                 if iteration in testing_iterations:
                     if test_psnr is None: test_psnr = 0.0
@@ -372,11 +515,22 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         env_map_optimizer.step()
                         env_map_optimizer.zero_grad(set_to_none=True)
 
+    return {
+        "best_test_psnr": best_psnr,
+        "final_iteration": opt.iterations,
+        "final_total_points": scene.gaussians.get_xyz.shape[0],
+        "final_static_points": scene.gaussians.get_static_xyz.shape[0] if hasattr(scene.gaussians, 'get_static_xyz') else 0,
+        "final_dynamic_points": (
+            scene.gaussians.get_xyz.shape[0] - scene.gaussians.get_static_xyz.shape[0]
+            if hasattr(scene.gaussians, 'get_static_xyz') else scene.gaussians.get_xyz.shape[0]
+        ),
+        "model_path": scene.model_path,
+        "start_checkpoint": checkpoint,
+    }
+
 
 def prepare_output_and_logger(args):
-    if not args.model_path:
-        unique_str = os.getenv('OAR_JOB_ID') if os.getenv('OAR_JOB_ID') else str(uuid.uuid4())
-        args.model_path = os.path.join("./output/", unique_str[0:10])
+    ensure_model_path(args)
 
     print(f"Output folder: {args.model_path}")
     os.makedirs(args.model_path, exist_ok=True)
@@ -390,23 +544,21 @@ def prepare_output_and_logger(args):
         return None
 
 
-def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed, testing_iterations, scene: Scene, renderFunc, renderArgs, loss_dict=None):
+def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed, testing_iterations, scene: Scene, renderFunc, renderArgs, loss_dict=None, wandb_run=None):
     test_psnr = None
+    gaussians = scene.gaussians
+    opt = getattr(scene, 'opt', None)
+    total_points = gaussians.get_xyz.shape[0]
+    static_points = gaussians.get_static_xyz.shape[0] if hasattr(gaussians, 'get_static_xyz') else 0
+    dynamic_points = total_points - static_points
 
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/ssim_loss', Lssim.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss, iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
-        tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)
-        tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)
-
-        gaussians = scene.gaussians
-        opt = getattr(scene, 'opt', None)
-
-        total_points = gaussians.get_xyz.shape[0]
-        static_points = gaussians.get_static_xyz.shape[0] if hasattr(gaussians, 'get_static_xyz') else 0
-        dynamic_points = total_points - static_points
+        tb_writer.add_scalar('total_points', total_points, iteration)
+        tb_writer.add_histogram("scene/opacity_histogram", gaussians.get_opacity, iteration)
 
         tb_writer.add_scalar('points/total', total_points, iteration)
         tb_writer.add_scalar('points/static', static_points, iteration)
@@ -451,6 +603,62 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         tb_writer.add_scalar('gpu/memory_allocated_MB', torch.cuda.memory_allocated() / 1e6, iteration)
         tb_writer.add_scalar('gpu/memory_reserved_MB', torch.cuda.memory_reserved() / 1e6, iteration)
 
+    wandb_metrics = {
+        "train/l1_loss": Ll1.item(),
+        "train/ssim_loss": Lssim.item(),
+        "train/total_loss": loss,
+        "train/iter_time_ms": elapsed,
+        "points/total": total_points,
+        "points/static": static_points,
+        "points/dynamic": dynamic_points,
+        "gpu/memory_allocated_MB": torch.cuda.memory_allocated() / 1e6,
+        "gpu/memory_reserved_MB": torch.cuda.memory_reserved() / 1e6,
+        "hist/scene_opacity": gaussians.get_opacity,
+    }
+
+    if hasattr(gaussians, '_staticness_score') and opt is not None and gaussians._staticness_score.numel() > 0:
+        conversion_rate = (gaussians._staticness_score > opt.static_conversion_threshold).float().mean().item() * 100
+        wandb_metrics["points/static_conversion_rate"] = conversion_rate
+
+    if hasattr(gaussians, 'differentiable_s') and gaussians.differentiable_s is not None and gaussians.differentiable_s.numel() > 0:
+        s = gaussians.differentiable_s.detach()
+        wandb_metrics.update({
+            "gate/mean_s": s.mean().item(),
+            "gate/median_s": s.median().item(),
+            "gate/min_s": s.min().item(),
+            "gate/max_s": s.max().item(),
+            "gate/percent_s_gt_0_9": (s > 0.9).float().mean().item() * 100,
+            "gate/percent_s_lt_0_1": (s < 0.1).float().mean().item() * 100,
+            "hist/gate_s_distribution": s,
+        })
+        if hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
+            wandb_metrics["hist/gate_timestamps_after_gating"] = gaussians.get_t.detach()
+
+    if hasattr(gaussians, "num_static_candidates_last"):
+        wandb_metrics["static_conversion/num_candidates"] = gaussians.num_static_candidates_last
+    if hasattr(gaussians, "num_converted_last"):
+        wandb_metrics["static_conversion/num_converted"] = gaussians.num_converted_last
+        if gaussians.num_static_candidates_last > 0:
+            wandb_metrics["static_conversion/frac_converted"] = gaussians.num_converted_last / max(1, gaussians.num_static_candidates_last)
+
+    if loss_dict is not None:
+        loss_metric_names = {
+            "Lrigid": "train/rigid_loss",
+            "Ldepth": "train/depth_loss",
+            "Ltv": "train/tv_loss",
+            "Lopa": "train/opa_loss",
+            "Lptsopa": "train/pts_opa_loss",
+            "Lsmooth": "train/smooth_loss",
+            "Llaplacian": "train/laplacian_loss",
+            "Lsparsity": "train/gate_sparsity_loss",
+            "Lmotion_gate": "train/motion_gate_loss",
+        }
+        for key, metric_name in loss_metric_names.items():
+            if key in loss_dict:
+                wandb_metrics[metric_name] = loss_dict[key]
+
+    log_wandb_metrics(wandb_run, wandb_metrics, iteration)
+
     # simple evaluation on test set when requested
     if iteration in testing_iterations:
         (pipe, background) = renderArgs
@@ -486,6 +694,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if psnrs:
                 test_psnr = float(np.mean(psnrs))
                 if tb_writer: tb_writer.add_scalar('test/psnr', test_psnr, iteration)
+                log_wandb_metrics(wandb_run, {"test/psnr": test_psnr}, iteration)
                 return test_psnr
     return None
 
@@ -522,9 +731,16 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=6666)
     parser.add_argument("--exhaust_test", action="store_true")
     parser.add_argument("--val", action="store_true", default=False)
+    parser.add_argument("--use_wandb", action="store_true", default=False)
+    parser.add_argument("--wandb_project", type=str, default="adags")
+    parser.add_argument("--wandb_entity", type=str, default=None)
+    parser.add_argument("--wandb_run_name", type=str, default=None)
+    parser.add_argument("--wandb_group", type=str, default=None)
+    parser.add_argument("--wandb_tags", nargs="+", default=None)
+    parser.add_argument("--wandb_mode", type=str, choices=["online", "offline", "disabled"], default="online")
+    parser.add_argument("--wandb_resume", type=str, default=None)
 
     args = parser.parse_args(sys.argv[1:])
-    args.save_iterations.append(args.iterations)
 
     cfg = OmegaConf.load(args.config)
 
@@ -537,6 +753,12 @@ if __name__ == "__main__":
 
     for k in cfg.keys(): recursive_merge(k, cfg)
 
+    if args.wandb_mode == "disabled":
+        args.use_wandb = False
+
+    args.save_iterations.append(args.iterations)
+    ensure_model_path(args)
+
     if args.exhaust_test:
         args.test_iterations = args.test_iterations + [i for i in range(0, args.iterations, 500)]
 
@@ -546,14 +768,24 @@ if __name__ == "__main__":
     safe_state(args.quiet)
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
 
-    if not args.val:
-        training(lp.extract(args), op.extract(args), pp.extract(args),
-                 args.test_iterations, args.save_iterations, args.start_checkpoint, args.debug_from,
-                 args.gaussian_dim, args.time_duration, args.num_pts, args.num_pts_ratio,
-                 args.rot_4d, args.force_sh_3d, args.batch_size)
-    else:
-        validation(lp.extract(args), op.extract(args), pp.extract(args),
-                   args.start_checkpoint, args.gaussian_dim, args.time_duration,
-                   args.rot_4d, args.force_sh_3d, args.num_pts, args.num_pts_ratio)
+    wandb_run = init_wandb(args)
+
+    summary_updates = None
+    try:
+        if not args.val:
+            summary_updates = training(lp.extract(args), op.extract(args), pp.extract(args),
+                                       args.test_iterations, args.save_iterations, args.start_checkpoint, args.debug_from,
+                                       args.gaussian_dim, args.time_duration, args.num_pts, args.num_pts_ratio,
+                                       args.rot_4d, args.force_sh_3d, args.batch_size, wandb_run)
+        else:
+            validation(lp.extract(args), op.extract(args), pp.extract(args),
+                       args.start_checkpoint, args.gaussian_dim, args.time_duration,
+                       args.rot_4d, args.force_sh_3d, args.num_pts, args.num_pts_ratio, wandb_run)
+            summary_updates = {
+                "model_path": args.model_path,
+                "validation_checkpoint": args.start_checkpoint,
+            }
+    finally:
+        finish_wandb_run(wandb_run, summary_updates)
 
     print("\nComplete.")
