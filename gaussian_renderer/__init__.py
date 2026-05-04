@@ -59,9 +59,17 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     rasterizer = GaussianRasterizer(raster_settings=raster_settings)
 
-    means3D = pc.get_xyz
+    means3D = pc.get_dynamic_xyz(viewpoint_camera.timestamp)
     means2D = screenspace_points
-    opacity = pc.get_opacity
+    base_opacity = pc.get_opacity
+    dynamic_probability = pc.get_dynamic_probability
+    static_probability = pc.get_static_probability
+    use_soft_routing = (
+        pc.gaussian_dim == 4
+        and pc.enable_soft_routing
+        and dynamic_probability.numel() > 0
+    )
+    opacity = base_opacity * dynamic_probability
 
     # If precomputed 3d covariance is provided, use it. If not, then it will be computed from
     # scaling / rotation by the rasterizer.
@@ -86,9 +94,6 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         if pc.gaussian_dim == 4:
             scales_t = pc.get_scaling_t
             ts = pc.get_t
-            if hasattr(pc, "differentiable_s") and pc.differentiable_s is not None and pc.differentiable_s.numel() > 0:
-                s = pc.differentiable_s.clamp(0, 1)
-                ts = (1.0 - s) * ts + s * viewpoint_camera.timestamp
             if pc.rot_4d:
                 rotations_r = pc.get_rotation_r
 
@@ -153,17 +158,27 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     # Rasterize visible Gaussians to image, obtain their radii (on screen).
 
-    means3D_static = pc.get_static_xyz
+    if use_soft_routing:
+        means3D_static = pc.get_xyz
+        opacity_static = base_opacity * static_probability
+        sh_static = pc.get_features
+        scales_static = pc.get_scaling
+        rotations_static = pc.get_rotation
+        hard_static_count = 0
+    else:
+        means3D_static = pc.get_static_xyz
+        opacity_static = pc.get_static_opacity
+        sh_static = pc.get_static_features
+        scales_static = pc.get_static_scaling
+        rotations_static = pc.get_static_rotation
+        hard_static_count = means3D_static.shape[0]
+
     screenspace_points_static = torch.zeros_like(means3D_static, dtype=means3D_static.dtype, requires_grad=True, device="cuda") + 0
     try:
         screenspace_points_static.retain_grad()
     except:
         pass
     means2D_static = screenspace_points_static
-    opacity_static = pc.get_static_opacity
-    sh_static = pc.get_static_features
-    scales_static = pc.get_static_scaling
-    rotations_static = pc.get_static_rotation
 
     rendered_image, radii, depth, alpha, flow, covs_com, radii_static, color_4d, color_3d, invdepth = rasterizer(
         means3D = means3D,
@@ -221,4 +236,6 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             "render_4d": color_4d,
             "render_3d": color_3d,
             "viewspace_points_static": screenspace_points_static,
+            "soft_routing": use_soft_routing,
+            "hard_static_count": hard_static_count,
             }

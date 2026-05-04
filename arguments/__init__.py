@@ -109,6 +109,7 @@ class OptimizationParams(ParamGroup):
         self.lambda_rigid = 0.0
         self.lambda_motion = 0.0
 
+        self.enable_hard_static_conversion = False
         self.static_conversion_threshold = 0.99
         self.lambda_gate_sparsity = 0.0
 
@@ -118,6 +119,15 @@ class OptimizationParams(ParamGroup):
         self.lambda_sparsity = 0.0
         self.lambda_motion_gate = 0.0
         self.motion_gate_quantile = 0.8
+
+        self.enable_soft_routing = True
+        self.route_logit_init = 4.0
+        self.route_lr = -1.0
+
+        self.motion_model = "poly"
+        self.motion_poly_order = 2
+        self.motion_lr_init = -1.0
+        self.motion_reg_lambda = 0.0
 
         self.blur_until_iter = 0       # Set > 0 to enable blurring
         self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel

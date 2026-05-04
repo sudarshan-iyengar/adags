@@ -256,8 +256,15 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     device = "cuda"
     Lsparsity = torch.tensor(0.0, device=device)
     Lmotion_gate = torch.tensor(0.0, device=device)
+    Lmotion_reg = torch.tensor(0.0, device=device)
 
     motion_gate_quantile = getattr(opt, "motion_gate_quantile", 0.8)
+    hard_static_conversion = getattr(opt, "enable_hard_static_conversion", False)
+    use_legacy_gate = (
+            hard_static_conversion
+            or getattr(opt, "lambda_sparsity", 0.0) > 0
+            or getattr(opt, "lambda_motion_gate", 0.0) > 0
+    )
 
     while iteration < opt.iterations + 1:
         for batch_data in training_dataloader:
@@ -274,8 +281,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if (iteration - 1) == debug_from:
                 pipe.debug = True
 
-            # compute gate scores (no gate loss yet)
-            if iteration >= opt.gate_activation_iter:
+            # Legacy hard-conversion gate is disabled by default for reversible routing.
+            if use_legacy_gate and iteration >= opt.gate_activation_iter:
                 gaussians.compute_differentiable_staticness()
             else:
                 if gaussians._xyz.shape[0] > 0:
@@ -301,6 +308,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 viewspace_point_tensor_static = render_pkg["viewspace_points_static"]
                 visibility_filter_static = render_pkg["visibility_filter_static"]
                 radii_static = render_pkg["radii_static"]
+                has_hard_static = render_pkg.get("hard_static_count", 0) > 0
 
                 if opt.blur_until_iter > 0 and iteration < opt.blur_until_iter:
                     progress = iteration / float(opt.blur_until_iter)
@@ -344,7 +352,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 batch_radii.append(radii)
                 batch_visibility_filter.append(visibility_filter)
 
-                if len(viewspace_point_tensor_static) > 0:
+                if has_hard_static and len(viewspace_point_tensor_static) > 0:
                     static = True
                     batch_point_grad_static.append(torch.norm(viewspace_point_tensor_static.grad[:, :2], dim=-1))
                     batch_radii_static.append(radii_static)
@@ -388,7 +396,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Lsparsity = torch.tensor(0.0, device=device)
             Lmotion_gate = torch.tensor(0.0, device=device)
 
-            if iteration > opt.gate_activation_iter and gaussians._xyz.shape[0] > 0:
+            if use_legacy_gate and iteration > opt.gate_activation_iter and gaussians._xyz.shape[0] > 0:
                 s = gaussians.differentiable_s
                 if s is not None and s.numel() > 0:
                     # annealed sparsity toward static (s→1)
@@ -418,10 +426,25 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         total_loss += gate_loss.item()
                         gate_loss.backward()
 
+            Lmotion_reg = torch.tensor(0.0, device=device)
+            if (
+                    getattr(opt, "motion_reg_lambda", 0.0) > 0
+                    and gaussians.gaussian_dim == 4
+                    and getattr(gaussians, "motion_model", "") == "poly"
+                    and gaussians.get_motion_v.numel() > 0
+            ):
+                Lmotion_reg = opt.motion_reg_lambda * (
+                    gaussians.get_motion_v.pow(2).mean()
+                    + gaussians.get_motion_a.pow(2).mean()
+                )
+                if Lmotion_reg.requires_grad and Lmotion_reg.item() != 0.0:
+                    total_loss += Lmotion_reg.item()
+                    Lmotion_reg.backward()
+
             iter_end.record()
 
             # ================= logging dictionary =================
-            loss_dict = {"Ll1": Ll1, "Lssim": Lssim, "Lsparsity": Lsparsity, "Lmotion_gate": Lmotion_gate}
+            loss_dict = {"Ll1": Ll1, "Lssim": Lssim, "Lsparsity": Lsparsity, "Lmotion_gate": Lmotion_gate, "Lmotion_reg": Lmotion_reg}
             if 'Lrigid' in locals(): loss_dict["Lrigid"] = Lrigid
 
             with torch.no_grad():
@@ -492,7 +515,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     if iteration > opt.densify_from_iter:
                         size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                         if iteration % opt.densification_interval == 0:
-                            gaussians.update_staticness_score()
+                            if hard_static_conversion:
+                                gaussians.update_staticness_score()
                             gaussians.densify_and_prune(
                                 max_grad=opt.densify_grad_threshold,
                                 min_opacity=opt.thresh_opa_prune,
@@ -503,6 +527,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                                 gate_activation_iter=opt.gate_activation_iter,
                                 gate_warmup_until_iter=opt.gate_warmup_until_iter,
                                 iteration=iteration,
+                                enable_hard_static_conversion=hard_static_conversion,
                             )
                     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                         gaussians.reset_opacity()
@@ -551,6 +576,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
     total_points = gaussians.get_xyz.shape[0]
     static_points = gaussians.get_static_xyz.shape[0] if hasattr(gaussians, 'get_static_xyz') else 0
     dynamic_points = total_points - static_points
+    hard_static_conversion = bool(getattr(opt, "enable_hard_static_conversion", False)) if opt is not None else False
 
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
@@ -564,11 +590,11 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         tb_writer.add_scalar('points/static', static_points, iteration)
         tb_writer.add_scalar('points/dynamic', dynamic_points, iteration)
 
-        if hasattr(gaussians, '_staticness_score') and opt is not None and gaussians._staticness_score.numel() > 0:
+        if hard_static_conversion and hasattr(gaussians, '_staticness_score') and opt is not None and gaussians._staticness_score.numel() > 0:
             conversion_rate = (gaussians._staticness_score > opt.static_conversion_threshold).float().mean().item() * 100
             tb_writer.add_scalar('points/static_conversion_rate', conversion_rate, iteration)
 
-        if hasattr(gaussians, 'differentiable_s') and gaussians.differentiable_s is not None and gaussians.differentiable_s.numel() > 0:
+        if hard_static_conversion and hasattr(gaussians, 'differentiable_s') and gaussians.differentiable_s is not None and gaussians.differentiable_s.numel() > 0:
             s = gaussians.differentiable_s.detach()
             tb_writer.add_scalar('gate/scalars/mean_s', s.mean().item(), iteration)
             tb_writer.add_scalar('gate/scalars/median_s', s.median().item(), iteration)
@@ -580,10 +606,19 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
                 ts = gaussians.get_t.detach()
                 tb_writer.add_histogram('gate/ts/timestamps_after_gating', ts, iteration, bins=50)
-        # Static conversion diagnostics (if available)
-        if hasattr(gaussians, "num_static_candidates_last"):
+        if gaussians.get_route_logit.numel() > 0:
+            p_dyn = gaussians.get_dynamic_probability.detach().clamp(1e-6, 1.0 - 1e-6)
+            route_entropy = (-(p_dyn * torch.log(p_dyn) + (1.0 - p_dyn) * torch.log(1.0 - p_dyn))).mean()
+            tb_writer.add_scalar('routing/mean_dynamic_prob', p_dyn.mean().item(), iteration)
+            tb_writer.add_scalar('routing/entropy', route_entropy.item(), iteration)
+            tb_writer.add_scalar('routing/percent_near_static', (p_dyn < 0.1).float().mean().item() * 100, iteration)
+            tb_writer.add_scalar('routing/percent_near_dynamic', (p_dyn > 0.9).float().mean().item() * 100, iteration)
+            tb_writer.add_histogram('routing/dynamic_probability', p_dyn, iteration, bins=50)
+
+        # Static conversion diagnostics (only for explicit hard-conversion ablations)
+        if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
             tb_writer.add_scalar('static_conversion/num_candidates',gaussians.num_static_candidates_last,iteration,)
-        if hasattr(gaussians, "num_converted_last"):
+        if hard_static_conversion and hasattr(gaussians, "num_converted_last"):
             tb_writer.add_scalar('static_conversion/num_converted',gaussians.num_converted_last,iteration,)
             if gaussians.num_static_candidates_last > 0:
                 frac = gaussians.num_converted_last / max(1, gaussians.num_static_candidates_last)
@@ -599,6 +634,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if "Llaplacian" in loss_dict: tb_writer.add_scalar('train_loss_patches/laplacian_loss', loss_dict['Llaplacian'].item(), iteration)
             if "Lsparsity" in loss_dict: tb_writer.add_scalar('train_loss_patches/gate_sparsity_loss', loss_dict['Lsparsity'].item(), iteration)
             if "Lmotion_gate" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_gate_loss', loss_dict['Lmotion_gate'].item(), iteration)
+            if "Lmotion_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_reg_loss', loss_dict['Lmotion_reg'].item(), iteration)
 
         tb_writer.add_scalar('gpu/memory_allocated_MB', torch.cuda.memory_allocated() / 1e6, iteration)
         tb_writer.add_scalar('gpu/memory_reserved_MB', torch.cuda.memory_reserved() / 1e6, iteration)
@@ -616,11 +652,11 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         "hist/scene_opacity": gaussians.get_opacity,
     }
 
-    if hasattr(gaussians, '_staticness_score') and opt is not None and gaussians._staticness_score.numel() > 0:
+    if hard_static_conversion and hasattr(gaussians, '_staticness_score') and opt is not None and gaussians._staticness_score.numel() > 0:
         conversion_rate = (gaussians._staticness_score > opt.static_conversion_threshold).float().mean().item() * 100
         wandb_metrics["points/static_conversion_rate"] = conversion_rate
 
-    if hasattr(gaussians, 'differentiable_s') and gaussians.differentiable_s is not None and gaussians.differentiable_s.numel() > 0:
+    if hard_static_conversion and hasattr(gaussians, 'differentiable_s') and gaussians.differentiable_s is not None and gaussians.differentiable_s.numel() > 0:
         s = gaussians.differentiable_s.detach()
         wandb_metrics.update({
             "gate/mean_s": s.mean().item(),
@@ -634,9 +670,20 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         if hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
             wandb_metrics["hist/gate_timestamps_after_gating"] = gaussians.get_t.detach()
 
-    if hasattr(gaussians, "num_static_candidates_last"):
+    if gaussians.get_route_logit.numel() > 0:
+        p_dyn = gaussians.get_dynamic_probability.detach().clamp(1e-6, 1.0 - 1e-6)
+        route_entropy = (-(p_dyn * torch.log(p_dyn) + (1.0 - p_dyn) * torch.log(1.0 - p_dyn))).mean()
+        wandb_metrics.update({
+            "routing/mean_dynamic_prob": p_dyn.mean().item(),
+            "routing/entropy": route_entropy.item(),
+            "routing/percent_near_static": (p_dyn < 0.1).float().mean().item() * 100,
+            "routing/percent_near_dynamic": (p_dyn > 0.9).float().mean().item() * 100,
+            "hist/routing_dynamic_probability": p_dyn,
+        })
+
+    if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
         wandb_metrics["static_conversion/num_candidates"] = gaussians.num_static_candidates_last
-    if hasattr(gaussians, "num_converted_last"):
+    if hard_static_conversion and hasattr(gaussians, "num_converted_last"):
         wandb_metrics["static_conversion/num_converted"] = gaussians.num_converted_last
         if gaussians.num_static_candidates_last > 0:
             wandb_metrics["static_conversion/frac_converted"] = gaussians.num_converted_last / max(1, gaussians.num_static_candidates_last)
@@ -652,6 +699,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "Llaplacian": "train/laplacian_loss",
             "Lsparsity": "train/gate_sparsity_loss",
             "Lmotion_gate": "train/motion_gate_loss",
+            "Lmotion_reg": "train/motion_reg_loss",
         }
         for key, metric_name in loss_metric_names.items():
             if key in loss_dict:
