@@ -430,13 +430,21 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if (
                     getattr(opt, "motion_reg_lambda", 0.0) > 0
                     and gaussians.gaussian_dim == 4
-                    and getattr(gaussians, "motion_model", "") == "poly"
-                    and gaussians.get_motion_v.numel() > 0
             ):
-                Lmotion_reg = opt.motion_reg_lambda * (
-                    gaussians.get_motion_v.pow(2).mean()
-                    + gaussians.get_motion_a.pow(2).mean()
-                )
+                if getattr(gaussians, "motion_model", "") == "poly" and gaussians.get_motion_v.numel() > 0:
+                    Lmotion_reg = opt.motion_reg_lambda * (
+                        gaussians.get_motion_v.pow(2).mean()
+                        + gaussians.get_motion_a.pow(2).mean()
+                    )
+                elif (
+                        getattr(gaussians, "motion_model", "") == "lora"
+                        and gaussians.get_motion_lora_coeff.numel() > 0
+                        and gaussians.get_motion_lora_basis is not None
+                ):
+                    Lmotion_reg = opt.motion_reg_lambda * (
+                        gaussians.get_motion_lora_coeff.pow(2).mean()
+                        + gaussians.get_motion_lora_basis.pow(2).mean()
+                    )
                 if Lmotion_reg.requires_grad and Lmotion_reg.item() != 0.0:
                     total_loss += Lmotion_reg.item()
                     Lmotion_reg.backward()
@@ -615,6 +623,12 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             tb_writer.add_scalar('routing/percent_near_dynamic', (p_dyn > 0.9).float().mean().item() * 100, iteration)
             tb_writer.add_histogram('routing/dynamic_probability', p_dyn, iteration, bins=50)
 
+        if getattr(gaussians, "motion_model", "") == "lora" and gaussians.get_motion_lora_coeff.numel() > 0:
+            tb_writer.add_scalar('motion_lora/coeff_norm_mean', gaussians.get_motion_lora_coeff.detach().norm(dim=1).mean().item(), iteration)
+            if gaussians.get_motion_lora_basis is not None:
+                tb_writer.add_scalar('motion_lora/basis_norm_mean', gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item(), iteration)
+                tb_writer.add_histogram('motion_lora/basis', gaussians.get_motion_lora_basis.detach(), iteration, bins=50)
+
         # Static conversion diagnostics (only for explicit hard-conversion ablations)
         if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
             tb_writer.add_scalar('static_conversion/num_candidates',gaussians.num_static_candidates_last,iteration,)
@@ -680,6 +694,12 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "routing/percent_near_dynamic": (p_dyn > 0.9).float().mean().item() * 100,
             "hist/routing_dynamic_probability": p_dyn,
         })
+
+    if getattr(gaussians, "motion_model", "") == "lora" and gaussians.get_motion_lora_coeff.numel() > 0:
+        wandb_metrics["motion_lora/coeff_norm_mean"] = gaussians.get_motion_lora_coeff.detach().norm(dim=1).mean().item()
+        if gaussians.get_motion_lora_basis is not None:
+            wandb_metrics["motion_lora/basis_norm_mean"] = gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item()
+            wandb_metrics["hist/motion_lora_basis"] = gaussians.get_motion_lora_basis.detach()
 
     if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
         wandb_metrics["static_conversion/num_candidates"] = gaussians.num_static_candidates_last

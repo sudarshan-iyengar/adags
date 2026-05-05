@@ -135,6 +135,11 @@ class GaussianModel:
         self.motion_poly_order = 2
         self._motion_v = torch.empty(0)
         self._motion_a = torch.empty(0)
+        self.motion_lora_rank = 8
+        self.motion_lora_anchors = 16
+        self.motion_lora_init_scale = 0.01
+        self._motion_lora_coeff = torch.empty(0)
+        self._motion_lora_basis = None
 
         self.setup_functions()
 
@@ -167,10 +172,15 @@ class GaussianModel:
                 "route_logit": self._route_logit,
                 "motion_v": self._motion_v,
                 "motion_a": self._motion_a,
+                "motion_lora_coeff": self._motion_lora_coeff,
+                "motion_lora_basis": self._motion_lora_basis,
                 "enable_soft_routing": self.enable_soft_routing,
                 "route_logit_init": self.route_logit_init,
                 "motion_model": self.motion_model,
                 "motion_poly_order": self.motion_poly_order,
+                "motion_lora_rank": self.motion_lora_rank,
+                "motion_lora_anchors": self.motion_lora_anchors,
+                "motion_lora_init_scale": self.motion_lora_init_scale,
             }
 
             return (
@@ -273,6 +283,12 @@ class GaussianModel:
                 self._motion_a = routing_motion_params.get(
                     "motion_a", torch.empty(0, device=self._xyz.device)
                 )
+                self._motion_lora_coeff = routing_motion_params.get(
+                    "motion_lora_coeff", torch.empty(0, device=self._xyz.device)
+                )
+                self._motion_lora_basis = routing_motion_params.get(
+                    "motion_lora_basis", None
+                )
                 self.enable_soft_routing = routing_motion_params.get(
                     "enable_soft_routing", self.enable_soft_routing
                 )
@@ -284,6 +300,15 @@ class GaussianModel:
                 )
                 self.motion_poly_order = routing_motion_params.get(
                     "motion_poly_order", self.motion_poly_order
+                )
+                self.motion_lora_rank = routing_motion_params.get(
+                    "motion_lora_rank", self.motion_lora_rank
+                )
+                self.motion_lora_anchors = routing_motion_params.get(
+                    "motion_lora_anchors", self.motion_lora_anchors
+                )
+                self.motion_lora_init_scale = routing_motion_params.get(
+                    "motion_lora_init_scale", self.motion_lora_init_scale
                 )
 
         if training_args is not None:
@@ -407,6 +432,14 @@ class GaussianModel:
     def get_motion_a(self):
         return self._motion_a
 
+    @property
+    def get_motion_lora_coeff(self):
+        return self._motion_lora_coeff
+
+    @property
+    def get_motion_lora_basis(self):
+        return self._motion_lora_basis
+
     def get_polynomial_motion_offset(self, timestamp):
         if (
                 self.gaussian_dim != 4
@@ -422,9 +455,54 @@ class GaussianModel:
             offset = offset + self._motion_a * dt * dt
         return offset
 
+    def _sample_lora_basis(self, relative_dt):
+        if self._motion_lora_basis is None:
+            return None
+        if self._motion_lora_basis.numel() == 0:
+            return None
+
+        basis = self._motion_lora_basis
+        num_anchors = basis.shape[1]
+        if num_anchors < 2:
+            return basis[:, 0:1, :].permute(1, 0, 2).expand(relative_dt.shape[0], -1, -1)
+
+        duration = max(float(self.time_duration[1] - self.time_duration[0]), 1e-6)
+        u = ((relative_dt / duration) + 1.0) * 0.5
+        u = u.clamp(0.0, 1.0).squeeze(-1)
+        pos = u * float(num_anchors - 1)
+        lo = torch.floor(pos).long().clamp(0, num_anchors - 1)
+        hi = (lo + 1).clamp(0, num_anchors - 1)
+        w = (pos - lo.float()).view(1, -1, 1)
+
+        basis_lo = basis[:, lo, :]
+        basis_hi = basis[:, hi, :]
+        sampled = basis_lo * (1.0 - w) + basis_hi * w
+        return sampled.permute(1, 0, 2)
+
+    def get_lora_motion_offset(self, timestamp):
+        if (
+                self.gaussian_dim != 4
+                or self.motion_model != "lora"
+                or self._motion_lora_coeff.numel() == 0
+                or self._motion_lora_coeff.shape[0] != self._xyz.shape[0]
+                or self._motion_lora_basis is None
+        ):
+            return torch.zeros_like(self._xyz)
+
+        relative_dt = timestamp - self.get_t
+        basis_at_dt = self._sample_lora_basis(relative_dt)
+        basis_at_center = self._sample_lora_basis(torch.zeros_like(relative_dt))
+        if basis_at_dt is None or basis_at_center is None:
+            return torch.zeros_like(self._xyz)
+
+        centered_basis = basis_at_dt - basis_at_center
+        return torch.einsum("nr,nrd->nd", self._motion_lora_coeff, centered_basis)
+
     def get_dynamic_xyz(self, timestamp):
         if self.gaussian_dim == 4 and self.motion_model == "poly" and not self.rot_4d:
             return self._xyz + self.get_polynomial_motion_offset(timestamp)
+        if self.gaussian_dim == 4 and self.motion_model == "lora" and not self.rot_4d:
+            return self._xyz + self.get_lora_motion_offset(timestamp)
         return self._xyz
 
     @property
@@ -635,6 +713,9 @@ class GaussianModel:
             self._motion_a = nn.Parameter(
                 torch.zeros((self.get_xyz.shape[0], 3), device="cuda").requires_grad_(True)
             )
+            self._motion_lora_coeff = nn.Parameter(
+                torch.zeros((self.get_xyz.shape[0], self.motion_lora_rank), device="cuda").requires_grad_(True)
+            )
 
     def create_from_pth(self, path, spatial_lr_scale):
         assert self.gaussian_dim == 4 and self.rot_4d
@@ -700,6 +781,15 @@ class GaussianModel:
                 torch.zeros((self.get_xyz.shape[0], 3), device="cuda"),
             ).cuda().requires_grad_(True)
         )
+        self._motion_lora_coeff = nn.Parameter(
+            init_4d_gaussian.get(
+                "motion_lora_coeff",
+                torch.zeros((self.get_xyz.shape[0], self.motion_lora_rank), device="cuda"),
+            ).cuda().requires_grad_(True)
+        )
+        motion_lora_basis = init_4d_gaussian.get("motion_lora_basis", None)
+        if motion_lora_basis is not None:
+            self._motion_lora_basis = nn.Parameter(motion_lora_basis.cuda().requires_grad_(True))
 
     # ----------------- Training setup -----------------
 
@@ -729,12 +819,40 @@ class GaussianModel:
         elif not isinstance(self._motion_a, nn.Parameter):
             self._motion_a = nn.Parameter(self._motion_a.to(device).requires_grad_(True))
 
+        if self._motion_lora_coeff.numel() == 0 or self._motion_lora_coeff.shape[0] != n_points or self._motion_lora_coeff.shape[1] != self.motion_lora_rank:
+            self._motion_lora_coeff = nn.Parameter(
+                torch.zeros((n_points, self.motion_lora_rank), device=device).requires_grad_(True)
+            )
+        elif not isinstance(self._motion_lora_coeff, nn.Parameter):
+            self._motion_lora_coeff = nn.Parameter(self._motion_lora_coeff.to(device).requires_grad_(True))
+
+        need_basis = (
+                self._motion_lora_basis is None
+                or self._motion_lora_basis.numel() == 0
+                or self._motion_lora_basis.shape[0] != self.motion_lora_rank
+                or self._motion_lora_basis.shape[1] != self.motion_lora_anchors
+        )
+        if need_basis:
+            anchor_grid = torch.linspace(-1.0, 1.0, self.motion_lora_anchors, device=device)
+            basis = torch.zeros((self.motion_lora_rank, self.motion_lora_anchors, 3), device=device)
+            for rank_idx in range(self.motion_lora_rank):
+                freq = rank_idx // 6 + 1
+                phase = torch.sin(anchor_grid * torch.pi * freq) if rank_idx % 2 == 0 else torch.cos(anchor_grid * torch.pi * freq) - 1.0
+                axis = rank_idx % 3
+                basis[rank_idx, :, axis] = phase * self.motion_lora_init_scale
+            self._motion_lora_basis = nn.Parameter(basis.requires_grad_(True))
+        elif not isinstance(self._motion_lora_basis, nn.Parameter):
+            self._motion_lora_basis = nn.Parameter(self._motion_lora_basis.to(device).requires_grad_(True))
+
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense
         self.enable_soft_routing = getattr(training_args, "enable_soft_routing", True)
         self.route_logit_init = getattr(training_args, "route_logit_init", 4.0)
         self.motion_model = getattr(training_args, "motion_model", "poly")
         self.motion_poly_order = getattr(training_args, "motion_poly_order", 2)
+        self.motion_lora_rank = getattr(training_args, "motion_lora_rank", 8)
+        self.motion_lora_anchors = getattr(training_args, "motion_lora_anchors", 16)
+        self.motion_lora_init_scale = getattr(training_args, "motion_lora_init_scale", 0.01)
 
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
@@ -758,11 +876,16 @@ class GaussianModel:
             l.append({'params': [self._scaling_t], 'lr': training_args.scaling_lr, "name": "scaling_t"})
             route_lr = training_args.route_lr if getattr(training_args, "route_lr", -1.0) >= 0 else training_args.feature_lr
             motion_lr = training_args.motion_lr_init if getattr(training_args, "motion_lr_init", -1.0) >= 0 else training_args.position_lr_init * self.spatial_lr_scale
+            motion_lora_coeff_lr = training_args.motion_lora_coeff_lr if getattr(training_args, "motion_lora_coeff_lr", -1.0) >= 0 else motion_lr
+            motion_lora_basis_lr = training_args.motion_lora_basis_lr if getattr(training_args, "motion_lora_basis_lr", -1.0) >= 0 else motion_lr
             if self.enable_soft_routing:
                 l.append({'params': [self._route_logit], 'lr': route_lr, "name": "route_logit"})
             if self.motion_model == "poly":
                 l.append({'params': [self._motion_v], 'lr': motion_lr, "name": "motion_v"})
                 l.append({'params': [self._motion_a], 'lr': motion_lr, "name": "motion_a"})
+            elif self.motion_model == "lora":
+                l.append({'params': [self._motion_lora_coeff], 'lr': motion_lora_coeff_lr, "name": "motion_lora_coeff"})
+                l.append({'params': [self._motion_lora_basis], 'lr': motion_lora_basis_lr, "name": "motion_lora_basis"})
             if self.rot_4d:
                 l.append({'params': [self._rotation_r], 'lr': training_args.rotation_lr, "name": "rotation_r"})
 
@@ -837,7 +960,7 @@ class GaussianModel:
             name = group["name"]
 
             # Skip global / non-per-point groups
-            if name in ("gate_mlp", "gate_params"):
+            if name in ("gate_mlp", "gate_params", "motion_lora_basis"):
                 continue
 
             if static and "static" not in name:
@@ -892,6 +1015,8 @@ class GaussianModel:
                 self._motion_v = optimizable_tensors["motion_v"]
             if "motion_a" in optimizable_tensors:
                 self._motion_a = optimizable_tensors["motion_a"]
+            if "motion_lora_coeff" in optimizable_tensors:
+                self._motion_lora_coeff = optimizable_tensors["motion_lora_coeff"]
             if self.rot_4d:
                 self._rotation_r = optimizable_tensors['rotation_r']
             self.t_gradient_accum = self.t_gradient_accum[valid_points_mask]
@@ -917,7 +1042,7 @@ class GaussianModel:
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
             name = group["name"]
-            if name in ("gate_mlp", "gate_params"):
+            if name in ("gate_mlp", "gate_params", "motion_lora_basis"):
                 # Global params; no concatenation
                 continue
 
@@ -985,6 +1110,7 @@ class GaussianModel:
             new_route_logit=None,
             new_motion_v=None,
             new_motion_a=None,
+            new_motion_lora_coeff=None,
     ):
         d = {
             "xyz": new_xyz,
@@ -1014,6 +1140,12 @@ class GaussianModel:
                     if new_motion_a is not None
                     else self._motion_a.new_zeros((new_xyz.shape[0], 3))
                 )
+            if self.motion_model == "lora" and new_xyz.shape[0] > 0:
+                d["motion_lora_coeff"] = (
+                    new_motion_lora_coeff
+                    if new_motion_lora_coeff is not None
+                    else self._motion_lora_coeff.new_zeros((new_xyz.shape[0], self.motion_lora_rank))
+                )
             if self.rot_4d:
                 d["rotation_r"] = new_rotation_r
 
@@ -1035,6 +1167,8 @@ class GaussianModel:
                 self._motion_v = optimizable_tensors["motion_v"]
             if "motion_a" in optimizable_tensors:
                 self._motion_a = optimizable_tensors["motion_a"]
+            if "motion_lora_coeff" in optimizable_tensors:
+                self._motion_lora_coeff = optimizable_tensors["motion_lora_coeff"]
             if self.rot_4d:
                 self._rotation_r = optimizable_tensors["rotation_r"]
             self.t_gradient_accum = torch.zeros(
@@ -1182,6 +1316,7 @@ class GaussianModel:
             new_route_logit = None
             new_motion_v = None
             new_motion_a = None
+            new_motion_lora_coeff = None
             if self.gaussian_dim == 4:
                 stds_t = self.get_scaling_t[selected_pts_mask].repeat(N, 1)
                 means_t = torch.zeros((stds_t.size(0), 1), device="cuda")
@@ -1199,6 +1334,8 @@ class GaussianModel:
                 if self.motion_model == "poly":
                     new_motion_v = self._motion_v[selected_pts_mask].repeat(N, 1)
                     new_motion_a = self._motion_a[selected_pts_mask].repeat(N, 1)
+                elif self.motion_model == "lora":
+                    new_motion_lora_coeff = self._motion_lora_coeff[selected_pts_mask].repeat(N, 1)
         else:
             stds = self.get_scaling_xyzt[selected_pts_mask].repeat(N, 1)
             means = torch.zeros((stds.size(0), 4), device="cuda")
@@ -1224,11 +1361,14 @@ class GaussianModel:
             new_route_logit = None
             new_motion_v = None
             new_motion_a = None
+            new_motion_lora_coeff = None
             if self.enable_soft_routing:
                 new_route_logit = self._route_logit[selected_pts_mask].repeat(N, 1)
             if self.motion_model == "poly":
                 new_motion_v = self._motion_v[selected_pts_mask].repeat(N, 1)
                 new_motion_a = self._motion_a[selected_pts_mask].repeat(N, 1)
+            elif self.motion_model == "lora":
+                new_motion_lora_coeff = self._motion_lora_coeff[selected_pts_mask].repeat(N, 1)
 
         self.densification_postfix(
             new_xyz,
@@ -1243,6 +1383,7 @@ class GaussianModel:
             new_route_logit,
             new_motion_v,
             new_motion_a,
+            new_motion_lora_coeff,
         )
 
         prune_filter = torch.cat(
@@ -1278,6 +1419,7 @@ class GaussianModel:
         new_route_logit = None
         new_motion_v = None
         new_motion_a = None
+        new_motion_lora_coeff = None
         if self.gaussian_dim == 4:
             new_t = self._t[selected_pts_mask]
             new_scaling_t = self._scaling_t[selected_pts_mask]
@@ -1286,6 +1428,8 @@ class GaussianModel:
             if self.motion_model == "poly":
                 new_motion_v = self._motion_v[selected_pts_mask]
                 new_motion_a = self._motion_a[selected_pts_mask]
+            elif self.motion_model == "lora":
+                new_motion_lora_coeff = self._motion_lora_coeff[selected_pts_mask]
             if self.rot_4d:
                 new_rotation_r = self._rotation_r[selected_pts_mask]
 
@@ -1302,6 +1446,7 @@ class GaussianModel:
             new_route_logit,
             new_motion_v,
             new_motion_a,
+            new_motion_lora_coeff,
         )
 
     def densify_and_split_static(self, grads, grad_threshold, scene_extent, N=2):

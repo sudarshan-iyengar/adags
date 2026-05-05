@@ -128,6 +128,11 @@ class OptimizationParams(ParamGroup):
         self.motion_poly_order = 2
         self.motion_lr_init = -1.0
         self.motion_reg_lambda = 0.0
+        self.motion_lora_rank = 8
+        self.motion_lora_anchors = 16
+        self.motion_lora_init_scale = 0.01
+        self.motion_lora_coeff_lr = -1.0
+        self.motion_lora_basis_lr = -1.0
 
         self.blur_until_iter = 0       # Set > 0 to enable blurring
         self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel
