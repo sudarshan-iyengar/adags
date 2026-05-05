@@ -10,20 +10,21 @@ SCENES=(
   flame_steak
 )
 
-# # label|config_path
-# CONFIGS=(
-#   "default|$WORK/proj_adags/repo/adags/configs/n3v/default.yaml"
-# #  "runA|$WORK/proj_adags/repo/adags/configs/n3v/runA.yaml"
-# #  "runB|$WORK/proj_adags/repo/adags/configs/n3v/runB.yaml"
-# #  "runC|$WORK/proj_adags/repo/adags/configs/n3v/runC.yaml"
-# #  "runD|$WORK/proj_adags/repo/adags/configs/n3v/runD.yaml"
-# )
-
 # label|config_path|ckpt_iter
 CONFIGS=(
-#  "default|$WORK/proj_adags/repo/adags/configs/n3v/default.yaml|15000"
-  "no_blur_15k|$WORK/proj_adags/repo/adags/configs/n3v/no_blur_15k.yaml|15000"
-  "no_blur_6k|$WORK/proj_adags/repo/adags/configs/n3v/no_blur_6k.yaml|6000"
+  "lora_r4_a16|$WORK/proj_adags/repo/adags/configs/n3v/lora_r4_a16.yaml|15000"
+  "lora_r8_a16|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a16.yaml|15000"
+  "lora_r16_a16|$WORK/proj_adags/repo/adags/configs/n3v/lora_r16_a16.yaml|15000"
+  "lora_r8_a32|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a32.yaml|15000"
+  "lora_r16_a32|$WORK/proj_adags/repo/adags/configs/n3v/lora_r16_a32.yaml|15000"
+  "lora_r8_a32_coeff2x_basis025x|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a32_coeff2x_basis025x.yaml|15000"
+  "lora_r8_a32_coeff1x_basis01x|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a32_coeff1x_basis01x.yaml|15000"
+  "lora_r16_a32_coeff2x_basis025x|$WORK/proj_adags/repo/adags/configs/n3v/lora_r16_a32_coeff2x_basis025x.yaml|15000"
+  "lora_r8_a32_reg1e-6|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a32_reg1e-6.yaml|15000"
+  "lora_r8_a32_reg1e-5|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a32_reg1e-5.yaml|15000"
+  "lora_r16_a32_reg1e-5|$WORK/proj_adags/repo/adags/configs/n3v/lora_r16_a32_reg1e-5.yaml|15000"
+  "lora_r8_a32_route2|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a32_route2.yaml|15000"
+  "lora_r8_a32_route0|$WORK/proj_adags/repo/adags/configs/n3v/lora_r8_a32_route0.yaml|15000"
 )
 
 
@@ -39,7 +40,7 @@ for SCENE in "${SCENES[@]}"; do
     IFS='|' read -r CFG_NAME CFG_PATH CKPT_ITER <<< "$ENTRY"
 
     TS="$(date +%Y%m%d_%H%M%S)"
-    RUN_TAG="Reversible_Routing_Polynomial_Motion_${CFG_NAME}"
+    RUN_TAG="LoRA_Motion_Sweep_${CFG_NAME}"
     RUN_ID="${TS}_${SCENE}_${CFG_NAME}"
 
     TRAIN_JOBID=$(
