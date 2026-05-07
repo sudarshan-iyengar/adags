@@ -133,6 +133,21 @@ class OptimizationParams(ParamGroup):
         self.motion_lora_init_scale = 0.01
         self.motion_lora_coeff_lr = -1.0
         self.motion_lora_basis_lr = -1.0
+        self.motion_part_count = 8
+        self.motion_part_rank = 8
+        self.motion_part_anchors = 32
+        self.motion_part_temperature = 1.0
+        self.motion_part_init_scale = 0.01
+        self.motion_part_residual_scale = 0.1
+        self.motion_part_coeff_lr = -1.0
+        self.motion_part_basis_lr = -1.0
+        self.motion_part_logit_lr = -1.0
+        self.motion_part_residual_lr = -1.0
+        self.motion_part_balance_lambda = 0.001
+        self.motion_part_entropy_lambda = 0.0001
+        self.motion_part_entropy_warmup_until_iter = 2000
+        self.motion_part_diversity_lambda = 0.0001
+        self.motion_part_reg_lambda = 0.0
 
         self.blur_until_iter = 0       # Set > 0 to enable blurring
         self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel

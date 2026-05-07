@@ -18,6 +18,7 @@ import sys
 import uuid
 import torch
 from torch import nn
+import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 from argparse import ArgumentParser, Namespace
@@ -257,6 +258,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     Lsparsity = torch.tensor(0.0, device=device)
     Lmotion_gate = torch.tensor(0.0, device=device)
     Lmotion_reg = torch.tensor(0.0, device=device)
+    Lmotion_part_balance = torch.tensor(0.0, device=device)
+    Lmotion_part_entropy = torch.tensor(0.0, device=device)
+    Lmotion_part_diversity = torch.tensor(0.0, device=device)
+    Lmotion_part_reg = torch.tensor(0.0, device=device)
 
     motion_gate_quantile = getattr(opt, "motion_gate_quantile", 0.8)
     hard_static_conversion = getattr(opt, "enable_hard_static_conversion", False)
@@ -427,6 +432,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         gate_loss.backward()
 
             Lmotion_reg = torch.tensor(0.0, device=device)
+            Lmotion_part_balance = torch.tensor(0.0, device=device)
+            Lmotion_part_entropy = torch.tensor(0.0, device=device)
+            Lmotion_part_diversity = torch.tensor(0.0, device=device)
+            Lmotion_part_reg = torch.tensor(0.0, device=device)
             if (
                     getattr(opt, "motion_reg_lambda", 0.0) > 0
                     and gaussians.gaussian_dim == 4
@@ -449,10 +458,75 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     total_loss += Lmotion_reg.item()
                     Lmotion_reg.backward()
 
+            if (
+                    getattr(gaussians, "motion_model", "") == "part_basis"
+                    and gaussians.gaussian_dim == 4
+                    and gaussians.get_motion_part_logits.numel() > 0
+            ):
+                part_prob = gaussians.get_motion_part_probability.clamp(1e-6, 1.0)
+                num_parts = part_prob.shape[1]
+                part_loss = torch.tensor(0.0, device=device)
+
+                if getattr(opt, "motion_part_balance_lambda", 0.0) > 0 and num_parts > 0:
+                    mean_part_prob = part_prob.mean(dim=0)
+                    target = torch.full_like(mean_part_prob, 1.0 / float(num_parts))
+                    Lmotion_part_balance = opt.motion_part_balance_lambda * (mean_part_prob - target).pow(2).mean()
+                    part_loss = part_loss + Lmotion_part_balance
+
+                if (
+                        getattr(opt, "motion_part_entropy_lambda", 0.0) > 0
+                        and num_parts > 1
+                        and iteration >= getattr(opt, "motion_part_entropy_warmup_until_iter", 0)
+                ):
+                    entropy = -(part_prob * torch.log(part_prob)).sum(dim=1).mean()
+                    entropy = entropy / math.log(float(num_parts))
+                    Lmotion_part_entropy = opt.motion_part_entropy_lambda * entropy
+                    part_loss = part_loss + Lmotion_part_entropy
+
+                if (
+                        getattr(opt, "motion_part_diversity_lambda", 0.0) > 0
+                        and gaussians.get_motion_part_basis is not None
+                        and gaussians.get_motion_part_basis.shape[0] > 1
+                ):
+                    basis_flat = gaussians.get_motion_part_basis.reshape(gaussians.get_motion_part_basis.shape[0], -1)
+                    basis_flat = basis_flat - basis_flat.mean(dim=1, keepdim=True)
+                    basis_flat = F.normalize(basis_flat, p=2, dim=1, eps=1e-6)
+                    gram = basis_flat @ basis_flat.t()
+                    off_diag = gram - torch.eye(gram.shape[0], device=gram.device)
+                    Lmotion_part_diversity = opt.motion_part_diversity_lambda * off_diag.pow(2).sum() / float(gram.shape[0] * (gram.shape[0] - 1))
+                    part_loss = part_loss + Lmotion_part_diversity
+
+                if (
+                        getattr(opt, "motion_part_reg_lambda", 0.0) > 0
+                        and gaussians.get_motion_part_coeff.numel() > 0
+                        and gaussians.get_motion_part_basis is not None
+                ):
+                    Lmotion_part_reg = opt.motion_part_reg_lambda * (
+                        gaussians.get_motion_part_coeff.pow(2).mean()
+                        + gaussians.get_motion_part_basis.pow(2).mean()
+                        + gaussians.get_motion_part_res_v.pow(2).mean()
+                        + gaussians.get_motion_part_res_a.pow(2).mean()
+                    )
+                    part_loss = part_loss + Lmotion_part_reg
+
+                if part_loss.requires_grad and part_loss.item() != 0.0:
+                    total_loss += part_loss.item()
+                    part_loss.backward()
+
             iter_end.record()
 
             # ================= logging dictionary =================
-            loss_dict = {"Ll1": Ll1, "Lssim": Lssim, "Lsparsity": Lsparsity, "Lmotion_gate": Lmotion_gate, "Lmotion_reg": Lmotion_reg}
+            loss_dict = {
+                "Ll1": Ll1,
+                "Lssim": Lssim,
+                "Lsparsity": Lsparsity,
+                "Lmotion_gate": Lmotion_gate,
+                "Lmotion_reg": Lmotion_reg,
+                "Lmotion_part_balance": Lmotion_part_balance,
+                "Lmotion_part_entropy": Lmotion_part_entropy,
+                "Lmotion_part_diversity": Lmotion_part_diversity,
+                "Lmotion_part_reg": Lmotion_part_reg,
+            }
             if 'Lrigid' in locals(): loss_dict["Lrigid"] = Lrigid
 
             with torch.no_grad():
@@ -629,6 +703,24 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                 tb_writer.add_scalar('motion_lora/basis_norm_mean', gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item(), iteration)
                 tb_writer.add_histogram('motion_lora/basis', gaussians.get_motion_lora_basis.detach(), iteration, bins=50)
 
+        if getattr(gaussians, "motion_model", "") == "part_basis" and gaussians.get_motion_part_logits.numel() > 0:
+            part_prob = gaussians.get_motion_part_probability.detach().clamp(1e-6, 1.0)
+            mean_part_prob = part_prob.mean(dim=0)
+            part_entropy = (-(part_prob * torch.log(part_prob)).sum(dim=1)).mean()
+            effective_parts = torch.exp(-(mean_part_prob * torch.log(mean_part_prob.clamp_min(1e-6))).sum())
+            tb_writer.add_scalar('motion_part/entropy', part_entropy.item(), iteration)
+            tb_writer.add_scalar('motion_part/max_confidence_mean', part_prob.max(dim=1).values.mean().item(), iteration)
+            tb_writer.add_scalar('motion_part/effective_parts', effective_parts.item(), iteration)
+            tb_writer.add_histogram('motion_part/mean_probability', mean_part_prob, iteration, bins=50)
+            for part_idx, part_value in enumerate(mean_part_prob):
+                tb_writer.add_scalar(f'motion_part/mean_probability_{part_idx}', part_value.item(), iteration)
+            tb_writer.add_scalar('motion_part/coeff_norm_mean', gaussians.get_motion_part_coeff.detach().norm(dim=1).mean().item(), iteration)
+            tb_writer.add_scalar('motion_part/residual_v_norm_mean', gaussians.get_motion_part_res_v.detach().norm(dim=1).mean().item(), iteration)
+            tb_writer.add_scalar('motion_part/residual_a_norm_mean', gaussians.get_motion_part_res_a.detach().norm(dim=1).mean().item(), iteration)
+            if gaussians.get_motion_part_basis is not None:
+                tb_writer.add_scalar('motion_part/basis_norm_mean', gaussians.get_motion_part_basis.detach().norm(dim=-1).mean().item(), iteration)
+                tb_writer.add_histogram('motion_part/basis', gaussians.get_motion_part_basis.detach(), iteration, bins=50)
+
         # Static conversion diagnostics (only for explicit hard-conversion ablations)
         if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
             tb_writer.add_scalar('static_conversion/num_candidates',gaussians.num_static_candidates_last,iteration,)
@@ -649,6 +741,10 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if "Lsparsity" in loss_dict: tb_writer.add_scalar('train_loss_patches/gate_sparsity_loss', loss_dict['Lsparsity'].item(), iteration)
             if "Lmotion_gate" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_gate_loss', loss_dict['Lmotion_gate'].item(), iteration)
             if "Lmotion_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_reg_loss', loss_dict['Lmotion_reg'].item(), iteration)
+            if "Lmotion_part_balance" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_part_balance_loss', loss_dict['Lmotion_part_balance'].item(), iteration)
+            if "Lmotion_part_entropy" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_part_entropy_loss', loss_dict['Lmotion_part_entropy'].item(), iteration)
+            if "Lmotion_part_diversity" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_part_diversity_loss', loss_dict['Lmotion_part_diversity'].item(), iteration)
+            if "Lmotion_part_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_part_reg_loss', loss_dict['Lmotion_part_reg'].item(), iteration)
 
         tb_writer.add_scalar('gpu/memory_allocated_MB', torch.cuda.memory_allocated() / 1e6, iteration)
         tb_writer.add_scalar('gpu/memory_reserved_MB', torch.cuda.memory_reserved() / 1e6, iteration)
@@ -701,6 +797,26 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             wandb_metrics["motion_lora/basis_norm_mean"] = gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item()
             wandb_metrics["hist/motion_lora_basis"] = gaussians.get_motion_lora_basis.detach()
 
+    if getattr(gaussians, "motion_model", "") == "part_basis" and gaussians.get_motion_part_logits.numel() > 0:
+        part_prob = gaussians.get_motion_part_probability.detach().clamp(1e-6, 1.0)
+        mean_part_prob = part_prob.mean(dim=0)
+        part_entropy = (-(part_prob * torch.log(part_prob)).sum(dim=1)).mean()
+        effective_parts = torch.exp(-(mean_part_prob * torch.log(mean_part_prob.clamp_min(1e-6))).sum())
+        wandb_metrics.update({
+            "motion_part/entropy": part_entropy.item(),
+            "motion_part/max_confidence_mean": part_prob.max(dim=1).values.mean().item(),
+            "motion_part/effective_parts": effective_parts.item(),
+            "motion_part/coeff_norm_mean": gaussians.get_motion_part_coeff.detach().norm(dim=1).mean().item(),
+            "motion_part/residual_v_norm_mean": gaussians.get_motion_part_res_v.detach().norm(dim=1).mean().item(),
+            "motion_part/residual_a_norm_mean": gaussians.get_motion_part_res_a.detach().norm(dim=1).mean().item(),
+            "hist/motion_part_mean_probability": mean_part_prob,
+        })
+        for part_idx, part_value in enumerate(mean_part_prob):
+            wandb_metrics[f"motion_part/mean_probability_{part_idx}"] = part_value.item()
+        if gaussians.get_motion_part_basis is not None:
+            wandb_metrics["motion_part/basis_norm_mean"] = gaussians.get_motion_part_basis.detach().norm(dim=-1).mean().item()
+            wandb_metrics["hist/motion_part_basis"] = gaussians.get_motion_part_basis.detach()
+
     if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
         wandb_metrics["static_conversion/num_candidates"] = gaussians.num_static_candidates_last
     if hard_static_conversion and hasattr(gaussians, "num_converted_last"):
@@ -720,6 +836,10 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "Lsparsity": "train/gate_sparsity_loss",
             "Lmotion_gate": "train/motion_gate_loss",
             "Lmotion_reg": "train/motion_reg_loss",
+            "Lmotion_part_balance": "train/motion_part_balance_loss",
+            "Lmotion_part_entropy": "train/motion_part_entropy_loss",
+            "Lmotion_part_diversity": "train/motion_part_diversity_loss",
+            "Lmotion_part_reg": "train/motion_part_reg_loss",
         }
         for key, metric_name in loss_metric_names.items():
             if key in loss_dict:

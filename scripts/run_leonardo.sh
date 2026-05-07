@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Usage examples:
 #   sbatch ... scripts/run_leonardo.sh train
-#   sbatch ... --export=ALL,RUN_ID=20260226_154023_cut_roasted_beef_baseline scripts/run_leonardo.sh eval
+#   sbatch ... --export=ALL,RUN_LABEL=baseline,RUN_ID=20260226_154023_cut_roasted_beef_baseline scripts/run_leonardo.sh eval
 #   sbatch ... --export=ALL,RUN_DIR=$WORK/proj_adags/runs/20260226_154023_cut_roasted_beef_baseline scripts/run_leonardo.sh eval
 #   sbatch ... --export=ALL,SCENE=cut_roasted_beef,RUN_TAG=baseline scripts/run_leonardo.sh train
 
@@ -27,9 +27,10 @@ CKPT_PATH="${CKPT_PATH:-}"                   # optional explicit path to .pth
 
 # Reuse existing run:
 # - Prefer RUN_DIR if set
-# - Else if RUN_ID set, use $WORK/proj_adags/runs/$RUN_ID
+# - Else if RUN_ID set, use $WORK/proj_adags/runs/$RUN_LABEL/$RUN_ID
 RUN_DIR="${RUN_DIR:-}"
 RUN_ID="${RUN_ID:-}"
+RUN_LABEL="${RUN_LABEL:-}"
 
 # ---- derived paths ----
 DATASET_PATH="${DATASET_ROOT}/${SCENE}"
@@ -37,16 +38,24 @@ DATASET_PATH="${DATASET_ROOT}/${SCENE}"
 # If no run was provided:
 if [[ -z "$RUN_DIR" ]]; then
   if [[ -n "$RUN_ID" ]]; then
-    RUN_DIR="$WORK/proj_adags/runs/$RUN_ID"
+    if [[ -n "$RUN_LABEL" ]]; then
+      RUN_DIR="$WORK/proj_adags/runs/${RUN_LABEL}/${RUN_ID}"
+    else
+      RUN_DIR="$WORK/proj_adags/runs/${RUN_ID}"
+    fi
   else
     # only create a new run for training; for eval, require an existing run
     if [[ "$MODE" == "train" ]]; then
       TS="$(date +%Y%m%d_%H%M%S)"
       RUN_ID="${TS}_${SCENE}_${RUN_TAG}"
-      RUN_DIR="$WORK/proj_adags/runs/${RUN_ID}"
+      if [[ -n "$RUN_LABEL" ]]; then
+        RUN_DIR="$WORK/proj_adags/runs/$RUN_LABEL/${RUN_ID}"
+      else
+        RUN_DIR="$WORK/proj_adags/runs/${RUN_ID}"
+      fi
     else
       echo "ERROR: For eval you must set RUN_DIR or RUN_ID to an existing run." >&2
-      echo "Example: --export=ALL,RUN_ID=20260226_154023_cut_roasted_beef_baseline" >&2
+      echo "Example: --export=ALL,RUN_LABEL=baseline,RUN_ID=20260226_154023_cut_roasted_beef_baseline" >&2
       exit 2
     fi
   fi
@@ -65,6 +74,7 @@ cd "$WORK/proj_adags/repo/adags"
   echo "mode: ${MODE}"
   echo "scene: ${SCENE}"
   echo "run_tag: ${RUN_TAG}"
+  echo "run_label: ${RUN_LABEL:-none}"
   echo "run_dir: ${RUN_DIR}"
   echo "host: $(hostname)"
   echo "slurm_job_id: ${SLURM_JOB_ID:-none}"
