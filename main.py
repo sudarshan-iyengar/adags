@@ -24,6 +24,7 @@ from argparse import ArgumentParser, Namespace
 from omegaconf import OmegaConf
 from omegaconf.dictconfig import DictConfig
 from torch.utils.data import DataLoader
+import torch.nn.functional as F
 
 from gaussian_renderer import render
 from scene import Scene, GaussianModel
@@ -31,6 +32,14 @@ from arguments import ModelParams, PipelineParams, OptimizationParams
 from utils.loss_utils import l1_loss, ssim, msssim
 from utils.image_utils import psnr, easy_cmap
 from utils.general_utils import safe_state, knn
+from utils.motion_prior_utils import (
+    MotionPriorCache,
+    edge_magnitude,
+    masked_l1,
+    masked_psnr,
+    normalize_flow_tensor,
+    sample_mask_at_points,
+)
 from utils.mesh_utils import GaussianExtractor
 from utils.render_utils import generate_path, create_videos
 import torchvision.transforms.functional as TF
@@ -50,6 +59,55 @@ except ImportError:
 
 def identity_collate(x):
     return x
+
+
+def normalize_dynamic_weight(weight, eps=1e-6):
+    if weight is None or weight.numel() == 0:
+        return weight
+    weight = torch.nan_to_num(weight.detach()).clamp_min(0.0)
+    positive = weight[weight > 0]
+    if positive.numel() == 0:
+        return torch.zeros_like(weight)
+    scale = torch.quantile(positive, 0.9).clamp_min(eps)
+    return (weight / scale).clamp(0.0, 1.0)
+
+
+def compute_dynamic_densify_weight(gaussians, viewpoint_cam, dynamic_mask, residual_map=None):
+    if dynamic_mask is None or gaussians.gaussian_dim != 4 or gaussians.get_xyz.numel() == 0:
+        return None
+    with torch.no_grad():
+        points = gaussians.get_dynamic_xyz(viewpoint_cam.timestamp).detach()
+        mask_weight = sample_mask_at_points(dynamic_mask, points, viewpoint_cam)
+        motion_weight = gaussians.get_motion_offset(viewpoint_cam.timestamp).detach().norm(dim=1, keepdim=True)
+        motion_weight = normalize_dynamic_weight(motion_weight)
+        if residual_map is not None:
+            residual_weight = normalize_dynamic_weight(sample_mask_at_points(residual_map, points, viewpoint_cam))
+        else:
+            residual_weight = torch.zeros_like(motion_weight)
+        return (mask_weight * (0.34 + 0.33 * motion_weight + 0.33 * residual_weight)).clamp(0.0, 1.0)
+
+
+def compute_static_exclusion_loss(gaussians, viewpoint_cam, dynamic_mask, visibility_filter):
+    if dynamic_mask is None or gaussians.get_xyz.numel() == 0 or gaussians.get_route_logit.numel() == 0:
+        return torch.zeros((), device=gaussians.get_xyz.device)
+    with torch.no_grad():
+        points = gaussians.get_dynamic_xyz(viewpoint_cam.timestamp).detach()
+        mask_weight = sample_mask_at_points(dynamic_mask, points, viewpoint_cam)
+        if visibility_filter is not None and visibility_filter.numel() == mask_weight.shape[0]:
+            mask_weight = mask_weight * visibility_filter.float().unsqueeze(-1)
+        mask_weight = mask_weight * gaussians.get_opacity.detach()
+    denom = mask_weight.sum().clamp_min(1e-6)
+    return (mask_weight * gaussians.get_static_probability).sum() / denom
+
+
+def compute_flow_loss(pred_flow, target_flow, flow_mask):
+    pred_flow = normalize_flow_tensor(pred_flow)
+    target_flow = normalize_flow_tensor(target_flow)
+    if pred_flow is None or target_flow is None:
+        return None
+    if pred_flow.shape[-2:] != target_flow.shape[-2:]:
+        pred_flow = F.interpolate(pred_flow[None], size=target_flow.shape[-2:], mode="bilinear", align_corners=False)[0]
+    return masked_l1(pred_flow, target_flow, flow_mask)
 
 
 def ensure_model_path(args):
@@ -213,6 +271,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     gaussians = GaussianModel(dataset.sh_degree, gaussian_dim=gaussian_dim, time_duration=time_duration, rot_4d=rot_4d, force_sh_3d=force_sh_3d, sh_degree_t=2 if pipe.eval_shfs_4d else 0)
     scene = Scene(dataset, gaussians, num_pts=num_pts, num_pts_ratio=num_pts_ratio, time_duration=time_duration)
     scene.opt = opt
+    scene.motion_prior_cache = MotionPriorCache(dataset.source_path, opt, device="cuda")
     gaussians.training_setup(opt)
 
     if checkpoint:
@@ -257,6 +316,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     Lsparsity = torch.tensor(0.0, device=device)
     Lmotion_gate = torch.tensor(0.0, device=device)
     Lmotion_reg = torch.tensor(0.0, device=device)
+    Ldynamic_roi = torch.tensor(0.0, device=device)
+    Lstatic_exclusion = torch.tensor(0.0, device=device)
+    Ltrack_flow = torch.tensor(0.0, device=device)
+    Lscaffold_smooth = torch.tensor(0.0, device=device)
+    Lscaffold_reg = torch.tensor(0.0, device=device)
 
     motion_gate_quantile = getattr(opt, "motion_gate_quantile", 0.8)
     hard_static_conversion = getattr(opt, "enable_hard_static_conversion", False)
@@ -292,6 +356,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
             batch_point_grad, batch_visibility_filter, batch_radii = [], [], []
             batch_point_grad_static, batch_visibility_filter_static, batch_radii_static = [], [], []
+            batch_dynamic_densify_weight = []
+            Ldynamic_roi = torch.tensor(0.0, device=device)
+            Lstatic_exclusion = torch.tensor(0.0, device=device)
+            Ltrack_flow = torch.tensor(0.0, device=device)
+            Lscaffold_smooth = torch.tensor(0.0, device=device)
+            Lscaffold_reg = torch.tensor(0.0, device=device)
 
             static = False
 
@@ -327,6 +397,36 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 loss_recon = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * Lssim
                 loss = loss_recon
 
+                dynamic_mask = scene.motion_prior_cache.get_dynamic_mask(
+                    viewpoint_cam,
+                    target_hw=gt_image.shape[-2:],
+                    gt_image=gt_image,
+                    pred_image=image,
+                    allow_residual=True,
+                )
+
+                if dynamic_mask is not None and getattr(opt, "lambda_dynamic_roi", 0.0) > 0:
+                    Ldyn = masked_l1(image_for_loss, gt_image_for_loss, dynamic_mask)
+                    loss = loss + opt.lambda_dynamic_roi * Ldyn
+                    Ldynamic_roi = Ldynamic_roi + Ldyn.detach() / float(batch_size)
+
+                if dynamic_mask is not None and getattr(opt, "lambda_static_exclusion", 0.0) > 0:
+                    Lstat = compute_static_exclusion_loss(gaussians, viewpoint_cam, dynamic_mask, visibility_filter)
+                    loss = loss + opt.lambda_static_exclusion * Lstat
+                    Lstatic_exclusion = Lstatic_exclusion + Lstat.detach() / float(batch_size)
+
+                if getattr(opt, "lambda_track_flow", 0.0) > 0:
+                    track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(viewpoint_cam, gt_image.shape[-2:])
+                    if track_flow is not None:
+                        if track_flow_mask is None:
+                            track_flow_mask = dynamic_mask
+                        elif dynamic_mask is not None:
+                            track_flow_mask = (track_flow_mask * dynamic_mask).clamp(0.0, 1.0)
+                        Lflow_prior = compute_flow_loss(render_pkg.get("flow", None), track_flow, track_flow_mask)
+                        if Lflow_prior is not None:
+                            loss = loss + opt.lambda_track_flow * Lflow_prior
+                            Ltrack_flow = Ltrack_flow + Lflow_prior.detach() / float(batch_size)
+
                 # opa mask loss
                 if opt.lambda_opa_mask > 0:
                     o = alpha.clamp(1e-6, 1 - 1e-6)
@@ -344,6 +444,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     vel_dist = torch.norm(velocity[idx] - velocity[None, :, None], p=2, dim=-1)
                     Lrigid = (weight * vel_dist).sum() / k / xyz_cur.shape[0]
                     loss = loss + opt.lambda_rigid * Lrigid
+
+                if getattr(opt, "enable_motion_aware_densify", False):
+                    residual_map = (image.detach() - gt_image.detach()).abs().mean(dim=0, keepdim=True)
+                    dyn_weight = compute_dynamic_densify_weight(gaussians, viewpoint_cam, dynamic_mask, residual_map)
+                    if dyn_weight is not None:
+                        batch_dynamic_densify_weight.append(dyn_weight.squeeze(-1))
 
                 total_loss += loss.item()
                 (loss / batch_size).backward(retain_graph=True)
@@ -381,6 +487,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     batch_t_grad = gaussians._t.grad.clone()[:, 0].detach()
                     batch_t_grad[visibility_filter] = batch_t_grad[visibility_filter] * batch_size / visibility_count[visibility_filter]
                     batch_t_grad = batch_t_grad.unsqueeze(1)
+                dynamic_densify_weight = None
+                if batch_dynamic_densify_weight:
+                    dynamic_densify_weight = torch.stack(batch_dynamic_densify_weight, 1).max(dim=1).values.unsqueeze(1)
             else:
                 visibility_filter = batch_visibility_filter[0]
                 radii = batch_radii[0]
@@ -391,6 +500,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     batch_viewspace_point_grad_static = batch_point_grad_static[0].unsqueeze(1)
                 if gaussians.gaussian_dim == 4:
                     batch_t_grad = gaussians._t.grad.clone().detach()
+                dynamic_densify_weight = batch_dynamic_densify_weight[0].unsqueeze(1) if batch_dynamic_densify_weight else None
 
             # ================= gate losses (monotonic logistic on log σ_t) =================
             Lsparsity = torch.tensor(0.0, device=device)
@@ -449,10 +559,39 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     total_loss += Lmotion_reg.item()
                     Lmotion_reg.backward()
 
+            if (
+                    getattr(opt, "lambda_scaffold_smooth", 0.0) > 0
+                    and getattr(gaussians, "motion_scaffold_enable", False)
+            ):
+                Lscaffold_smooth = opt.lambda_scaffold_smooth * gaussians.get_scaffold_smoothness_loss()
+                if Lscaffold_smooth.requires_grad and Lscaffold_smooth.item() != 0.0:
+                    total_loss += Lscaffold_smooth.item()
+                    Lscaffold_smooth.backward()
+
+            if (
+                    getattr(opt, "lambda_scaffold_reg", 0.0) > 0
+                    and getattr(gaussians, "motion_scaffold_enable", False)
+            ):
+                Lscaffold_reg = opt.lambda_scaffold_reg * gaussians.get_scaffold_reg_loss()
+                if Lscaffold_reg.requires_grad and Lscaffold_reg.item() != 0.0:
+                    total_loss += Lscaffold_reg.item()
+                    Lscaffold_reg.backward()
+
             iter_end.record()
 
             # ================= logging dictionary =================
-            loss_dict = {"Ll1": Ll1, "Lssim": Lssim, "Lsparsity": Lsparsity, "Lmotion_gate": Lmotion_gate, "Lmotion_reg": Lmotion_reg}
+            loss_dict = {
+                "Ll1": Ll1,
+                "Lssim": Lssim,
+                "Lsparsity": Lsparsity,
+                "Lmotion_gate": Lmotion_gate,
+                "Lmotion_reg": Lmotion_reg,
+                "Ldynamic_roi": Ldynamic_roi,
+                "Lstatic_exclusion": Lstatic_exclusion,
+                "Ltrack_flow": Ltrack_flow,
+                "Lscaffold_smooth": Lscaffold_smooth,
+                "Lscaffold_reg": Lscaffold_reg,
+            }
             if 'Lrigid' in locals(): loss_dict["Lrigid"] = Lrigid
 
             with torch.no_grad():
@@ -513,10 +652,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
                     if batch_size == 1:
                         gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter,
-                                                          batch_t_grad if gaussians.gaussian_dim == 4 else None)
+                                                          batch_t_grad if gaussians.gaussian_dim == 4 else None,
+                                                          dynamic_densify_weight)
                     else:
                         gaussians.add_densification_stats_grad(batch_viewspace_point_grad, visibility_filter,
-                                                               batch_t_grad if gaussians.gaussian_dim == 4 else None)
+                                                               batch_t_grad if gaussians.gaussian_dim == 4 else None,
+                                                               dynamic_densify_weight)
                         if static:
                             gaussians.add_densification_stats_grad_static(batch_viewspace_point_grad_static, visibility_filter_static)
 
@@ -629,6 +770,14 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                 tb_writer.add_scalar('motion_lora/basis_norm_mean', gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item(), iteration)
                 tb_writer.add_histogram('motion_lora/basis', gaussians.get_motion_lora_basis.detach(), iteration, bins=50)
 
+        if getattr(gaussians, "motion_scaffold_enable", False) and gaussians.get_motion_scaffold_coeff.numel() > 0:
+            tb_writer.add_scalar('motion_scaffold/node_count', gaussians.get_motion_scaffold_coeff.shape[0], iteration)
+            tb_writer.add_scalar('motion_scaffold/coeff_norm_mean', gaussians.get_motion_scaffold_coeff.detach().norm(dim=1).mean().item(), iteration)
+            if gaussians.get_motion_scaffold_basis is not None:
+                tb_writer.add_scalar('motion_scaffold/basis_norm_mean', gaussians.get_motion_scaffold_basis.detach().norm(dim=-1).mean().item(), iteration)
+            if gaussians.get_motion_scaffold_attach_w.numel() > 0:
+                tb_writer.add_scalar('motion_scaffold/attach_entropy', (-(gaussians.get_motion_scaffold_attach_w.detach().clamp_min(1e-6) * torch.log(gaussians.get_motion_scaffold_attach_w.detach().clamp_min(1e-6))).sum(dim=1)).mean().item(), iteration)
+
         # Static conversion diagnostics (only for explicit hard-conversion ablations)
         if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
             tb_writer.add_scalar('static_conversion/num_candidates',gaussians.num_static_candidates_last,iteration,)
@@ -649,6 +798,11 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if "Lsparsity" in loss_dict: tb_writer.add_scalar('train_loss_patches/gate_sparsity_loss', loss_dict['Lsparsity'].item(), iteration)
             if "Lmotion_gate" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_gate_loss', loss_dict['Lmotion_gate'].item(), iteration)
             if "Lmotion_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/motion_reg_loss', loss_dict['Lmotion_reg'].item(), iteration)
+            if "Ldynamic_roi" in loss_dict: tb_writer.add_scalar('train_loss_patches/dynamic_roi_loss', loss_dict['Ldynamic_roi'].item(), iteration)
+            if "Lstatic_exclusion" in loss_dict: tb_writer.add_scalar('train_loss_patches/static_exclusion_loss', loss_dict['Lstatic_exclusion'].item(), iteration)
+            if "Ltrack_flow" in loss_dict: tb_writer.add_scalar('train_loss_patches/track_flow_loss', loss_dict['Ltrack_flow'].item(), iteration)
+            if "Lscaffold_smooth" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_smooth_loss', loss_dict['Lscaffold_smooth'].item(), iteration)
+            if "Lscaffold_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_reg_loss', loss_dict['Lscaffold_reg'].item(), iteration)
 
         tb_writer.add_scalar('gpu/memory_allocated_MB', torch.cuda.memory_allocated() / 1e6, iteration)
         tb_writer.add_scalar('gpu/memory_reserved_MB', torch.cuda.memory_reserved() / 1e6, iteration)
@@ -701,6 +855,15 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             wandb_metrics["motion_lora/basis_norm_mean"] = gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item()
             wandb_metrics["hist/motion_lora_basis"] = gaussians.get_motion_lora_basis.detach()
 
+    if getattr(gaussians, "motion_scaffold_enable", False) and gaussians.get_motion_scaffold_coeff.numel() > 0:
+        wandb_metrics["motion_scaffold/node_count"] = gaussians.get_motion_scaffold_coeff.shape[0]
+        wandb_metrics["motion_scaffold/coeff_norm_mean"] = gaussians.get_motion_scaffold_coeff.detach().norm(dim=1).mean().item()
+        if gaussians.get_motion_scaffold_basis is not None:
+            wandb_metrics["motion_scaffold/basis_norm_mean"] = gaussians.get_motion_scaffold_basis.detach().norm(dim=-1).mean().item()
+        if gaussians.get_motion_scaffold_attach_w.numel() > 0:
+            attach_w = gaussians.get_motion_scaffold_attach_w.detach().clamp_min(1e-6)
+            wandb_metrics["motion_scaffold/attach_entropy"] = (-(attach_w * torch.log(attach_w)).sum(dim=1)).mean().item()
+
     if hard_static_conversion and hasattr(gaussians, "num_static_candidates_last"):
         wandb_metrics["static_conversion/num_candidates"] = gaussians.num_static_candidates_last
     if hard_static_conversion and hasattr(gaussians, "num_converted_last"):
@@ -720,6 +883,11 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "Lsparsity": "train/gate_sparsity_loss",
             "Lmotion_gate": "train/motion_gate_loss",
             "Lmotion_reg": "train/motion_reg_loss",
+            "Ldynamic_roi": "train/dynamic_roi_loss",
+            "Lstatic_exclusion": "train/static_exclusion_loss",
+            "Ltrack_flow": "train/track_flow_loss",
+            "Lscaffold_smooth": "train/scaffold_smooth_loss",
+            "Lscaffold_reg": "train/scaffold_reg_loss",
         }
         for key, metric_name in loss_metric_names.items():
             if key in loss_dict:
@@ -733,6 +901,10 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         test_cams = scene.getTestCameras()
         if len(test_cams) > 0:
             psnrs = []
+            dyn_psnrs = []
+            static_ghost_scores = []
+            dynamic_edge_scores = []
+            track_flow_errors = []
             with torch.no_grad():
                 for data in test_cams:
                     # Unpack in case dataset returns (gt_image, cam)
@@ -753,6 +925,30 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
 
                     psnrs.append(psnr(pred, gt).mean().item())
 
+                    prior_cache = getattr(scene, "motion_prior_cache", None)
+                    if prior_cache is not None:
+                        dyn_mask = prior_cache.get_dynamic_mask(
+                            cam,
+                            target_hw=gt.shape[-2:],
+                            gt_image=gt,
+                            pred_image=pred,
+                            allow_residual=False,
+                        )
+                        if dyn_mask is not None and dyn_mask.sum() > 1:
+                            dyn_psnr = masked_psnr(pred, gt, dyn_mask)
+                            if dyn_psnr is not None:
+                                dyn_psnrs.append(dyn_psnr.item())
+                            static_ghost_scores.append((render_out["render_3d"].abs().mean(dim=0, keepdim=True) * dyn_mask).sum().div(dyn_mask.sum().clamp_min(1e-6)).item())
+                            dynamic_edge_scores.append((edge_magnitude(pred) * dyn_mask).sum().div(dyn_mask.sum().clamp_min(1e-6)).item())
+
+                        track_flow, track_flow_mask = prior_cache.get_track_flow(cam, gt.shape[-2:])
+                        if track_flow is not None:
+                            if track_flow_mask is None:
+                                track_flow_mask = dyn_mask
+                            flow_loss = compute_flow_loss(render_out.get("flow", None), track_flow, track_flow_mask)
+                            if flow_loss is not None:
+                                track_flow_errors.append(flow_loss.item())
+
                     # for cam in test_cams:
                     # cam = cam.cuda()
                     # render_out = renderFunc(cam, scene.gaussians, pipe, background)
@@ -761,8 +957,19 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                     # psnrs.append(psnr(pred, gt).mean().item())
             if psnrs:
                 test_psnr = float(np.mean(psnrs))
-                if tb_writer: tb_writer.add_scalar('test/psnr', test_psnr, iteration)
-                log_wandb_metrics(wandb_run, {"test/psnr": test_psnr}, iteration)
+                eval_metrics = {"test/psnr": test_psnr}
+                if dyn_psnrs:
+                    eval_metrics["test/dynamic_mask_psnr"] = float(np.mean(dyn_psnrs))
+                if static_ghost_scores:
+                    eval_metrics["test/static_ghost_score"] = float(np.mean(static_ghost_scores))
+                if dynamic_edge_scores:
+                    eval_metrics["test/dynamic_edge_magnitude"] = float(np.mean(dynamic_edge_scores))
+                if track_flow_errors:
+                    eval_metrics["test/track_flow_l1"] = float(np.mean(track_flow_errors))
+                if tb_writer:
+                    for metric_name, metric_value in eval_metrics.items():
+                        tb_writer.add_scalar(metric_name, metric_value, iteration)
+                log_wandb_metrics(wandb_run, eval_metrics, iteration)
                 return test_psnr
     return None
 

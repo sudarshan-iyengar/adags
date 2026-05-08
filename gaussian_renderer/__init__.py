@@ -15,6 +15,7 @@ import math
 from .diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh, eval_shfs_4d
+from utils.motion_prior_utils import project_points_to_screen
 from collections import defaultdict
 
 def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
@@ -126,7 +127,13 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     else:
         colors_precomp = override_color
 
-    flow_2d = torch.zeros_like(pc.get_xyz[:,:2])
+    if pc.gaussian_dim == 4 and getattr(pc, "enable_rendered_flow", False):
+        means3D_next = pc.get_dynamic_xyz(viewpoint_camera.timestamp + getattr(pc, "motion_track_dt", 1.0 / 30.0))
+        screen_now, valid_now = project_points_to_screen(means3D, viewpoint_camera)
+        screen_next, valid_next = project_points_to_screen(means3D_next, viewpoint_camera)
+        flow_2d = torch.where((valid_now & valid_next).expand_as(screen_now), screen_next - screen_now, torch.zeros_like(screen_now))
+    else:
+        flow_2d = torch.zeros_like(pc.get_xyz[:,:2])
 
     # Prefilter
     if pipe.compute_cov3D_python and pc.gaussian_dim == 4:

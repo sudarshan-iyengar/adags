@@ -134,6 +134,31 @@ class OptimizationParams(ParamGroup):
         self.motion_lora_coeff_lr = -1.0
         self.motion_lora_basis_lr = -1.0
 
+        self.motion_prior_root = ""
+        self.dynamic_mask_from_residual = False
+        self.dynamic_mask_residual_quantile = 0.85
+        self.dynamic_mask_dilate = 2
+        self.lambda_dynamic_roi = 0.0
+        self.lambda_static_exclusion = 0.0
+        self.lambda_track_flow = 0.0
+        self.lambda_scaffold_smooth = 0.0
+        self.lambda_scaffold_reg = 0.0
+
+        self.motion_scaffold_enable = False
+        self.motion_scaffold_count = 512
+        self.motion_scaffold_rank = 8
+        self.motion_scaffold_anchors = 32
+        self.motion_scaffold_knn = 4
+        self.motion_scaffold_init_scale = 0.01
+        self.motion_scaffold_weight_temp = 0.05
+        self.motion_scaffold_chunk = 65536
+        self.motion_scaffold_coeff_lr = -1.0
+        self.motion_scaffold_basis_lr = -1.0
+        self.motion_track_dt = 0.0333333333
+        self.enable_rendered_flow = False
+        self.enable_motion_aware_densify = False
+        self.motion_aware_densify_boost = 1.0
+
         self.blur_until_iter = 0       # Set > 0 to enable blurring
         self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel
 

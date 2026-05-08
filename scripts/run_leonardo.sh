@@ -14,6 +14,7 @@ CONFIG="${CONFIG:-configs/n3v/default.yaml}"
 DATASET_ROOT="${DATASET_ROOT:-$WORK/proj_adags/data/n3v}"
 SCENE="${SCENE:-cut_roasted_beef}"           # override per job via --export
 RUN_TAG="${RUN_TAG:-baseline}"               # free text
+RUN_LABEL="${RUN_LABEL:-}"                   # optional subdirectory under runs/
 
 # W&B
 WANDB_PROJECT="${WANDB_PROJECT:-adags}"
@@ -37,13 +38,21 @@ DATASET_PATH="${DATASET_ROOT}/${SCENE}"
 # If no run was provided:
 if [[ -z "$RUN_DIR" ]]; then
   if [[ -n "$RUN_ID" ]]; then
-    RUN_DIR="$WORK/proj_adags/runs/$RUN_ID"
+    if [[ -n "$RUN_LABEL" ]]; then
+      RUN_DIR="$WORK/proj_adags/runs/$RUN_LABEL/$RUN_ID"
+    else
+      RUN_DIR="$WORK/proj_adags/runs/$RUN_ID"
+    fi
   else
     # only create a new run for training; for eval, require an existing run
     if [[ "$MODE" == "train" ]]; then
       TS="$(date +%Y%m%d_%H%M%S)"
       RUN_ID="${TS}_${SCENE}_${RUN_TAG}"
-      RUN_DIR="$WORK/proj_adags/runs/${RUN_ID}"
+      if [[ -n "$RUN_LABEL" ]]; then
+        RUN_DIR="$WORK/proj_adags/runs/$RUN_LABEL/${RUN_ID}"
+      else
+        RUN_DIR="$WORK/proj_adags/runs/${RUN_ID}"
+      fi
     else
       echo "ERROR: For eval you must set RUN_DIR or RUN_ID to an existing run." >&2
       echo "Example: --export=ALL,RUN_ID=20260226_154023_cut_roasted_beef_baseline" >&2
@@ -65,6 +74,7 @@ cd "$WORK/proj_adags/repo/adags"
   echo "mode: ${MODE}"
   echo "scene: ${SCENE}"
   echo "run_tag: ${RUN_TAG}"
+  echo "run_label: ${RUN_LABEL:-none}"
   echo "run_dir: ${RUN_DIR}"
   echo "host: $(hostname)"
   echo "slurm_job_id: ${SLURM_JOB_ID:-none}"
