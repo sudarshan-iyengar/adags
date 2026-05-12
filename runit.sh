@@ -12,9 +12,8 @@ SCENES=(
 
 # label|config_path|ckpt_iter
 CONFIGS=(
-  "lora_route0_dynmask|$WORK/proj_adags/repo/adags/configs/n3v/lora_route0_dynmask.yaml|15000"
-  "scaffold_lora_route0|$WORK/proj_adags/repo/adags/configs/n3v/scaffold_lora_route0.yaml|15000"
-  "scaffold_lora_route0_dyn_densify|$WORK/proj_adags/repo/adags/configs/n3v/scaffold_lora_route0_dyn_densify.yaml|15000"
+  "scaffold_lora_route0|$WORK/proj_adags/repo/adags/configs/n3v/scaffold_lora_route0.yaml|9000"
+  "scaffold_lora_route0_dyn_densify|$WORK/proj_adags/repo/adags/configs/n3v/scaffold_lora_route0_dyn_densify.yaml|9000"
 )
 
 

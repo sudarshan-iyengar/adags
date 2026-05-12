@@ -624,7 +624,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         if opt.__dict__[lambda_name] > 0:
                             key = lambda_name.replace("lambda_", "L")
                             ema_name = f"ema_{lambda_name.replace('lambda_', '')}_for_log"
-                            postfix[key] = f"{vars()[ema_name]:.4f}"
+                            if key in ("Lscaffold_smooth", "Lscaffold_reg"):
+                                postfix[key] = f"{vars()[ema_name]:.4e}"
+                            else:
+                                postfix[key] = f"{vars()[ema_name]:.4f}"
                     progress_bar.set_postfix(postfix)
                     progress_bar.update(10)
                 if iteration == opt.iterations:
