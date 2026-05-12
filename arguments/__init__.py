@@ -161,6 +161,7 @@ class OptimizationParams(ParamGroup):
 
         self.blur_until_iter = 0       # Set > 0 to enable blurring
         self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel
+        self.histogram_log_interval = 1
 
         super().__init__(parser, "Optimization Parameters")
 

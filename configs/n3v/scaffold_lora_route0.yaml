@@ -30,7 +30,7 @@ PipelineParams:
   eval_shfs_4d: True
 
 OptimizationParams:
-  iterations: 15_000
+  iterations: 9_000
   position_lr_init: 0.00016
   position_t_lr_init: -1.0
   position_lr_final: 0.0000016
@@ -46,7 +46,7 @@ OptimizationParams:
   densification_interval: 100
   opacity_reset_interval: 30000
   densify_from_iter: 500
-  densify_until_iter: 12_000
+  densify_until_iter: 6_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.000005
   densify_until_num_points: -1
@@ -78,7 +78,7 @@ OptimizationParams:
   dynamic_mask_dilate: 2
   lambda_dynamic_roi: 0.5
   lambda_static_exclusion: 0.02
-  lambda_track_flow: 0.05
+  lambda_track_flow: 0.0
   lambda_scaffold_smooth: 0.0001
   lambda_scaffold_reg: 0.000001
   motion_scaffold_enable: true
@@ -92,7 +92,8 @@ OptimizationParams:
   motion_scaffold_coeff_lr: -1.0
   motion_scaffold_basis_lr: -1.0
   motion_track_dt: 0.0333333333
-  enable_rendered_flow: true
+  enable_rendered_flow: false
   enable_motion_aware_densify: false
-  blur_until_iter: 9000
+  blur_until_iter: 0
   blur_start_sigma: 8.0
+  histogram_log_interval: 100

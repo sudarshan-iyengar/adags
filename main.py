@@ -726,6 +726,13 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
     static_points = gaussians.get_static_xyz.shape[0] if hasattr(gaussians, 'get_static_xyz') else 0
     dynamic_points = total_points - static_points
     hard_static_conversion = bool(getattr(opt, "enable_hard_static_conversion", False)) if opt is not None else False
+    histogram_log_interval = max(1, int(getattr(opt, "histogram_log_interval", 1))) if opt is not None else 1
+    log_histograms = (
+        iteration % histogram_log_interval == 0
+        or iteration == 1
+        or iteration in testing_iterations
+        or iteration == getattr(opt, "iterations", -1)
+    )
 
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
@@ -733,7 +740,8 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         tb_writer.add_scalar('train_loss_patches/total_loss', loss, iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
         tb_writer.add_scalar('total_points', total_points, iteration)
-        tb_writer.add_histogram("scene/opacity_histogram", gaussians.get_opacity, iteration)
+        if log_histograms:
+            tb_writer.add_histogram("scene/opacity_histogram", gaussians.get_opacity, iteration)
 
         tb_writer.add_scalar('points/total', total_points, iteration)
         tb_writer.add_scalar('points/static', static_points, iteration)
@@ -751,8 +759,9 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             tb_writer.add_scalar('gate/scalars/max_s', s.max().item(), iteration)
             tb_writer.add_scalar('gate/scalars/percent_s>0.9', (s > 0.9).float().mean().item() * 100, iteration)
             tb_writer.add_scalar('gate/scalars/percent_s<0.1', (s < 0.1).float().mean().item() * 100, iteration)
-            tb_writer.add_histogram('gate/hist/s_distribution', s, iteration, bins=50)
-            if hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
+            if log_histograms:
+                tb_writer.add_histogram('gate/hist/s_distribution', s, iteration, bins=50)
+            if log_histograms and hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
                 ts = gaussians.get_t.detach()
                 tb_writer.add_histogram('gate/ts/timestamps_after_gating', ts, iteration, bins=50)
         if gaussians.get_route_logit.numel() > 0:
@@ -762,13 +771,15 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             tb_writer.add_scalar('routing/entropy', route_entropy.item(), iteration)
             tb_writer.add_scalar('routing/percent_near_static', (p_dyn < 0.1).float().mean().item() * 100, iteration)
             tb_writer.add_scalar('routing/percent_near_dynamic', (p_dyn > 0.9).float().mean().item() * 100, iteration)
-            tb_writer.add_histogram('routing/dynamic_probability', p_dyn, iteration, bins=50)
+            if log_histograms:
+                tb_writer.add_histogram('routing/dynamic_probability', p_dyn, iteration, bins=50)
 
         if getattr(gaussians, "motion_model", "") == "lora" and gaussians.get_motion_lora_coeff.numel() > 0:
             tb_writer.add_scalar('motion_lora/coeff_norm_mean', gaussians.get_motion_lora_coeff.detach().norm(dim=1).mean().item(), iteration)
             if gaussians.get_motion_lora_basis is not None:
                 tb_writer.add_scalar('motion_lora/basis_norm_mean', gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item(), iteration)
-                tb_writer.add_histogram('motion_lora/basis', gaussians.get_motion_lora_basis.detach(), iteration, bins=50)
+                if log_histograms:
+                    tb_writer.add_histogram('motion_lora/basis', gaussians.get_motion_lora_basis.detach(), iteration, bins=50)
 
         if getattr(gaussians, "motion_scaffold_enable", False) and gaussians.get_motion_scaffold_coeff.numel() > 0:
             tb_writer.add_scalar('motion_scaffold/node_count', gaussians.get_motion_scaffold_coeff.shape[0], iteration)
@@ -817,8 +828,9 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         "points/dynamic": dynamic_points,
         "gpu/memory_allocated_MB": torch.cuda.memory_allocated() / 1e6,
         "gpu/memory_reserved_MB": torch.cuda.memory_reserved() / 1e6,
-        "hist/scene_opacity": gaussians.get_opacity,
     }
+    if log_histograms:
+        wandb_metrics["hist/scene_opacity"] = gaussians.get_opacity
 
     if hard_static_conversion and hasattr(gaussians, '_staticness_score') and opt is not None and gaussians._staticness_score.numel() > 0:
         conversion_rate = (gaussians._staticness_score > opt.static_conversion_threshold).float().mean().item() * 100
@@ -833,9 +845,10 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "gate/max_s": s.max().item(),
             "gate/percent_s_gt_0_9": (s > 0.9).float().mean().item() * 100,
             "gate/percent_s_lt_0_1": (s < 0.1).float().mean().item() * 100,
-            "hist/gate_s_distribution": s,
         })
-        if hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
+        if log_histograms:
+            wandb_metrics["hist/gate_s_distribution"] = s
+        if log_histograms and hasattr(gaussians, 'get_t') and gaussians.get_t.numel() > 0:
             wandb_metrics["hist/gate_timestamps_after_gating"] = gaussians.get_t.detach()
 
     if gaussians.get_route_logit.numel() > 0:
@@ -846,14 +859,16 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "routing/entropy": route_entropy.item(),
             "routing/percent_near_static": (p_dyn < 0.1).float().mean().item() * 100,
             "routing/percent_near_dynamic": (p_dyn > 0.9).float().mean().item() * 100,
-            "hist/routing_dynamic_probability": p_dyn,
         })
+        if log_histograms:
+            wandb_metrics["hist/routing_dynamic_probability"] = p_dyn
 
     if getattr(gaussians, "motion_model", "") == "lora" and gaussians.get_motion_lora_coeff.numel() > 0:
         wandb_metrics["motion_lora/coeff_norm_mean"] = gaussians.get_motion_lora_coeff.detach().norm(dim=1).mean().item()
         if gaussians.get_motion_lora_basis is not None:
             wandb_metrics["motion_lora/basis_norm_mean"] = gaussians.get_motion_lora_basis.detach().norm(dim=-1).mean().item()
-            wandb_metrics["hist/motion_lora_basis"] = gaussians.get_motion_lora_basis.detach()
+            if log_histograms:
+                wandb_metrics["hist/motion_lora_basis"] = gaussians.get_motion_lora_basis.detach()
 
     if getattr(gaussians, "motion_scaffold_enable", False) and gaussians.get_motion_scaffold_coeff.numel() > 0:
         wandb_metrics["motion_scaffold/node_count"] = gaussians.get_motion_scaffold_coeff.shape[0]
