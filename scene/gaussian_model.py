@@ -1414,6 +1414,24 @@ class GaussianModel:
 
     # ----------------- Densification -----------------
 
+    def _limit_densify_selection(self, selected_pts_mask, scores, max_selected):
+        if max_selected is None or max_selected < 0:
+            return selected_pts_mask
+        max_selected = int(max_selected)
+        if max_selected <= 0:
+            return torch.zeros_like(selected_pts_mask, dtype=torch.bool)
+
+        selected_count = int(selected_pts_mask.sum().item())
+        if selected_count <= max_selected:
+            return selected_pts_mask
+
+        selected_idx = selected_pts_mask.nonzero(as_tuple=False).squeeze(-1)
+        selected_scores = scores.reshape(-1)[selected_idx]
+        keep_local = torch.topk(selected_scores, k=max_selected, largest=True).indices
+        limited = torch.zeros_like(selected_pts_mask, dtype=torch.bool)
+        limited[selected_idx[keep_local]] = True
+        return limited
+
     def densification_postfix(
             self,
             new_xyz,
@@ -1613,7 +1631,7 @@ class GaussianModel:
 
     # split/clone methods unchanged (just using helpers above)
 
-    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
+    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2, max_new_points=None):
         n_init_points = self.get_xyz.shape[0]
         padded_grad = torch.zeros((n_init_points), device="cuda")
         padded_grad[: grads.shape[0]] = grads.squeeze()
@@ -1623,6 +1641,10 @@ class GaussianModel:
             torch.max(self.get_scaling, dim=1).values
             > self.percent_dense * scene_extent,
             )
+        selected_pts_mask = self._limit_densify_selection(selected_pts_mask, padded_grad, max_new_points)
+        selected_count = int(selected_pts_mask.sum().item())
+        if selected_count == 0:
+            return 0
 
         new_scaling = self.scaling_inverse_activation(
             self.get_scaling[selected_pts_mask].repeat(N, 1) / (0.8 * N)
@@ -1746,14 +1768,20 @@ class GaussianModel:
             )
         )
         self.prune_points(prune_filter)
+        return selected_count
 
-    def densify_and_clone(self, grads, grad_threshold, scene_extent):
-        selected_pts_mask = torch.norm(grads, dim=-1) >= grad_threshold
+    def densify_and_clone(self, grads, grad_threshold, scene_extent, max_new_points=None):
+        grad_norm = torch.norm(grads, dim=-1)
+        selected_pts_mask = grad_norm >= grad_threshold
         selected_pts_mask = torch.logical_and(
             selected_pts_mask,
             torch.max(self.get_scaling, dim=1).values
             <= self.percent_dense * scene_extent,
             )
+        selected_pts_mask = self._limit_densify_selection(selected_pts_mask, grad_norm, max_new_points)
+        selected_count = int(selected_pts_mask.sum().item())
+        if selected_count == 0:
+            return 0
 
         new_xyz = self._xyz[selected_pts_mask]
         new_features_dc = self._features_dc[selected_pts_mask]
@@ -1804,6 +1832,7 @@ class GaussianModel:
             new_motion_scaffold_attach_idx,
             new_motion_scaffold_attach_w,
         )
+        return selected_count
 
     def densify_and_split_static(self, grads, grad_threshold, scene_extent, N=2):
         n_init_points = self.get_static_xyz.shape[0]
@@ -1904,6 +1933,7 @@ class GaussianModel:
             gate_warmup_until_iter=None,
             iteration=None,
             enable_hard_static_conversion=False,
+            max_total_points=-1,
     ):
         # 1) Snapshot temporal gradients BEFORE we touch the point set
         avg_t_grad_snapshot = None
@@ -1946,8 +1976,24 @@ class GaussianModel:
         grads[grads.isnan()] = 0.0
 
         # 4) Densify dynamic gaussians
-        self.densify_and_clone(grads, max_grad, extent)
-        self.densify_and_split(grads, max_grad, extent)
+        remaining_new_points = None
+        if max_total_points is not None and max_total_points >= 0:
+            remaining_new_points = max(0, int(max_total_points) - int(self.get_xyz.shape[0]))
+
+        cloned_points = self.densify_and_clone(
+            grads,
+            max_grad,
+            extent,
+            max_new_points=remaining_new_points,
+        )
+        if remaining_new_points is not None:
+            remaining_new_points = max(0, remaining_new_points - cloned_points)
+        self.densify_and_split(
+            grads,
+            max_grad,
+            extent,
+            max_new_points=remaining_new_points,
+        )
 
         # 5) Densify static gaussians (unchanged)
         if len(self.static_xyz) != 0:

@@ -49,7 +49,7 @@ OptimizationParams:
   densify_until_iter: 6_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.000005
-  densify_until_num_points: -1
+  densify_until_num_points: 800000
   final_prune_from_iter: -1
   sh_increase_interval: 1000
   lambda_opa_mask: 0.0
@@ -94,7 +94,7 @@ OptimizationParams:
   motion_track_dt: 0.0333333333
   enable_rendered_flow: false
   enable_motion_aware_densify: true
-  motion_aware_densify_boost: 2.0
+  motion_aware_densify_boost: 1.5
   blur_until_iter: 0
   blur_start_sigma: 8.0
   histogram_log_interval: 100

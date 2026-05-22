@@ -680,6 +680,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                                 gate_warmup_until_iter=opt.gate_warmup_until_iter,
                                 iteration=iteration,
                                 enable_hard_static_conversion=hard_static_conversion,
+                                max_total_points=opt.densify_until_num_points,
                             )
                     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                         gaussians.reset_opacity()
