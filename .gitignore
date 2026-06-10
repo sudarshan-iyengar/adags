@@ -30,6 +30,10 @@ venv/
 env/
 *.env
 
+# Local agent tooling
+.agents/
+skills-lock.json
+
 # Operating System files
 .DS_Store
 Thumbs.db

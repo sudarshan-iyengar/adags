@@ -83,6 +83,25 @@ environment:
 
 If outbound connectivity is restricted on the cluster, run with `--wandb_mode offline` and sync later from the run directory.
 
+### Syncing offline W&B runs
+
+The Leonardo batch scripts default to `WANDB_MODE=offline`, so each train/eval segment is saved under:
+
+```shell
+$WORK/proj_adags/runs/<run_label>/<run_id>/wandb/offline-run-*
+```
+
+From a login node with network access:
+
+```shell
+cd $WORK/proj_adags/repo/adags
+export WANDB_API_KEY=your_api_key
+bash scripts/sync_wandb_runs.sh --dry-run
+bash scripts/sync_wandb_runs.sh --project adags
+```
+
+Use `--entity <team-or-user>` if the project lives under a W&B team account. The sync helper passes `--append` by default because this repo uses the same W&B run id for train and eval jobs.
+
 ## 🙏 Acknowledgement
 This project builds upon:
 - [Hybrid 3D-4DGS](https://github.com/ohsngjun/3D-4DGS)

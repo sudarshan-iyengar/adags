@@ -147,19 +147,125 @@ def get_job_metadata():
     }
 
 
+WANDB_CONFIG_EXCLUDE_KEYS = {
+    "config",
+    "debug_from",
+    "detect_anomaly",
+    "exhaust_test",
+    "from3dgs",
+    "images",
+    "loaded_pth",
+    "model_path",
+    "quiet",
+    "save_iterations",
+    "source_path",
+    "start_checkpoint",
+    "test_iterations",
+    "use_wandb",
+    "val",
+}
+
+WANDB_CONFIG_EXCLUDE_PREFIXES = (
+    "runtime_",
+    "wandb_",
+)
+
+
+def normalize_wandb_value(value):
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, DictConfig):
+        return OmegaConf.to_container(value, resolve=True)
+    return value
+
+
+def infer_scene_name(args):
+    source_path = getattr(args, "source_path", None)
+    if source_path:
+        scene = os.path.basename(os.path.normpath(str(source_path)))
+        if scene:
+            return scene
+
+    for tag in getattr(args, "wandb_tags", None) or []:
+        if tag not in {"train", "eval", "validation", "n3v"}:
+            return tag
+    return None
+
+
+def infer_method_name(args):
+    config_path = getattr(args, "config", None)
+    if config_path:
+        return os.path.splitext(os.path.basename(str(config_path)))[0]
+
+    tags = getattr(args, "wandb_tags", None) or []
+    for tag in tags:
+        if tag not in {"train", "eval", "validation", "n3v", infer_scene_name(args)}:
+            return tag
+    return None
+
+
+def infer_wandb_job_type(args):
+    tags = set(getattr(args, "wandb_tags", None) or [])
+    if getattr(args, "val", False) or "eval" in tags or "validation" in tags:
+        return "eval"
+    return "train"
+
+
+def resolve_wandb_group(args):
+    scene_name = infer_scene_name(args)
+    requested_group = getattr(args, "wandb_group", None)
+    if scene_name and (requested_group is None or requested_group in {"", "n3v"}):
+        return scene_name
+    return requested_group or scene_name
+
+
+def build_wandb_tags(args):
+    tags = []
+    for tag in getattr(args, "wandb_tags", None) or []:
+        if tag and tag not in tags:
+            tags.append(tag)
+
+    for tag in (infer_scene_name(args), infer_method_name(args), infer_wandb_job_type(args)):
+        if tag and tag not in tags:
+            tags.append(tag)
+
+    requested_group = getattr(args, "wandb_group", None)
+    if requested_group and requested_group != resolve_wandb_group(args):
+        group_tag = f"group:{requested_group}"
+        if group_tag not in tags:
+            tags.append(group_tag)
+    return tags
+
+
 def build_wandb_config(args):
     config = {}
     for key, value in vars(args).items():
-        if key == "wandb_tags":
-            config[key] = value if value is not None else []
-        elif isinstance(value, tuple):
-            config[key] = list(value)
-        else:
-            config[key] = value
+        if key in WANDB_CONFIG_EXCLUDE_KEYS:
+            continue
+        if any(key.startswith(prefix) for prefix in WANDB_CONFIG_EXCLUDE_PREFIXES):
+            continue
+        config[key] = normalize_wandb_value(value)
+
+    return config
+
+
+def build_wandb_metadata(args):
+    metadata = {
+        "metadata/source_path": getattr(args, "source_path", None),
+        "metadata/model_path": getattr(args, "model_path", None),
+        "metadata/config_path": getattr(args, "config", None),
+        "metadata/config_name": infer_method_name(args),
+        "metadata/scene": infer_scene_name(args),
+        "metadata/run_phase": infer_wandb_job_type(args),
+        "metadata/requested_group": getattr(args, "wandb_group", None),
+        "metadata/resolved_group": resolve_wandb_group(args),
+        "metadata/wandb_run_name": getattr(args, "wandb_run_name", None),
+        "metadata/wandb_resume": getattr(args, "wandb_resume", None),
+    }
 
     for key, value in get_job_metadata().items():
-        config[f"runtime_{key}"] = value
-    return config
+        metadata[f"runtime/{key}"] = value
+    return metadata
 
 
 def init_wandb(args):
@@ -169,10 +275,10 @@ def init_wandb(args):
     if not WANDB_FOUND:
         raise ImportError("Weights & Biases logging requested, but `wandb` is not installed.")
 
-    if args.wandb_mode == "online" and not os.getenv("WANDB_API_KEY"):
+    if args.wandb_mode == "online" and not has_wandb_credentials():
         raise RuntimeError(
-            "Weights & Biases online mode requires WANDB_API_KEY in the environment. "
-            "Use `--wandb_mode offline` for local dry runs without an API key."
+            "Weights & Biases online mode requires credentials from WANDB_API_KEY "
+            "or `wandb login`. Use `--wandb_mode offline` for dry runs without credentials."
         )
 
     ensure_model_path(args)
@@ -180,8 +286,9 @@ def init_wandb(args):
         project=args.wandb_project,
         entity=args.wandb_entity,
         name=args.wandb_run_name,
-        group=args.wandb_group,
-        tags=args.wandb_tags,
+        group=resolve_wandb_group(args),
+        job_type=infer_wandb_job_type(args),
+        tags=build_wandb_tags(args),
         mode=args.wandb_mode,
         id=args.wandb_resume,
         resume="allow" if args.wandb_resume else None,
@@ -190,9 +297,26 @@ def init_wandb(args):
     )
     run.summary["model_path"] = args.model_path
     run.summary["config_path"] = args.config
+    for key, value in build_wandb_metadata(args).items():
+        if value is not None:
+            run.summary[key] = value
     if args.start_checkpoint:
         run.summary["start_checkpoint"] = args.start_checkpoint
     return run
+
+
+def has_wandb_credentials():
+    if os.getenv("WANDB_API_KEY"):
+        return True
+
+    try:
+        import netrc
+
+        host = os.getenv("WANDB_BASE_URL", "https://api.wandb.ai")
+        host = host.removeprefix("https://").removeprefix("http://").split("/", 1)[0]
+        return netrc.netrc().authenticators(host) is not None
+    except (FileNotFoundError, netrc.NetrcParseError, OSError):
+        return False
 
 
 def finish_wandb_run(wandb_run, summary_updates=None):
@@ -252,12 +376,30 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
 
     print("export rendered testing images ...")
     os.makedirs(test_dir, exist_ok=True)
-    gaussExtractor.reconstruction(scene.getTestCameras(), test_dir, stage="validation")
+    validation_stats = gaussExtractor.reconstruction(scene.getTestCameras(), test_dir, stage="validation")
     gaussExtractor.export_image(test_dir, mode="validation")
     if wandb_run is not None:
         wandb_run.summary["validation_checkpoint"] = checkpoint
         wandb_run.summary["validation_output_dir"] = test_dir
         wandb_run.summary["validation_train_dir"] = train_dir
+        if validation_stats:
+            metric_map = {
+                "psnr": "test/psnr",
+                "ssim": "test/ssim",
+                "lpips": "test/lpips",
+                "num_GS": "points/total",
+                "static": "points/hard_static",
+            }
+            eval_metrics = {}
+            for stat_name, metric_name in metric_map.items():
+                if stat_name in validation_stats:
+                    eval_metrics[metric_name] = validation_stats[stat_name]
+            if "num_GS" in validation_stats and "static" in validation_stats:
+                hard_dynamic = validation_stats["num_GS"] - validation_stats["static"]
+                eval_metrics["points/static"] = validation_stats["static"]
+                eval_metrics["points/dynamic"] = hard_dynamic
+                eval_metrics["points/hard_dynamic"] = hard_dynamic
+            log_wandb_metrics(wandb_run, eval_metrics, first_iter)
 
 
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint, debug_from,
@@ -741,6 +883,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/ssim_loss', Lssim.item(), iteration)
+        tb_writer.add_scalar('train/ssim', 1.0 - Lssim.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss, iteration)
         tb_writer.add_scalar('iter_time', elapsed, iteration)
         tb_writer.add_scalar('total_points', total_points, iteration)
@@ -750,6 +893,8 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         tb_writer.add_scalar('points/total', total_points, iteration)
         tb_writer.add_scalar('points/static', static_points, iteration)
         tb_writer.add_scalar('points/dynamic', dynamic_points, iteration)
+        tb_writer.add_scalar('points/hard_static', static_points, iteration)
+        tb_writer.add_scalar('points/hard_dynamic', dynamic_points, iteration)
 
         if hard_static_conversion and hasattr(gaussians, '_staticness_score') and opt is not None and gaussians._staticness_score.numel() > 0:
             conversion_rate = (gaussians._staticness_score > opt.static_conversion_threshold).float().mean().item() * 100
@@ -775,6 +920,9 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             tb_writer.add_scalar('routing/entropy', route_entropy.item(), iteration)
             tb_writer.add_scalar('routing/percent_near_static', (p_dyn < 0.1).float().mean().item() * 100, iteration)
             tb_writer.add_scalar('routing/percent_near_dynamic', (p_dyn > 0.9).float().mean().item() * 100, iteration)
+            tb_writer.add_scalar('routing/expected_static_points', (1.0 - p_dyn).sum().item(), iteration)
+            tb_writer.add_scalar('routing/expected_dynamic_points', p_dyn.sum().item(), iteration)
+            tb_writer.add_scalar('routing/percent_uncertain', ((p_dyn >= 0.1) & (p_dyn <= 0.9)).float().mean().item() * 100, iteration)
             if log_histograms:
                 tb_writer.add_histogram('routing/dynamic_probability', p_dyn, iteration, bins=50)
 
@@ -825,11 +973,14 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
     wandb_metrics = {
         "train/l1_loss": Ll1.item(),
         "train/ssim_loss": Lssim.item(),
+        "train/ssim": 1.0 - Lssim.item(),
         "train/total_loss": loss,
         "train/iter_time_ms": elapsed,
         "points/total": total_points,
         "points/static": static_points,
         "points/dynamic": dynamic_points,
+        "points/hard_static": static_points,
+        "points/hard_dynamic": dynamic_points,
         "gpu/memory_allocated_MB": torch.cuda.memory_allocated() / 1e6,
         "gpu/memory_reserved_MB": torch.cuda.memory_reserved() / 1e6,
     }
@@ -863,6 +1014,9 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "routing/entropy": route_entropy.item(),
             "routing/percent_near_static": (p_dyn < 0.1).float().mean().item() * 100,
             "routing/percent_near_dynamic": (p_dyn > 0.9).float().mean().item() * 100,
+            "routing/expected_static_points": (1.0 - p_dyn).sum().item(),
+            "routing/expected_dynamic_points": p_dyn.sum().item(),
+            "routing/percent_uncertain": ((p_dyn >= 0.1) & (p_dyn <= 0.9)).float().mean().item() * 100,
         })
         if log_histograms:
             wandb_metrics["hist/routing_dynamic_probability"] = p_dyn
@@ -920,6 +1074,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         test_cams = scene.getTestCameras()
         if len(test_cams) > 0:
             psnrs = []
+            ssims = []
             dyn_psnrs = []
             static_ghost_scores = []
             dynamic_edge_scores = []
@@ -943,6 +1098,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                         raise ValueError("No ground truth image found for test camera.")
 
                     psnrs.append(psnr(pred, gt).mean().item())
+                    ssims.append(ssim(pred, gt).mean().item())
 
                     prior_cache = getattr(scene, "motion_prior_cache", None)
                     if prior_cache is not None:
@@ -977,6 +1133,8 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if psnrs:
                 test_psnr = float(np.mean(psnrs))
                 eval_metrics = {"test/psnr": test_psnr}
+                if ssims:
+                    eval_metrics["test/ssim"] = float(np.mean(ssims))
                 if dyn_psnrs:
                     eval_metrics["test/dynamic_mask_psnr"] = float(np.mean(dyn_psnrs))
                 if static_ghost_scores:
