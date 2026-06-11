@@ -179,6 +179,10 @@ def normalize_wandb_value(value):
     return value
 
 
+DATASET_GROUP_TAGS = {"n3v", "panopticsports"}
+MAX_WANDB_TAG_LENGTH = 64
+
+
 def infer_scene_name(args):
     source_path = getattr(args, "source_path", None)
     if source_path:
@@ -187,7 +191,7 @@ def infer_scene_name(args):
             return scene
 
     for tag in getattr(args, "wandb_tags", None) or []:
-        if tag not in {"train", "eval", "validation", "n3v"}:
+        if tag not in {"train", "eval", "validation"} | DATASET_GROUP_TAGS:
             return tag
     return None
 
@@ -199,7 +203,7 @@ def infer_method_name(args):
 
     tags = getattr(args, "wandb_tags", None) or []
     for tag in tags:
-        if tag not in {"train", "eval", "validation", "n3v", infer_scene_name(args)}:
+        if tag not in {"train", "eval", "validation", infer_scene_name(args)} | DATASET_GROUP_TAGS:
             return tag
     return None
 
@@ -214,26 +218,34 @@ def infer_wandb_job_type(args):
 def resolve_wandb_group(args):
     scene_name = infer_scene_name(args)
     requested_group = getattr(args, "wandb_group", None)
-    if scene_name and (requested_group is None or requested_group in {"", "n3v"}):
+    if scene_name and (requested_group is None or requested_group in {""} | DATASET_GROUP_TAGS):
         return scene_name
     return requested_group or scene_name
 
 
 def build_wandb_tags(args):
     tags = []
-    for tag in getattr(args, "wandb_tags", None) or []:
-        if tag and tag not in tags:
+
+    def add_tag(tag):
+        if tag is None:
+            return
+        tag = str(tag)
+        if not tag:
+            return
+        if len(tag) > MAX_WANDB_TAG_LENGTH:
+            tag = tag[:MAX_WANDB_TAG_LENGTH]
+        if tag not in tags:
             tags.append(tag)
 
+    for tag in getattr(args, "wandb_tags", None) or []:
+        add_tag(tag)
+
     for tag in (infer_scene_name(args), infer_method_name(args), infer_wandb_job_type(args)):
-        if tag and tag not in tags:
-            tags.append(tag)
+        add_tag(tag)
 
     requested_group = getattr(args, "wandb_group", None)
     if requested_group and requested_group != resolve_wandb_group(args):
-        group_tag = f"group:{requested_group}"
-        if group_tag not in tags:
-            tags.append(group_tag)
+        add_tag(f"group:{requested_group}")
     return tags
 
 
@@ -1189,7 +1201,7 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_run_name", type=str, default=None)
     parser.add_argument("--wandb_group", type=str, default=None)
     parser.add_argument("--wandb_tags", nargs="+", default=None)
-    parser.add_argument("--wandb_mode", type=str, choices=["online", "offline", "disabled"], default="online")
+    parser.add_argument("--wandb_mode", type=str, choices=["online", "offline", "disabled"], default="offline")
     parser.add_argument("--wandb_resume", type=str, default=None)
 
     args = parser.parse_args(sys.argv[1:])

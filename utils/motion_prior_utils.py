@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 import numpy as np
@@ -164,6 +165,7 @@ class MotionPriorCache:
         root = getattr(opt, "motion_prior_root", "")
         if root in ("", None):
             root = os.path.join(source_path, "motion_priors")
+        self.source_path = Path(source_path)
         self.root = Path(root)
         self.device = device
         self.mask_cache = {}
@@ -185,6 +187,30 @@ class MotionPriorCache:
         for path in self._candidate_paths(image_name, subdirs, suffixes):
             if path.exists():
                 return path
+        return None
+
+    def _find_panoptic_seg_mask(self, camera):
+        seg_root = self.source_path / "seg"
+        if not seg_root.exists():
+            return None
+
+        image_path = getattr(camera, "image_path", None)
+        if image_path:
+            try:
+                rel = Path(image_path).resolve().relative_to((self.source_path / "ims").resolve())
+            except ValueError:
+                rel = None
+            if rel is not None and len(rel.parts) >= 2:
+                candidate = seg_root / rel.parts[0] / f"{Path(rel.parts[-1]).stem}.png"
+                if candidate.exists():
+                    return candidate
+
+        image_name = getattr(camera, "image_name", "")
+        match = re.match(r"cam(\d+)_(\d+)$", image_name)
+        if match:
+            candidate = seg_root / str(int(match.group(1))) / f"{match.group(2)}.png"
+            if candidate.exists():
+                return candidate
         return None
 
     def _load_mask_file(self, path):
@@ -230,6 +256,8 @@ class MotionPriorCache:
             ("masks", "dynamic_masks", "foreground_masks", ""),
             IMAGE_EXTENSIONS + TENSOR_EXTENSIONS,
         )
+        if path is None:
+            path = self._find_panoptic_seg_mask(camera)
         mask = self._load_mask_file(path)
         loaded_from_file = mask is not None
         if mask is None and allow_residual and self.dynamic_mask_from_residual and gt_image is not None and pred_image is not None:

@@ -50,6 +50,9 @@ class Scene:
         if os.path.exists(os.path.join(args.source_path, "sparse")):
             colmap=True
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.white_background, args.eval, num_pts=num_pts, time_duration=time_duration, extension=args.extension, num_extra_pts=args.num_extra_pts, frame_ratio=args.frame_ratio, dataloader=args.dataloader, args=args)
+        elif os.path.exists(os.path.join(args.source_path, "train_meta.json")) and os.path.exists(os.path.join(args.source_path, "test_meta.json")):
+            print("Found train_meta.json and test_meta.json, assuming PanopticSports data set!")
+            scene_info = sceneLoadTypeCallbacks["PanopticSports"](args.source_path, args.white_background, args.eval, num_pts=num_pts, time_duration=time_duration, extension=args.extension, num_extra_pts=args.num_extra_pts, frame_ratio=args.frame_ratio, dataloader=args.dataloader, args=args)
         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
             print("Found transforms_train.json file, assuming Blender data set!")
             scene_info = sceneLoadTypeCallbacks["Blender"](args.source_path, args.white_background, args.eval, num_pts=num_pts, time_duration=time_duration, extension=args.extension, num_extra_pts=args.num_extra_pts, frame_ratio=args.frame_ratio, dataloader=args.dataloader)
