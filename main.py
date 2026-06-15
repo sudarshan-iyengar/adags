@@ -128,6 +128,29 @@ def get_git_commit():
         return None
 
 
+def get_git_branch():
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def get_git_dirty():
+    try:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+        return bool(status)
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def get_job_metadata():
     job_id = None
     job_env_var = None
@@ -143,7 +166,9 @@ def get_job_metadata():
         "cuda_visible_devices": os.getenv("CUDA_VISIBLE_DEVICES"),
         "job_id": job_id,
         "job_id_env": job_env_var,
+        "git_branch": get_git_branch(),
         "git_commit": get_git_commit(),
+        "git_dirty": get_git_dirty(),
     }
 
 
@@ -267,6 +292,9 @@ def build_wandb_metadata(args):
         "metadata/model_path": getattr(args, "model_path", None),
         "metadata/config_path": getattr(args, "config", None),
         "metadata/config_name": infer_method_name(args),
+        "metadata/experiment_name": getattr(args, "experiment_name", None),
+        "metadata/method_family": getattr(args, "method_family", None),
+        "metadata/budget_label": getattr(args, "budget_label", None),
         "metadata/scene": infer_scene_name(args),
         "metadata/run_phase": infer_wandb_job_type(args),
         "metadata/requested_group": getattr(args, "wandb_group", None),
@@ -1203,6 +1231,9 @@ if __name__ == "__main__":
     parser.add_argument("--wandb_tags", nargs="+", default=None)
     parser.add_argument("--wandb_mode", type=str, choices=["online", "offline", "disabled"], default="offline")
     parser.add_argument("--wandb_resume", type=str, default=None)
+    parser.add_argument("--experiment_name", type=str, default=None)
+    parser.add_argument("--method_family", type=str, default=None)
+    parser.add_argument("--budget_label", type=str, default=None)
 
     args = parser.parse_args(sys.argv[1:])
 
