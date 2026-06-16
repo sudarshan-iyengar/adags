@@ -35,7 +35,7 @@ else
   RUN_TAG="${RUN_TAG:-panoptic_scaffold_lora_route0_dyn_densify_ptbudget}"
   TRAIN_TIME="${TRAIN_TIME:-15:00:00}"
   CPUS_PER_TASK="${CPUS_PER_TASK:-16}"
-  CKPT_ITER="${CKPT_ITER:-9000}"
+  CKPT_ITER="${CKPT_ITER:-6000}"
   WANDB_MODE="${WANDB_MODE:-offline}"
   EVAL_AFTER="${EVAL_AFTER:-1}"
 fi

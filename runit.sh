@@ -9,10 +9,13 @@ set -euo pipefail
 # Optional overrides:
 #   SCENE=<single_scene>
 #   CONFIG=<path/to/config.yaml> CFG_NAME=<label> CKPT_ITER=<iter>
-#   EXPERIMENT=single|fixed_budget
+#   EXPERIMENT=single|fixed_budget|mechanism_screen
 #   FIXED_BUDGET_SCENES="cut_roasted_beef flame_steak"
 #   FIXED_BUDGETS="400k 600k 800k"
 #   FIXED_BUDGET_METHODS="lora_route0 scaffold_lora_route0_noreg scaffold_lora_route0_dyn"
+#   MECHANISM_SCREEN_SCENES="cut_roasted_beef flame_steak sear_steak"
+#   MECHANISM_SCREEN_METHODS="lora_route0 lora_route0_dyn scaffold_lora_route0_noreg scaffold_lora_route0_reg scaffold_lora_route0_dyn"
+#   MECHANISM_SCREEN_BUDGETS="600k"
 #   TRAIN_TIME=HH:MM:SS EVAL_AFTER=0|1 WANDB_MODE=offline|online|disabled
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,6 +42,7 @@ SMOKE="${SMOKE:-0}"
 CONFIG_OVERRIDE="${CONFIG:-}"
 CFG_NAME_OVERRIDE="${CFG_NAME:-}"
 DEFAULT_FIXED_BUDGET_SCENES=()
+DEFAULT_MECHANISM_SCREEN_SCENES=()
 
 case "$DATASET" in
   n3v)
@@ -57,10 +61,15 @@ case "$DATASET" in
     DEFAULT_TRAIN_TIME="15:00:00"
     DEFAULT_EVAL_AFTER="1"
     DEFAULT_CKPT_ITER="6000"
-    DEFAULT_EXPERIMENT="fixed_budget"
+    DEFAULT_EXPERIMENT="mechanism_screen"
     DEFAULT_FIXED_BUDGET_SCENES=(
       cut_roasted_beef
       flame_steak
+    )
+    DEFAULT_MECHANISM_SCREEN_SCENES=(
+      cut_roasted_beef
+      flame_steak
+      sear_steak
     )
     DEFAULT_CONFIG_NAME="scaffold_lora_route0_dyn_densify_ptbudget"
     DEFAULT_CONFIG_PATH="$REPO_DIR/configs/n3v/scaffold_lora_route0_dyn_densify_ptbudget.yaml"
@@ -115,6 +124,10 @@ elif [[ "$EXPERIMENT" == "fixed_budget" && -n "${FIXED_BUDGET_SCENES:-}" ]]; the
   read -r -a SCENES <<< "$FIXED_BUDGET_SCENES"
 elif [[ "$EXPERIMENT" == "fixed_budget" && "${#DEFAULT_FIXED_BUDGET_SCENES[@]}" -gt 0 ]]; then
   SCENES=("${DEFAULT_FIXED_BUDGET_SCENES[@]}")
+elif [[ "$EXPERIMENT" == "mechanism_screen" && -n "${MECHANISM_SCREEN_SCENES:-}" ]]; then
+  read -r -a SCENES <<< "$MECHANISM_SCREEN_SCENES"
+elif [[ "$EXPERIMENT" == "mechanism_screen" && "${#DEFAULT_MECHANISM_SCREEN_SCENES[@]}" -gt 0 ]]; then
+  SCENES=("${DEFAULT_MECHANISM_SCREEN_SCENES[@]}")
 else
   SCENES=("${DEFAULT_SCENES[@]}")
 fi
@@ -140,14 +153,19 @@ declare -a CFG_PATHS
 declare -a CFG_METHODS
 declare -a CFG_BUDGETS
 
-if [[ "$EXPERIMENT" == "fixed_budget" ]]; then
+if [[ "$EXPERIMENT" == "fixed_budget" || "$EXPERIMENT" == "mechanism_screen" ]]; then
   if [[ "$DATASET" != "n3v" ]]; then
-    echo "ERROR: EXPERIMENT=fixed_budget is only defined for DATASET=n3v." >&2
+    echo "ERROR: EXPERIMENT=$EXPERIMENT is only defined for DATASET=n3v." >&2
     exit 2
   fi
 
-  FIXED_BUDGET_METHODS="${FIXED_BUDGET_METHODS:-lora_route0 scaffold_lora_route0_noreg scaffold_lora_route0_dyn}"
-  FIXED_BUDGETS="${FIXED_BUDGETS:-400k 600k 800k}"
+  if [[ "$EXPERIMENT" == "mechanism_screen" ]]; then
+    FIXED_BUDGET_METHODS="${MECHANISM_SCREEN_METHODS:-${FIXED_BUDGET_METHODS:-lora_route0 lora_route0_dyn scaffold_lora_route0_noreg scaffold_lora_route0_reg scaffold_lora_route0_dyn}}"
+    FIXED_BUDGETS="${MECHANISM_SCREEN_BUDGETS:-${FIXED_BUDGETS:-600k}}"
+  else
+    FIXED_BUDGET_METHODS="${FIXED_BUDGET_METHODS:-lora_route0 scaffold_lora_route0_noreg scaffold_lora_route0_dyn}"
+    FIXED_BUDGETS="${FIXED_BUDGETS:-400k 600k 800k}"
+  fi
 
   for METHOD in $FIXED_BUDGET_METHODS; do
     for BUDGET in $FIXED_BUDGETS; do
@@ -182,7 +200,7 @@ elif [[ "$EXPERIMENT" == "single" ]]; then
   CFG_METHODS=("$CFG_NAME")
   CFG_BUDGETS=("")
 else
-  echo "ERROR: EXPERIMENT must be 'single' or 'fixed_budget'. Got: $EXPERIMENT" >&2
+  echo "ERROR: EXPERIMENT must be 'single', 'fixed_budget', or 'mechanism_screen'. Got: $EXPERIMENT" >&2
   exit 2
 fi
 
@@ -206,11 +224,11 @@ for IDX in "${!CFG_NAMES[@]}"; do
   CFG_PATH="${CFG_PATHS[$IDX]}"
   METHOD_FAMILY="${CFG_METHODS[$IDX]}"
   BUDGET_LABEL="${CFG_BUDGETS[$IDX]}"
-  if [[ "$EXPERIMENT" == "fixed_budget" ]]; then
+  if [[ "$EXPERIMENT" == "fixed_budget" || "$EXPERIMENT" == "mechanism_screen" ]]; then
     RUN_LABEL_FOR_JOB="${RUN_LABEL:-${DEFAULT_RUN_LABEL_PREFIX}${CFG_NAME}}"
-    RUN_TAG_FOR_JOB="${RUN_TAG:-fixed_budget}"
-    WANDB_EXTRA_TAGS_FOR_JOB="${WANDB_EXTRA_TAGS:-experiment:fixed_budget method:${METHOD_FAMILY} budget:${BUDGET_LABEL}}"
-    EXPERIMENT_NAME_FOR_JOB="fixed_budget"
+    RUN_TAG_FOR_JOB="${RUN_TAG:-$EXPERIMENT}"
+    WANDB_EXTRA_TAGS_FOR_JOB="${WANDB_EXTRA_TAGS:-experiment:${EXPERIMENT} method:${METHOD_FAMILY} budget:${BUDGET_LABEL}}"
+    EXPERIMENT_NAME_FOR_JOB="$EXPERIMENT"
   else
     RUN_LABEL_FOR_JOB="${RUN_LABEL:-${DEFAULT_RUN_LABEL_PREFIX}${CFG_NAME}}"
     RUN_TAG_FOR_JOB="${RUN_TAG:-${DEFAULT_RUN_TAG_PREFIX}_${CFG_NAME}}"
