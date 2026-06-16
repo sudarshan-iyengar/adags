@@ -15,6 +15,25 @@ set -euo pipefail
 #   FIXED_BUDGET_METHODS="lora_route0 scaffold_lora_route0_noreg scaffold_lora_route0_dyn"
 #   TRAIN_TIME=HH:MM:SS EVAL_AFTER=0|1 WANDB_MODE=offline|online|disabled
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR" && pwd)"
+PROJECT_ROOT="${ADAGS_PROJECT_ROOT:-${WORK:?WORK must be set}/proj_adags}"
+SUBMIT_SCRIPT="$REPO_DIR/scripts/run_leonardo.sh"
+DRY_RUN="${DRY_RUN:-0}"
+
+submit_sbatch() {
+  if [[ "$DRY_RUN" == "1" ]]; then
+    {
+      printf 'DRY_RUN sbatch --parsable'
+      printf ' %q' "$@"
+      printf '\n'
+    } >&2
+    echo "dryrun-${RANDOM}"
+  else
+    sbatch --parsable "$@"
+  fi
+}
+
 DATASET="${DATASET:-n3v}"
 SMOKE="${SMOKE:-0}"
 CONFIG_OVERRIDE="${CONFIG:-}"
@@ -31,20 +50,20 @@ case "$DATASET" in
       sear_steak
       flame_steak
     )
-    DEFAULT_DATASET_ROOT="$WORK/proj_adags/data/n3v"
+    DEFAULT_DATASET_ROOT="$PROJECT_ROOT/data/n3v"
     DEFAULT_WANDB_GROUP="n3v"
     DEFAULT_RUN_TAG_PREFIX="Scaffold_Motion_Priors"
     DEFAULT_RUN_LABEL_PREFIX=""
     DEFAULT_TRAIN_TIME="15:00:00"
     DEFAULT_EVAL_AFTER="1"
-    DEFAULT_CKPT_ITER="9000"
+    DEFAULT_CKPT_ITER="6000"
     DEFAULT_EXPERIMENT="fixed_budget"
     DEFAULT_FIXED_BUDGET_SCENES=(
       cut_roasted_beef
       flame_steak
     )
     DEFAULT_CONFIG_NAME="scaffold_lora_route0_dyn_densify_ptbudget"
-    DEFAULT_CONFIG_PATH="$WORK/proj_adags/repo/adags/configs/n3v/scaffold_lora_route0_dyn_densify_ptbudget.yaml"
+    DEFAULT_CONFIG_PATH="$REPO_DIR/configs/n3v/scaffold_lora_route0_dyn_densify_ptbudget.yaml"
     ;;
 
   panopticsports|panoptic|panoptic_sports)
@@ -57,7 +76,7 @@ case "$DATASET" in
       softball
       tennis
     )
-    DEFAULT_DATASET_ROOT="$WORK/proj_adags/data/panopticsports"
+    DEFAULT_DATASET_ROOT="$PROJECT_ROOT/data/panopticsports"
     DEFAULT_WANDB_GROUP="panopticsports"
     DEFAULT_RUN_TAG_PREFIX="panoptic"
     DEFAULT_RUN_LABEL_PREFIX="panopticsports_"
@@ -67,14 +86,14 @@ case "$DATASET" in
       DEFAULT_CKPT_ITER="20"
       DEFAULT_EXPERIMENT="single"
       DEFAULT_CONFIG_NAME="smoke"
-      DEFAULT_CONFIG_PATH="$WORK/proj_adags/repo/adags/configs/panopticsports/smoke.yaml"
+      DEFAULT_CONFIG_PATH="$REPO_DIR/configs/panopticsports/smoke.yaml"
     else
       DEFAULT_TRAIN_TIME="15:00:00"
       DEFAULT_EVAL_AFTER="1"
       DEFAULT_CKPT_ITER="6000"
       DEFAULT_EXPERIMENT="single"
       DEFAULT_CONFIG_NAME="scaffold_lora_route0_dyn_densify_ptbudget"
-      DEFAULT_CONFIG_PATH="$WORK/proj_adags/repo/adags/configs/panopticsports/scaffold_lora_route0_dyn_densify_ptbudget.yaml"
+      DEFAULT_CONFIG_PATH="$REPO_DIR/configs/panopticsports/scaffold_lora_route0_dyn_densify_ptbudget.yaml"
     fi
     ;;
 
@@ -133,7 +152,7 @@ if [[ "$EXPERIMENT" == "fixed_budget" ]]; then
   for METHOD in $FIXED_BUDGET_METHODS; do
     for BUDGET in $FIXED_BUDGETS; do
       CFG_NAME="fixed_budget_${METHOD}_${BUDGET}"
-      CFG_PATH="$WORK/proj_adags/repo/adags/configs/n3v/${CFG_NAME}.yaml"
+      CFG_PATH="$REPO_DIR/configs/n3v/${CFG_NAME}.yaml"
       if [[ ! -f "$CFG_PATH" ]]; then
         echo "ERROR: missing fixed-budget config: $CFG_PATH" >&2
         exit 3
@@ -169,6 +188,8 @@ fi
 
 echo "dataset: $DATASET"
 echo "experiment: $EXPERIMENT"
+echo "repo_dir: $REPO_DIR"
+echo "submit_script: $SUBMIT_SCRIPT"
 echo "dataset_root: $DATASET_ROOT"
 echo "wandb_group: $WANDB_GROUP"
 echo "wandb_mode: $WANDB_MODE"
@@ -203,14 +224,14 @@ for IDX in "${!CFG_NAMES[@]}"; do
     LOG_PREFIX="${DATASET}_${SCENE}_${CFG_NAME}"
 
     TRAIN_JOBID=$(
-      sbatch --parsable \
+      submit_sbatch \
         -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
         -N 1 --ntasks=1 --cpus-per-task="$CPUS_PER_TASK" --gres=gpu:1 \
         -t "$TRAIN_TIME" \
-        -o "$WORK/proj_adags/exp_index/${LOG_PREFIX}_%j.out" \
-        -e "$WORK/proj_adags/exp_index/${LOG_PREFIX}_%j.err" \
-        --export=ALL,SCENE="$SCENE",RUN_TAG="$RUN_TAG_FOR_JOB",RUN_ID="$RUN_ID",RUN_LABEL="$RUN_LABEL_FOR_JOB",DATASET_ROOT="$DATASET_ROOT",CONFIG="$CFG_PATH",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$WANDB_EXTRA_TAGS_FOR_JOB",EXPERIMENT_NAME="$EXPERIMENT_NAME_FOR_JOB",METHOD_FAMILY="$METHOD_FAMILY",BUDGET_LABEL="$BUDGET_LABEL" \
-        "$WORK/proj_adags/repo/adags/scripts/run_leonardo.sh" train
+        -o "$PROJECT_ROOT/exp_index/${LOG_PREFIX}_%j.out" \
+        -e "$PROJECT_ROOT/exp_index/${LOG_PREFIX}_%j.err" \
+        --export=ALL,SCENE="$SCENE",RUN_TAG="$RUN_TAG_FOR_JOB",RUN_ID="$RUN_ID",RUN_LABEL="$RUN_LABEL_FOR_JOB",DATASET_ROOT="$DATASET_ROOT",CONFIG="$CFG_PATH",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$WANDB_EXTRA_TAGS_FOR_JOB",EXPERIMENT_NAME="$EXPERIMENT_NAME_FOR_JOB",METHOD_FAMILY="$METHOD_FAMILY",BUDGET_LABEL="$BUDGET_LABEL",ADAGS_REPO_DIR="$REPO_DIR",ADAGS_PROJECT_ROOT="$PROJECT_ROOT" \
+        "$SUBMIT_SCRIPT" train
     )
 
     echo "Submitted train for $DATASET/$SCENE [$CFG_NAME] as job $TRAIN_JOBID"
@@ -218,15 +239,15 @@ for IDX in "${!CFG_NAMES[@]}"; do
 
     if [[ "$EVAL_AFTER" == "1" ]]; then
       EVAL_JOBID=$(
-        sbatch --parsable \
+        submit_sbatch \
           --dependency=afterok:${TRAIN_JOBID} \
           -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
           -N 1 --ntasks=1 --cpus-per-task=8 --gres=gpu:1 \
           -t 00:50:00 \
-          -o "$WORK/proj_adags/exp_index/${LOG_PREFIX}_eval_%j.out" \
-          -e "$WORK/proj_adags/exp_index/${LOG_PREFIX}_eval_%j.err" \
-          --export=ALL,SCENE="$SCENE",RUN_TAG="$RUN_TAG_FOR_JOB",RUN_ID="$RUN_ID",RUN_LABEL="$RUN_LABEL_FOR_JOB",DATASET_ROOT="$DATASET_ROOT",CKPT_ITER="$CKPT_ITER",CONFIG="$CFG_PATH",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$WANDB_EXTRA_TAGS_FOR_JOB",EXPERIMENT_NAME="$EXPERIMENT_NAME_FOR_JOB",METHOD_FAMILY="$METHOD_FAMILY",BUDGET_LABEL="$BUDGET_LABEL" \
-          "$WORK/proj_adags/repo/adags/scripts/run_leonardo.sh" eval
+          -o "$PROJECT_ROOT/exp_index/${LOG_PREFIX}_eval_%j.out" \
+          -e "$PROJECT_ROOT/exp_index/${LOG_PREFIX}_eval_%j.err" \
+          --export=ALL,SCENE="$SCENE",RUN_TAG="$RUN_TAG_FOR_JOB",RUN_ID="$RUN_ID",RUN_LABEL="$RUN_LABEL_FOR_JOB",DATASET_ROOT="$DATASET_ROOT",CKPT_ITER="$CKPT_ITER",CONFIG="$CFG_PATH",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$WANDB_EXTRA_TAGS_FOR_JOB",EXPERIMENT_NAME="$EXPERIMENT_NAME_FOR_JOB",METHOD_FAMILY="$METHOD_FAMILY",BUDGET_LABEL="$BUDGET_LABEL",ADAGS_REPO_DIR="$REPO_DIR",ADAGS_PROJECT_ROOT="$PROJECT_ROOT" \
+          "$SUBMIT_SCRIPT" eval
       )
       echo "Submitted eval  for $DATASET/$SCENE [$CFG_NAME] as job $EVAL_JOBID (depends on $TRAIN_JOBID)"
     fi

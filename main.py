@@ -57,6 +57,9 @@ except ImportError:
     wandb = None
     WANDB_FOUND = False
 
+DEFAULT_MAX_TRAIN_ITERATIONS = 6000
+
+
 def identity_collate(x):
     return x
 
@@ -176,10 +179,12 @@ WANDB_CONFIG_EXCLUDE_KEYS = {
     "config",
     "debug_from",
     "detect_anomaly",
+    "experiment_name",
     "exhaust_test",
     "from3dgs",
     "images",
     "loaded_pth",
+    "method_family",
     "model_path",
     "quiet",
     "save_iterations",
@@ -188,6 +193,7 @@ WANDB_CONFIG_EXCLUDE_KEYS = {
     "test_iterations",
     "use_wandb",
     "val",
+    "budget_label",
 }
 
 WANDB_CONFIG_EXCLUDE_PREFIXES = (
@@ -400,6 +406,168 @@ def log_wandb_metrics(wandb_run, metrics, step):
         wandb_run.log(clean_metrics, step=step)
 
 
+def summary_scalar(value):
+    if value is None:
+        return None
+    if torch.is_tensor(value):
+        if value.numel() != 1:
+            return None
+        return value.detach().item()
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, (int, float, bool, str)):
+        return value
+    return None
+
+
+def add_scalar_metric(metrics, key, value):
+    value = summary_scalar(value)
+    if value is not None:
+        metrics[key] = value
+
+
+def tensor_mean_norm(value, dim=-1):
+    if value is None or not torch.is_tensor(value) or value.numel() == 0:
+        return None
+    value = value.detach()
+    if value.dim() == 0:
+        return value.abs().item()
+    if value.dim() == 1:
+        return value.norm().item()
+    return value.norm(dim=dim).mean().item()
+
+
+def collect_decomposition_diagnostics(gaussians, opt=None):
+    metrics = {}
+
+    total_points = int(gaussians.get_xyz.shape[0])
+    static_points = int(gaussians.get_static_xyz.shape[0]) if hasattr(gaussians, "get_static_xyz") else 0
+    dynamic_points = max(0, total_points - static_points)
+    add_scalar_metric(metrics, "points/total", total_points)
+    add_scalar_metric(metrics, "points/static", static_points)
+    add_scalar_metric(metrics, "points/dynamic", dynamic_points)
+    add_scalar_metric(metrics, "points/hard_static", static_points)
+    add_scalar_metric(metrics, "points/hard_dynamic", dynamic_points)
+    add_scalar_metric(metrics, "points/hard_static_fraction", static_points / total_points if total_points > 0 else 0.0)
+
+    route_logit = getattr(gaussians, "get_route_logit", None)
+    if torch.is_tensor(route_logit) and route_logit.numel() > 0:
+        p_dyn = gaussians.get_dynamic_probability.detach().clamp(1e-6, 1.0 - 1e-6)
+        route_entropy = (-(p_dyn * torch.log(p_dyn) + (1.0 - p_dyn) * torch.log(1.0 - p_dyn))).mean()
+        expected_static = (1.0 - p_dyn).sum().item()
+        expected_dynamic = p_dyn.sum().item()
+        add_scalar_metric(metrics, "routing/mean_dynamic_prob", p_dyn.mean().item())
+        add_scalar_metric(metrics, "routing/entropy", route_entropy.item())
+        add_scalar_metric(metrics, "routing/expected_static_points", expected_static)
+        add_scalar_metric(metrics, "routing/expected_dynamic_points", expected_dynamic)
+        add_scalar_metric(metrics, "routing/expected_static_fraction", expected_static / total_points if total_points > 0 else 0.0)
+        add_scalar_metric(metrics, "routing/percent_near_static", (p_dyn < 0.1).float().mean().item() * 100)
+        add_scalar_metric(metrics, "routing/percent_near_dynamic", (p_dyn > 0.9).float().mean().item() * 100)
+        add_scalar_metric(metrics, "routing/percent_uncertain", ((p_dyn >= 0.1) & (p_dyn <= 0.9)).float().mean().item() * 100)
+
+    lora_coeff = getattr(gaussians, "get_motion_lora_coeff", None)
+    if torch.is_tensor(lora_coeff) and lora_coeff.numel() > 0:
+        add_scalar_metric(metrics, "motion_lora/coeff_norm_mean", tensor_mean_norm(lora_coeff, dim=1))
+        add_scalar_metric(metrics, "motion_lora/basis_norm_mean", tensor_mean_norm(getattr(gaussians, "get_motion_lora_basis", None), dim=-1))
+
+    scaffold_coeff = getattr(gaussians, "get_motion_scaffold_coeff", None)
+    if torch.is_tensor(scaffold_coeff) and scaffold_coeff.numel() > 0:
+        add_scalar_metric(metrics, "motion_scaffold/node_count", scaffold_coeff.shape[0])
+        add_scalar_metric(metrics, "motion_scaffold/coeff_norm_mean", tensor_mean_norm(scaffold_coeff, dim=1))
+        add_scalar_metric(metrics, "motion_scaffold/basis_norm_mean", tensor_mean_norm(getattr(gaussians, "get_motion_scaffold_basis", None), dim=-1))
+        attach_w = getattr(gaussians, "get_motion_scaffold_attach_w", None)
+        if torch.is_tensor(attach_w) and attach_w.numel() > 0:
+            attach_w = attach_w.detach().clamp_min(1e-6)
+            if attach_w.dim() > 1:
+                attach_entropy = (-(attach_w * torch.log(attach_w)).sum(dim=1)).mean().item()
+            else:
+                attach_entropy = (-(attach_w * torch.log(attach_w)).sum()).item()
+            add_scalar_metric(metrics, "motion_scaffold/attach_entropy", attach_entropy)
+
+    hard_static_conversion = bool(getattr(opt, "enable_hard_static_conversion", False)) if opt is not None else False
+    if hard_static_conversion:
+        if hasattr(gaussians, "_staticness_score") and opt is not None and gaussians._staticness_score.numel() > 0:
+            conversion_rate = (gaussians._staticness_score > opt.static_conversion_threshold).float().mean().item() * 100
+            add_scalar_metric(metrics, "points/static_conversion_rate", conversion_rate)
+        if hasattr(gaussians, "num_static_candidates_last"):
+            add_scalar_metric(metrics, "static_conversion/num_candidates", gaussians.num_static_candidates_last)
+        if hasattr(gaussians, "num_converted_last"):
+            add_scalar_metric(metrics, "static_conversion/num_converted", gaussians.num_converted_last)
+            num_candidates = getattr(gaussians, "num_static_candidates_last", 0)
+            if num_candidates > 0:
+                add_scalar_metric(metrics, "static_conversion/frac_converted", gaussians.num_converted_last / max(1, num_candidates))
+
+    return metrics
+
+
+def summary_alias_name(metric_name):
+    if metric_name.startswith("test/"):
+        return metric_name[len("test/"):]
+    return metric_name
+
+
+def prefixed_summary_metrics(prefix, metrics):
+    updates = {}
+    for key, value in (metrics or {}).items():
+        value = summary_scalar(value)
+        if value is not None:
+            updates[f"{prefix}/{summary_alias_name(key)}"] = value
+    return updates
+
+
+def build_validation_summary_updates(metrics, iteration, include_best=True, include_final=True):
+    updates = {}
+    if not metrics:
+        return updates
+
+    psnr_value = summary_scalar(metrics.get("test/psnr"))
+    if include_best:
+        updates["best_val_psnr"] = psnr_value
+        updates["best_val_iter"] = iteration if psnr_value is not None else None
+        updates.update(prefixed_summary_metrics("best_val", metrics))
+    if include_final:
+        updates["final_psnr"] = psnr_value
+        updates["final_val_iter"] = iteration
+        updates.update(prefixed_summary_metrics("final", metrics))
+    return updates
+
+
+def normalize_iteration_schedule(values, final_iteration, include_final=True):
+    normalized = []
+    for value in values or []:
+        value = int(value)
+        if 1 <= value <= final_iteration:
+            normalized.append(value)
+    if include_final and final_iteration > 0:
+        normalized.append(int(final_iteration))
+    return sorted(set(normalized))
+
+
+def resolve_max_train_iterations():
+    raw_value = os.getenv("ADAGS_MAX_ITERATIONS", "").strip()
+    if not raw_value:
+        return DEFAULT_MAX_TRAIN_ITERATIONS
+    try:
+        max_iterations = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"ADAGS_MAX_ITERATIONS must be an integer, got {raw_value!r}") from exc
+    if max_iterations < 1:
+        raise ValueError(f"ADAGS_MAX_ITERATIONS must be positive, got {max_iterations}")
+    return max_iterations
+
+
+def enforce_train_iteration_guard(args):
+    if getattr(args, "val", False):
+        return
+    max_iterations = resolve_max_train_iterations()
+    if args.iterations <= max_iterations or os.getenv("ADAGS_ALLOW_LONG_RUNS") == "1":
+        return
+    raise RuntimeError(
+        f"Refusing to train for {args.iterations} iterations; the guarded maximum is {max_iterations}. "
+        "Set ADAGS_MAX_ITERATIONS to a larger value or ADAGS_ALLOW_LONG_RUNS=1 for an intentional long run."
+    )
+
+
 def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_4d, force_sh_3d, num_pts, num_pts_ratio, wandb_run=None):
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -418,28 +586,38 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     os.makedirs(test_dir, exist_ok=True)
     validation_stats = gaussExtractor.reconstruction(scene.getTestCameras(), test_dir, stage="validation")
     gaussExtractor.export_image(test_dir, mode="validation")
+    summary_updates = {
+        "validation_checkpoint": checkpoint,
+        "validation_output_dir": test_dir,
+        "validation_train_dir": train_dir,
+    }
+    eval_metrics = collect_decomposition_diagnostics(gaussians, opt)
+    if validation_stats:
+        metric_map = {
+            "psnr": "test/psnr",
+            "ssim": "test/ssim",
+            "lpips": "test/lpips",
+            "num_GS": "points/total",
+            "static": "points/hard_static",
+        }
+        for stat_name, metric_name in metric_map.items():
+            if stat_name in validation_stats:
+                eval_metrics[metric_name] = validation_stats[stat_name]
+        if "num_GS" in validation_stats and "static" in validation_stats:
+            hard_dynamic = validation_stats["num_GS"] - validation_stats["static"]
+            eval_metrics["points/static"] = validation_stats["static"]
+            eval_metrics["points/dynamic"] = hard_dynamic
+            eval_metrics["points/hard_dynamic"] = hard_dynamic
+            eval_metrics["points/hard_static_fraction"] = (
+                validation_stats["static"] / validation_stats["num_GS"] if validation_stats["num_GS"] > 0 else 0.0
+            )
+    summary_updates.update(build_validation_summary_updates(eval_metrics, first_iter))
     if wandb_run is not None:
         wandb_run.summary["validation_checkpoint"] = checkpoint
         wandb_run.summary["validation_output_dir"] = test_dir
         wandb_run.summary["validation_train_dir"] = train_dir
-        if validation_stats:
-            metric_map = {
-                "psnr": "test/psnr",
-                "ssim": "test/ssim",
-                "lpips": "test/lpips",
-                "num_GS": "points/total",
-                "static": "points/hard_static",
-            }
-            eval_metrics = {}
-            for stat_name, metric_name in metric_map.items():
-                if stat_name in validation_stats:
-                    eval_metrics[metric_name] = validation_stats[stat_name]
-            if "num_GS" in validation_stats and "static" in validation_stats:
-                hard_dynamic = validation_stats["num_GS"] - validation_stats["static"]
-                eval_metrics["points/static"] = validation_stats["static"]
-                eval_metrics["points/dynamic"] = hard_dynamic
-                eval_metrics["points/hard_dynamic"] = hard_dynamic
-            log_wandb_metrics(wandb_run, eval_metrics, first_iter)
+        log_wandb_metrics(wandb_run, eval_metrics, first_iter)
+    return summary_updates
 
 
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint, debug_from,
@@ -467,6 +645,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     iter_end = torch.cuda.Event(enable_timing=True)
 
     best_psnr = 0.0
+    best_val_metrics = None
+    best_val_iter = None
+    final_val_metrics = None
+    final_val_iter = None
     ema_loss_for_log = 0.0
     ema_l1loss_for_log = 0.0
     ema_ssimloss_for_log = 0.0
@@ -815,13 +997,19 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 if iteration == opt.iterations:
                     progress_bar.close()
 
-                test_psnr = training_report(tb_writer, iteration, Ll1, Lssim, total_loss, l1_loss, iter_start.elapsed_time(iter_end),
-                                            testing_iterations, scene, render, (pipe, background), loss_dict, wandb_run)
+                eval_metrics = training_report(tb_writer, iteration, Ll1, Lssim, total_loss, l1_loss, iter_start.elapsed_time(iter_end),
+                                               testing_iterations, scene, render, (pipe, background), loss_dict, wandb_run)
 
-                if iteration in testing_iterations:
-                    if test_psnr is None: test_psnr = 0.0
+                if eval_metrics is not None and "test/psnr" in eval_metrics:
+                    final_val_metrics = eval_metrics
+                    final_val_iter = iteration
+                    test_psnr = summary_scalar(eval_metrics.get("test/psnr"))
+                    if test_psnr is None:
+                        test_psnr = 0.0
                     if test_psnr >= best_psnr:
                         best_psnr = test_psnr
+                        best_val_metrics = dict(eval_metrics)
+                        best_val_iter = iteration
                         print(f"\n[ITER {iteration}] Saving best checkpoint")
                         torch.save((gaussians.capture(), iteration), scene.model_path + "/chkpnt_best.pth")
 
@@ -875,8 +1063,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         env_map_optimizer.step()
                         env_map_optimizer.zero_grad(set_to_none=True)
 
-    return {
+    final_diagnostics = collect_decomposition_diagnostics(scene.gaussians, opt)
+    summary_updates = {
         "best_test_psnr": best_psnr,
+        "best_val_psnr": best_psnr if best_val_iter is not None else None,
+        "best_val_iter": best_val_iter,
+        "final_psnr": summary_scalar((final_val_metrics or {}).get("test/psnr")),
+        "final_val_iter": final_val_iter,
         "final_iteration": opt.iterations,
         "final_total_points": scene.gaussians.get_xyz.shape[0],
         "final_static_points": scene.gaussians.get_static_xyz.shape[0] if hasattr(scene.gaussians, 'get_static_xyz') else 0,
@@ -887,6 +1080,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         "model_path": scene.model_path,
         "start_checkpoint": checkpoint,
     }
+    if best_val_metrics is not None:
+        summary_updates.update(prefixed_summary_metrics("best_val", best_val_metrics))
+    final_metrics = dict(final_diagnostics)
+    if final_val_metrics is not None:
+        final_metrics.update(final_val_metrics)
+    summary_updates.update(prefixed_summary_metrics("final", final_metrics))
+    return summary_updates
 
 
 def prepare_output_and_logger(args):
@@ -905,7 +1105,6 @@ def prepare_output_and_logger(args):
 
 
 def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed, testing_iterations, scene: Scene, renderFunc, renderArgs, loss_dict=None, wandb_run=None):
-    test_psnr = None
     gaussians = scene.gaussians
     opt = getattr(scene, 'opt', None)
     total_points = gaussians.get_xyz.shape[0]
@@ -1016,14 +1215,10 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         "train/ssim": 1.0 - Lssim.item(),
         "train/total_loss": loss,
         "train/iter_time_ms": elapsed,
-        "points/total": total_points,
-        "points/static": static_points,
-        "points/dynamic": dynamic_points,
-        "points/hard_static": static_points,
-        "points/hard_dynamic": dynamic_points,
         "gpu/memory_allocated_MB": torch.cuda.memory_allocated() / 1e6,
         "gpu/memory_reserved_MB": torch.cuda.memory_reserved() / 1e6,
     }
+    wandb_metrics.update(collect_decomposition_diagnostics(gaussians, opt))
     if log_histograms:
         wandb_metrics["hist/scene_opacity"] = gaussians.get_opacity
 
@@ -1183,11 +1378,12 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                     eval_metrics["test/dynamic_edge_magnitude"] = float(np.mean(dynamic_edge_scores))
                 if track_flow_errors:
                     eval_metrics["test/track_flow_l1"] = float(np.mean(track_flow_errors))
+                eval_metrics.update(collect_decomposition_diagnostics(gaussians, opt))
                 if tb_writer:
                     for metric_name, metric_value in eval_metrics.items():
                         tb_writer.add_scalar(metric_name, metric_value, iteration)
                 log_wandb_metrics(wandb_run, eval_metrics, iteration)
-                return test_psnr
+                return eval_metrics
     return None
 
 
@@ -1251,11 +1447,16 @@ if __name__ == "__main__":
     if args.wandb_mode == "disabled":
         args.use_wandb = False
 
-    args.save_iterations.append(args.iterations)
+    enforce_train_iteration_guard(args)
+    args.save_iterations = normalize_iteration_schedule(args.save_iterations, args.iterations)
+    args.test_iterations = normalize_iteration_schedule(args.test_iterations, args.iterations)
     ensure_model_path(args)
 
     if args.exhaust_test:
-        args.test_iterations = args.test_iterations + [i for i in range(0, args.iterations, 500)]
+        args.test_iterations = normalize_iteration_schedule(
+            args.test_iterations + [i for i in range(0, args.iterations, 500)],
+            args.iterations,
+        )
 
     setup_seed(args.seed)
     print("Optimizing " + args.model_path)
@@ -1273,13 +1474,10 @@ if __name__ == "__main__":
                                        args.gaussian_dim, args.time_duration, args.num_pts, args.num_pts_ratio,
                                        args.rot_4d, args.force_sh_3d, args.batch_size, wandb_run)
         else:
-            validation(lp.extract(args), op.extract(args), pp.extract(args),
-                       args.start_checkpoint, args.gaussian_dim, args.time_duration,
-                       args.rot_4d, args.force_sh_3d, args.num_pts, args.num_pts_ratio, wandb_run)
-            summary_updates = {
-                "model_path": args.model_path,
-                "validation_checkpoint": args.start_checkpoint,
-            }
+            summary_updates = validation(lp.extract(args), op.extract(args), pp.extract(args),
+                                         args.start_checkpoint, args.gaussian_dim, args.time_duration,
+                                         args.rot_4d, args.force_sh_3d, args.num_pts, args.num_pts_ratio, wandb_run)
+            summary_updates["model_path"] = args.model_path
     finally:
         finish_wandb_run(wandb_run, summary_updates)
 
