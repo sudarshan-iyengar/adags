@@ -126,6 +126,8 @@ class GaussianExtractor(object):
             os.makedirs(stats_dir, exist_ok=True)
             with open(f"{stats_dir}/{stage}.json", "w") as f:
                 json.dump(stats, f)
+            return stats
+        return None
 
     def estimate_bounding_sphere(self):
         """

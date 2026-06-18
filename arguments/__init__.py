@@ -25,7 +25,7 @@ class ParamGroup:
                 shorthand = True
                 key = key[1:]
             t = type(value)
-            value = value if not fill_none else None 
+            value = value if not fill_none else None
             if shorthand:
                 if t == bool:
                     group.add_argument("--" + key, ("-" + key[0:1]), default=value, action="store_true")
@@ -44,7 +44,7 @@ class ParamGroup:
                 setattr(group, arg[0], arg[1])
         return group
 
-class ModelParams(ParamGroup): 
+class ModelParams(ParamGroup):
     def __init__(self, parser, sentinel=False):
         self.sh_degree = 3
         self._source_path = ""
@@ -108,7 +108,61 @@ class OptimizationParams(ParamGroup):
         self.lambda_opa_mask = 0.0
         self.lambda_rigid = 0.0
         self.lambda_motion = 0.0
-        self.scale_t_threshold =3.0
+
+        self.enable_hard_static_conversion = False
+        self.static_conversion_threshold = 0.99
+        self.lambda_gate_sparsity = 0.0
+
+        self.gate_activation_iter = 500
+        self.gate_warmup_until_iter = 1500
+
+        self.lambda_sparsity = 0.0
+        self.lambda_motion_gate = 0.0
+        self.motion_gate_quantile = 0.8
+
+        self.enable_soft_routing = True
+        self.route_logit_init = 4.0
+        self.route_lr = -1.0
+
+        self.motion_model = "poly"
+        self.motion_poly_order = 2
+        self.motion_lr_init = -1.0
+        self.motion_reg_lambda = 0.0
+        self.motion_lora_rank = 8
+        self.motion_lora_anchors = 16
+        self.motion_lora_init_scale = 0.01
+        self.motion_lora_coeff_lr = -1.0
+        self.motion_lora_basis_lr = -1.0
+
+        self.motion_prior_root = ""
+        self.dynamic_mask_from_residual = False
+        self.dynamic_mask_residual_quantile = 0.85
+        self.dynamic_mask_dilate = 2
+        self.lambda_dynamic_roi = 0.0
+        self.lambda_static_exclusion = 0.0
+        self.lambda_track_flow = 0.0
+        self.lambda_scaffold_smooth = 0.0
+        self.lambda_scaffold_reg = 0.0
+
+        self.motion_scaffold_enable = False
+        self.motion_scaffold_count = 512
+        self.motion_scaffold_rank = 8
+        self.motion_scaffold_anchors = 32
+        self.motion_scaffold_knn = 4
+        self.motion_scaffold_init_scale = 0.01
+        self.motion_scaffold_weight_temp = 0.05
+        self.motion_scaffold_chunk = 65536
+        self.motion_scaffold_coeff_lr = -1.0
+        self.motion_scaffold_basis_lr = -1.0
+        self.motion_track_dt = 0.0333333333
+        self.enable_rendered_flow = False
+        self.enable_motion_aware_densify = False
+        self.motion_aware_densify_boost = 1.0
+
+        self.blur_until_iter = 0       # Set > 0 to enable blurring
+        self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel
+        self.histogram_log_interval = 1
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):

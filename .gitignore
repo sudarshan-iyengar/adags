@@ -7,7 +7,7 @@ data/
 
 # Output folder (adjust if your output folder has a different name or path)
 output/
-
+test/
 
 *.run
 
@@ -29,6 +29,13 @@ dist/
 venv/
 env/
 *.env
+
+# Local agent tooling
+.agents/
+skills-lock.json
+
+# Generated analysis outputs
+analysis/
 
 # Operating System files
 .DS_Store

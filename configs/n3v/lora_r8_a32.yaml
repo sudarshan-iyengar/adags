@@ -6,15 +6,11 @@ rot_4d: False
 force_sh_3d: True
 batch_size: 4
 exhaust_test: False
-# start_checkpoint: "output/$dataset/chkpnt6000.pth"
-
 
 ModelParams:
   sh_degree: 3
-  # source_path: ".../$dataset"
-  # model_path: "output/$dataset"
   images: "images"
-  resolution: 2 # use 2 for the original resolution dataset!
+  resolution: 2
   white_background: False
   data_device: "cuda"
   eval: True
@@ -52,31 +48,29 @@ OptimizationParams:
   densify_from_iter: 500
   densify_until_iter: 12_000
   densify_grad_threshold: 0.0002
-  densify_grad_t_threshold: 0.0002 / 40
+  densify_grad_t_threshold: 0.000005
   densify_until_num_points: -1
   final_prune_from_iter: -1
   sh_increase_interval: 1000
   lambda_opa_mask: 0.0
   lambda_rigid: 0.0
-
   enable_hard_static_conversion: false
-  lambda_sparsity: 0.0          # start with 0.0 if you want to debug safely
+  lambda_sparsity: 0.0
   lambda_motion_gate: 0.0
-
   static_conversion_threshold: 0.99
   gate_activation_iter: 1000
   gate_warmup_until_iter: 2000
-
   enable_soft_routing: true
   route_logit_init: 4.0
   route_lr: -1.0
-
-  motion_model: "poly"
+  motion_model: "lora"
   motion_poly_order: 2
   motion_lr_init: -1.0
   motion_reg_lambda: 0.0
-
+  motion_lora_rank: 8
+  motion_lora_anchors: 32
+  motion_lora_init_scale: 0.01
+  motion_lora_coeff_lr: -1.0
+  motion_lora_basis_lr: -1.0
   blur_until_iter: 9000
-  blur_start_sigma: 8.0        # Simulate roughly an 8x downsample
-  # lambda_motion: 0.001
-  # lambda_gate_sparsity: 0
+  blur_start_sigma: 8.0

@@ -15,6 +15,7 @@ import math
 from .diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh, eval_shfs_4d
+from utils.motion_prior_utils import project_points_to_screen
 from collections import defaultdict
 
 def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
@@ -23,7 +24,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     
     Background tensor (bg_color) must be on GPU!
     """
- 
+
     # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
     screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
     try:
@@ -59,9 +60,17 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     rasterizer = GaussianRasterizer(raster_settings=raster_settings)
 
-    means3D = pc.get_xyz
+    means3D = pc.get_dynamic_xyz(viewpoint_camera.timestamp)
     means2D = screenspace_points
-    opacity = pc.get_opacity
+    base_opacity = pc.get_opacity
+    dynamic_probability = pc.get_dynamic_probability
+    static_probability = pc.get_static_probability
+    use_soft_routing = (
+        pc.gaussian_dim == 4
+        and pc.enable_soft_routing
+        and dynamic_probability.numel() > 0
+    )
+    opacity = base_opacity * dynamic_probability
 
     # If precomputed 3d covariance is provided, use it. If not, then it will be computed from
     # scaling / rotation by the rasterizer.
@@ -89,6 +98,9 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             if pc.rot_4d:
                 rotations_r = pc.get_rotation_r
 
+            marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
+            opacity = opacity * marginal_t
+
     # If precomputed colors are provided, use them. Otherwise, if it is desired to precompute colors
     # from SHs in Python, do it. If not, then SH -> RGB conversion will be done by rasterizer.
     shs = None
@@ -114,9 +126,15 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
                 ts = pc.get_t
     else:
         colors_precomp = override_color
-    
-    flow_2d = torch.zeros_like(pc.get_xyz[:,:2])
-    
+
+    if pc.gaussian_dim == 4 and getattr(pc, "enable_rendered_flow", False):
+        means3D_next = pc.get_dynamic_xyz(viewpoint_camera.timestamp + getattr(pc, "motion_track_dt", 1.0 / 30.0))
+        screen_now, valid_now = project_points_to_screen(means3D, viewpoint_camera)
+        screen_next, valid_next = project_points_to_screen(means3D_next, viewpoint_camera)
+        flow_2d = torch.where((valid_now & valid_next).expand_as(screen_now), screen_next - screen_now, torch.zeros_like(screen_now))
+    else:
+        flow_2d = torch.zeros_like(pc.get_xyz[:,:2])
+
     # Prefilter
     if pipe.compute_cov3D_python and pc.gaussian_dim == 4:
         mask = marginal_t[:,0] > 0.05
@@ -144,20 +162,30 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             cov3D_precomp = cov3D_precomp[mask]
         if flow_2d is not None:
             flow_2d = flow_2d[mask]
-    
-    # Rasterize visible Gaussians to image, obtain their radii (on screen). 
 
-    means3D_static = pc.get_static_xyz
+    # Rasterize visible Gaussians to image, obtain their radii (on screen).
+
+    if use_soft_routing:
+        means3D_static = pc.get_xyz
+        opacity_static = base_opacity * static_probability
+        sh_static = pc.get_features
+        scales_static = pc.get_scaling
+        rotations_static = pc.get_rotation
+        hard_static_count = 0
+    else:
+        means3D_static = pc.get_static_xyz
+        opacity_static = pc.get_static_opacity
+        sh_static = pc.get_static_features
+        scales_static = pc.get_static_scaling
+        rotations_static = pc.get_static_rotation
+        hard_static_count = means3D_static.shape[0]
+
     screenspace_points_static = torch.zeros_like(means3D_static, dtype=means3D_static.dtype, requires_grad=True, device="cuda") + 0
     try:
         screenspace_points_static.retain_grad()
     except:
         pass
     means2D_static = screenspace_points_static
-    opacity_static = pc.get_static_opacity
-    sh_static = pc.get_static_features
-    scales_static = pc.get_static_scaling
-    rotations_static = pc.get_static_rotation 
 
     rendered_image, radii, depth, alpha, flow, covs_com, radii_static, color_4d, color_3d, invdepth = rasterizer(
         means3D = means3D,
@@ -178,8 +206,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         opacities_static = opacity_static,
         scales_static = scales_static,
         rotations_static = rotations_static)
-    
-    
+
+
     if pipe.env_map_res:
         assert pc.env_map is not None
         R = 60
@@ -194,7 +222,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         bg_color_from_envmap = F.grid_sample(pc.env_map[None], texcoord[None])[0] # 3,H,W
         # mask2 = (0 < xyz_inter[...,0]) & (xyz_inter[...,1] > 0) # & (xyz_inter[...,2] > -19)
         rendered_image = rendered_image + (1 - alpha) * bg_color_from_envmap # * mask2[None]
-    
+
     if pipe.compute_cov3D_python and pc.gaussian_dim == 4:
         radii_all = radii.new_zeros(mask.shape)
         radii_all[mask] = radii
@@ -215,4 +243,6 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             "render_4d": color_4d,
             "render_3d": color_3d,
             "viewspace_points_static": screenspace_points_static,
+            "soft_routing": use_soft_routing,
+            "hard_static_count": hard_static_count,
             }

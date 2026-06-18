@@ -157,6 +157,151 @@ def storePly(path, xyz, rgb):
     ply_data = PlyData([vertex_element])
     ply_data.write(path)
 
+def _load_panoptic_image(image_path, white_background, dataloader):
+    if dataloader:
+        image = np.empty(0)
+        width, height = imagesize.get(image_path)
+        return image, width, height
+
+    with Image.open(image_path) as image_load:
+        im_data = np.array(image_load.convert("RGBA"))
+
+    bg = np.array([1, 1, 1]) if white_background else np.array([0, 0, 0])
+    norm_data = im_data / 255.0
+    arr = norm_data[:, :, :3] * norm_data[:, :, 3:4] + bg * (1 - norm_data[:, :, 3:4])
+    if norm_data[:, :, 3:4].min() < 1:
+        arr = np.concatenate([arr, norm_data[:, :, 3:4]], axis=2)
+        image = Image.fromarray(np.array(arr * 255.0, dtype=np.byte), "RGBA")
+    else:
+        image = Image.fromarray(np.array(arr * 255.0, dtype=np.byte), "RGB")
+    width, height = image.size[0], image.size[1]
+    return image, width, height
+
+def _panoptic_frame_to_image_path(path, images_dir, frame_name, extension):
+    frame_path = Path(frame_name)
+    if not frame_path.suffix:
+        frame_path = frame_path.with_suffix(extension)
+    return os.path.join(path, images_dir, str(frame_path))
+
+def readPanopticSportsCameras(path, metafile, white_background, extension=".jpg", time_duration=None, frame_ratio=1, dataloader=False, images_dir="ims"):
+    with open(os.path.join(path, metafile)) as json_file:
+        contents = json.load(json_file)
+
+    width = int(contents["w"])
+    height = int(contents["h"])
+    ks = contents["k"]
+    w2cs = contents["w2c"]
+    frame_names = contents["fn"]
+    cam_ids = contents["cam_id"]
+
+    cam_infos = []
+    tbar = tqdm(total=sum(len(row) for row in frame_names))
+    for frame_idx, names_for_frame in enumerate(frame_names):
+        timestamp = frame_idx / 30.0
+        if frame_ratio > 1:
+            timestamp /= frame_ratio
+        if time_duration is not None:
+            if timestamp < time_duration[0] or timestamp > time_duration[1]:
+                tbar.update(len(names_for_frame))
+                continue
+
+        for view_idx, frame_name in enumerate(names_for_frame):
+            cam_id = int(cam_ids[frame_idx][view_idx])
+            image_path = _panoptic_frame_to_image_path(path, images_dir, frame_name, extension)
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Missing PanopticSports image: {image_path}")
+
+            k = np.array(ks[frame_idx][view_idx], dtype=np.float64)
+            w2c = np.array(w2cs[frame_idx][view_idx], dtype=np.float64)
+            R = np.transpose(w2c[:3, :3])
+            T = w2c[:3, 3]
+            fl_x = float(k[0, 0])
+            fl_y = float(k[1, 1])
+            cx = float(k[0, 2])
+            cy = float(k[1, 2])
+
+            image, image_width, image_height = _load_panoptic_image(image_path, white_background, dataloader)
+            stem = Path(frame_name).stem
+            image_name = f"cam{cam_id:02d}_{stem}"
+
+            cam_infos.append(CameraInfo(
+                uid=cam_id, R=R, T=T, FovY=-1.0, FovX=-1.0, image=image, depth=None,
+                image_path=image_path, image_name=image_name, width=image_width or width, height=image_height or height,
+                timestamp=timestamp, fl_x=fl_x, fl_y=fl_y, cx=cx, cy=cy
+            ))
+            tbar.update(1)
+    tbar.close()
+    return cam_infos
+
+def readPanopticSportsInfo(path, white_background, eval, extension=".jpg", num_pts=100_000, time_duration=None, num_extra_pts=0, frame_ratio=1, dataloader=False, args=None):
+    images_dir = getattr(args, "images", "ims") if args is not None else "ims"
+
+    print("Reading PanopticSports training metadata")
+    train_cam_infos = readPanopticSportsCameras(
+        path, "train_meta.json", white_background, extension=extension, time_duration=time_duration,
+        frame_ratio=frame_ratio, dataloader=dataloader, images_dir=images_dir
+    )
+    print("Reading PanopticSports test metadata")
+    test_cam_infos = readPanopticSportsCameras(
+        path, "test_meta.json", white_background, extension=extension, time_duration=time_duration,
+        frame_ratio=frame_ratio, dataloader=dataloader, images_dir=images_dir
+    )
+
+    if not eval:
+        train_cam_infos.extend(test_cam_infos)
+        test_cam_infos = []
+
+    nerf_normalization = getNerfppNorm(train_cam_infos)
+
+    ply_path = os.path.join(path, "points3d.ply")
+    npz_path = os.path.join(path, "init_pt_cld.npz")
+    if not os.path.exists(ply_path):
+        if not os.path.exists(npz_path):
+            raise FileNotFoundError(f"Missing PanopticSports initial point cloud: {npz_path}")
+        print("Converting init_pt_cld.npz to points3d.ply, will happen only the first time you open the scene.")
+        with np.load(npz_path) as npz:
+            init_points = npz["data"] if "data" in npz else npz[npz.files[0]]
+        if init_points.shape[1] < 6:
+            raise ValueError(f"Expected PanopticSports point cloud with XYZRGB columns, got shape {init_points.shape}")
+        xyz = init_points[:, :3].astype(np.float32)
+        rgb = init_points[:, 3:6].astype(np.float32)
+        if rgb.max() <= 1.0:
+            rgb = rgb * 255.0
+        storePly(ply_path, xyz, np.clip(rgb, 0, 255))
+
+    pcd = fetchPly(ply_path)
+
+    if pcd.points.shape[0] > num_pts:
+        mask = np.random.choice(pcd.points.shape[0], num_pts, replace=False)
+        pcd = BasicPointCloud(
+            points=pcd.points[mask],
+            colors=pcd.colors[mask],
+            normals=pcd.normals[mask],
+            time=None
+        )
+
+    if num_extra_pts > 0:
+        xyz = pcd.points
+        rgb = pcd.colors
+        normals = pcd.normals
+        bound_min, bound_max = xyz.min(0), xyz.max(0)
+        xyz_extra = np.random.random((num_extra_pts, 3)) * (bound_max - bound_min) + bound_min
+        rgb_extra = np.ones((num_extra_pts, 3)) / 2
+        normals_extra = np.zeros_like(xyz_extra)
+        pcd = BasicPointCloud(
+            points=np.concatenate([xyz, xyz_extra], axis=0),
+            colors=np.concatenate([rgb, rgb_extra], axis=0),
+            normals=np.concatenate([normals, normals_extra], axis=0),
+            time=None
+        )
+
+    scene_info = SceneInfo(point_cloud=pcd,
+                           train_cameras=train_cam_infos,
+                           test_cameras=test_cam_infos,
+                           nerf_normalization=nerf_normalization,
+                           ply_path=ply_path)
+    return scene_info
+
 def readColmapSceneInfo(path, images, eval, llffhold=8, num_pts_ratio=1.0):
     try:
         cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
@@ -563,5 +708,6 @@ def readColmapCamerasTechnicolor(cam_extrinsics, cam_intrinsics, source_path, ne
 
 sceneLoadTypeCallbacks = {
     "Colmap": readColmapSceneInfoTechnicolor,
-    "Blender" : readNerfSyntheticInfo
+    "Blender" : readNerfSyntheticInfo,
+    "PanopticSports": readPanopticSportsInfo
 }
