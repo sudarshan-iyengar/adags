@@ -113,6 +113,97 @@ def compute_flow_loss(pred_flow, target_flow, flow_mask):
     return masked_l1(pred_flow, target_flow, flow_mask)
 
 
+def evaluate_motion_prior_test_metrics(scene, pipe, background, prior_cache, clamp_pred=True):
+    if prior_cache is None:
+        return {}
+
+    test_cams = scene.getTestCameras()
+    if len(test_cams) == 0:
+        return {}
+
+    dyn_psnrs = []
+    static_region_psnrs = []
+    static_ghost_scores = []
+    dynamic_edge_scores = []
+    track_flow_errors = []
+
+    with torch.no_grad():
+        for data in test_cams:
+            if isinstance(data, (list, tuple)) and len(data) == 2:
+                gt_image, cam = data
+            else:
+                gt_image, cam = None, data
+
+            cam = cam.cuda()
+            render_out = render(cam, scene.gaussians, pipe, background)
+            pred = render_out["render"]
+            if clamp_pred:
+                pred = pred.clamp(0.0, 1.0)
+
+            if gt_image is not None:
+                gt = gt_image.cuda()
+            elif hasattr(cam, "original_image"):
+                gt = cam.original_image.cuda()
+            elif hasattr(cam, "gt_image"):
+                gt = cam.gt_image.cuda()
+            else:
+                raise ValueError("No ground truth image found for test camera.")
+
+            dyn_mask = prior_cache.get_dynamic_mask(
+                cam,
+                target_hw=gt.shape[-2:],
+                gt_image=gt,
+                pred_image=pred,
+                allow_residual=False,
+            )
+            if dyn_mask is not None and dyn_mask.sum() > 1:
+                dyn_psnr = masked_psnr(pred, gt, dyn_mask)
+                if dyn_psnr is not None:
+                    dyn_psnrs.append(dyn_psnr.item())
+
+                static_mask = (1.0 - dyn_mask).clamp(0.0, 1.0)
+                if static_mask.sum() > 1:
+                    static_psnr = masked_psnr(pred, gt, static_mask)
+                    if static_psnr is not None:
+                        static_region_psnrs.append(static_psnr.item())
+
+                static_render = render_out.get("render_3d")
+                if static_render is not None:
+                    static_ghost_scores.append(
+                        (static_render.abs().mean(dim=0, keepdim=True) * dyn_mask)
+                        .sum()
+                        .div(dyn_mask.sum().clamp_min(1e-6))
+                        .item()
+                    )
+                dynamic_edge_scores.append(
+                    (edge_magnitude(pred) * dyn_mask)
+                    .sum()
+                    .div(dyn_mask.sum().clamp_min(1e-6))
+                    .item()
+                )
+
+            track_flow, track_flow_mask = prior_cache.get_track_flow(cam, gt.shape[-2:])
+            if track_flow is not None:
+                if track_flow_mask is None:
+                    track_flow_mask = dyn_mask
+                flow_loss = compute_flow_loss(render_out.get("flow", None), track_flow, track_flow_mask)
+                if flow_loss is not None:
+                    track_flow_errors.append(flow_loss.item())
+
+    metrics = {}
+    if dyn_psnrs:
+        metrics["test/dynamic_mask_psnr"] = float(np.mean(dyn_psnrs))
+    if static_region_psnrs:
+        metrics["test/static_region_psnr"] = float(np.mean(static_region_psnrs))
+    if static_ghost_scores:
+        metrics["test/static_ghost_score"] = float(np.mean(static_ghost_scores))
+    if dynamic_edge_scores:
+        metrics["test/dynamic_edge_magnitude"] = float(np.mean(dynamic_edge_scores))
+    if track_flow_errors:
+        metrics["test/track_flow_l1"] = float(np.mean(track_flow_errors))
+    return metrics
+
+
 def ensure_model_path(args):
     if not args.model_path:
         unique_str = os.getenv('OAR_JOB_ID') if os.getenv('OAR_JOB_ID') else str(uuid.uuid4())
@@ -575,6 +666,7 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     gaussians = GaussianModel(dataset.sh_degree, gaussian_dim=gaussian_dim, time_duration=time_duration, rot_4d=rot_4d, force_sh_3d=force_sh_3d, sh_degree_t=2 if pipe.eval_shfs_4d else 0)
     assert checkpoint, "No checkpoint provided for validation"
     scene = Scene(dataset, gaussians, shuffle=False, num_pts=num_pts, num_pts_ratio=num_pts_ratio, time_duration=time_duration)
+    scene.motion_prior_cache = MotionPriorCache(dataset.source_path, opt, device="cuda")
 
     (model_params, first_iter) = torch.load(checkpoint)
     train_dir = os.path.join(dataset.model_path, 'train', f"ours_{first_iter}")
@@ -611,6 +703,7 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
             eval_metrics["points/hard_static_fraction"] = (
                 validation_stats["static"] / validation_stats["num_GS"] if validation_stats["num_GS"] > 0 else 0.0
             )
+    eval_metrics.update(evaluate_motion_prior_test_metrics(scene, pipe, background, scene.motion_prior_cache))
     summary_updates.update(build_validation_summary_updates(eval_metrics, first_iter))
     if wandb_run is not None:
         wandb_run.summary["validation_checkpoint"] = checkpoint
@@ -1311,6 +1404,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             psnrs = []
             ssims = []
             dyn_psnrs = []
+            static_region_psnrs = []
             static_ghost_scores = []
             dynamic_edge_scores = []
             track_flow_errors = []
@@ -1348,6 +1442,11 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                             dyn_psnr = masked_psnr(pred, gt, dyn_mask)
                             if dyn_psnr is not None:
                                 dyn_psnrs.append(dyn_psnr.item())
+                            static_mask = (1.0 - dyn_mask).clamp(0.0, 1.0)
+                            if static_mask.sum() > 1:
+                                static_psnr = masked_psnr(pred, gt, static_mask)
+                                if static_psnr is not None:
+                                    static_region_psnrs.append(static_psnr.item())
                             static_ghost_scores.append((render_out["render_3d"].abs().mean(dim=0, keepdim=True) * dyn_mask).sum().div(dyn_mask.sum().clamp_min(1e-6)).item())
                             dynamic_edge_scores.append((edge_magnitude(pred) * dyn_mask).sum().div(dyn_mask.sum().clamp_min(1e-6)).item())
 
@@ -1372,6 +1471,8 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                     eval_metrics["test/ssim"] = float(np.mean(ssims))
                 if dyn_psnrs:
                     eval_metrics["test/dynamic_mask_psnr"] = float(np.mean(dyn_psnrs))
+                if static_region_psnrs:
+                    eval_metrics["test/static_region_psnr"] = float(np.mean(static_region_psnrs))
                 if static_ghost_scores:
                     eval_metrics["test/static_ghost_score"] = float(np.mean(static_ghost_scores))
                 if dynamic_edge_scores:

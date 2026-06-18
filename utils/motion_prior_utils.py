@@ -163,7 +163,8 @@ def sample_mask_at_points(mask, points, camera):
 class MotionPriorCache:
     def __init__(self, source_path, opt, device="cuda"):
         root = getattr(opt, "motion_prior_root", "")
-        if root in ("", None):
+        self.uses_default_root = root in ("", None)
+        if self.uses_default_root:
             root = os.path.join(source_path, "motion_priors")
         self.source_path = Path(source_path)
         self.root = Path(root)
@@ -175,13 +176,19 @@ class MotionPriorCache:
         self.dynamic_mask_residual_quantile = float(getattr(opt, "dynamic_mask_residual_quantile", 0.85))
         self.dynamic_mask_dilate = int(getattr(opt, "dynamic_mask_dilate", 2))
 
+    def _candidate_roots(self):
+        yield self.root
+        if self.uses_default_root and self.source_path != self.root:
+            yield self.source_path
+
     def _candidate_paths(self, image_name, subdirs, suffixes):
         names = [image_name, Path(image_name).stem]
-        for subdir in subdirs:
-            base_dir = self.root / subdir if subdir else self.root
-            for name in names:
-                for suffix in suffixes:
-                    yield base_dir / f"{name}{suffix}"
+        for root in self._candidate_roots():
+            for subdir in subdirs:
+                base_dir = root / subdir if subdir else root
+                for name in names:
+                    for suffix in suffixes:
+                        yield base_dir / f"{name}{suffix}"
 
     def _find_existing(self, image_name, subdirs, suffixes):
         for path in self._candidate_paths(image_name, subdirs, suffixes):
@@ -245,6 +252,23 @@ class MotionPriorCache:
             return normalize_flow_tensor(_as_float_tensor(_select_pt_array(obj, ("flow", "track_flow", "forward_flow")), self.device))
         return None
 
+    def _load_flow_mask_from_file(self, path):
+        if path is None:
+            return None
+        suffix = path.suffix.lower()
+        if suffix == ".npz":
+            with np.load(path, allow_pickle=False) as npz:
+                for key in ("mask", "flow_mask", "valid", "valid_mask"):
+                    if key in npz:
+                        return _as_float_tensor(npz[key], self.device)
+        if suffix in (".pt", ".pth"):
+            obj = torch.load(path, map_location=self.device)
+            if isinstance(obj, dict):
+                for key in ("mask", "flow_mask", "valid", "valid_mask"):
+                    if key in obj:
+                        return _as_float_tensor(obj[key], self.device)
+        return None
+
     def get_dynamic_mask(self, camera, target_hw=None, gt_image=None, pred_image=None, allow_residual=True):
         target_hw = tuple(target_hw or (int(camera.image_height), int(camera.image_width)))
         key = (camera.image_name, target_hw)
@@ -283,8 +307,8 @@ class MotionPriorCache:
             TENSOR_EXTENSIONS,
         )
         flow = resize_flow(self._load_flow_file(flow_path), target_hw)
+        mask = resize_mask(self._load_flow_mask_from_file(flow_path), target_hw, 0)
 
-        mask = None
         mask_path = self._find_existing(
             camera.image_name,
             ("track_flow_masks", "flow_masks", "track_masks", ""),
@@ -292,8 +316,9 @@ class MotionPriorCache:
         )
         if mask_path is not None:
             mask = resize_mask(self._load_mask_file(mask_path), target_hw, self.dynamic_mask_dilate)
-        elif flow is not None:
+        elif mask is None and flow is not None:
             mask = torch.isfinite(flow).all(dim=0, keepdim=True).float()
+        if flow is not None:
             flow = torch.nan_to_num(flow)
 
         self.flow_cache[key] = flow
