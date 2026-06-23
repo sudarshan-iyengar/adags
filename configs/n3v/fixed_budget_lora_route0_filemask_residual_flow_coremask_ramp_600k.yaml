@@ -1,4 +1,4 @@
-# Fixed-budget LoRA file-mask residual mechanism candidate with rendered-flow supervision.
+# Fixed-budget LoRA flow candidate with core-only flow supervision and delayed ramp.
 gaussian_dim: 4
 time_duration: [0.0, 10.0]
 num_pts: 300_0000
@@ -80,9 +80,9 @@ OptimizationParams:
   lambda_dynamic_roi: 0.5
   lambda_static_exclusion: 0.02
   lambda_track_flow: 0.01
-  track_flow_mask_erode: 0
-  track_flow_loss_start_iter: 0
-  track_flow_loss_ramp_iters: 0
+  track_flow_mask_erode: 2
+  track_flow_loss_start_iter: 1000
+  track_flow_loss_ramp_iters: 2000
   lambda_scaffold_smooth: 0.0
   lambda_scaffold_reg: 0.0
   motion_scaffold_enable: false

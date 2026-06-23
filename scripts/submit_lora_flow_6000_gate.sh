@@ -31,6 +31,9 @@ Environment overrides:
   WANDB_ENTITY=models-ku-leuven
   WANDB_GROUP=lora_flow_6000_YYYYMMDD
   EXCLUDE_NODES=lrdn1262,lrdn1386
+  METHOD_FAMILY=lora_filemask_residual_flow
+  EXPERIMENT_NAME=lora_flow_6000
+  CANDIDATE_TAG=fixed_budget_lora_route0_filemask_residual_flow_600k
 EOF
 }
 
@@ -83,6 +86,9 @@ WANDB_PROJECT="${WANDB_PROJECT:-adags}"
 WANDB_ENTITY="${WANDB_ENTITY:-models-ku-leuven}"
 WANDB_GROUP="${WANDB_GROUP:-lora_flow_6000_$(date +%Y%m%d)}"
 WANDB_MODE="${WANDB_MODE:-offline}"
+METHOD_FAMILY="${METHOD_FAMILY:-lora_filemask_residual_flow}"
+EXPERIMENT_NAME="${EXPERIMENT_NAME:-lora_flow_6000}"
+CANDIDATE_TAG="${CANDIDATE_TAG:-$CANDIDATE}"
 
 PARTITION="${PARTITION:-boost_usr_prod}"
 ACCOUNT="${ACCOUNT:-euhpc_d21_034}"
@@ -101,8 +107,8 @@ sync_script="$PROJECT_ROOT/exp_index/lora_flow_6000_gate_sync_after_eval_${times
 sync_log="$PROJECT_ROOT/exp_index/lora_flow_6000_gate_sync_after_eval_${timestamp}.log"
 mkdir -p "$PROJECT_ROOT/exp_index"
 
-method_family="lora_filemask_residual_flow"
-wandb_extra_tags="phase:lora_flow_6000 screen:mechanism_flow baseline:fixed_budget_lora_route0_600k comparator:fixed_budget_lora_route0_filemask_residual_600k candidate:flow_6000 method:${method_family} budget:6000iter"
+method_family="$METHOD_FAMILY"
+wandb_extra_tags="phase:${EXPERIMENT_NAME} screen:mechanism_flow baseline:fixed_budget_lora_route0_600k comparator:fixed_budget_lora_route0_filemask_residual_600k candidate:${CANDIDATE_TAG} method:${method_family} budget:6000iter"
 
 if [[ "$DRY_RUN" == "0" ]]; then
   printf "train_job_id\teval_job_id\tscene\tcandidate\tmethod_family\trun_id\trun_dir\tconfig\tckpt\tflow_dir\twandb_group\tsync_script\tsync_log\n" > "$manifest"
@@ -140,7 +146,7 @@ for scene in $SCENES; do
     -t "$TRAIN_TIME"
     -o "$PROJECT_ROOT/exp_index/${log_prefix}_train_%j.out"
     -e "$PROJECT_ROOT/exp_index/${log_prefix}_train_%j.err"
-    --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",SCENE="$scene",RUN_TAG="lora_flow_6000",RUN_ID="$run_id",RUN_LABEL="$CANDIDATE",DATASET_ROOT="$DATASET_ROOT",CKPT_ITER="$CKPT_ITER",CONFIG="$cfg_path",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$wandb_extra_tags",EXPERIMENT_NAME="lora_flow_6000",METHOD_FAMILY="$method_family",BUDGET_LABEL="6000iter"
+    --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",SCENE="$scene",RUN_TAG="$EXPERIMENT_NAME",RUN_ID="$run_id",RUN_LABEL="$CANDIDATE",DATASET_ROOT="$DATASET_ROOT",CKPT_ITER="$CKPT_ITER",CONFIG="$cfg_path",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$wandb_extra_tags",EXPERIMENT_NAME="$EXPERIMENT_NAME",METHOD_FAMILY="$method_family",BUDGET_LABEL="6000iter"
     "$REPO_ROOT/scripts/run_leonardo.sh" train
   )
 
@@ -172,7 +178,7 @@ for scene in $SCENES; do
       -t "$EVAL_TIME"
       -o "$PROJECT_ROOT/exp_index/${log_prefix}_eval${CKPT_ITER}_%j.out"
       -e "$PROJECT_ROOT/exp_index/${log_prefix}_eval${CKPT_ITER}_%j.err"
-      --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",SCENE="$scene",RUN_TAG="lora_flow_6000_eval",RUN_ID="$run_id",RUN_DIR="$run_dir",RUN_LABEL="$CANDIDATE",DATASET_ROOT="$DATASET_ROOT",CKPT_ITER="$CKPT_ITER",CONFIG="$cfg_path",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$wandb_extra_tags eval_ckpt:${CKPT_ITER}",EXPERIMENT_NAME="lora_flow_6000",METHOD_FAMILY="$method_family",BUDGET_LABEL="6000iter"
+      --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",SCENE="$scene",RUN_TAG="${EXPERIMENT_NAME}_eval",RUN_ID="$run_id",RUN_DIR="$run_dir",RUN_LABEL="$CANDIDATE",DATASET_ROOT="$DATASET_ROOT",CKPT_ITER="$CKPT_ITER",CONFIG="$cfg_path",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE",WANDB_EXTRA_TAGS="$wandb_extra_tags eval_ckpt:${CKPT_ITER}",EXPERIMENT_NAME="$EXPERIMENT_NAME",METHOD_FAMILY="$method_family",BUDGET_LABEL="6000iter"
       "$REPO_ROOT/scripts/run_leonardo.sh" eval
     )
 

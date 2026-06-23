@@ -58,6 +58,20 @@ def resize_mask(mask, target_hw, dilate=0):
     return mask.clamp(0.0, 1.0)
 
 
+def erode_mask(mask, erode=0):
+    if mask is None or erode <= 0:
+        return mask
+    if mask.dim() == 2:
+        mask = mask.unsqueeze(0)
+    if mask.dim() == 3 and mask.shape[-1] in (1, 3, 4):
+        mask = mask.permute(2, 0, 1)
+    if mask.dim() == 3 and mask.shape[0] != 1:
+        mask = mask[:1]
+    mask = mask.float().clamp(0.0, 1.0)
+    kernel = int(2 * erode + 1)
+    return (-F.max_pool2d((-mask)[None], kernel_size=kernel, stride=1, padding=erode)[0]).clamp(0.0, 1.0)
+
+
 def normalize_flow_tensor(flow):
     if flow is None:
         return None

@@ -35,6 +35,7 @@ from utils.general_utils import safe_state, knn
 from utils.motion_prior_utils import (
     MotionPriorCache,
     edge_magnitude,
+    erode_mask,
     masked_l1,
     masked_psnr,
     normalize_flow_tensor,
@@ -111,6 +112,32 @@ def compute_flow_loss(pred_flow, target_flow, flow_mask):
     if pred_flow.shape[-2:] != target_flow.shape[-2:]:
         pred_flow = F.interpolate(pred_flow[None], size=target_flow.shape[-2:], mode="bilinear", align_corners=False)[0]
     return masked_l1(pred_flow, target_flow, flow_mask)
+
+
+def scheduled_flow_weight(opt, iteration):
+    base_weight = float(getattr(opt, "lambda_track_flow", 0.0))
+    if base_weight <= 0.0:
+        return 0.0
+    start_iter = int(getattr(opt, "track_flow_loss_start_iter", 0))
+    if iteration < start_iter:
+        return 0.0
+    ramp_iters = int(getattr(opt, "track_flow_loss_ramp_iters", 0))
+    if ramp_iters <= 0:
+        return base_weight
+    progress = float(iteration - start_iter + 1) / float(max(ramp_iters, 1))
+    return base_weight * max(0.0, min(1.0, progress))
+
+
+def build_track_flow_loss_mask(track_flow_mask, dynamic_mask, erode_pixels=0):
+    if track_flow_mask is None:
+        mask = dynamic_mask
+    else:
+        mask = track_flow_mask
+        if dynamic_mask is not None:
+            mask = (mask * dynamic_mask).clamp(0.0, 1.0)
+    if mask is not None and erode_pixels > 0:
+        mask = erode_mask(mask, erode_pixels)
+    return mask
 
 
 def evaluate_motion_prior_test_metrics(scene, pipe, background, prior_cache, clamp_pred=True):
@@ -872,16 +899,18 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     loss = loss + opt.lambda_static_exclusion * Lstat
                     Lstatic_exclusion = Lstatic_exclusion + Lstat.detach() / float(batch_size)
 
-                if getattr(opt, "lambda_track_flow", 0.0) > 0:
+                flow_weight = scheduled_flow_weight(opt, iteration)
+                if flow_weight > 0:
                     track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(viewpoint_cam, gt_image.shape[-2:])
                     if track_flow is not None:
-                        if track_flow_mask is None:
-                            track_flow_mask = dynamic_mask
-                        elif dynamic_mask is not None:
-                            track_flow_mask = (track_flow_mask * dynamic_mask).clamp(0.0, 1.0)
+                        track_flow_mask = build_track_flow_loss_mask(
+                            track_flow_mask,
+                            dynamic_mask,
+                            int(getattr(opt, "track_flow_mask_erode", 0)),
+                        )
                         Lflow_prior = compute_flow_loss(render_pkg.get("flow", None), track_flow, track_flow_mask)
                         if Lflow_prior is not None:
-                            loss = loss + opt.lambda_track_flow * Lflow_prior
+                            loss = loss + flow_weight * Lflow_prior
                             Ltrack_flow = Ltrack_flow + Lflow_prior.detach() / float(batch_size)
 
                 # opa mask loss

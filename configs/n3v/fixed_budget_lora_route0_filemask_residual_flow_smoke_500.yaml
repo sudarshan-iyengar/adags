@@ -80,6 +80,9 @@ OptimizationParams:
   lambda_dynamic_roi: 0.5
   lambda_static_exclusion: 0.02
   lambda_track_flow: 0.01
+  track_flow_mask_erode: 0
+  track_flow_loss_start_iter: 0
+  track_flow_loss_ramp_iters: 0
   lambda_scaffold_smooth: 0.0
   lambda_scaffold_reg: 0.0
   motion_scaffold_enable: false
