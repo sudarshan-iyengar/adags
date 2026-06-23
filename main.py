@@ -848,6 +848,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Lscaffold_reg = torch.tensor(0.0, device=device)
 
             static = False
+            flow_weight = scheduled_flow_weight(opt, iteration)
 
             # ================= inner micro-batch loop =================
             for batch_idx in range(batch_size):
@@ -855,7 +856,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 gt_image = gt_image.cuda()
                 viewpoint_cam = viewpoint_cam.cuda()
 
-                render_pkg = render(viewpoint_cam, gaussians, pipe, background)
+                render_pkg = render(viewpoint_cam, gaussians, pipe, background, render_flow=flow_weight > 0.0)
                 image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
                 depth = render_pkg["depth"]
                 alpha = render_pkg["alpha"]
@@ -899,7 +900,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     loss = loss + opt.lambda_static_exclusion * Lstat
                     Lstatic_exclusion = Lstatic_exclusion + Lstat.detach() / float(batch_size)
 
-                flow_weight = scheduled_flow_weight(opt, iteration)
                 if flow_weight > 0:
                     track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(viewpoint_cam, gt_image.shape[-2:])
                     if track_flow is not None:

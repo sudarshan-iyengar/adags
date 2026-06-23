@@ -18,7 +18,7 @@ from utils.sh_utils import eval_sh, eval_shfs_4d
 from utils.motion_prior_utils import project_points_to_screen
 from collections import defaultdict
 
-def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
+def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, render_flow = None):
     """
     Render the scene. 
     
@@ -127,7 +127,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     else:
         colors_precomp = override_color
 
-    if pc.gaussian_dim == 4 and getattr(pc, "enable_rendered_flow", False):
+    if render_flow is None:
+        render_flow = getattr(pc, "enable_rendered_flow", False)
+
+    if pc.gaussian_dim == 4 and render_flow:
         means3D_next = pc.get_dynamic_xyz(viewpoint_camera.timestamp + getattr(pc, "motion_track_dt", 1.0 / 30.0))
         screen_now, valid_now = project_points_to_screen(means3D, viewpoint_camera)
         screen_next, valid_next = project_points_to_screen(means3D_next, viewpoint_camera)
