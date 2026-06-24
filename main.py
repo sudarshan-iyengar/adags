@@ -140,6 +140,16 @@ def build_track_flow_loss_mask(track_flow_mask, dynamic_mask, erode_pixels=0):
     return mask
 
 
+def build_boundary_ring_masks(dynamic_mask, core_erode_pixels=0):
+    if dynamic_mask is None:
+        return None, None
+    core_mask = erode_optional_mask(dynamic_mask, core_erode_pixels)
+    ring_mask = (dynamic_mask - core_mask).clamp(0.0, 1.0)
+    if ring_mask.sum() <= 1:
+        return core_mask, None
+    return core_mask, ring_mask
+
+
 def erode_optional_mask(mask, erode_pixels=0):
     erode_pixels = int(erode_pixels)
     if mask is None or erode_pixels <= 0:
@@ -828,6 +838,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     Ldynamic_roi = torch.tensor(0.0, device=device)
     Lstatic_exclusion = torch.tensor(0.0, device=device)
     Ltrack_flow = torch.tensor(0.0, device=device)
+    Lboundary_ring_l1 = torch.tensor(0.0, device=device)
+    Lboundary_ring_edge = torch.tensor(0.0, device=device)
     Lscaffold_smooth = torch.tensor(0.0, device=device)
     Lscaffold_reg = torch.tensor(0.0, device=device)
 
@@ -869,6 +881,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ldynamic_roi = torch.tensor(0.0, device=device)
             Lstatic_exclusion = torch.tensor(0.0, device=device)
             Ltrack_flow = torch.tensor(0.0, device=device)
+            Lboundary_ring_l1 = torch.tensor(0.0, device=device)
+            Lboundary_ring_edge = torch.tensor(0.0, device=device)
             Lscaffold_smooth = torch.tensor(0.0, device=device)
             Lscaffold_reg = torch.tensor(0.0, device=device)
 
@@ -928,6 +942,27 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     Lstat = compute_static_exclusion_loss(gaussians, viewpoint_cam, static_exclusion_mask, visibility_filter)
                     loss = loss + opt.lambda_static_exclusion * Lstat
                     Lstatic_exclusion = Lstatic_exclusion + Lstat.detach() / float(batch_size)
+
+                ring_l1_weight = float(getattr(opt, "lambda_boundary_ring_l1", 0.0))
+                ring_edge_weight = float(getattr(opt, "lambda_boundary_ring_edge", 0.0))
+                if dynamic_mask is not None and (ring_l1_weight > 0.0 or ring_edge_weight > 0.0):
+                    _, boundary_ring_mask = build_boundary_ring_masks(
+                        dynamic_mask,
+                        int(getattr(opt, "boundary_ring_core_erode", 0)),
+                    )
+                    if boundary_ring_mask is not None:
+                        if ring_l1_weight > 0.0:
+                            Lring_l1 = masked_l1(image_for_loss, gt_image_for_loss, boundary_ring_mask)
+                            loss = loss + ring_l1_weight * Lring_l1
+                            Lboundary_ring_l1 = Lboundary_ring_l1 + Lring_l1.detach() / float(batch_size)
+                        if ring_edge_weight > 0.0:
+                            Lring_edge = masked_l1(
+                                edge_magnitude(image_for_loss),
+                                edge_magnitude(gt_image_for_loss),
+                                boundary_ring_mask,
+                            )
+                            loss = loss + ring_edge_weight * Lring_edge
+                            Lboundary_ring_edge = Lboundary_ring_edge + Lring_edge.detach() / float(batch_size)
 
                 if flow_weight > 0:
                     track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(viewpoint_cam, gt_image.shape[-2:])
@@ -1104,6 +1139,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 "Ldynamic_roi": Ldynamic_roi,
                 "Lstatic_exclusion": Lstatic_exclusion,
                 "Ltrack_flow": Ltrack_flow,
+                "Lboundary_ring_l1": Lboundary_ring_l1,
+                "Lboundary_ring_edge": Lboundary_ring_edge,
                 "Lscaffold_smooth": Lscaffold_smooth,
                 "Lscaffold_reg": Lscaffold_reg,
             }
@@ -1354,6 +1391,8 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if "Ldynamic_roi" in loss_dict: tb_writer.add_scalar('train_loss_patches/dynamic_roi_loss', loss_dict['Ldynamic_roi'].item(), iteration)
             if "Lstatic_exclusion" in loss_dict: tb_writer.add_scalar('train_loss_patches/static_exclusion_loss', loss_dict['Lstatic_exclusion'].item(), iteration)
             if "Ltrack_flow" in loss_dict: tb_writer.add_scalar('train_loss_patches/track_flow_loss', loss_dict['Ltrack_flow'].item(), iteration)
+            if "Lboundary_ring_l1" in loss_dict: tb_writer.add_scalar('train_loss_patches/boundary_ring_l1_loss', loss_dict['Lboundary_ring_l1'].item(), iteration)
+            if "Lboundary_ring_edge" in loss_dict: tb_writer.add_scalar('train_loss_patches/boundary_ring_edge_loss', loss_dict['Lboundary_ring_edge'].item(), iteration)
             if "Lscaffold_smooth" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_smooth_loss', loss_dict['Lscaffold_smooth'].item(), iteration)
             if "Lscaffold_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_reg_loss', loss_dict['Lscaffold_reg'].item(), iteration)
 
@@ -1445,6 +1484,8 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "Ldynamic_roi": "train/dynamic_roi_loss",
             "Lstatic_exclusion": "train/static_exclusion_loss",
             "Ltrack_flow": "train/track_flow_loss",
+            "Lboundary_ring_l1": "train/boundary_ring_l1_loss",
+            "Lboundary_ring_edge": "train/boundary_ring_edge_loss",
             "Lscaffold_smooth": "train/scaffold_smooth_loss",
             "Lscaffold_reg": "train/scaffold_reg_loss",
         }

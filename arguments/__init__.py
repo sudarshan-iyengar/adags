@@ -144,6 +144,9 @@ class OptimizationParams(ParamGroup):
         self.lambda_dynamic_roi = 0.0
         self.lambda_static_exclusion = 0.0
         self.lambda_track_flow = 0.0
+        self.lambda_boundary_ring_l1 = 0.0
+        self.lambda_boundary_ring_edge = 0.0
+        self.boundary_ring_core_erode = 0
         self.track_flow_mask_erode = 0
         self.track_flow_loss_start_iter = 0
         self.track_flow_loss_ramp_iters = 0
