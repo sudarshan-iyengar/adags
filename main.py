@@ -128,6 +128,20 @@ def scheduled_flow_weight(opt, iteration):
     return base_weight * max(0.0, min(1.0, progress))
 
 
+def scheduled_static_anchor_weight(opt, iteration):
+    base_weight = float(getattr(opt, "lambda_static_anchor_flow", 0.0))
+    if base_weight <= 0.0:
+        return 0.0
+    start_iter = int(getattr(opt, "static_anchor_loss_start_iter", 0))
+    if iteration < start_iter:
+        return 0.0
+    ramp_iters = int(getattr(opt, "static_anchor_loss_ramp_iters", 0))
+    if ramp_iters <= 0:
+        return base_weight
+    progress = float(iteration - start_iter + 1) / float(max(ramp_iters, 1))
+    return base_weight * max(0.0, min(1.0, progress))
+
+
 def build_track_flow_loss_mask(track_flow_mask, dynamic_mask, erode_pixels=0):
     if track_flow_mask is None:
         mask = dynamic_mask
@@ -138,6 +152,19 @@ def build_track_flow_loss_mask(track_flow_mask, dynamic_mask, erode_pixels=0):
     if mask is not None and erode_pixels > 0:
         mask = erode_mask(mask, erode_pixels)
     return mask
+
+
+def compute_static_anchor_flow_loss(pred_flow, dynamic_mask, erode_pixels=0):
+    pred_flow = normalize_flow_tensor(pred_flow)
+    if pred_flow is None or dynamic_mask is None:
+        return None
+    static_mask = (1.0 - dynamic_mask).clamp(0.0, 1.0)
+    if erode_pixels > 0:
+        static_mask = erode_mask(static_mask, erode_pixels)
+    if static_mask.sum() <= 1:
+        return None
+    zero_flow = torch.zeros_like(pred_flow)
+    return masked_l1(pred_flow, zero_flow, static_mask)
 
 
 def erode_optional_mask(mask, erode_pixels=0):
@@ -828,6 +855,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     Ldynamic_roi = torch.tensor(0.0, device=device)
     Lstatic_exclusion = torch.tensor(0.0, device=device)
     Ltrack_flow = torch.tensor(0.0, device=device)
+    Lstatic_anchor_flow = torch.tensor(0.0, device=device)
     Lscaffold_smooth = torch.tensor(0.0, device=device)
     Lscaffold_reg = torch.tensor(0.0, device=device)
 
@@ -869,11 +897,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ldynamic_roi = torch.tensor(0.0, device=device)
             Lstatic_exclusion = torch.tensor(0.0, device=device)
             Ltrack_flow = torch.tensor(0.0, device=device)
+            Lstatic_anchor_flow = torch.tensor(0.0, device=device)
             Lscaffold_smooth = torch.tensor(0.0, device=device)
             Lscaffold_reg = torch.tensor(0.0, device=device)
 
             static = False
             flow_weight = scheduled_flow_weight(opt, iteration)
+            static_anchor_weight = scheduled_static_anchor_weight(opt, iteration)
 
             # ================= inner micro-batch loop =================
             for batch_idx in range(batch_size):
@@ -881,7 +911,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 gt_image = gt_image.cuda()
                 viewpoint_cam = viewpoint_cam.cuda()
 
-                render_pkg = render(viewpoint_cam, gaussians, pipe, background, render_flow=flow_weight > 0.0)
+                render_pkg = render(
+                    viewpoint_cam,
+                    gaussians,
+                    pipe,
+                    background,
+                    render_flow=flow_weight > 0.0 or static_anchor_weight > 0.0,
+                )
                 image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
                 depth = render_pkg["depth"]
                 alpha = render_pkg["alpha"]
@@ -941,6 +977,16 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         if Lflow_prior is not None:
                             loss = loss + flow_weight * Lflow_prior
                             Ltrack_flow = Ltrack_flow + Lflow_prior.detach() / float(batch_size)
+
+                if static_anchor_weight > 0:
+                    Lanchor = compute_static_anchor_flow_loss(
+                        render_pkg.get("flow", None),
+                        dynamic_mask,
+                        int(getattr(opt, "static_anchor_mask_erode", 0)),
+                    )
+                    if Lanchor is not None:
+                        loss = loss + static_anchor_weight * Lanchor
+                        Lstatic_anchor_flow = Lstatic_anchor_flow + Lanchor.detach() / float(batch_size)
 
                 # opa mask loss
                 if opt.lambda_opa_mask > 0:
@@ -1104,6 +1150,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 "Ldynamic_roi": Ldynamic_roi,
                 "Lstatic_exclusion": Lstatic_exclusion,
                 "Ltrack_flow": Ltrack_flow,
+                "Lstatic_anchor_flow": Lstatic_anchor_flow,
                 "Lscaffold_smooth": Lscaffold_smooth,
                 "Lscaffold_reg": Lscaffold_reg,
             }
@@ -1354,6 +1401,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if "Ldynamic_roi" in loss_dict: tb_writer.add_scalar('train_loss_patches/dynamic_roi_loss', loss_dict['Ldynamic_roi'].item(), iteration)
             if "Lstatic_exclusion" in loss_dict: tb_writer.add_scalar('train_loss_patches/static_exclusion_loss', loss_dict['Lstatic_exclusion'].item(), iteration)
             if "Ltrack_flow" in loss_dict: tb_writer.add_scalar('train_loss_patches/track_flow_loss', loss_dict['Ltrack_flow'].item(), iteration)
+            if "Lstatic_anchor_flow" in loss_dict: tb_writer.add_scalar('train_loss_patches/static_anchor_flow_loss', loss_dict['Lstatic_anchor_flow'].item(), iteration)
             if "Lscaffold_smooth" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_smooth_loss', loss_dict['Lscaffold_smooth'].item(), iteration)
             if "Lscaffold_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_reg_loss', loss_dict['Lscaffold_reg'].item(), iteration)
 
@@ -1445,6 +1493,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             "Ldynamic_roi": "train/dynamic_roi_loss",
             "Lstatic_exclusion": "train/static_exclusion_loss",
             "Ltrack_flow": "train/track_flow_loss",
+            "Lstatic_anchor_flow": "train/static_anchor_flow_loss",
             "Lscaffold_smooth": "train/scaffold_smooth_loss",
             "Lscaffold_reg": "train/scaffold_reg_loss",
         }

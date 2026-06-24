@@ -31,6 +31,8 @@ Environment overrides:
   WANDB_ENTITY=models-ku-leuven
   WANDB_GROUP=lora_flow_6000_YYYYMMDD
   EXCLUDE_NODES=lrdn1262,lrdn1386
+  BASELINE=fixed_budget_lora_route0_600k
+  COMPARATOR=fixed_budget_lora_route0_filemask_residual_flow_coremask_ramp_rendergate_600k
   METHOD_FAMILY=lora_filemask_residual_flow
   EXPERIMENT_NAME=lora_flow_6000
   CANDIDATE_TAG=fixed_budget_lora_route0_filemask_residual_flow_600k
@@ -86,6 +88,8 @@ WANDB_PROJECT="${WANDB_PROJECT:-adags}"
 WANDB_ENTITY="${WANDB_ENTITY:-models-ku-leuven}"
 WANDB_GROUP="${WANDB_GROUP:-lora_flow_6000_$(date +%Y%m%d)}"
 WANDB_MODE="${WANDB_MODE:-offline}"
+BASELINE="${BASELINE:-fixed_budget_lora_route0_600k}"
+COMPARATOR="${COMPARATOR:-fixed_budget_lora_route0_filemask_residual_flow_coremask_ramp_rendergate_600k}"
 METHOD_FAMILY="${METHOD_FAMILY:-lora_filemask_residual_flow}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-lora_flow_6000}"
 CANDIDATE_TAG="${CANDIDATE_TAG:-$CANDIDATE}"
@@ -108,7 +112,7 @@ sync_log="$PROJECT_ROOT/exp_index/lora_flow_6000_gate_sync_after_eval_${timestam
 mkdir -p "$PROJECT_ROOT/exp_index"
 
 method_family="$METHOD_FAMILY"
-wandb_extra_tags="phase:${EXPERIMENT_NAME} screen:mechanism_flow baseline:fixed_budget_lora_route0_600k comparator:fixed_budget_lora_route0_filemask_residual_600k candidate:${CANDIDATE_TAG} method:${method_family} budget:6000iter"
+wandb_extra_tags="phase:${EXPERIMENT_NAME} screen:mechanism_flow baseline:${BASELINE} comparator:${COMPARATOR} candidate:${CANDIDATE_TAG} method:${method_family} budget:6000iter"
 
 if [[ "$DRY_RUN" == "0" ]]; then
   printf "train_job_id\teval_job_id\tscene\tcandidate\tmethod_family\trun_id\trun_dir\tconfig\tckpt\tflow_dir\twandb_group\tsync_script\tsync_log\n" > "$manifest"

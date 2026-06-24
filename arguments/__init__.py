@@ -144,6 +144,10 @@ class OptimizationParams(ParamGroup):
         self.lambda_dynamic_roi = 0.0
         self.lambda_static_exclusion = 0.0
         self.lambda_track_flow = 0.0
+        self.lambda_static_anchor_flow = 0.0
+        self.static_anchor_mask_erode = 0
+        self.static_anchor_loss_start_iter = 0
+        self.static_anchor_loss_ramp_iters = 0
         self.track_flow_mask_erode = 0
         self.track_flow_loss_start_iter = 0
         self.track_flow_loss_ramp_iters = 0
