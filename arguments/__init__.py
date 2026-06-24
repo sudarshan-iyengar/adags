@@ -138,6 +138,9 @@ class OptimizationParams(ParamGroup):
         self.dynamic_mask_from_residual = False
         self.dynamic_mask_residual_quantile = 0.85
         self.dynamic_mask_dilate = 2
+        self.dynamic_roi_mask_erode = 0
+        self.static_exclusion_mask_erode = 0
+        self.dynamic_densify_mask_erode = 0
         self.lambda_dynamic_roi = 0.0
         self.lambda_static_exclusion = 0.0
         self.lambda_track_flow = 0.0

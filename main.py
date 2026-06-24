@@ -140,6 +140,31 @@ def build_track_flow_loss_mask(track_flow_mask, dynamic_mask, erode_pixels=0):
     return mask
 
 
+def erode_optional_mask(mask, erode_pixels=0):
+    erode_pixels = int(erode_pixels)
+    if mask is None or erode_pixels <= 0:
+        return mask
+    return erode_mask(mask, erode_pixels)
+
+
+def build_motion_supervision_masks(dynamic_mask, opt):
+    if dynamic_mask is None:
+        return None, None, None
+    dynamic_roi_mask = erode_optional_mask(
+        dynamic_mask,
+        getattr(opt, "dynamic_roi_mask_erode", 0),
+    )
+    static_exclusion_mask = erode_optional_mask(
+        dynamic_mask,
+        getattr(opt, "static_exclusion_mask_erode", 0),
+    )
+    dynamic_densify_mask = erode_optional_mask(
+        dynamic_mask,
+        getattr(opt, "dynamic_densify_mask_erode", 0),
+    )
+    return dynamic_roi_mask, static_exclusion_mask, dynamic_densify_mask
+
+
 def evaluate_motion_prior_test_metrics(scene, pipe, background, prior_cache, clamp_pred=True):
     if prior_cache is None:
         return {}
@@ -889,14 +914,18 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     pred_image=image,
                     allow_residual=True,
                 )
+                dynamic_roi_mask, static_exclusion_mask, dynamic_densify_mask = build_motion_supervision_masks(
+                    dynamic_mask,
+                    opt,
+                )
 
-                if dynamic_mask is not None and getattr(opt, "lambda_dynamic_roi", 0.0) > 0:
-                    Ldyn = masked_l1(image_for_loss, gt_image_for_loss, dynamic_mask)
+                if dynamic_roi_mask is not None and getattr(opt, "lambda_dynamic_roi", 0.0) > 0:
+                    Ldyn = masked_l1(image_for_loss, gt_image_for_loss, dynamic_roi_mask)
                     loss = loss + opt.lambda_dynamic_roi * Ldyn
                     Ldynamic_roi = Ldynamic_roi + Ldyn.detach() / float(batch_size)
 
-                if dynamic_mask is not None and getattr(opt, "lambda_static_exclusion", 0.0) > 0:
-                    Lstat = compute_static_exclusion_loss(gaussians, viewpoint_cam, dynamic_mask, visibility_filter)
+                if static_exclusion_mask is not None and getattr(opt, "lambda_static_exclusion", 0.0) > 0:
+                    Lstat = compute_static_exclusion_loss(gaussians, viewpoint_cam, static_exclusion_mask, visibility_filter)
                     loss = loss + opt.lambda_static_exclusion * Lstat
                     Lstatic_exclusion = Lstatic_exclusion + Lstat.detach() / float(batch_size)
 
@@ -933,7 +962,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
                 if getattr(opt, "enable_motion_aware_densify", False):
                     residual_map = (image.detach() - gt_image.detach()).abs().mean(dim=0, keepdim=True)
-                    dyn_weight = compute_dynamic_densify_weight(gaussians, viewpoint_cam, dynamic_mask, residual_map)
+                    dyn_weight = compute_dynamic_densify_weight(gaussians, viewpoint_cam, dynamic_densify_mask, residual_map)
                     if dyn_weight is not None:
                         batch_dynamic_densify_weight.append(dyn_weight.squeeze(-1))
 
