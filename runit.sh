@@ -14,7 +14,7 @@ set -euo pipefail
 #   FIXED_BUDGETS="400k 600k 800k"
 #   FIXED_BUDGET_METHODS="lora_route0 scaffold_lora_route0_noreg scaffold_lora_route0_dyn"
 #   MECHANISM_SCREEN_SCENES="cut_roasted_beef flame_steak sear_steak"
-#   MECHANISM_SCREEN_METHODS="lora_route0 lora_route0_dyn scaffold_lora_route0_noreg scaffold_lora_route0_reg scaffold_lora_route0_dyn"
+#   MECHANISM_SCREEN_METHODS="lora_route0 lora_route0_dyn rendergate_flow prior_admission prior_admission_no_flow prior_admission_no_static_anchor prior_admission_no_hard_floor"
 #   MECHANISM_SCREEN_BUDGETS="600k"
 #   TRAIN_TIME=HH:MM:SS EVAL_AFTER=0|1 WANDB_MODE=offline|online|disabled
 
@@ -160,7 +160,7 @@ if [[ "$EXPERIMENT" == "fixed_budget" || "$EXPERIMENT" == "mechanism_screen" ]];
   fi
 
   if [[ "$EXPERIMENT" == "mechanism_screen" ]]; then
-    FIXED_BUDGET_METHODS="${MECHANISM_SCREEN_METHODS:-${FIXED_BUDGET_METHODS:-lora_route0 lora_route0_dyn scaffold_lora_route0_noreg scaffold_lora_route0_reg scaffold_lora_route0_dyn}}"
+    FIXED_BUDGET_METHODS="${MECHANISM_SCREEN_METHODS:-${FIXED_BUDGET_METHODS:-lora_route0 lora_route0_dyn rendergate_flow prior_admission prior_admission_no_flow prior_admission_no_static_anchor prior_admission_no_hard_floor}}"
     FIXED_BUDGETS="${MECHANISM_SCREEN_BUDGETS:-${FIXED_BUDGETS:-600k}}"
   else
     FIXED_BUDGET_METHODS="${FIXED_BUDGET_METHODS:-lora_route0 scaffold_lora_route0_noreg scaffold_lora_route0_dyn}"

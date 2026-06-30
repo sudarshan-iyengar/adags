@@ -1,0 +1,54 @@
+# Control: rendered/prior-flow gate only, without dynamic ROI floor or static anchor.
+gaussian_dim: 4
+time_duration: [0.0, 10.0]
+num_pts: 300_0000
+num_pts_ratio: 1.0
+rot_4d: false
+force_sh_3d: true
+batch_size: 4
+exhaust_test: false
+
+ModelParams:
+  images: "images"
+  resolution: 2
+  eval: true
+  dataloader: true
+
+PipelineParams:
+  eval_shfs_4d: true
+  env_optimize_until: 5000000000
+
+OptimizationParams:
+  iterations: 6_000
+  position_lr_max_steps: 6_000
+  opacity_reset_interval: 30000
+  densify_until_iter: 6_000
+  densify_grad_t_threshold: 0.000005
+  densify_until_num_points: 600000
+  enable_soft_routing: true
+  route_logit_init: 0.0
+  route_lr: -1.0
+  motion_model: "lora"
+  motion_lora_rank: 8
+  motion_lora_anchors: 32
+  motion_lora_init_scale: 0.01
+  dynamic_mask_from_residual: true
+  dynamic_mask_residual_quantile: 0.85
+  dynamic_mask_dilate: 0
+  lambda_dynamic_roi: 0.0
+  lambda_static_exclusion: 0.0
+  lambda_track_flow: 0.05
+  motion_scaffold_enable: false
+  motion_track_dt: 0.0333333333
+  enable_rendered_flow: true
+  enable_motion_aware_densify: false
+  enable_prior_admission: true
+  prior_admission_calibration_views: 0
+  prior_admission_use_flow_agreement: true
+  prior_admission_use_static_anchor: false
+  prior_admission_use_hard_floor: false
+  prior_admission_gamma_ring: 0.0
+  prior_admission_alpha: 0.0
+  prior_admission_eta_anchor: 0.0
+  blur_until_iter: 0
+  histogram_log_interval: 100

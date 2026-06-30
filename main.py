@@ -9,6 +9,8 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import itertools
+import json
 import math
 import os
 import random
@@ -34,6 +36,7 @@ from utils.image_utils import psnr, easy_cmap
 from utils.general_utils import safe_state, knn
 from utils.motion_prior_utils import (
     MotionPriorCache,
+    compute_prior_admission,
     edge_magnitude,
     masked_l1,
     masked_psnr,
@@ -90,17 +93,37 @@ def compute_dynamic_densify_weight(gaussians, viewpoint_cam, dynamic_mask, resid
         return (mask_weight * (0.34 + 0.33 * motion_weight + 0.33 * residual_weight)).clamp(0.0, 1.0)
 
 
-def compute_static_exclusion_loss(gaussians, viewpoint_cam, dynamic_mask, visibility_filter):
-    if dynamic_mask is None or gaussians.get_xyz.numel() == 0 or gaussians.get_route_logit.numel() == 0:
+def compute_static_exclusion_loss(gaussians, viewpoint_cam, dynamic_mask, visibility_filter, anchor_mask=None, eta_anchor=0.0):
+    if (
+        (dynamic_mask is None and anchor_mask is None)
+        or gaussians.get_xyz.numel() == 0
+        or gaussians.get_route_logit.numel() == 0
+    ):
         return torch.zeros((), device=gaussians.get_xyz.device)
+    loss = torch.zeros((), device=gaussians.get_xyz.device)
     with torch.no_grad():
         points = gaussians.get_dynamic_xyz(viewpoint_cam.timestamp).detach()
-        mask_weight = sample_mask_at_points(dynamic_mask, points, viewpoint_cam)
-        if visibility_filter is not None and visibility_filter.numel() == mask_weight.shape[0]:
-            mask_weight = mask_weight * visibility_filter.float().unsqueeze(-1)
-        mask_weight = mask_weight * gaussians.get_opacity.detach()
-    denom = mask_weight.sum().clamp_min(1e-6)
-    return (mask_weight * gaussians.get_static_probability).sum() / denom
+        visible_opacity = gaussians.get_opacity.detach()
+
+    if dynamic_mask is not None:
+        with torch.no_grad():
+            mask_weight = sample_mask_at_points(dynamic_mask, points, viewpoint_cam)
+            if visibility_filter is not None and visibility_filter.numel() == mask_weight.shape[0]:
+                mask_weight = mask_weight * visibility_filter.float().unsqueeze(-1)
+            mask_weight = mask_weight * visible_opacity
+        denom = mask_weight.sum().clamp_min(1e-6)
+        loss = loss + (mask_weight * gaussians.get_static_probability).sum() / denom
+
+    if anchor_mask is not None and eta_anchor > 0:
+        with torch.no_grad():
+            anchor_weight = sample_mask_at_points(anchor_mask, points, viewpoint_cam)
+            if visibility_filter is not None and visibility_filter.numel() == anchor_weight.shape[0]:
+                anchor_weight = anchor_weight * visibility_filter.float().unsqueeze(-1)
+            anchor_weight = anchor_weight * visible_opacity
+        if anchor_weight.sum() > 0:
+            denom = anchor_weight.sum().clamp_min(1e-6)
+            loss = loss + eta_anchor * (anchor_weight * gaussians.get_dynamic_probability).sum() / denom
+    return loss
 
 
 def compute_flow_loss(pred_flow, target_flow, flow_mask):
@@ -111,6 +134,215 @@ def compute_flow_loss(pred_flow, target_flow, flow_mask):
     if pred_flow.shape[-2:] != target_flow.shape[-2:]:
         pred_flow = F.interpolate(pred_flow[None], size=target_flow.shape[-2:], mode="bilinear", align_corners=False)[0]
     return masked_l1(pred_flow, target_flow, flow_mask)
+
+
+PRIOR_ADMISSION_GRID_DEFAULTS = {
+    "r_core": [1, 2, 3],
+    "r_ring": [2, 4, 6],
+    "r_anchor": [6, 10],
+    "gamma_ring": [0.0, 0.25],
+    "T_flow": [0.01, 0.02, 0.04],
+    "T_anchor": [0.01, 0.02, 0.04],
+    "tau_min": [0.25, 0.5],
+    "alpha": [0.0, 0.05, 0.10],
+}
+
+
+def parse_grid_values(value, cast):
+    if isinstance(value, (list, tuple)):
+        return [cast(v) for v in value]
+    return [cast(v.strip()) for v in str(value).split(",") if v.strip()]
+
+
+def prior_admission_params_from_opt(opt):
+    return {
+        "r_core": int(getattr(opt, "prior_admission_r_core", 1)),
+        "r_ring": int(getattr(opt, "prior_admission_r_ring", 2)),
+        "r_anchor": int(getattr(opt, "prior_admission_r_anchor", 6)),
+        "gamma_ring": float(getattr(opt, "prior_admission_gamma_ring", 0.0)),
+        "T_flow": float(getattr(opt, "prior_admission_T_flow", 0.02)),
+        "T_anchor": float(getattr(opt, "prior_admission_T_anchor", 0.02)),
+        "tau_min": float(getattr(opt, "prior_admission_tau_min", 0.25)),
+        "alpha": float(getattr(opt, "prior_admission_alpha", 0.05)),
+        "mask_threshold": float(getattr(opt, "prior_admission_mask_threshold", 0.5)),
+        "hard_quantile": float(getattr(opt, "prior_admission_hard_quantile", 0.8)),
+        "anchor_pool_radius": int(getattr(opt, "prior_admission_anchor_pool_radius", 2)),
+    }
+
+
+def set_prior_admission_params_on_opt(opt, params):
+    for key, value in params.items():
+        setattr(opt, f"prior_admission_{key}", value)
+
+
+def iter_prior_admission_grid(opt):
+    grid = {}
+    for key, default_values in PRIOR_ADMISSION_GRID_DEFAULTS.items():
+        raw = getattr(opt, f"prior_admission_grid_{key}", None)
+        cast = int if key.startswith("r_") else float
+        grid[key] = parse_grid_values(raw, cast) if raw not in (None, "") else default_values
+    base = prior_admission_params_from_opt(opt)
+    for values in itertools.product(*(grid[key] for key in PRIOR_ADMISSION_GRID_DEFAULTS)):
+        params = dict(base)
+        params.update(dict(zip(PRIOR_ADMISSION_GRID_DEFAULTS.keys(), values)))
+        yield params
+
+
+def downsample_for_calibration(tensor, max_side):
+    if tensor is None or max_side <= 0:
+        return tensor
+    h, w = tensor.shape[-2:]
+    side = max(h, w)
+    if side <= max_side:
+        return tensor
+    scale = float(max_side) / float(side)
+    target_hw = (max(1, int(round(h * scale))), max(1, int(round(w * scale))))
+    if tensor.dim() == 3 and tensor.shape[0] == 2:
+        resized = F.interpolate(tensor[None], size=target_hw, mode="bilinear", align_corners=False)[0]
+        resized[0] = resized[0] * (float(target_hw[1]) / max(float(w), 1.0))
+        resized[1] = resized[1] * (float(target_hw[0]) / max(float(h), 1.0))
+        return resized
+    if tensor.dim() == 3:
+        return F.interpolate(tensor[None], size=target_hw, mode="bilinear", align_corners=False)[0]
+    return F.interpolate(tensor[None, None], size=target_hw, mode="bilinear", align_corners=False)[0, 0]
+
+
+def accumulate_prior_metrics(accum, metrics, weight=1.0):
+    for key, value in (metrics or {}).items():
+        scalar = summary_scalar(value)
+        if scalar is not None:
+            accum[key] = accum.get(key, 0.0) + float(weight) * float(scalar)
+
+
+def average_prior_metrics(accum, denom):
+    if denom <= 0:
+        return {}
+    return {key: value / float(denom) for key, value in accum.items()}
+
+
+def score_prior_admission_stats(stats, opt):
+    hard_min = float(getattr(opt, "prior_admission_min_hard_coverage", 0.05))
+    flow_tol = float(getattr(opt, "prior_admission_flow_mass_tolerance", 1.05))
+    flow_mass_ratio = stats.get("prior_admission/flow_mass_ratio", 0.0)
+    if stats.get("prior_admission/render_gate_flow_mass", 0.0) <= 1e-8:
+        flow_mass_ok = True
+    else:
+        flow_mass_ok = flow_mass_ratio <= flow_tol
+    return (
+        stats.get("prior_admission/agreement_monotonic", 1.0) >= 0.5,
+        stats.get("prior_admission/hard_core_coverage", 0.0) >= hard_min,
+        flow_mass_ok,
+    )
+
+
+def calibrate_prior_admission(scene, opt, pipe, background):
+    if not getattr(opt, "enable_prior_admission", False):
+        return prior_admission_params_from_opt(opt), {}
+
+    max_views = int(getattr(opt, "prior_admission_calibration_views", 0))
+    if max_views <= 0:
+        return prior_admission_params_from_opt(opt), {}
+
+    train_cams = scene.getTrainCameras()
+    if len(train_cams) == 0:
+        return prior_admission_params_from_opt(opt), {}
+
+    max_side = int(getattr(opt, "prior_admission_calibration_max_side", 192))
+    candidates = list(iter_prior_admission_grid(opt))
+    candidate_stats = [({}, 0) for _ in candidates]
+    use_flow_agreement = bool(getattr(opt, "prior_admission_use_flow_agreement", True))
+    use_static_anchor = bool(getattr(opt, "prior_admission_use_static_anchor", True))
+    use_hard_floor = bool(getattr(opt, "prior_admission_use_hard_floor", True))
+
+    selected_views = [train_cams[idx] for idx in np.linspace(0, len(train_cams) - 1, min(max_views, len(train_cams)), dtype=int)]
+    with torch.no_grad():
+        for data in selected_views:
+            if isinstance(data, (list, tuple)) and len(data) == 2:
+                gt_image, cam = data
+            else:
+                gt_image, cam = None, data
+            cam = cam.cuda()
+            if gt_image is None:
+                gt_image = getattr(cam, "image", None)
+            if gt_image is None:
+                continue
+            gt_image = gt_image.cuda()
+            render_out = render(cam, scene.gaussians, pipe, background)
+            pred = render_out["render"]
+            dynamic_mask = scene.motion_prior_cache.get_dynamic_mask(
+                cam,
+                target_hw=gt_image.shape[-2:],
+                gt_image=gt_image,
+                pred_image=pred,
+                allow_residual=True,
+            )
+            if dynamic_mask is None:
+                continue
+            track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(cam, gt_image.shape[-2:])
+
+            dynamic_mask_c = downsample_for_calibration(dynamic_mask, max_side)
+            pred_flow_c = downsample_for_calibration(render_out.get("flow", None), max_side)
+            track_flow_c = downsample_for_calibration(track_flow, max_side)
+            track_flow_mask_c = downsample_for_calibration(track_flow_mask, max_side)
+            pred_c = downsample_for_calibration(pred, max_side)
+            gt_c = downsample_for_calibration(gt_image, max_side)
+
+            for idx, params in enumerate(candidates):
+                admission = compute_prior_admission(
+                    dynamic_mask_c,
+                    pred_flow=pred_flow_c,
+                    prior_flow=track_flow_c,
+                    flow_mask=track_flow_mask_c,
+                    pred_image=pred_c,
+                    gt_image=gt_c,
+                    params=params,
+                    use_flow_agreement=use_flow_agreement,
+                    use_static_anchor=use_static_anchor,
+                    use_hard_floor=use_hard_floor,
+                )
+                if admission is None:
+                    continue
+                stats, count = candidate_stats[idx]
+                accumulate_prior_metrics(stats, admission["metrics"])
+                candidate_stats[idx] = (stats, count + 1)
+
+    scored = []
+    for params, (stats, count) in zip(candidates, candidate_stats):
+        avg_stats = average_prior_metrics(stats, count)
+        if count == 0:
+            continue
+        admissible = all(score_prior_admission_stats(avg_stats, opt))
+        score = (
+            0 if admissible else 1,
+            -avg_stats.get("prior_admission/hard_core_coverage", 0.0),
+            (
+                avg_stats.get("prior_admission/w_dyn_mean", 0.0)
+                + avg_stats.get("prior_admission/w_flow_mean", 0.0)
+                + avg_stats.get("prior_admission/w_route_anchor_mean", 0.0)
+            ),
+            avg_stats.get("prior_admission/boundary_mass", 0.0),
+            int(params["r_core"]) + int(params["r_ring"]) + int(params["r_anchor"]),
+            float(params["alpha"]),
+        )
+        scored.append((score, params, avg_stats, admissible))
+
+    if not scored:
+        return prior_admission_params_from_opt(opt), {}
+
+    scored.sort(key=lambda item: item[0])
+    selected_params = scored[0][1]
+    selected_stats = dict(scored[0][2])
+    selected_stats["prior_admission/calibration_admissible"] = float(scored[0][3])
+    selected_stats["prior_admission/calibration_candidates"] = float(len(scored))
+    set_prior_admission_params_on_opt(opt, selected_params)
+
+    try:
+        os.makedirs(scene.model_path, exist_ok=True)
+        with open(os.path.join(scene.model_path, "prior_admission_params.json"), "w", encoding="utf-8") as handle:
+            json.dump({"params": selected_params, "stats": selected_stats}, handle, indent=2, sort_keys=True)
+    except OSError:
+        pass
+    return selected_params, selected_stats
 
 
 def evaluate_motion_prior_test_metrics(scene, pipe, background, prior_cache, clamp_pred=True):
@@ -126,6 +358,10 @@ def evaluate_motion_prior_test_metrics(scene, pipe, background, prior_cache, cla
     static_ghost_scores = []
     dynamic_edge_scores = []
     track_flow_errors = []
+    reliability_eval_stats = {}
+    reliability_eval_count = 0
+    reliability_bin_psnrs = {"low": [], "mid": [], "high": []}
+    opt = getattr(scene, "opt", None)
 
     with torch.no_grad():
         for data in test_cams:
@@ -190,6 +426,41 @@ def evaluate_motion_prior_test_metrics(scene, pipe, background, prior_cache, cla
                 if flow_loss is not None:
                     track_flow_errors.append(flow_loss.item())
 
+            if opt is not None and getattr(opt, "enable_prior_admission", False) and dyn_mask is not None:
+                admission = compute_prior_admission(
+                    dyn_mask,
+                    pred_flow=render_out.get("flow", None),
+                    prior_flow=track_flow,
+                    flow_mask=track_flow_mask,
+                    pred_image=pred,
+                    gt_image=gt,
+                    params=prior_admission_params_from_opt(opt),
+                    use_flow_agreement=bool(getattr(opt, "prior_admission_use_flow_agreement", True)),
+                    use_static_anchor=bool(getattr(opt, "prior_admission_use_static_anchor", True)),
+                    use_hard_floor=bool(getattr(opt, "prior_admission_use_hard_floor", True)),
+                )
+                if admission is not None:
+                    accumulate_prior_metrics(
+                        reliability_eval_stats,
+                        {f"test/{key}": value for key, value in admission["metrics"].items()},
+                    )
+                    reliability_eval_count += 1
+                    rel = admission["reliability_dynamic"].detach()
+                    valid = (dyn_mask > 0) & (rel > 0)
+                    rel_values = rel[valid]
+                    if rel_values.numel() >= 16:
+                        q_low = torch.quantile(rel_values, 1.0 / 3.0)
+                        q_high = torch.quantile(rel_values, 2.0 / 3.0)
+                        bin_masks = {
+                            "low": valid.float() * (rel <= q_low).float(),
+                            "mid": valid.float() * (rel > q_low).float() * (rel <= q_high).float(),
+                            "high": valid.float() * (rel > q_high).float(),
+                        }
+                        for bin_name, bin_mask in bin_masks.items():
+                            bin_psnr = masked_psnr(pred, gt, bin_mask)
+                            if bin_psnr is not None:
+                                reliability_bin_psnrs[bin_name].append(bin_psnr.item())
+
     metrics = {}
     if dyn_psnrs:
         metrics["test/dynamic_mask_psnr"] = float(np.mean(dyn_psnrs))
@@ -201,6 +472,11 @@ def evaluate_motion_prior_test_metrics(scene, pipe, background, prior_cache, cla
         metrics["test/dynamic_edge_magnitude"] = float(np.mean(dynamic_edge_scores))
     if track_flow_errors:
         metrics["test/track_flow_l1"] = float(np.mean(track_flow_errors))
+    if reliability_eval_count > 0:
+        metrics.update(average_prior_metrics(reliability_eval_stats, reliability_eval_count))
+        for bin_name, values in reliability_bin_psnrs.items():
+            if values:
+                metrics[f"test/reliability_{bin_name}_bin_psnr"] = float(np.mean(values))
     return metrics
 
 
@@ -666,6 +942,7 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     gaussians = GaussianModel(dataset.sh_degree, gaussian_dim=gaussian_dim, time_duration=time_duration, rot_4d=rot_4d, force_sh_3d=force_sh_3d, sh_degree_t=2 if pipe.eval_shfs_4d else 0)
     assert checkpoint, "No checkpoint provided for validation"
     scene = Scene(dataset, gaussians, shuffle=False, num_pts=num_pts, num_pts_ratio=num_pts_ratio, time_duration=time_duration)
+    scene.opt = opt
     scene.motion_prior_cache = MotionPriorCache(dataset.source_path, opt, device="cuda")
 
     (model_params, first_iter) = torch.load(checkpoint)
@@ -733,6 +1010,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+    prior_admission_params, prior_admission_calibration_stats = calibrate_prior_admission(scene, opt, pipe, background)
+    scene.prior_admission_calibration_stats = prior_admission_calibration_stats
+    scene.prior_admission_params = prior_admission_params
 
     iter_start = torch.cuda.Event(enable_timing=True)
     iter_end = torch.cuda.Event(enable_timing=True)
@@ -819,6 +1099,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ltrack_flow = torch.tensor(0.0, device=device)
             Lscaffold_smooth = torch.tensor(0.0, device=device)
             Lscaffold_reg = torch.tensor(0.0, device=device)
+            prior_admission_metrics_accum = {}
+            prior_admission_metrics_count = 0
 
             static = False
 
@@ -861,25 +1143,64 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     pred_image=image,
                     allow_residual=True,
                 )
+                track_flow = None
+                track_flow_mask = None
+                prior_admission = None
+                enable_prior_admission = bool(getattr(opt, "enable_prior_admission", False))
+                if dynamic_mask is not None and enable_prior_admission:
+                    if getattr(opt, "prior_admission_use_flow_agreement", True) or getattr(opt, "lambda_track_flow", 0.0) > 0:
+                        track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(viewpoint_cam, gt_image.shape[-2:])
+                    prior_admission = compute_prior_admission(
+                        dynamic_mask,
+                        pred_flow=render_pkg.get("flow", None),
+                        prior_flow=track_flow,
+                        flow_mask=track_flow_mask,
+                        pred_image=image,
+                        gt_image=gt_image,
+                        params=prior_admission_params,
+                        use_flow_agreement=bool(getattr(opt, "prior_admission_use_flow_agreement", True)),
+                        use_static_anchor=bool(getattr(opt, "prior_admission_use_static_anchor", True)),
+                        use_hard_floor=bool(getattr(opt, "prior_admission_use_hard_floor", True)),
+                    )
+                    if prior_admission is not None:
+                        accumulate_prior_metrics(prior_admission_metrics_accum, prior_admission["metrics"], 1.0 / float(batch_size))
+                        prior_admission_metrics_count += 1
 
                 if dynamic_mask is not None and getattr(opt, "lambda_dynamic_roi", 0.0) > 0:
-                    Ldyn = masked_l1(image_for_loss, gt_image_for_loss, dynamic_mask)
+                    dyn_weight = prior_admission["w_dyn"] if prior_admission is not None else dynamic_mask
+                    Ldyn = masked_l1(image_for_loss, gt_image_for_loss, dyn_weight)
                     loss = loss + opt.lambda_dynamic_roi * Ldyn
                     Ldynamic_roi = Ldynamic_roi + Ldyn.detach() / float(batch_size)
 
                 if dynamic_mask is not None and getattr(opt, "lambda_static_exclusion", 0.0) > 0:
-                    Lstat = compute_static_exclusion_loss(gaussians, viewpoint_cam, dynamic_mask, visibility_filter)
+                    route_dyn_weight = prior_admission["w_route_dyn"] if prior_admission is not None else dynamic_mask
+                    route_anchor_weight = prior_admission["w_route_anchor"] if prior_admission is not None else None
+                    eta_anchor = float(getattr(opt, "prior_admission_eta_anchor", 1.0)) if prior_admission is not None else 0.0
+                    Lstat = compute_static_exclusion_loss(
+                        gaussians,
+                        viewpoint_cam,
+                        route_dyn_weight,
+                        visibility_filter,
+                        anchor_mask=route_anchor_weight,
+                        eta_anchor=eta_anchor,
+                    )
                     loss = loss + opt.lambda_static_exclusion * Lstat
                     Lstatic_exclusion = Lstatic_exclusion + Lstat.detach() / float(batch_size)
 
                 if getattr(opt, "lambda_track_flow", 0.0) > 0:
-                    track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(viewpoint_cam, gt_image.shape[-2:])
+                    if track_flow is None:
+                        track_flow, track_flow_mask = scene.motion_prior_cache.get_track_flow(viewpoint_cam, gt_image.shape[-2:])
                     if track_flow is not None:
-                        if track_flow_mask is None:
-                            track_flow_mask = dynamic_mask
-                        elif dynamic_mask is not None:
-                            track_flow_mask = (track_flow_mask * dynamic_mask).clamp(0.0, 1.0)
-                        Lflow_prior = compute_flow_loss(render_pkg.get("flow", None), track_flow, track_flow_mask)
+                        if prior_admission is not None:
+                            flow_weight = prior_admission["w_flow"]
+                        else:
+                            if track_flow_mask is None:
+                                flow_weight = dynamic_mask
+                            elif dynamic_mask is not None:
+                                flow_weight = (track_flow_mask * dynamic_mask).clamp(0.0, 1.0)
+                            else:
+                                flow_weight = track_flow_mask
+                        Lflow_prior = compute_flow_loss(render_pkg.get("flow", None), track_flow, flow_weight)
                         if Lflow_prior is not None:
                             loss = loss + opt.lambda_track_flow * Lflow_prior
                             Ltrack_flow = Ltrack_flow + Lflow_prior.detach() / float(batch_size)
@@ -1037,6 +1358,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             iter_end.record()
 
             # ================= logging dictionary =================
+            scene.last_prior_admission_metrics = dict(prior_admission_metrics_accum)
             loss_dict = {
                 "Ll1": Ll1,
                 "Lssim": Lssim,
@@ -1211,6 +1533,9 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         or iteration in testing_iterations
         or iteration == getattr(opt, "iterations", -1)
     )
+    prior_admission_metrics = {}
+    prior_admission_metrics.update(getattr(scene, "prior_admission_calibration_stats", {}) or {})
+    prior_admission_metrics.update(getattr(scene, "last_prior_admission_metrics", {}) or {})
 
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
@@ -1299,6 +1624,11 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             if "Lscaffold_smooth" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_smooth_loss', loss_dict['Lscaffold_smooth'].item(), iteration)
             if "Lscaffold_reg" in loss_dict: tb_writer.add_scalar('train_loss_patches/scaffold_reg_loss', loss_dict['Lscaffold_reg'].item(), iteration)
 
+        for metric_name, metric_value in prior_admission_metrics.items():
+            scalar_value = summary_scalar(metric_value)
+            if scalar_value is not None:
+                tb_writer.add_scalar(metric_name, scalar_value, iteration)
+
         tb_writer.add_scalar('gpu/memory_allocated_MB', torch.cuda.memory_allocated() / 1e6, iteration)
         tb_writer.add_scalar('gpu/memory_reserved_MB', torch.cuda.memory_reserved() / 1e6, iteration)
 
@@ -1312,6 +1642,7 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
         "gpu/memory_reserved_MB": torch.cuda.memory_reserved() / 1e6,
     }
     wandb_metrics.update(collect_decomposition_diagnostics(gaussians, opt))
+    wandb_metrics.update(prior_admission_metrics)
     if log_histograms:
         wandb_metrics["hist/scene_opacity"] = gaussians.get_opacity
 
@@ -1408,6 +1739,9 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
             static_ghost_scores = []
             dynamic_edge_scores = []
             track_flow_errors = []
+            reliability_eval_stats = {}
+            reliability_eval_count = 0
+            reliability_bin_psnrs = {"low": [], "mid": [], "high": []}
             with torch.no_grad():
                 for data in test_cams:
                     # Unpack in case dataset returns (gt_image, cam)
@@ -1458,6 +1792,41 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                             if flow_loss is not None:
                                 track_flow_errors.append(flow_loss.item())
 
+                        if opt is not None and getattr(opt, "enable_prior_admission", False) and dyn_mask is not None:
+                            admission = compute_prior_admission(
+                                dyn_mask,
+                                pred_flow=render_out.get("flow", None),
+                                prior_flow=track_flow,
+                                flow_mask=track_flow_mask,
+                                pred_image=pred,
+                                gt_image=gt,
+                                params=prior_admission_params_from_opt(opt),
+                                use_flow_agreement=bool(getattr(opt, "prior_admission_use_flow_agreement", True)),
+                                use_static_anchor=bool(getattr(opt, "prior_admission_use_static_anchor", True)),
+                                use_hard_floor=bool(getattr(opt, "prior_admission_use_hard_floor", True)),
+                            )
+                            if admission is not None:
+                                accumulate_prior_metrics(
+                                    reliability_eval_stats,
+                                    {f"test/{key}": value for key, value in admission["metrics"].items()},
+                                )
+                                reliability_eval_count += 1
+                                rel = admission["reliability_dynamic"].detach()
+                                valid = (dyn_mask > 0) & (rel > 0)
+                                rel_values = rel[valid]
+                                if rel_values.numel() >= 16:
+                                    q_low = torch.quantile(rel_values, 1.0 / 3.0)
+                                    q_high = torch.quantile(rel_values, 2.0 / 3.0)
+                                    bin_masks = {
+                                        "low": valid.float() * (rel <= q_low).float(),
+                                        "mid": valid.float() * (rel > q_low).float() * (rel <= q_high).float(),
+                                        "high": valid.float() * (rel > q_high).float(),
+                                    }
+                                    for bin_name, bin_mask in bin_masks.items():
+                                        bin_psnr = masked_psnr(pred, gt, bin_mask)
+                                        if bin_psnr is not None:
+                                            reliability_bin_psnrs[bin_name].append(bin_psnr.item())
+
                     # for cam in test_cams:
                     # cam = cam.cuda()
                     # render_out = renderFunc(cam, scene.gaussians, pipe, background)
@@ -1479,6 +1848,11 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                     eval_metrics["test/dynamic_edge_magnitude"] = float(np.mean(dynamic_edge_scores))
                 if track_flow_errors:
                     eval_metrics["test/track_flow_l1"] = float(np.mean(track_flow_errors))
+                if reliability_eval_count > 0:
+                    eval_metrics.update(average_prior_metrics(reliability_eval_stats, reliability_eval_count))
+                    for bin_name, values in reliability_bin_psnrs.items():
+                        if values:
+                            eval_metrics[f"test/reliability_{bin_name}_bin_psnr"] = float(np.mean(values))
                 eval_metrics.update(collect_decomposition_diagnostics(gaussians, opt))
                 if tb_writer:
                     for metric_name, metric_value in eval_metrics.items():

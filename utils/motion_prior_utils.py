@@ -58,6 +58,54 @@ def resize_mask(mask, target_hw, dilate=0):
     return mask.clamp(0.0, 1.0)
 
 
+def dilate_mask(mask, radius):
+    if mask is None:
+        return None
+    radius = int(radius)
+    if mask.dim() == 2:
+        mask = mask.unsqueeze(0)
+    mask = mask.float().clamp(0.0, 1.0)
+    if radius <= 0:
+        return mask
+    kernel = 2 * radius + 1
+    return F.max_pool2d(mask[None], kernel_size=kernel, stride=1, padding=radius)[0].clamp(0.0, 1.0)
+
+
+def erode_mask(mask, radius):
+    if mask is None:
+        return None
+    radius = int(radius)
+    if radius <= 0:
+        return mask.float().clamp(0.0, 1.0)
+    if mask.dim() == 2:
+        mask = mask.unsqueeze(0)
+    inv = 1.0 - mask.float().clamp(0.0, 1.0)
+    kernel = 2 * radius + 1
+    eroded = 1.0 - F.max_pool2d(inv[None], kernel_size=kernel, stride=1, padding=radius)[0]
+    return eroded.clamp(0.0, 1.0)
+
+
+def build_dynamic_zones(dynamic_mask, r_core=1, r_ring=2, r_anchor=6, mask_threshold=0.5):
+    if dynamic_mask is None:
+        return None
+    if dynamic_mask.dim() == 2:
+        dynamic_mask = dynamic_mask.unsqueeze(0)
+    mask = (dynamic_mask.float().clamp(0.0, 1.0) >= float(mask_threshold)).float()
+    core = erode_mask(mask, r_core)
+    ring_outer = dilate_mask(mask, r_ring)
+    anchor_outer = dilate_mask(mask, r_anchor)
+    ring = (ring_outer - core).clamp(0.0, 1.0)
+    anchor = (anchor_outer - ring_outer).clamp(0.0, 1.0)
+    dynamic_support = (core + ring).clamp(0.0, 1.0)
+    return {
+        "mask": mask,
+        "core": core,
+        "ring": ring,
+        "anchor": anchor,
+        "dynamic_support": dynamic_support,
+    }
+
+
 def normalize_flow_tensor(flow):
     if flow is None:
         return None
@@ -72,6 +120,15 @@ def normalize_flow_tensor(flow):
     return None
 
 
+def flow_to_image_units(flow):
+    flow = normalize_flow_tensor(flow)
+    if flow is None:
+        return None
+    h, w = flow.shape[-2:]
+    scale = flow.new_tensor([max(float(w), 1.0), max(float(h), 1.0)]).view(2, 1, 1)
+    return flow / scale
+
+
 def resize_flow(flow, target_hw):
     flow = normalize_flow_tensor(flow)
     if flow is None:
@@ -84,6 +141,168 @@ def resize_flow(flow, target_hw):
     flow[0] = flow[0] * (float(new_w) / max(float(old_w), 1.0))
     flow[1] = flow[1] * (float(new_h) / max(float(old_h), 1.0))
     return flow
+
+
+def _safe_mask_mean(value, mask=None, eps=1e-6):
+    if value is None or value.numel() == 0:
+        return value.new_tensor(0.0) if torch.is_tensor(value) else torch.tensor(0.0)
+    if mask is None:
+        return value.float().mean()
+    denom = mask.float().sum().clamp_min(eps)
+    return (value.float() * mask.float()).sum() / denom
+
+
+def _binary_mask_coverage(weight, support, eps=1e-6):
+    if weight is None or support is None:
+        return torch.tensor(0.0, device=weight.device if torch.is_tensor(weight) else "cpu")
+    denom = support.sum().clamp_min(eps)
+    return (weight.clamp_min(0.0) * support).sum() / denom
+
+
+def compute_prior_admission(
+    dynamic_mask,
+    pred_flow=None,
+    prior_flow=None,
+    flow_mask=None,
+    pred_image=None,
+    gt_image=None,
+    params=None,
+    use_flow_agreement=True,
+    use_static_anchor=True,
+    use_hard_floor=True,
+):
+    if dynamic_mask is None:
+        return None
+
+    params = params or {}
+    target_hw = tuple(dynamic_mask.shape[-2:])
+    zones = build_dynamic_zones(
+        dynamic_mask,
+        r_core=params.get("r_core", 1),
+        r_ring=params.get("r_ring", 2),
+        r_anchor=params.get("r_anchor", 6),
+        mask_threshold=params.get("mask_threshold", 0.5),
+    )
+    if zones is None:
+        return None
+
+    eps = float(params.get("eps", 1e-6))
+    gamma_ring = float(params.get("gamma_ring", 0.0))
+    tau_min = float(params.get("tau_min", 0.25))
+    t_flow = max(float(params.get("T_flow", 0.02)), eps)
+    t_anchor = max(float(params.get("T_anchor", 0.02)), eps)
+    alpha = float(params.get("alpha", 0.0)) if use_hard_floor else 0.0
+
+    device = dynamic_mask.device
+    core = zones["core"]
+    ring = zones["ring"]
+    anchor = zones["anchor"]
+    dynamic_support = zones["dynamic_support"]
+    zone_dynamic = (core + gamma_ring * ring).clamp(0.0, 1.0)
+
+    pred_flow = resize_flow(pred_flow, target_hw)
+    prior_flow = resize_flow(prior_flow, target_hw)
+    flow_valid = torch.zeros((1, *target_hw), device=device)
+    agreement = torch.ones((1, *target_hw), device=device)
+    flow_error = torch.zeros((1, *target_hw), device=device)
+
+    if pred_flow is not None and prior_flow is not None:
+        pred_unit = flow_to_image_units(pred_flow.detach())
+        prior_unit = flow_to_image_units(prior_flow.detach())
+        finite = torch.isfinite(pred_unit).all(dim=0, keepdim=True) & torch.isfinite(prior_unit).all(dim=0, keepdim=True)
+        if flow_mask is not None:
+            flow_valid = resize_mask(flow_mask, target_hw, 0).clamp(0.0, 1.0) * finite.float()
+        else:
+            flow_valid = finite.float()
+        diff_l1 = (pred_unit - prior_unit).abs().sum(dim=0, keepdim=True)
+        flow_error = torch.sqrt(diff_l1.pow(2) + eps * eps)
+        if use_flow_agreement:
+            agreement_raw = torch.exp(-flow_error / t_flow)
+            agreement = torch.where(flow_valid > 0, agreement_raw, torch.ones_like(agreement_raw))
+
+    if use_static_anchor and pred_flow is not None and anchor.sum() > eps:
+        pred_unit = flow_to_image_units(pred_flow.detach())
+        flow_mag = pred_unit.abs().sum(dim=0, keepdim=True) if pred_unit is not None else torch.zeros_like(anchor)
+        conflict = (flow_mag + dynamic_mask.float().clamp(0.0, 1.0)) * anchor
+        pool_radius = int(params.get("anchor_pool_radius", max(1, int(params.get("r_ring", 2)))))
+        if pool_radius > 0:
+            kernel = 2 * pool_radius + 1
+            conflict = F.max_pool2d(conflict[None], kernel_size=kernel, stride=1, padding=pool_radius)[0] * anchor
+        s_anchor = torch.where(anchor > 0, torch.exp(-conflict / t_anchor), torch.ones_like(anchor))
+    else:
+        conflict = torch.zeros_like(anchor)
+        s_anchor = torch.ones_like(anchor)
+
+    reliability_dynamic = (zone_dynamic * agreement).clamp(0.0, 1.0)
+    reliability_anchor = (anchor * agreement * s_anchor).clamp(0.0, 1.0)
+    reliability = torch.maximum(reliability_dynamic, reliability_anchor)
+
+    if pred_image is not None and gt_image is not None and core.sum() > eps:
+        residual = (pred_image.detach() - gt_image.detach()).abs().mean(dim=0, keepdim=True)
+        core_values = residual[core > 0]
+        if core_values.numel() > 0:
+            q = float(params.get("hard_quantile", 0.8))
+            threshold = torch.quantile(core_values, q)
+            hard_core = ((residual >= threshold).float() * core).clamp(0.0, 1.0)
+        else:
+            hard_core = torch.zeros_like(core)
+    else:
+        hard_core = core
+
+    w_dyn = (reliability_dynamic + alpha * hard_core * (1.0 - reliability_dynamic)).clamp(0.0, 1.0)
+    w_dyn = (w_dyn * dynamic_support).clamp(0.0, 1.0)
+    flow_gate = (agreement >= tau_min).float() * flow_valid * dynamic_support
+    w_flow = (reliability_dynamic * flow_gate).clamp(0.0, 1.0)
+    w_route_dyn = (reliability_dynamic * dynamic_support).clamp(0.0, 1.0)
+    w_route_anchor = reliability_anchor
+
+    valid_flow_values = flow_valid > 0
+    if valid_flow_values.sum() >= 16:
+        agree_vals = agreement[valid_flow_values].flatten()
+        rel_vals = reliability_dynamic[valid_flow_values].flatten()
+        order = torch.argsort(agree_vals)
+        chunks = torch.chunk(rel_vals[order], min(4, rel_vals.numel()))
+        bin_means = torch.stack([chunk.mean() for chunk in chunks if chunk.numel() > 0])
+        monotonic = (bin_means[1:] + 1e-4 >= bin_means[:-1]).float().prod() if bin_means.numel() > 1 else agreement.new_tensor(1.0)
+    else:
+        monotonic = agreement.new_tensor(1.0)
+
+    metrics = {
+        "prior_admission/reliability_mean": reliability.mean(),
+        "prior_admission/reliability_dynamic_mean": _safe_mask_mean(reliability_dynamic, dynamic_support),
+        "prior_admission/reliability_anchor_mean": _safe_mask_mean(reliability_anchor, anchor),
+        "prior_admission/w_dyn_mean": w_dyn.mean(),
+        "prior_admission/w_flow_mean": w_flow.mean(),
+        "prior_admission/w_route_anchor_mean": w_route_anchor.mean(),
+        "prior_admission/core_coverage": core.mean(),
+        "prior_admission/ring_coverage": ring.mean(),
+        "prior_admission/anchor_coverage": anchor.mean(),
+        "prior_admission/hard_core_coverage": _binary_mask_coverage(w_dyn, hard_core),
+        "prior_admission/flow_valid_coverage": _safe_mask_mean(flow_valid, dynamic_support),
+        "prior_admission/render_gate_flow_mass": flow_gate.mean(),
+        "prior_admission/flow_mass_ratio": w_flow.mean() / flow_gate.mean().clamp_min(eps),
+        "prior_admission/boundary_mass": _safe_mask_mean(reliability_dynamic, ring),
+        "prior_admission/anchor_conflict_mean": _safe_mask_mean(conflict, anchor),
+        "prior_admission/flow_agreement_mean": _safe_mask_mean(agreement, flow_valid),
+        "prior_admission/flow_error_mean": _safe_mask_mean(flow_error, flow_valid),
+        "prior_admission/agreement_monotonic": monotonic,
+    }
+
+    return {
+        "reliability": reliability,
+        "reliability_dynamic": reliability_dynamic,
+        "reliability_anchor": reliability_anchor,
+        "agreement": agreement,
+        "flow_valid": flow_valid,
+        "flow_gate": flow_gate,
+        "hard_core": hard_core,
+        "zones": zones,
+        "w_dyn": w_dyn,
+        "w_flow": w_flow,
+        "w_route_dyn": w_route_dyn,
+        "w_route_anchor": w_route_anchor,
+        "metrics": metrics,
+    }
 
 
 def masked_l1(pred, target, mask, eps=1e-6):
