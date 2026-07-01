@@ -36,6 +36,8 @@ skills-lock.json
 
 # Generated analysis outputs
 analysis/
+refine-logs/
+research-wiki/
 
 # Operating System files
 .DS_Store
