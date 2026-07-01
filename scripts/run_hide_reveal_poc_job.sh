@@ -4,6 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${ADAGS_REPO_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
+if [[ -n "${ADAGS_PROJECT_ROOT:-}" ]]; then
+  PROJECT_ROOT="$ADAGS_PROJECT_ROOT"
+elif [[ -n "${WORK:-}" ]]; then
+  PROJECT_ROOT="$WORK/proj_adags"
+else
+  PROJECT_ROOT="$REPO_ROOT"
+fi
 STAGE="${HIDE_REVEAL_STAGE:-synthetic}"
 OUT_DIR="${HIDE_REVEAL_OUT_DIR:-$REPO_ROOT/refine-logs/hide_reveal_poc/$STAGE}"
 MANIFEST="${HIDE_REVEAL_MANIFEST:-}"
@@ -11,6 +18,11 @@ SEEDS="${HIDE_REVEAL_SEEDS:-0 1 2}"
 CLIPS_PER_TYPE="${HIDE_REVEAL_CLIPS_PER_TYPE:-8}"
 COMPUTE_LPIPS="${HIDE_REVEAL_COMPUTE_LPIPS:-0}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
+ENV_SCRIPT="${ADAGS_ENV_SCRIPT:-$PROJECT_ROOT/exp_index/leonardo_env.sh}"
+
+if [[ -f "$ENV_SCRIPT" ]]; then
+  source "$ENV_SCRIPT"
+fi
 
 if [[ "$PYTHON_BIN" == "python" && -x "$REPO_ROOT/.venv/Scripts/python.exe" ]]; then
   PYTHON_BIN="$REPO_ROOT/.venv/Scripts/python.exe"
@@ -24,8 +36,12 @@ mkdir -p "$OUT_DIR"
   echo "stage: $STAGE"
   echo "out_dir: $OUT_DIR"
   echo "repo_root: $REPO_ROOT"
+  echo "project_root: $PROJECT_ROOT"
+  echo "env_script: $ENV_SCRIPT"
+  echo "env_loaded: $([[ -f "$ENV_SCRIPT" ]] && echo true || echo false)"
   echo "host: $(hostname)"
   echo "slurm_job_id: ${SLURM_JOB_ID:-none}"
+  echo "python: $(command -v "$PYTHON_BIN" 2>/dev/null || echo "$PYTHON_BIN")"
   echo "python_bin: $PYTHON_BIN"
   echo "git_branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   echo "git_commit: $(git rev-parse HEAD 2>/dev/null || echo unknown)"

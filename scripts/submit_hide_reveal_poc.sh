@@ -77,6 +77,13 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [[ -n "${ADAGS_PROJECT_ROOT:-}" ]]; then
+  PROJECT_ROOT="$ADAGS_PROJECT_ROOT"
+elif [[ -n "${WORK:-}" ]]; then
+  PROJECT_ROOT="$WORK/proj_adags"
+else
+  PROJECT_ROOT="$REPO_ROOT"
+fi
 LOG_DIR="$REPO_ROOT/logs"
 mkdir -p "$LOG_DIR"
 
@@ -99,7 +106,7 @@ cmd=(
   -t "$TIME"
   -o "$LOG_DIR/hide_reveal_${STAGE}_%j.out"
   -e "$LOG_DIR/hide_reveal_${STAGE}_%j.err"
-  --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",HIDE_REVEAL_STAGE="$STAGE",HIDE_REVEAL_OUT_DIR="$OUT_DIR",HIDE_REVEAL_MANIFEST="$MANIFEST"
+  --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",HIDE_REVEAL_STAGE="$STAGE",HIDE_REVEAL_OUT_DIR="$OUT_DIR",HIDE_REVEAL_MANIFEST="$MANIFEST"
   "$REPO_ROOT/scripts/run_hide_reveal_poc_job.sh"
 )
 
