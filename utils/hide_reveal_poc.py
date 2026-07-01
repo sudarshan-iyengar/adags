@@ -10,7 +10,8 @@ import numpy as np
 from PIL import Image
 
 
-TRUE_EVENT_TYPES = {"hide_reveal", "hide_only", "boundary_occlusion"}
+TRUE_EVENT_TYPES = {"hide_reveal", "hide_only", "boundary_occlusion", "identity_confuser"}
+REVEAL_EVENT_TYPES = {"hide_reveal", "boundary_occlusion", "identity_confuser"}
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
 
 
@@ -48,6 +49,10 @@ class SyntheticCandidate:
     def is_true_event(self) -> bool:
         return self.event_type in TRUE_EVENT_TYPES
 
+    @property
+    def requires_identity_reconnection(self) -> bool:
+        return self.event_type in REVEAL_EVENT_TYPES
+
 
 @dataclass(frozen=True)
 class ShadowScore:
@@ -69,10 +74,14 @@ class CandidateResult:
     accepted: bool
     matched_lifespan_delta: float
     matched_lifespan_accepted: bool
+    matched_lifespan_identity_reconnected: bool
     no_identity_delta: float
     no_identity_accepted: bool
+    no_identity_reconnected: bool
     unnormalized_delta: float
+    unnormalized_accepted: bool
     no_hysteresis_accepted: bool
+    identity_reconnected: bool
 
 
 def sigmoid(x: np.ndarray) -> np.ndarray:
@@ -136,6 +145,9 @@ def _positions(frames: int, width: int, height: int, seed: int, event_type: str)
         vy = 0.35
     if event_type == "boundary_occlusion":
         y0 -= 4.0
+    if event_type == "identity_confuser":
+        y0 += 2.0
+        vx += 0.10
     x = np.clip(x0 + vx * t, 8.0, width - 8.0)
     y = np.clip(y0 + vy * t + 1.2 * np.sin(t / 5.0), 8.0, height - 8.0)
     return np.stack([x, y], axis=1)
@@ -414,7 +426,11 @@ def evaluate_candidate(candidate: SyntheticCandidate, params: FrozenHideRevealPa
     lifespan_delta = no_id_delta
     lifespan_accepted = selected and lifespan_delta < -lifespan_params.m_event
     no_identity_accepted = selected and no_id_delta < -no_id_params.m_event
+    unnormalized_accepted = selected and unnormalized_delta < -params.m_event
     no_hysteresis_accepted = score >= (params.c_min - 0.08) and delta < -params.m_event
+    identity_reconnected = accepted and candidate.requires_identity_reconnection
+    matched_lifespan_identity_reconnected = False
+    no_identity_reconnected = False
 
     return CandidateResult(
         candidate=candidate,
@@ -426,10 +442,14 @@ def evaluate_candidate(candidate: SyntheticCandidate, params: FrozenHideRevealPa
         accepted=bool(accepted),
         matched_lifespan_delta=float(lifespan_delta),
         matched_lifespan_accepted=bool(lifespan_accepted),
+        matched_lifespan_identity_reconnected=bool(matched_lifespan_identity_reconnected),
         no_identity_delta=float(no_id_delta),
         no_identity_accepted=bool(no_identity_accepted),
+        no_identity_reconnected=bool(no_identity_reconnected),
         unnormalized_delta=float(unnormalized_delta),
+        unnormalized_accepted=bool(unnormalized_accepted),
         no_hysteresis_accepted=bool(no_hysteresis_accepted),
+        identity_reconnected=bool(identity_reconnected),
     )
 
 
@@ -438,7 +458,7 @@ def make_synthetic_candidates(
     clips_per_type: int,
     params: FrozenHideRevealParams,
 ) -> List[SyntheticCandidate]:
-    event_types = ["hide_reveal", "boundary_occlusion", "normal_motion", "distractor_motion"]
+    event_types = ["hide_reveal", "boundary_occlusion", "identity_confuser", "normal_motion", "distractor_motion"]
     candidates: List[SyntheticCandidate] = []
     for seed in seeds:
         split = "calibration" if seed % 2 == 0 else "heldout"
@@ -475,12 +495,16 @@ def _safe_div(numer: float, denom: float) -> Optional[float]:
 def summarize_candidate_results(results: Sequence[CandidateResult], split: Optional[str] = None) -> Dict[str, Optional[float]]:
     rows = [result for result in results if split is None or result.candidate.split == split]
     true_rows = [result for result in rows if result.candidate.is_true_event]
+    reveal_rows = [result for result in rows if result.candidate.requires_identity_reconnection]
     normal_rows = [result for result in rows if not result.candidate.is_true_event]
     accepted = [result for result in rows if result.accepted]
     accepted_true = [result for result in accepted if result.candidate.is_true_event]
     selected_true = [result for result in true_rows if result.selected]
     selected_normal = [result for result in normal_rows if result.selected]
     lifespan_true = [result for result in true_rows if result.matched_lifespan_accepted]
+    full_reconnected = [result for result in reveal_rows if result.identity_reconnected]
+    lifespan_reconnected = [result for result in reveal_rows if result.matched_lifespan_identity_reconnected]
+    no_identity_reconnected = [result for result in reveal_rows if result.no_identity_reconnected]
 
     auc = roc_auc([result.candidate.is_true_event for result in rows], [-result.delta_event for result in rows])
     candidate_auc = roc_auc([result.candidate.is_true_event for result in rows], [result.candidate_score for result in rows])
@@ -488,6 +512,7 @@ def summarize_candidate_results(results: Sequence[CandidateResult], split: Optio
     return {
         "n": float(len(rows)),
         "true_events": float(len(true_rows)),
+        "reveal_events": float(len(reveal_rows)),
         "normal_controls": float(len(normal_rows)),
         "candidate_recall": _safe_div(float(len(selected_true)), float(len(true_rows))),
         "candidate_false_positive_rate": _safe_div(float(len(selected_normal)), float(len(normal_rows))),
@@ -498,12 +523,27 @@ def summarize_candidate_results(results: Sequence[CandidateResult], split: Optio
         "false_event_rate_normal": _safe_div(float(len([r for r in normal_rows if r.accepted])), float(len(normal_rows))),
         "mean_delta_true": mean_or_none([result.delta_event for result in true_rows]),
         "mean_delta_normal": mean_or_none([result.delta_event for result in normal_rows]),
-        "identity_reconnection_accuracy": _safe_div(float(len(accepted_true)), float(len(true_rows))),
+        "identity_reconnection_accuracy": _safe_div(float(len(full_reconnected)), float(len(reveal_rows))),
         "matched_lifespan_accept_recall": _safe_div(float(len(lifespan_true)), float(len(true_rows))),
-        "matched_lifespan_identity_reconnection_accuracy": 0.0 if true_rows else None,
+        "matched_lifespan_identity_reconnection_accuracy": _safe_div(
+            float(len(lifespan_reconnected)),
+            float(len(reveal_rows)),
+        ),
         "no_identity_accept_recall": _safe_div(
             float(len([result for result in true_rows if result.no_identity_accepted])),
             float(len(true_rows)),
+        ),
+        "no_identity_identity_reconnection_accuracy": _safe_div(
+            float(len(no_identity_reconnected)),
+            float(len(reveal_rows)),
+        ),
+        "unnormalized_accept_recall": _safe_div(
+            float(len([result for result in true_rows if result.unnormalized_accepted])),
+            float(len(true_rows)),
+        ),
+        "unnormalized_false_event_rate": _safe_div(
+            float(len([result for result in normal_rows if result.unnormalized_accepted])),
+            float(len(normal_rows)),
         ),
         "no_hysteresis_false_event_rate": _safe_div(
             float(len([result for result in normal_rows if result.no_hysteresis_accepted])),
@@ -556,18 +596,22 @@ def synthetic_stop_go(results: Sequence[CandidateResult]) -> Dict[str, object]:
     margin_auc = metric_or_default(heldout.get("margin_auc"), 0.0)
     false_event_rate = metric_or_default(heldout.get("false_event_rate_normal"), 1.0)
     lifespan_identity = heldout.get("matched_lifespan_identity_reconnection_accuracy")
+    no_identity_identity = heldout.get("no_identity_identity_reconnection_accuracy")
     identity = metric_or_default(heldout.get("identity_reconnection_accuracy"), 0.0)
     pass_candidate = candidate_recall >= 0.85
     pass_margin = margin_auc >= 0.85 and false_event_rate <= 0.15
     pass_lifespan = lifespan_identity is not None and identity > lifespan_identity
+    pass_no_identity = no_identity_identity is not None and identity > no_identity_identity
     return {
         "pass_candidate_recall": pass_candidate,
         "pass_margin_separation": pass_margin,
         "pass_matched_lifespan_gate": pass_lifespan,
-        "proceed_to_real_windows": bool(pass_candidate and pass_margin and pass_lifespan),
+        "pass_no_identity_deletion": pass_no_identity,
+        "proceed_to_real_windows": bool(pass_candidate and pass_margin and pass_lifespan and pass_no_identity),
         "notes": [
             "Synthetic labels carry the identity claim; real windows should be sanity checks only.",
-            "Matched lifespan identity reconnection is zero in this PoC because it has no hidden-identity reveal matching.",
+            "Matched lifespan can accept the same patch event, but gets no identity-reconnection credit because it has no hidden-identity reveal matching.",
+            "The no-identity deletion can accept patch events, but should not pass the identity reconnection gate.",
         ],
     }
 
@@ -590,10 +634,14 @@ def candidate_result_to_row(result: CandidateResult) -> Dict[str, object]:
             "accepted": result.accepted,
             "matched_lifespan_delta": result.matched_lifespan_delta,
             "matched_lifespan_accepted": result.matched_lifespan_accepted,
+            "matched_lifespan_identity_reconnected": result.matched_lifespan_identity_reconnected,
             "no_identity_delta": result.no_identity_delta,
             "no_identity_accepted": result.no_identity_accepted,
+            "no_identity_reconnected": result.no_identity_reconnected,
             "unnormalized_delta": result.unnormalized_delta,
+            "unnormalized_accepted": result.unnormalized_accepted,
             "no_hysteresis_accepted": result.no_hysteresis_accepted,
+            "identity_reconnected": result.identity_reconnected,
         }
     )
     return row

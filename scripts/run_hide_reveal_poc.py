@@ -56,6 +56,15 @@ def main():
         print(f"Wrote synthetic PoC outputs to {Path(args.out_dir).resolve()}")
         print(f"heldout margin_auc={heldout.get('margin_auc')}")
         print(f"heldout candidate_recall={heldout.get('candidate_recall')}")
+        print(f"heldout identity_reconnection_accuracy={heldout.get('identity_reconnection_accuracy')}")
+        print(
+            "heldout matched_lifespan_identity_reconnection_accuracy="
+            f"{heldout.get('matched_lifespan_identity_reconnection_accuracy')}"
+        )
+        print(
+            "heldout no_identity_identity_reconnection_accuracy="
+            f"{heldout.get('no_identity_identity_reconnection_accuracy')}"
+        )
         print(f"proceed_to_real_windows={stop_go.get('proceed_to_real_windows')}")
     elif args.command == "write-real-template":
         out = Path(args.out)
