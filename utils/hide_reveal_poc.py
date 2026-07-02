@@ -3,8 +3,9 @@ import json
 import math
 import re
 from dataclasses import asdict, dataclass, replace
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 from PIL import Image
@@ -731,6 +732,579 @@ def write_real_manifest_template(path: Path) -> Dict[str, object]:
     }
     write_json(path, template)
     return template
+
+
+@dataclass(frozen=True)
+class EvalFrameRun:
+    scene: str
+    eval_dir: Path
+    render_dir: Path
+    gt_dir: Path
+    static_dir: Optional[Path]
+
+
+def discover_eval_frame_runs(search_roots: Sequence[Path], max_depth: int = 5) -> List[EvalFrameRun]:
+    runs: List[EvalFrameRun] = []
+    seen: Set[str] = set()
+    for root in search_roots:
+        root = root.expanduser()
+        if not root.exists():
+            raise FileNotFoundError(f"Eval root does not exist: {root}")
+        root = root.resolve()
+        for eval_dir in iter_eval_dirs(root, max_depth=max_depth):
+            key = str(eval_dir.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            runs.append(
+                EvalFrameRun(
+                    scene=infer_scene_name(eval_dir),
+                    eval_dir=eval_dir,
+                    render_dir=eval_dir / "renders",
+                    gt_dir=eval_dir / "gt",
+                    static_dir=(eval_dir / "static") if (eval_dir / "static").is_dir() else None,
+                )
+            )
+    return sorted(runs, key=lambda run: (run.scene, str(run.eval_dir)))
+
+
+def iter_eval_dirs(root: Path, max_depth: int = 5) -> Iterable[Path]:
+    if is_eval_dir(root):
+        yield root
+        return
+    stack: List[Tuple[Path, int]] = [(root, 0)]
+    while stack:
+        current, depth = stack.pop()
+        if depth > max_depth:
+            continue
+        if is_eval_dir(current):
+            yield current
+            continue
+        if depth == max_depth:
+            continue
+        try:
+            children = [child for child in current.iterdir() if child.is_dir()]
+        except OSError:
+            continue
+        stack.extend((child, depth + 1) for child in reversed(children))
+
+
+def is_eval_dir(path: Path) -> bool:
+    return (path / "renders").is_dir() and (path / "gt").is_dir()
+
+
+def infer_scene_name(eval_dir: Path) -> str:
+    parent = eval_dir.parent
+    if eval_dir.name.startswith("ours_"):
+        if parent.name.lower() == "test" and parent.parent != parent:
+            return parent.parent.name
+        return parent.name
+    if parent.name.lower() == "test" and parent.parent != parent:
+        return parent.parent.name
+    return parent.name or eval_dir.name
+
+
+def parse_crop_xyxy(value: object) -> Tuple[int, int, int, int]:
+    if isinstance(value, str):
+        pieces = [piece.strip() for piece in re.split(r"[, ]+", value.strip()) if piece.strip()]
+    elif isinstance(value, Sequence):
+        pieces = list(value)
+    else:
+        raise ValueError(f"Crop must be a 4-value list or comma string, got {value!r}")
+    if len(pieces) != 4:
+        raise ValueError(f"Crop must have four values [x0, y0, x1, y1], got {value!r}")
+    crop = tuple(int(piece) for piece in pieces)
+    x0, y0, x1, y1 = crop
+    if not (0 <= x0 < x1 and 0 <= y0 < y1):
+        raise ValueError(f"Invalid crop_xyxy {crop}; expected 0 <= x0 < x1 and 0 <= y0 < y1")
+    return crop
+
+
+def image_size(path: Path) -> Tuple[int, int]:
+    with Image.open(path) as image:
+        return image.size
+
+
+def first_indexed_frame(index: Dict[int, Path]) -> Optional[Path]:
+    if not index:
+        return None
+    return index[min(index.keys())]
+
+
+def common_frame_numbers(run: EvalFrameRun) -> List[int]:
+    render_index = index_image_frames(run.render_dir)
+    gt_index = index_image_frames(run.gt_dir)
+    return sorted(set(render_index) & set(gt_index))
+
+
+def contiguous_segments(frames: Sequence[int]) -> List[List[int]]:
+    if not frames:
+        return []
+    segments: List[List[int]] = [[int(frames[0])]]
+    for frame in frames[1:]:
+        frame = int(frame)
+        if frame == segments[-1][-1] + 1:
+            segments[-1].append(frame)
+        else:
+            segments.append([frame])
+    return segments
+
+
+def sample_frame_windows(frames: Sequence[int], num_windows: int, window_length: int) -> List[Tuple[int, int]]:
+    if num_windows <= 0:
+        raise ValueError("--num-windows must be positive")
+    if window_length <= 0:
+        raise ValueError("--window-length must be positive")
+    starts: List[int] = []
+    for segment in contiguous_segments(frames):
+        if len(segment) < window_length:
+            continue
+        starts.extend(segment[: len(segment) - window_length + 1])
+    if not starts:
+        return []
+    if len(starts) <= num_windows:
+        chosen = starts
+    else:
+        idxs = np.linspace(0, len(starts) - 1, num_windows)
+        chosen = [starts[int(round(idx))] for idx in idxs]
+    deduped: List[int] = []
+    for start in chosen:
+        if start not in deduped:
+            deduped.append(start)
+    return [(start, start + window_length - 1) for start in deduped]
+
+
+def run_system_spec(run: EvalFrameRun) -> Dict[str, str]:
+    spec = {
+        "render_dir": str(run.render_dir.resolve()),
+        "gt_dir": str(run.gt_dir.resolve()),
+    }
+    if run.static_dir is not None:
+        spec["static_dir"] = str(run.static_dir.resolve())
+    return spec
+
+
+def manifest_payload(windows: Sequence[Dict[str, object]], source: str = "real-manifest-from-eval") -> Dict[str, object]:
+    return {
+        "description": "Predeclared real occlusion/reveal windows for hide/reveal PoC scoring.",
+        "frames_are_inclusive": True,
+        "generated_by": source,
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "windows": list(windows),
+    }
+
+
+def load_window_specs(json_path: Optional[Path] = None, csv_path: Optional[Path] = None) -> List[Dict[str, object]]:
+    specs: List[Dict[str, object]] = []
+    if json_path is not None:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            if "windows" in data:
+                raw_windows = data["windows"]
+            else:
+                raw_windows = [data]
+        elif isinstance(data, list):
+            raw_windows = data
+        else:
+            raise ValueError(f"Window JSON must be a manifest, object, or list: {json_path}")
+        if not isinstance(raw_windows, list):
+            raise ValueError(f"Window JSON `windows` must be a list: {json_path}")
+        specs.extend(dict(window) for window in raw_windows)
+    if csv_path is not None:
+        with csv_path.open("r", newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            specs.extend(csv_row_to_window_spec(row) for row in reader)
+    return specs
+
+
+def csv_row_to_window_spec(row: Dict[str, str]) -> Dict[str, object]:
+    spec: Dict[str, object] = {
+        key: value
+        for key, value in row.items()
+        if value is not None and str(value).strip() != "" and not key.endswith("_dir")
+    }
+    if "frame_start" in spec:
+        spec["frame_start"] = int(spec["frame_start"])
+    if "frame_end" in spec:
+        spec["frame_end"] = int(spec["frame_end"])
+    if "crop_xyxy" in spec:
+        spec["crop_xyxy"] = list(parse_crop_xyxy(spec["crop_xyxy"]))
+    elif all(key in row and row[key] for key in ("x0", "y0", "x1", "y1")):
+        spec["crop_xyxy"] = [int(row["x0"]), int(row["y0"]), int(row["x1"]), int(row["y1"])]
+
+    systems: Dict[str, Dict[str, str]] = {}
+    for system_name in sorted({key[:-11] for key in row if key.endswith("_render_dir") and key != "render_dir"}):
+        render_dir = row.get(f"{system_name}_render_dir")
+        gt_dir = row.get(f"{system_name}_gt_dir")
+        if render_dir and gt_dir:
+            systems[system_name] = {"render_dir": render_dir, "gt_dir": gt_dir}
+            static_dir = row.get(f"{system_name}_static_dir")
+            if static_dir:
+                systems[system_name]["static_dir"] = static_dir
+    if row.get("render_dir") and row.get("gt_dir"):
+        systems.setdefault("route0", {"render_dir": row["render_dir"], "gt_dir": row["gt_dir"]})
+        if row.get("static_dir"):
+            systems["route0"]["static_dir"] = row["static_dir"]
+    if systems:
+        spec["systems"] = systems
+    return spec
+
+
+def direct_window_spec(
+    scene: Optional[str],
+    frame_start: Optional[int],
+    frame_end: Optional[int],
+    crop_xyxy: Optional[Sequence[int]],
+    occluder: str,
+    notes: str,
+) -> Optional[Dict[str, object]]:
+    if frame_start is None and frame_end is None:
+        return None
+    if frame_start is None or frame_end is None:
+        raise ValueError("--frame-start and --frame-end must be provided together for a direct CLI window")
+    spec: Dict[str, object] = {
+        "frame_start": int(frame_start),
+        "frame_end": int(frame_end),
+        "occluder": occluder,
+        "notes": notes,
+    }
+    if scene:
+        spec["scene"] = scene
+    if crop_xyxy is not None:
+        spec["crop_xyxy"] = list(parse_crop_xyxy(crop_xyxy))
+    return spec
+
+
+def create_real_manifest_from_eval(
+    search_roots: Sequence[Path],
+    out_path: Path,
+    system_name: str = "route0",
+    scene: Optional[str] = None,
+    num_windows: int = 6,
+    window_length: int = 16,
+    crop_xyxy: Optional[Sequence[int]] = None,
+    occluder: str = "TBD_PREDECLARE",
+    notes: str = "Review and freeze this candidate window before scoring.",
+    window_specs: Optional[Sequence[Dict[str, object]]] = None,
+    max_depth: int = 5,
+) -> Dict[str, object]:
+    runs = discover_eval_frame_runs(search_roots, max_depth=max_depth)
+    if not runs:
+        roots = ", ".join(str(root) for root in search_roots)
+        raise FileNotFoundError(f"No eval folders with renders/ and gt/ found under: {roots}")
+    if scene:
+        runs = [replace_eval_scene(run, scene) for run in runs]
+    run_by_scene = make_run_lookup(runs)
+    windows = (
+        windows_from_user_specs(window_specs or [], run_by_scene, runs, system_name, crop_xyxy, occluder, notes)
+        if window_specs
+        else windows_from_discovered_runs(runs, system_name, num_windows, window_length, crop_xyxy, occluder, notes)
+    )
+    if not windows:
+        raise ValueError("No manifest windows could be created. Check frame indices and window length.")
+    payload = manifest_payload(windows)
+    write_json(out_path, payload)
+    return {
+        "manifest": payload,
+        "out_path": str(out_path),
+        "eval_runs": [eval_run_to_row(run) for run in runs],
+    }
+
+
+def replace_eval_scene(run: EvalFrameRun, scene: str) -> EvalFrameRun:
+    return EvalFrameRun(
+        scene=scene,
+        eval_dir=run.eval_dir,
+        render_dir=run.render_dir,
+        gt_dir=run.gt_dir,
+        static_dir=run.static_dir,
+    )
+
+
+def make_run_lookup(runs: Sequence[EvalFrameRun]) -> Dict[str, EvalFrameRun]:
+    lookup: Dict[str, EvalFrameRun] = {}
+    for run in runs:
+        lookup.setdefault(run.scene, run)
+        lookup.setdefault(str(run.eval_dir), run)
+        lookup.setdefault(run.eval_dir.name, run)
+    return lookup
+
+
+def eval_run_to_row(run: EvalFrameRun) -> Dict[str, object]:
+    return {
+        "scene": run.scene,
+        "eval_dir": str(run.eval_dir),
+        "render_dir": str(run.render_dir),
+        "gt_dir": str(run.gt_dir),
+        "static_dir": str(run.static_dir) if run.static_dir is not None else None,
+        "n_common_frames": len(common_frame_numbers(run)),
+    }
+
+
+def windows_from_discovered_runs(
+    runs: Sequence[EvalFrameRun],
+    system_name: str,
+    num_windows: int,
+    window_length: int,
+    crop_xyxy: Optional[Sequence[int]],
+    occluder: str,
+    notes: str,
+) -> List[Dict[str, object]]:
+    windows: List[Dict[str, object]] = []
+    remaining = num_windows
+    for run in runs:
+        if remaining <= 0:
+            break
+        frames = common_frame_numbers(run)
+        sampled = sample_frame_windows(frames, remaining, window_length)
+        if not sampled:
+            continue
+        crop = list(resolve_default_crop(run, crop_xyxy))
+        for frame_start, frame_end in sampled:
+            window_idx = len(windows) + 1
+            windows.append(
+                {
+                    "window_id": f"{run.scene}_window{window_idx:02d}",
+                    "scene": run.scene,
+                    "frame_start": int(frame_start),
+                    "frame_end": int(frame_end),
+                    "crop_xyxy": crop,
+                    "occluder": occluder,
+                    "notes": notes,
+                    "systems": {system_name: run_system_spec(run)},
+                }
+            )
+            remaining -= 1
+            if remaining <= 0:
+                break
+    return windows
+
+
+def windows_from_user_specs(
+    specs: Sequence[Dict[str, object]],
+    run_by_scene: Dict[str, EvalFrameRun],
+    runs: Sequence[EvalFrameRun],
+    system_name: str,
+    fallback_crop: Optional[Sequence[int]],
+    fallback_occluder: str,
+    fallback_notes: str,
+) -> List[Dict[str, object]]:
+    windows: List[Dict[str, object]] = []
+    for idx, spec in enumerate(specs, start=1):
+        window = dict(spec)
+        if "frame_start" not in window or "frame_end" not in window:
+            raise ValueError(f"Window spec {idx} must include frame_start and frame_end")
+        scene = str(window.get("scene") or "")
+        run = run_by_scene.get(scene) if scene else None
+        if run is None and len(runs) == 1:
+            run = runs[0]
+            scene = scene or run.scene
+        if run is None and "systems" not in window:
+            known = ", ".join(sorted({run.scene for run in runs}))
+            raise ValueError(f"Window spec {idx} has no matching scene. Known scenes: {known}")
+        if "crop_xyxy" in window:
+            crop = list(parse_crop_xyxy(window["crop_xyxy"]))
+        elif fallback_crop is not None:
+            crop = list(parse_crop_xyxy(fallback_crop))
+        elif run is not None:
+            crop = list(resolve_default_crop(run, None))
+        else:
+            raise ValueError(f"Window spec {idx} needs crop_xyxy when no eval run is matched")
+        window["window_id"] = window.get("window_id") or f"{scene or 'scene'}_window{idx:02d}"
+        window["scene"] = scene or window.get("scene") or "unknown_scene"
+        window["frame_start"] = int(window["frame_start"])
+        window["frame_end"] = int(window["frame_end"])
+        window["crop_xyxy"] = crop
+        window["occluder"] = window.get("occluder") or fallback_occluder
+        window["notes"] = window.get("notes") or fallback_notes
+        if "systems" not in window:
+            if run is None:
+                raise ValueError(f"Window spec {idx} needs systems or a matching eval run")
+            window["systems"] = {system_name: run_system_spec(run)}
+        windows.append(window)
+    return windows
+
+
+def resolve_default_crop(run: EvalFrameRun, crop_xyxy: Optional[Sequence[int]]) -> Tuple[int, int, int, int]:
+    if crop_xyxy is not None:
+        return parse_crop_xyxy(crop_xyxy)
+    first = first_indexed_frame(index_image_frames(run.render_dir))
+    if first is None:
+        raise FileNotFoundError(f"No indexed render frames found in {run.render_dir}")
+    width, height = image_size(first)
+    return (0, 0, width, height)
+
+
+def validate_real_manifest(
+    manifest_path: Path,
+    require_systems: Optional[Sequence[str]] = None,
+) -> Dict[str, object]:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    require_systems = list(require_systems or [])
+    errors: List[str] = []
+    warnings: List[str] = []
+    if not isinstance(manifest, dict):
+        raise ValueError(f"Manifest must be a JSON object: {manifest_path}")
+    windows = manifest.get("windows")
+    if not isinstance(windows, list):
+        errors.append("Manifest must contain a `windows` list.")
+        windows = []
+    if len(windows) < 4:
+        warnings.append(f"R009 expected 4-6 windows; manifest has {len(windows)}.")
+    if len(windows) > 6:
+        warnings.append(f"R009 expected 4-6 windows; manifest has {len(windows)}.")
+
+    window_reports = []
+    for idx, window in enumerate(windows, start=1):
+        report = validate_real_window_spec(window, manifest_path.parent, require_systems, idx)
+        window_reports.append(report)
+        errors.extend(f"{report['window_id']}: {message}" for message in report["errors"])
+        warnings.extend(f"{report['window_id']}: {message}" for message in report["warnings"])
+    return {
+        "manifest": str(manifest_path),
+        "ok": not errors,
+        "n_windows": len(windows),
+        "errors": errors,
+        "warnings": warnings,
+        "windows": window_reports,
+    }
+
+
+def validate_real_window_spec(
+    window: object,
+    base_dir: Path,
+    require_systems: Sequence[str],
+    fallback_idx: int,
+) -> Dict[str, object]:
+    window_id = f"window{fallback_idx:02d}"
+    errors: List[str] = []
+    warnings: List[str] = []
+    system_reports: Dict[str, object] = {}
+    if not isinstance(window, dict):
+        return {
+            "window_id": window_id,
+            "ok": False,
+            "errors": ["Window must be a JSON object."],
+            "warnings": [],
+            "systems": {},
+        }
+    window_id = str(window.get("window_id") or window_id)
+    for key in ("scene", "frame_start", "frame_end", "crop_xyxy", "systems"):
+        if key not in window:
+            errors.append(f"Missing required key `{key}`.")
+    try:
+        frame_start = int(window.get("frame_start"))
+        frame_end = int(window.get("frame_end"))
+        if frame_end < frame_start:
+            errors.append("frame_end must be >= frame_start.")
+    except Exception:
+        frame_start = 0
+        frame_end = -1
+        errors.append("frame_start and frame_end must be integers.")
+    try:
+        crop = parse_crop_xyxy(window.get("crop_xyxy"))
+    except Exception as exc:
+        crop = (0, 0, 1, 1)
+        errors.append(str(exc))
+
+    systems = window.get("systems")
+    if not isinstance(systems, dict):
+        systems = {}
+        errors.append("systems must be a mapping.")
+    for system_name in require_systems:
+        if system_name not in systems:
+            errors.append(f"Missing required system `{system_name}`.")
+    for system_name, system_spec in systems.items():
+        if not isinstance(system_spec, dict):
+            system_reports[str(system_name)] = {
+                "ok": False,
+                "errors": ["System spec must be a mapping."],
+                "warnings": [],
+            }
+            errors.append(f"System `{system_name}` spec must be a mapping.")
+            continue
+        report = validate_real_system_spec(str(system_name), system_spec, base_dir, frame_start, frame_end, crop)
+        system_reports[str(system_name)] = report
+        errors.extend(f"{system_name}: {message}" for message in report["errors"])
+        warnings.extend(f"{system_name}: {message}" for message in report["warnings"])
+
+    return {
+        "window_id": window_id,
+        "scene": window.get("scene"),
+        "ok": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "systems": system_reports,
+    }
+
+
+def validate_real_system_spec(
+    system_name: str,
+    system_spec: Dict[str, object],
+    base_dir: Path,
+    frame_start: int,
+    frame_end: int,
+    crop_xyxy: Tuple[int, int, int, int],
+) -> Dict[str, object]:
+    errors: List[str] = []
+    warnings: List[str] = []
+    paths: Dict[str, str] = {}
+    for key in ("render_dir", "gt_dir"):
+        if not system_spec.get(key):
+            errors.append(f"Missing `{key}`.")
+            continue
+        path = resolve_path(base_dir, system_spec[key])
+        paths[key] = str(path)
+        if not path.is_dir():
+            errors.append(f"{key} does not exist or is not a directory: {path}")
+    if errors:
+        return {"ok": False, "errors": errors, "warnings": warnings, "paths": paths}
+
+    render_dir = resolve_path(base_dir, system_spec["render_dir"])
+    gt_dir = resolve_path(base_dir, system_spec["gt_dir"])
+    render_index = index_image_frames(render_dir)
+    gt_index = index_image_frames(gt_dir)
+    required_frames = list(range(frame_start, frame_end + 1))
+    missing_render = [frame for frame in required_frames if frame not in render_index]
+    missing_gt = [frame for frame in required_frames if frame not in gt_index]
+    if missing_render:
+        errors.append(f"Missing render frames: {summarize_missing_frames(missing_render)}")
+    if missing_gt:
+        errors.append(f"Missing gt frames: {summarize_missing_frames(missing_gt)}")
+    check_path = render_index.get(frame_start) or first_indexed_frame(render_index)
+    if check_path is not None:
+        width, height = image_size(check_path)
+        x0, y0, x1, y1 = crop_xyxy
+        if not (0 <= x0 < x1 <= width and 0 <= y0 < y1 <= height):
+            errors.append(f"Crop {crop_xyxy} is outside render frame bounds {(width, height)}.")
+    else:
+        errors.append(f"No indexed render frames found in {render_dir}.")
+
+    static_value = system_spec.get("static_dir")
+    if static_value:
+        static_dir = resolve_path(base_dir, static_value)
+        paths["static_dir"] = str(static_dir)
+        if static_dir.is_dir():
+            static_index = index_image_frames(static_dir)
+            missing_static = [frame for frame in required_frames if frame not in static_index]
+            if missing_static:
+                warnings.append(f"Missing optional static frames: {summarize_missing_frames(missing_static)}")
+        else:
+            warnings.append(f"Optional static_dir does not exist or is not a directory: {static_dir}")
+    return {
+        "ok": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "paths": paths,
+        "n_frames": max(0, frame_end - frame_start + 1),
+    }
+
+
+def summarize_missing_frames(frames: Sequence[int], limit: int = 8) -> str:
+    shown = ", ".join(str(frame) for frame in frames[:limit])
+    if len(frames) > limit:
+        shown += f", ... ({len(frames)} total)"
+    return shown
 
 
 def evaluate_real_manifest(manifest_path: Path, out_dir: Path, compute_lpips: bool = False) -> Dict[str, object]:
