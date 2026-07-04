@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import json
 import math
 import re
@@ -1298,6 +1299,376 @@ def validate_real_system_spec(
         "paths": paths,
         "n_frames": max(0, frame_end - frame_start + 1),
     }
+
+
+def derive_real_poc_render_folders(
+    manifest_path: Path,
+    out_dir: Path,
+    route0_eval_dir: Optional[Path] = None,
+    route0_system: str = "route0",
+    hide_reveal_strength: float = 1.0,
+    matched_lifespan_strength: float = 0.35,
+    event_beta: float = 1.0,
+    feather_px: int = 8,
+    overwrite: bool = False,
+) -> Dict[str, object]:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise ValueError(f"Manifest must be a JSON object: {manifest_path}")
+    windows = manifest.get("windows")
+    if not isinstance(windows, list):
+        raise ValueError(f"Manifest must contain a `windows` list: {manifest_path}")
+    if not windows:
+        raise ValueError("Manifest has no windows to derive")
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    base_dir = manifest_path.parent
+    override_spec = route0_eval_system_spec(route0_eval_dir) if route0_eval_dir is not None else None
+    groups: Dict[str, Dict[str, object]] = {}
+    augmented_windows: List[Dict[str, object]] = []
+    metadata_windows: List[Dict[str, object]] = []
+
+    for idx, raw_window in enumerate(windows, start=1):
+        if not isinstance(raw_window, dict):
+            raise ValueError(f"Window {idx} must be a JSON object")
+        window = dict(raw_window)
+        window_id = str(window.get("window_id") or f"window{idx:02d}")
+        scene = str(window.get("scene") or "unknown_scene")
+        frame_start = int(window["frame_start"])
+        frame_end = int(window["frame_end"])
+        if frame_end < frame_start:
+            raise ValueError(f"{window_id}: frame_end must be >= frame_start")
+        crop = parse_crop_xyxy(window["crop_xyxy"])
+        raw_systems = window.get("systems")
+        systems = dict(raw_systems) if isinstance(raw_systems, dict) else {}
+        route0_spec = override_spec or systems.get(route0_system)
+        if not isinstance(route0_spec, dict):
+            raise ValueError(f"{window_id}: missing `{route0_system}` system and no --route0-eval override was given")
+        source_spec = absolute_system_spec(route0_spec, base_dir)
+        check = validate_real_system_spec(route0_system, source_spec, base_dir, frame_start, frame_end, crop)
+        if not check["ok"]:
+            joined = "; ".join(str(error) for error in check["errors"])
+            raise ValueError(f"{window_id}: source route0 validation failed: {joined}")
+
+        group_id = source_group_id(scene, source_spec["render_dir"], source_spec["gt_dir"])
+        group_root = out_dir / "derived_renders"
+        hide_render_dir = group_root / "hide_reveal" / group_id / "renders"
+        lifespan_render_dir = group_root / "matched_lifespan" / group_id / "renders"
+        group = groups.setdefault(
+            group_id,
+            {
+                "scene": scene,
+                "source": source_spec,
+                "hide_render_dir": hide_render_dir,
+                "lifespan_render_dir": lifespan_render_dir,
+                "windows": [],
+            },
+        )
+        group["windows"].append(
+            {
+                "window_id": window_id,
+                "frame_start": frame_start,
+                "frame_end": frame_end,
+                "crop_xyxy": crop,
+            }
+        )
+
+        systems[route0_system] = source_spec
+        systems["matched_lifespan"] = derived_system_spec(lifespan_render_dir, source_spec)
+        systems["hide_reveal"] = derived_system_spec(hide_render_dir, source_spec)
+        window["window_id"] = window_id
+        window["scene"] = scene
+        window["frame_start"] = frame_start
+        window["frame_end"] = frame_end
+        window["crop_xyxy"] = list(crop)
+        window["systems"] = systems
+        augmented_windows.append(window)
+        metadata_windows.append(
+            {
+                "window_id": window_id,
+                "scene": scene,
+                "frame_start": frame_start,
+                "frame_end": frame_end,
+                "crop_xyxy": list(crop),
+                "source_render_dir": source_spec["render_dir"],
+                "source_gt_dir": source_spec["gt_dir"],
+                "matched_lifespan_render_dir": str(lifespan_render_dir.resolve()),
+                "hide_reveal_render_dir": str(hide_render_dir.resolve()),
+            }
+        )
+
+    group_reports = []
+    for group_id, group in groups.items():
+        report = write_derived_group_renders(
+            group_id=group_id,
+            source_spec=group["source"],
+            windows=group["windows"],
+            hide_render_dir=group["hide_render_dir"],
+            lifespan_render_dir=group["lifespan_render_dir"],
+            hide_reveal_strength=hide_reveal_strength,
+            matched_lifespan_strength=matched_lifespan_strength,
+            event_beta=event_beta,
+            feather_px=feather_px,
+            overwrite=overwrite,
+        )
+        group_reports.append(report)
+
+    augmented_manifest = dict(manifest)
+    augmented_manifest["generated_by"] = "derive-real-renders"
+    augmented_manifest["derived_poc_outputs"] = {
+        "is_trained_model_output": False,
+        "description": (
+            "R012/R013 proof-of-concept derived image folders. hide_reveal composites GT crops into "
+            "predeclared event windows as a local counterfactual target; matched_lifespan uses the same "
+            "temporal/crop budget but a route0 temporal reference without identity-aware reveal matching."
+        ),
+    }
+    augmented_manifest["windows"] = augmented_windows
+    manifest_out = out_dir / "derived_real_windows_manifest.json"
+    write_json(manifest_out, augmented_manifest)
+
+    metadata = {
+        "generated_by": "derive-real-renders",
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "source_manifest": str(manifest_path.resolve()),
+        "output_manifest": str(manifest_out.resolve()),
+        "route0_system": route0_system,
+        "route0_eval_override": str(route0_eval_dir.resolve()) if route0_eval_dir is not None else None,
+        "is_trained_model_output": False,
+        "parameters": {
+            "hide_reveal_strength": float(hide_reveal_strength),
+            "matched_lifespan_strength": float(matched_lifespan_strength),
+            "event_beta": float(event_beta),
+            "feather_px": int(feather_px),
+        },
+        "limitations": [
+            "Derived image-level PoC composite; no GaussianModel state was trained or checkpointed.",
+            "hide_reveal uses GT only inside predeclared event crops to test the maximum possible local artifact effect.",
+            "matched_lifespan uses the same windows and crop budget but no identity-aware hidden/reveal target.",
+        ],
+        "windows": metadata_windows,
+        "groups": group_reports,
+    }
+    metadata_out = out_dir / "derived_poc_metadata.json"
+    write_json(metadata_out, metadata)
+    validation = validate_real_manifest(manifest_out, require_systems=[route0_system, "matched_lifespan", "hide_reveal"])
+    write_json(out_dir / "derived_real_windows_validation.json", validation)
+    return {
+        "manifest": augmented_manifest,
+        "manifest_path": str(manifest_out),
+        "metadata": metadata,
+        "metadata_path": str(metadata_out),
+        "validation": validation,
+    }
+
+
+def route0_eval_system_spec(eval_dir: Path) -> Dict[str, str]:
+    eval_dir = eval_dir.expanduser().resolve()
+    render_dir = eval_dir / "renders"
+    gt_dir = eval_dir / "gt"
+    if not render_dir.is_dir() or not gt_dir.is_dir():
+        raise FileNotFoundError(f"Expected renders/ and gt/ under route0 eval dir: {eval_dir}")
+    spec = {"render_dir": str(render_dir), "gt_dir": str(gt_dir)}
+    static_dir = eval_dir / "static"
+    if static_dir.is_dir():
+        spec["static_dir"] = str(static_dir)
+    return spec
+
+
+def absolute_system_spec(system_spec: Dict[str, object], base_dir: Path) -> Dict[str, str]:
+    spec = {
+        "render_dir": str(resolve_path(base_dir, system_spec["render_dir"]).resolve()),
+        "gt_dir": str(resolve_path(base_dir, system_spec["gt_dir"]).resolve()),
+    }
+    if system_spec.get("static_dir"):
+        spec["static_dir"] = str(resolve_path(base_dir, system_spec["static_dir"]).resolve())
+    return spec
+
+
+def derived_system_spec(render_dir: Path, source_spec: Dict[str, str]) -> Dict[str, str]:
+    spec = {
+        "render_dir": str(render_dir.resolve()),
+        "gt_dir": source_spec["gt_dir"],
+    }
+    if source_spec.get("static_dir"):
+        spec["static_dir"] = source_spec["static_dir"]
+    return spec
+
+
+def source_group_id(scene: str, render_dir: str, gt_dir: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "_", scene).strip("_") or "scene"
+    digest = hashlib.sha1(f"{render_dir}|{gt_dir}".encode("utf-8")).hexdigest()[:8]
+    return f"{slug}_{digest}"
+
+
+def write_derived_group_renders(
+    group_id: str,
+    source_spec: Dict[str, str],
+    windows: Sequence[Dict[str, object]],
+    hide_render_dir: Path,
+    lifespan_render_dir: Path,
+    hide_reveal_strength: float,
+    matched_lifespan_strength: float,
+    event_beta: float,
+    feather_px: int,
+    overwrite: bool,
+) -> Dict[str, object]:
+    render_dir = Path(source_spec["render_dir"])
+    gt_dir = Path(source_spec["gt_dir"])
+    render_index = index_image_frames(render_dir)
+    gt_index = index_image_frames(gt_dir)
+    for output_dir in (hide_render_dir, lifespan_render_dir):
+        ensure_render_dir_writable(output_dir, overwrite)
+
+    frame_ids = sorted(
+        {
+            frame_idx
+            for window in windows
+            for frame_idx in range(int(window["frame_start"]), int(window["frame_end"]) + 1)
+        }
+    )
+    image_cache: Dict[Path, np.ndarray] = {}
+    lifespan_targets = {
+        str(window["window_id"]): lifespan_reference_crop(render_index, window, image_cache)
+        for window in windows
+    }
+    frames_written = 0
+    for frame_idx in frame_ids:
+        source_path = render_index.get(frame_idx)
+        gt_path = gt_index.get(frame_idx)
+        if source_path is None:
+            raise FileNotFoundError(f"Missing route0 frame {frame_idx} in {render_dir}")
+        if gt_path is None:
+            raise FileNotFoundError(f"Missing GT frame {frame_idx} in {gt_dir}")
+        route0_image = load_full_image(source_path)
+        gt_image = load_full_image(gt_path)
+        hide_image = route0_image.copy()
+        lifespan_image = route0_image.copy()
+        for window in windows:
+            frame_start = int(window["frame_start"])
+            frame_end = int(window["frame_end"])
+            if frame_idx < frame_start or frame_idx > frame_end:
+                continue
+            crop = tuple(int(value) for value in window["crop_xyxy"])
+            temporal = event_window_mix(frame_idx, frame_start, frame_end, event_beta)
+            hide_image = composite_crop(
+                hide_image,
+                gt_image,
+                crop,
+                mix=hide_reveal_strength * temporal,
+                feather_px=feather_px,
+            )
+            reference_crop = lifespan_targets[str(window["window_id"])]
+            lifespan_image = composite_crop_with_crop_target(
+                lifespan_image,
+                reference_crop,
+                crop,
+                mix=matched_lifespan_strength * temporal,
+                feather_px=feather_px,
+            )
+        save_full_image(hide_render_dir / source_path.name, hide_image)
+        save_full_image(lifespan_render_dir / source_path.name, lifespan_image)
+        frames_written += 1
+
+    return {
+        "group_id": group_id,
+        "source_render_dir": str(render_dir),
+        "source_gt_dir": str(gt_dir),
+        "hide_reveal_render_dir": str(hide_render_dir.resolve()),
+        "matched_lifespan_render_dir": str(lifespan_render_dir.resolve()),
+        "n_windows": len(windows),
+        "n_frames_written": frames_written,
+    }
+
+
+def ensure_render_dir_writable(render_dir: Path, overwrite: bool) -> None:
+    if render_dir.exists() and any(render_dir.iterdir()) and not overwrite:
+        raise FileExistsError(f"Output render dir is not empty; use --overwrite to replace: {render_dir}")
+    render_dir.mkdir(parents=True, exist_ok=True)
+
+
+def load_full_image(path: Path) -> np.ndarray:
+    with Image.open(path) as image:
+        return np.asarray(image.convert("RGB"), dtype=np.float32) / 255.0
+
+
+def save_full_image(path: Path, image: np.ndarray) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    arr = np.clip(np.rint(image * 255.0), 0, 255).astype(np.uint8)
+    Image.fromarray(arr, mode="RGB").save(path)
+
+
+def event_window_mix(frame_idx: int, frame_start: int, frame_end: int, beta: float) -> float:
+    beta = max(float(beta), 1e-6)
+    value = 1.0 - float(rectangular_gate(np.asarray([float(frame_idx)]), frame_start, frame_end, beta=beta)[0])
+    return float(np.clip(value, 0.0, 1.0))
+
+
+def composite_crop(
+    image: np.ndarray,
+    target_image: np.ndarray,
+    crop_xyxy: Tuple[int, int, int, int],
+    mix: float,
+    feather_px: int,
+) -> np.ndarray:
+    x0, y0, x1, y1 = crop_xyxy
+    target_crop = target_image[y0:y1, x0:x1, :]
+    return composite_crop_with_crop_target(image, target_crop, crop_xyxy, mix, feather_px)
+
+
+def composite_crop_with_crop_target(
+    image: np.ndarray,
+    target_crop: np.ndarray,
+    crop_xyxy: Tuple[int, int, int, int],
+    mix: float,
+    feather_px: int,
+) -> np.ndarray:
+    mix = float(np.clip(mix, 0.0, 1.0))
+    if mix <= 0.0:
+        return image
+    x0, y0, x1, y1 = crop_xyxy
+    source_crop = image[y0:y1, x0:x1, :]
+    if source_crop.shape != target_crop.shape:
+        raise ValueError(f"Target crop shape {target_crop.shape} does not match source crop shape {source_crop.shape}")
+    mask = feather_mask(source_crop.shape[0], source_crop.shape[1], feather_px)[:, :, None] * mix
+    image[y0:y1, x0:x1, :] = source_crop * (1.0 - mask) + target_crop * mask
+    return image
+
+
+def feather_mask(height: int, width: int, feather_px: int) -> np.ndarray:
+    if feather_px <= 0:
+        return np.ones((height, width), dtype=np.float32)
+    yy, xx = np.mgrid[0:height, 0:width]
+    edge_distance = np.minimum.reduce([xx + 1, yy + 1, width - xx, height - yy]).astype(np.float32)
+    return np.clip(edge_distance / float(max(feather_px, 1)), 0.0, 1.0)
+
+
+def lifespan_reference_crop(
+    render_index: Dict[int, Path],
+    window: Dict[str, object],
+    image_cache: Dict[Path, np.ndarray],
+) -> np.ndarray:
+    frame_start = int(window["frame_start"])
+    frame_end = int(window["frame_end"])
+    crop = tuple(int(value) for value in window["crop_xyxy"])
+    before = max((frame for frame in render_index if frame < frame_start), default=None)
+    after = min((frame for frame in render_index if frame > frame_end), default=None)
+    crops = []
+    for frame_idx in (before, after):
+        if frame_idx is None:
+            continue
+        path = render_index[frame_idx]
+        if path not in image_cache:
+            image_cache[path] = load_full_image(path)
+        x0, y0, x1, y1 = crop
+        crops.append(image_cache[path][y0:y1, x0:x1, :])
+    if not crops:
+        first_path = render_index[frame_start]
+        if first_path not in image_cache:
+            image_cache[first_path] = load_full_image(first_path)
+        x0, y0, x1, y1 = crop
+        return image_cache[first_path][y0:y1, x0:x1, :].copy()
+    return np.mean(np.stack(crops, axis=0), axis=0).astype(np.float32)
 
 
 def summarize_missing_frames(frames: Sequence[int], limit: int = 8) -> str:

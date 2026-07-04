@@ -10,6 +10,7 @@ if str(REPO_ROOT) not in sys.path:
 from utils.hide_reveal_poc import (
     FrozenHideRevealParams,
     create_real_manifest_from_eval,
+    derive_real_poc_render_folders,
     direct_window_spec,
     evaluate_real_manifest,
     load_window_specs,
@@ -75,6 +76,29 @@ def parse_args():
     real.add_argument("--manifest", required=True)
     real.add_argument("--out-dir", default="refine-logs/hide_reveal_poc/real")
     real.add_argument("--compute-lpips", action="store_true")
+
+    derive = subparsers.add_parser(
+        "derive-real-renders",
+        help="Create R012/R013 derived PoC render folders from route0 frames and a frozen real-window manifest.",
+    )
+    derive.add_argument("--manifest", required=True)
+    derive.add_argument("--out-dir", default="refine-logs/hide_reveal_poc/derived_real_renders")
+    derive.add_argument(
+        "--route0-eval",
+        help="Optional eval folder with renders/ and gt/ to use as route0 for every manifest window.",
+    )
+    derive.add_argument("--route0-system", default="route0")
+    derive.add_argument("--hide-reveal-strength", type=float, default=1.0)
+    derive.add_argument("--matched-lifespan-strength", type=float, default=0.35)
+    derive.add_argument("--event-beta", type=float, default=1.0)
+    derive.add_argument("--feather-px", type=int, default=8)
+    derive.add_argument("--overwrite", action="store_true")
+    derive.add_argument(
+        "--run-eval",
+        action="store_true",
+        help="Immediately run real-eval on the derived manifest after writing render folders.",
+    )
+    derive.add_argument("--eval-out-dir", default="refine-logs/hide_reveal_poc/real")
 
     return parser.parse_args()
 
@@ -169,6 +193,35 @@ def main():
         payload = evaluate_real_manifest(Path(args.manifest), Path(args.out_dir), compute_lpips=args.compute_lpips)
         print(f"Wrote real event-window outputs to {Path(args.out_dir).resolve()}")
         print(f"systems={', '.join(payload['summary'].keys())}")
+    elif args.command == "derive-real-renders":
+        result = derive_real_poc_render_folders(
+            manifest_path=Path(args.manifest),
+            out_dir=Path(args.out_dir),
+            route0_eval_dir=Path(args.route0_eval) if args.route0_eval else None,
+            route0_system=args.route0_system,
+            hide_reveal_strength=args.hide_reveal_strength,
+            matched_lifespan_strength=args.matched_lifespan_strength,
+            event_beta=args.event_beta,
+            feather_px=args.feather_px,
+            overwrite=args.overwrite,
+        )
+        print(f"Wrote derived PoC render folders under {Path(args.out_dir).resolve()}")
+        print(f"derived_manifest={Path(result['manifest_path']).resolve()}")
+        print(f"metadata={Path(result['metadata_path']).resolve()}")
+        print(f"validation_ok={result['validation']['ok']}")
+        print(f"validation_errors={len(result['validation']['errors'])}")
+        if result["validation"]["errors"]:
+            for error in result["validation"]["errors"][:8]:
+                print(f"ERROR: {error}", file=sys.stderr)
+            return 2
+        if args.run_eval:
+            payload = evaluate_real_manifest(
+                Path(result["manifest_path"]),
+                Path(args.eval_out_dir),
+                compute_lpips=False,
+            )
+            print(f"Wrote real event-window outputs to {Path(args.eval_out_dir).resolve()}")
+            print(f"systems={', '.join(payload['summary'].keys())}")
     else:
         raise RuntimeError(f"Unhandled command: {args.command}")
     return 0
