@@ -14,6 +14,9 @@ fi
 STAGE="${HIDE_REVEAL_STAGE:-synthetic}"
 OUT_DIR="${HIDE_REVEAL_OUT_DIR:-$REPO_ROOT/refine-logs/hide_reveal_poc/$STAGE}"
 MANIFEST="${HIDE_REVEAL_MANIFEST:-}"
+ROUTE0_EVAL="${HIDE_REVEAL_ROUTE0_EVAL:-}"
+EVAL_OUT_DIR="${HIDE_REVEAL_EVAL_OUT_DIR:-$REPO_ROOT/refine-logs/hide_reveal_poc/real}"
+OVERWRITE_DERIVED="${HIDE_REVEAL_OVERWRITE:-0}"
 SEEDS="${HIDE_REVEAL_SEEDS:-0 1 2}"
 CLIPS_PER_TYPE="${HIDE_REVEAL_CLIPS_PER_TYPE:-8}"
 COMPUTE_LPIPS="${HIDE_REVEAL_COMPUTE_LPIPS:-0}"
@@ -27,6 +30,9 @@ fi
 if [[ "$PYTHON_BIN" == "python" && -x "$REPO_ROOT/.venv/Scripts/python.exe" ]]; then
   PYTHON_BIN="$REPO_ROOT/.venv/Scripts/python.exe"
 fi
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+fi
 
 cd "$REPO_ROOT"
 mkdir -p "$OUT_DIR"
@@ -35,6 +41,9 @@ mkdir -p "$OUT_DIR"
   echo "timestamp: $(date -Iseconds)"
   echo "stage: $STAGE"
   echo "out_dir: $OUT_DIR"
+  echo "manifest: ${MANIFEST:-none}"
+  echo "route0_eval: ${ROUTE0_EVAL:-none}"
+  echo "eval_out_dir: $EVAL_OUT_DIR"
   echo "repo_root: $REPO_ROOT"
   echo "project_root: $PROJECT_ROOT"
   echo "env_script: $ENV_SCRIPT"
@@ -70,7 +79,26 @@ elif [[ "$STAGE" == "real" ]]; then
     CMD+=(--compute-lpips)
   fi
   "${CMD[@]}"
+elif [[ "$STAGE" == "derive-real-renders" || "$STAGE" == "derive" ]]; then
+  if [[ -z "$MANIFEST" ]]; then
+    echo "ERROR: HIDE_REVEAL_MANIFEST is required for derive-real-renders stage." >&2
+    exit 2
+  fi
+  CMD=(
+    "$PYTHON_BIN" scripts/run_hide_reveal_poc.py derive-real-renders
+    --manifest "$MANIFEST"
+    --out-dir "$OUT_DIR"
+    --run-eval
+    --eval-out-dir "$EVAL_OUT_DIR"
+  )
+  if [[ -n "$ROUTE0_EVAL" ]]; then
+    CMD+=(--route0-eval "$ROUTE0_EVAL")
+  fi
+  if [[ "$OVERWRITE_DERIVED" == "1" ]]; then
+    CMD+=(--overwrite)
+  fi
+  "${CMD[@]}"
 else
-  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic or real. Got: $STAGE" >&2
+  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic, real, or derive-real-renders. Got: $STAGE" >&2
   exit 2
 fi
