@@ -37,7 +37,8 @@ Environment overrides:
   ACCOUNT=euhpc_d21_034
   QOS=boost_qos_lprod
   TIME=00:20:00
-  CPUS_PER_TASK=4
+  CPUS_PER_TASK=8
+  GRES=gpu:1
 EOF
 }
 
@@ -139,7 +140,8 @@ PARTITION="${PARTITION:-boost_usr_prod}"
 ACCOUNT="${ACCOUNT:-euhpc_d21_034}"
 QOS="${QOS:-boost_qos_lprod}"
 TIME="${TIME:-00:20:00}"
-CPUS_PER_TASK="${CPUS_PER_TASK:-4}"
+CPUS_PER_TASK="${CPUS_PER_TASK:-8}"
+GRES="${GRES:-gpu:1}"
 COMPUTE_LPIPS="${HIDE_REVEAL_COMPUTE_LPIPS:-0}"
 timestamp="$(date +%Y%m%d_%H%M%S)"
 submit_manifest="$REPO_ROOT/refine-logs/hide_reveal_poc_${STAGE}_jobs_${timestamp}.tsv"
@@ -148,6 +150,7 @@ cmd=(
   sbatch --parsable
   -p "$PARTITION" -A "$ACCOUNT" --qos="$QOS"
   -N 1 --ntasks=1 --cpus-per-task="$CPUS_PER_TASK"
+  --gres="$GRES"
   -t "$TIME"
   -o "$LOG_DIR/hide_reveal_${STAGE}_%j.out"
   -e "$LOG_DIR/hide_reveal_${STAGE}_%j.err"

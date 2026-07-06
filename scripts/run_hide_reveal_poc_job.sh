@@ -58,6 +58,8 @@ mkdir -p "$OUT_DIR"
   echo "env_loaded: $([[ -f "$ENV_SCRIPT" ]] && echo true || echo false)"
   echo "host: $(hostname)"
   echo "slurm_job_id: ${SLURM_JOB_ID:-none}"
+  echo "slurm_job_gpus: ${SLURM_JOB_GPUS:-unset}"
+  echo "slurm_gpus: ${SLURM_GPUS:-unset}"
   echo "cuda_visible_devices: ${CUDA_VISIBLE_DEVICES:-unset}"
   echo "torch_cuda_arch_list: ${TORCH_CUDA_ARCH_LIST:-unset}"
   if command -v nvidia-smi >/dev/null 2>&1; then
