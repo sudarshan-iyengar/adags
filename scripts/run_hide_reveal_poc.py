@@ -14,6 +14,7 @@ from utils.hide_reveal_poc import (
     direct_window_spec,
     evaluate_real_manifest,
     load_window_specs,
+    render_actual_hide_reveal_real_windows,
     run_synthetic_poc,
     validate_real_manifest,
     write_json,
@@ -99,6 +100,23 @@ def parse_args():
         help="Immediately run real-eval on the derived manifest after writing render folders.",
     )
     derive.add_argument("--eval-out-dir", default="refine-logs/hide_reveal_poc/real")
+
+    actual = subparsers.add_parser(
+        "actual-real-renders",
+        help="Render checkpoint-backed R017 runtime hide/reveal outputs for frozen real windows.",
+    )
+    actual.add_argument("--manifest", required=True)
+    actual.add_argument("--out-dir", default="refine-logs/hide_reveal_poc/r017_actual_real_renders")
+    actual.add_argument("--eval-out-dir", default="refine-logs/hide_reveal_poc/r017_actual_real_eval")
+    actual.add_argument("--residual-manifest", help="Manifest containing residual_uncertainty baseline paths.")
+    actual.add_argument("--matched-manifest", help="Manifest containing matched_lifespan baseline paths.")
+    actual.add_argument("--route0-system", default="route0")
+    actual.add_argument("--actual-system", default="actual_hide_reveal")
+    actual.add_argument("--opacity-attenuation", type=float, default=0.95)
+    actual.add_argument("--dynamic-probability-min", type=float, default=0.55)
+    actual.add_argument("--event-beta", type=float, default=1.0)
+    actual.add_argument("--overwrite", action="store_true")
+    actual.add_argument("--compute-lpips", action="store_true")
 
     return parser.parse_args()
 
@@ -222,6 +240,34 @@ def main():
             )
             print(f"Wrote real event-window outputs to {Path(args.eval_out_dir).resolve()}")
             print(f"systems={', '.join(payload['summary'].keys())}")
+    elif args.command == "actual-real-renders":
+        result = render_actual_hide_reveal_real_windows(
+            manifest_path=Path(args.manifest),
+            out_dir=Path(args.out_dir),
+            residual_manifest_path=Path(args.residual_manifest) if args.residual_manifest else None,
+            matched_manifest_path=Path(args.matched_manifest) if args.matched_manifest else None,
+            route0_system=args.route0_system,
+            actual_system=args.actual_system,
+            opacity_attenuation=args.opacity_attenuation,
+            dynamic_probability_min=args.dynamic_probability_min,
+            event_beta=args.event_beta,
+            overwrite=args.overwrite,
+            run_eval=True,
+            eval_out_dir=Path(args.eval_out_dir),
+            compute_lpips=args.compute_lpips,
+        )
+        print(f"Wrote actual hide/reveal render folders under {Path(args.out_dir).resolve()}")
+        print(f"actual_manifest={Path(result['manifest_path']).resolve()}")
+        print(f"metadata={Path(result['metadata_path']).resolve()}")
+        print(f"validation_ok={result['validation']['ok']}")
+        print(f"validation_errors={len(result['validation']['errors'])}")
+        if result["validation"]["errors"]:
+            for error in result["validation"]["errors"][:8]:
+                print(f"ERROR: {error}", file=sys.stderr)
+            return 2
+        if result.get("eval"):
+            print(f"Wrote real event-window outputs to {Path(args.eval_out_dir).resolve()}")
+            print(f"systems={', '.join(result['eval']['summary'].keys())}")
     else:
         raise RuntimeError(f"Unhandled command: {args.command}")
     return 0

@@ -15,6 +15,8 @@ STAGE="${HIDE_REVEAL_STAGE:-synthetic}"
 OUT_DIR="${HIDE_REVEAL_OUT_DIR:-$REPO_ROOT/refine-logs/hide_reveal_poc/$STAGE}"
 MANIFEST="${HIDE_REVEAL_MANIFEST:-}"
 ROUTE0_EVAL="${HIDE_REVEAL_ROUTE0_EVAL:-}"
+RESIDUAL_MANIFEST="${HIDE_REVEAL_RESIDUAL_MANIFEST:-}"
+MATCHED_MANIFEST="${HIDE_REVEAL_MATCHED_MANIFEST:-}"
 EVAL_OUT_DIR="${HIDE_REVEAL_EVAL_OUT_DIR:-$REPO_ROOT/refine-logs/hide_reveal_poc/real}"
 OVERWRITE_DERIVED="${HIDE_REVEAL_OVERWRITE:-0}"
 SEEDS="${HIDE_REVEAL_SEEDS:-0 1 2}"
@@ -43,6 +45,8 @@ mkdir -p "$OUT_DIR"
   echo "out_dir: $OUT_DIR"
   echo "manifest: ${MANIFEST:-none}"
   echo "route0_eval: ${ROUTE0_EVAL:-none}"
+  echo "residual_manifest: ${RESIDUAL_MANIFEST:-none}"
+  echo "matched_manifest: ${MATCHED_MANIFEST:-none}"
   echo "eval_out_dir: $EVAL_OUT_DIR"
   echo "repo_root: $REPO_ROOT"
   echo "project_root: $PROJECT_ROOT"
@@ -98,7 +102,31 @@ elif [[ "$STAGE" == "derive-real-renders" || "$STAGE" == "derive" ]]; then
     CMD+=(--overwrite)
   fi
   "${CMD[@]}"
+elif [[ "$STAGE" == "actual-real-renders" ]]; then
+  if [[ -z "$MANIFEST" ]]; then
+    echo "ERROR: HIDE_REVEAL_MANIFEST is required for actual-real-renders stage." >&2
+    exit 2
+  fi
+  CMD=(
+    "$PYTHON_BIN" scripts/run_hide_reveal_poc.py actual-real-renders
+    --manifest "$MANIFEST"
+    --out-dir "$OUT_DIR"
+    --eval-out-dir "$EVAL_OUT_DIR"
+  )
+  if [[ -n "$RESIDUAL_MANIFEST" ]]; then
+    CMD+=(--residual-manifest "$RESIDUAL_MANIFEST")
+  fi
+  if [[ -n "$MATCHED_MANIFEST" ]]; then
+    CMD+=(--matched-manifest "$MATCHED_MANIFEST")
+  fi
+  if [[ "$OVERWRITE_DERIVED" == "1" ]]; then
+    CMD+=(--overwrite)
+  fi
+  if [[ "$COMPUTE_LPIPS" == "1" ]]; then
+    CMD+=(--compute-lpips)
+  fi
+  "${CMD[@]}"
 else
-  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic, real, or derive-real-renders. Got: $STAGE" >&2
+  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic, real, derive-real-renders, or actual-real-renders. Got: $STAGE" >&2
   exit 2
 fi

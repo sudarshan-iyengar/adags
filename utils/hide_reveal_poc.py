@@ -1501,6 +1501,332 @@ def source_group_id(scene: str, render_dir: str, gt_dir: str) -> str:
     return f"{slug}_{digest}"
 
 
+def infer_run_dir_from_eval_render_dir(render_dir: Path) -> Path:
+    parts = list(render_dir.parts)
+    if len(parts) >= 3 and parts[-1] == "renders" and parts[-3] == "test":
+        return Path(*parts[:-3])
+    if len(parts) >= 2 and parts[-1] == "renders":
+        return render_dir.parents[1]
+    raise ValueError(f"Could not infer run dir from render_dir={render_dir}")
+
+
+def infer_checkpoint_from_render_dir(render_dir: Path) -> Tuple[Path, int]:
+    run_dir = infer_run_dir_from_eval_render_dir(render_dir)
+    iteration = None
+    if render_dir.parent.name.startswith("ours_"):
+        try:
+            iteration = int(render_dir.parent.name.split("_", 1)[1])
+        except ValueError:
+            iteration = None
+    if iteration is None:
+        iteration = 6000
+    checkpoint = run_dir / f"chkpnt{iteration}.pth"
+    return checkpoint, iteration
+
+
+def load_run_cfg_args(run_dir: Path, scene: str) -> object:
+    from argparse import Namespace
+
+    cfg_path = run_dir / "cfg_args"
+    if not cfg_path.exists():
+        raise FileNotFoundError(f"Missing cfg_args for checkpoint-backed render stage: {cfg_path}")
+    args = eval(cfg_path.read_text(encoding="utf-8"), {"Namespace": Namespace})
+    args.model_path = str(run_dir)
+    if not getattr(args, "source_path", ""):
+        args.source_path = str(Path("/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v") / scene)
+    args.eval = True
+    return args
+
+
+def merge_baseline_systems(
+    window: Dict[str, object],
+    baseline_windows: Sequence[Dict[str, object]],
+    system_names: Sequence[str],
+) -> Dict[str, Dict[str, object]]:
+    window_id = str(window["window_id"])
+    merged = {}
+    for baseline in baseline_windows:
+        if str(baseline.get("window_id")) != window_id:
+            continue
+        systems = baseline.get("systems", {})
+        if not isinstance(systems, dict):
+            continue
+        for system_name in system_names:
+            if system_name in systems:
+                merged[system_name] = systems[system_name]
+    return merged
+
+
+def render_actual_hide_reveal_real_windows(
+    manifest_path: Path,
+    out_dir: Path,
+    residual_manifest_path: Optional[Path] = None,
+    matched_manifest_path: Optional[Path] = None,
+    route0_system: str = "route0",
+    actual_system: str = "actual_hide_reveal",
+    opacity_attenuation: float = 0.95,
+    dynamic_probability_min: Optional[float] = 0.55,
+    event_beta: float = 1.0,
+    overwrite: bool = False,
+    run_eval: bool = True,
+    eval_out_dir: Optional[Path] = None,
+    compute_lpips: bool = False,
+) -> Dict[str, object]:
+    import torch
+    from argparse import Namespace
+
+    from gaussian_renderer import render
+    from scene import Scene
+    from scene.gaussian_model import GaussianModel
+    from utils.render_utils import save_img_u8
+
+    manifest_path = manifest_path.resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not manifest.get("windows"):
+        raise ValueError(f"Manifest has no windows: {manifest_path}")
+
+    residual_manifest = (
+        json.loads(residual_manifest_path.read_text(encoding="utf-8")) if residual_manifest_path else {"windows": []}
+    )
+    matched_manifest = (
+        json.loads(matched_manifest_path.read_text(encoding="utf-8")) if matched_manifest_path else {"windows": []}
+    )
+
+    groups: Dict[str, Dict[str, object]] = {}
+    augmented_windows = []
+    metadata_windows = []
+    for window in manifest["windows"]:
+        window_id = str(window["window_id"])
+        scene = str(window.get("scene", "scene"))
+        systems = window.get("systems", {})
+        if route0_system not in systems:
+            raise ValueError(f"Window {window_id} is missing required system {route0_system}")
+        source_spec = systems[route0_system]
+        source_render_dir = resolve_path(manifest_path.parent, source_spec["render_dir"])
+        source_gt_dir = resolve_path(manifest_path.parent, source_spec["gt_dir"])
+        checkpoint, iteration = infer_checkpoint_from_render_dir(source_render_dir)
+        run_dir = infer_run_dir_from_eval_render_dir(source_render_dir)
+        if not checkpoint.exists():
+            raise FileNotFoundError(f"Checkpoint not found for {window_id}: {checkpoint}")
+        group_id = source_group_id(scene, str(source_render_dir), str(source_gt_dir))
+        group_root = out_dir / "actual_renders" / actual_system / group_id
+        render_dir = group_root / "renders"
+        static_dir = group_root / "static"
+        dynamic_dir = group_root / "dynamic"
+        groups.setdefault(
+            group_id,
+            {
+                "group_id": group_id,
+                "scene": scene,
+                "source_spec": absolute_system_spec(source_spec, manifest_path.parent),
+                "source_render_dir": str(source_render_dir),
+                "source_gt_dir": str(source_gt_dir),
+                "run_dir": str(run_dir),
+                "checkpoint": str(checkpoint),
+                "checkpoint_iteration": iteration,
+                "render_dir": render_dir,
+                "static_dir": static_dir,
+                "dynamic_dir": dynamic_dir,
+                "windows": [],
+                "frame_ids": set(),
+            },
+        )
+        groups[group_id]["windows"].append(window)
+        groups[group_id]["frame_ids"].update(range(int(window["frame_start"]), int(window["frame_end"]) + 1))
+
+        augmented = dict(window)
+        augmented_systems = {route0_system: source_spec}
+        augmented_systems.update(
+            merge_baseline_systems(window, residual_manifest.get("windows", []), ["residual_uncertainty"])
+        )
+        augmented_systems.update(
+            merge_baseline_systems(window, matched_manifest.get("windows", []), ["matched_lifespan"])
+        )
+        augmented_systems[actual_system] = {
+            "render_dir": str(render_dir.resolve()),
+            "gt_dir": str(source_gt_dir.resolve()),
+            "static_dir": str(static_dir.resolve()),
+            "dynamic_dir": str(dynamic_dir.resolve()),
+        }
+        augmented["systems"] = augmented_systems
+        augmented_windows.append(augmented)
+        metadata_windows.append(
+            {
+                "window_id": window_id,
+                "scene": scene,
+                "frame_start": int(window["frame_start"]),
+                "frame_end": int(window["frame_end"]),
+                "crop_xyxy": [int(value) for value in window["crop_xyxy"]],
+                "actual_render_dir": str(render_dir.resolve()),
+                "checkpoint": str(checkpoint),
+                "checkpoint_iteration": int(iteration),
+            }
+        )
+
+    group_reports = []
+    for group_id, group in groups.items():
+        render_dir = Path(group["render_dir"])
+        static_dir = Path(group["static_dir"])
+        dynamic_dir = Path(group["dynamic_dir"])
+        for directory in (render_dir, static_dir, dynamic_dir):
+            ensure_render_dir_writable(directory, overwrite)
+
+        args = load_run_cfg_args(Path(group["run_dir"]), str(group["scene"]))
+        pipe = Namespace(
+            convert_SHs_python=getattr(args, "convert_SHs_python", False),
+            compute_cov3D_python=getattr(args, "compute_cov3D_python", False),
+            debug=getattr(args, "debug", False),
+            env_map_res=getattr(args, "env_map_res", 0),
+            eval_shfs_4d=getattr(args, "eval_shfs_4d", False),
+            opa_threshold=getattr(args, "opa_threshold", 0.05),
+        )
+        bg_color = [1, 1, 1] if getattr(args, "white_background", False) else [0, 0, 0]
+        background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+        gaussians = GaussianModel(
+            getattr(args, "sh_degree", 3),
+            gaussian_dim=getattr(args, "gaussian_dim", 3),
+            time_duration=getattr(args, "time_duration", [-0.5, 0.5]),
+            rot_4d=getattr(args, "rot_4d", False),
+            force_sh_3d=getattr(args, "force_sh_3d", False),
+            sh_degree_t=2 if getattr(pipe, "eval_shfs_4d", False) else 0,
+        )
+        scene_obj = Scene(
+            args,
+            gaussians,
+            shuffle=False,
+            num_pts=getattr(args, "num_pts", 100000),
+            num_pts_ratio=getattr(args, "num_pts_ratio", 1.0),
+            time_duration=getattr(args, "time_duration", [-0.5, 0.5]),
+        )
+        model_params, loaded_iteration = torch.load(str(group["checkpoint"]))
+        gaussians.restore(model_params, None)
+        gaussians.hide_reveal_runtime_events = [
+            {
+                "window_id": str(window["window_id"]),
+                "frame_start": int(window["frame_start"]),
+                "frame_end": int(window["frame_end"]),
+                "crop_xyxy": [int(value) for value in window["crop_xyxy"]],
+                "opacity_attenuation": float(opacity_attenuation),
+                "dynamic_probability_min": dynamic_probability_min,
+                "event_beta": float(event_beta),
+            }
+            for window in group["windows"]
+        ]
+
+        test_cameras = scene_obj.getTestCameras()
+        frame_stats = []
+        for frame_idx in sorted(group["frame_ids"]):
+            if frame_idx < 0 or frame_idx >= len(test_cameras):
+                raise IndexError(f"Frame {frame_idx} is outside test camera range 0..{len(test_cameras)-1}")
+            gt_image, camera = test_cameras[frame_idx]
+            camera = camera.cuda()
+            setattr(camera, "hide_reveal_frame_idx", int(frame_idx))
+            with torch.no_grad():
+                render_pkg = render(camera, gaussians, pipe, background)
+            rgb = torch.clamp(render_pkg["render"], 0, 1).permute(1, 2, 0).detach().cpu().numpy()
+            static = torch.clamp(render_pkg["render_3d"], 0, 1).permute(1, 2, 0).detach().cpu().numpy()
+            dynamic = torch.clamp(render_pkg["render_4d"], 0, 1).permute(1, 2, 0).detach().cpu().numpy()
+            save_img_u8(rgb, render_dir / f"{frame_idx:05d}.png")
+            save_img_u8(static, static_dir / f"static_{frame_idx:05d}.png")
+            save_img_u8(dynamic, dynamic_dir / f"dynamic_{frame_idx:05d}.png")
+            frame_stats.extend(render_pkg.get("hide_reveal_gate_stats", []))
+            del render_pkg, rgb, static, dynamic, gt_image, camera
+            torch.cuda.empty_cache()
+
+        group_reports.append(
+            {
+                "group_id": group_id,
+                "scene": group["scene"],
+                "checkpoint": group["checkpoint"],
+                "checkpoint_iteration": int(loaded_iteration),
+                "render_dir": str(render_dir.resolve()),
+                "static_dir": str(static_dir.resolve()),
+                "dynamic_dir": str(dynamic_dir.resolve()),
+                "n_windows": len(group["windows"]),
+                "n_frames_written": len(group["frame_ids"]),
+                "gate_stats": frame_stats,
+            }
+        )
+
+    augmented_manifest = dict(manifest)
+    augmented_manifest["generated_by"] = "actual-real-renders"
+    augmented_manifest["actual_hide_reveal_outputs"] = {
+        "system": actual_system,
+        "is_checkpoint_backed_inference": True,
+        "uses_gaussian_renderer": True,
+        "uses_gt_pixels_in_render": False,
+        "newly_trained_checkpoint": False,
+        "description": (
+            "R017 checkpoint-backed runtime opacity-gate render. Dynamic Gaussians projected inside "
+            "predeclared event crops are attenuated during the frozen event windows; no GT pixels are "
+            "composited into the output."
+        ),
+    }
+    augmented_manifest["windows"] = augmented_windows
+    manifest_out = out_dir / "actual_real_windows_manifest.json"
+    write_json(manifest_out, augmented_manifest)
+
+    metadata = {
+        "generated_by": "actual-real-renders",
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "source_manifest": str(manifest_path),
+        "output_manifest": str(manifest_out.resolve()),
+        "route0_system": route0_system,
+        "actual_system": actual_system,
+        "is_checkpoint_backed_inference": True,
+        "uses_gaussian_renderer": True,
+        "uses_gt_pixels_in_render": False,
+        "newly_trained_checkpoint": False,
+        "parameters": {
+            "opacity_attenuation": float(opacity_attenuation),
+            "dynamic_probability_min": None if dynamic_probability_min is None else float(dynamic_probability_min),
+            "event_beta": float(event_beta),
+        },
+        "limitations": [
+            "Runtime inference gate on existing route0 checkpoints; no new Gaussian state was trained.",
+            "Candidate support is the predeclared R009 crop projected onto currently visible dynamic Gaussians.",
+            "This tests whether a checkpoint-backed event opacity gate helps real windows without using GT crop composites.",
+        ],
+        "windows": metadata_windows,
+        "groups": group_reports,
+    }
+    metadata_out = out_dir / "actual_render_metadata.json"
+    write_json(metadata_out, metadata)
+
+    required_systems = [route0_system, actual_system]
+    if residual_manifest_path is not None:
+        required_systems.append("residual_uncertainty")
+    if matched_manifest_path is not None:
+        required_systems.append("matched_lifespan")
+    validation = validate_real_manifest(manifest_out, require_systems=required_systems)
+    write_json(out_dir / "actual_real_windows_validation.json", validation)
+    if not validation["ok"]:
+        return {
+            "manifest": augmented_manifest,
+            "manifest_path": str(manifest_out),
+            "metadata": metadata,
+            "metadata_path": str(metadata_out),
+            "validation": validation,
+        }
+
+    eval_payload = None
+    if run_eval:
+        eval_payload = evaluate_real_manifest(
+            manifest_out,
+            eval_out_dir or out_dir / "eval",
+            compute_lpips=compute_lpips,
+        )
+    return {
+        "manifest": augmented_manifest,
+        "manifest_path": str(manifest_out),
+        "metadata": metadata,
+        "metadata_path": str(metadata_out),
+        "validation": validation,
+        "eval": eval_payload,
+    }
+
+
 def write_derived_group_renders(
     group_id: str,
     source_spec: Dict[str, str],

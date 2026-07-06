@@ -2,13 +2,13 @@
 
 ## Recovery Snapshot
 
-- Current run ID: complete (R009-R016 reached)
+- Current run ID: R017
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit before R016 memo: `7953a333b108e189d812b3c42ae4b9d1491f1a34`
-- Last pushed milestone commit before R016 memo: `7953a333b108e189d812b3c42ae4b9d1491f1a34`
+- Last local commit before R017 implementation: `5df0027a021a032cf21a3ebb031fa1d88f9efff2`
+- Last pushed milestone commit before R017 implementation: `5df0027a021a032cf21a3ebb031fa1d88f9efff2`
 - Last HPC job ID: `48654171`
-- Latest success/failure: R016 FAIL / NO-GO for paper-scale validation; C1/C2 pass synthetically, but C3 is not proven for an actual trained Gaussian hide/reveal output
-- Next command to run: none for this goal; do not launch paper-scale baselines unless a future narrow real-method check passes
+- Latest success/failure: R016 FAIL / NO-GO for paper-scale validation; R017 implementation check requested
+- Next command to run: push R017 implementation, pull on Leonardo, validate shell wrapper, then submit `actual-real-renders` on the frozen R009 manifest
 - Open blockers: none known yet
 
 ## Session Log
@@ -183,6 +183,13 @@
 - C3 outcome: NOT PASSED for the actual method. Real windows are directionally positive only for the derived GT-crop upper-bound; no trained Gaussian/checkpoint-backed hide/reveal output, learned LPIPS, or confident-track ID switch evidence is available.
 - Allowed future work: one narrow actual-method check on the same frozen R009 windows. Broad baselines remain deferred.
 
+### 2026-07-07T01:24:38+02:00 - R017 started
+
+- User asked whether the perfect synthetic heldout gate is believable; interpretation: believable as a controlled fixture/smoke check, not as generalization evidence.
+- R017 objective: render actual checkpoint-backed hide/reveal outputs on the same five frozen R009 windows without GT crop compositing.
+- Implementation approach: add an inert-by-default renderer hook that attenuates projected dynamic Gaussian opacity inside predeclared event crops during frozen event frames, then export/evaluate `actual_hide_reveal` against route0, matched-lifespan, and residual/uncertainty baselines.
+- Pass rule remains strict: majority of five real windows must improve over all three baselines without static ghost degradation. No paper-scale baselines unless this passes.
+
 ## Milestone Decisions
 
 - R009: PASS. Frozen 2026-07-06T00:20:08Z in `refine-logs/hide_reveal_real_windows.json` with five pre-scoring windows:
@@ -201,3 +208,4 @@
 - R014: SKIP. Conditional equal-budget refinement diagnostic not triggered.
 - R015: PASS. Generated `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md`, `poc_table.csv`, `poc_decision_inputs.json`, `crop_strip_manifest.json`, and five qualitative crop strips under `crop_strips/`.
 - R016: FAIL / NO-GO for paper-scale validation. Memo: `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md`.
+- R017: pending.

@@ -18,6 +18,70 @@ from utils.sh_utils import eval_sh, eval_shfs_4d
 from utils.motion_prior_utils import project_points_to_screen
 from collections import defaultdict
 
+
+def _sigmoid_scalar(x):
+    return 1.0 / (1.0 + math.exp(-x))
+
+
+def _event_window_weight(frame_idx, frame_start, frame_end, beta):
+    beta = max(float(beta), 1e-6)
+    value = _sigmoid_scalar((float(frame_idx) - float(frame_start)) / beta)
+    value -= _sigmoid_scalar((float(frame_idx) - float(frame_end)) / beta)
+    return max(0.0, min(1.0, value))
+
+
+def _apply_runtime_hide_reveal_gate(opacity, means3D, dynamic_probability, viewpoint_camera, pc):
+    events = getattr(pc, "hide_reveal_runtime_events", None)
+    frame_idx = getattr(viewpoint_camera, "hide_reveal_frame_idx", None)
+    if not events or frame_idx is None or opacity is None or means3D.numel() == 0:
+        return opacity, []
+
+    screen_xy, valid = project_points_to_screen(means3D.detach(), viewpoint_camera)
+    valid = valid.squeeze(-1)
+    gate_scale = torch.ones_like(opacity)
+    stats = []
+    for event in events:
+        frame_start = int(event["frame_start"])
+        frame_end = int(event["frame_end"])
+        if int(frame_idx) < frame_start or int(frame_idx) > frame_end:
+            continue
+
+        x0, y0, x1, y1 = [float(v) for v in event["crop_xyxy"]]
+        support = (
+            valid
+            & (screen_xy[:, 0] >= x0)
+            & (screen_xy[:, 0] < x1)
+            & (screen_xy[:, 1] >= y0)
+            & (screen_xy[:, 1] < y1)
+        )
+        min_dynamic_probability = event.get("dynamic_probability_min", None)
+        if min_dynamic_probability is not None and dynamic_probability.numel() == opacity.numel():
+            support = support & (dynamic_probability.reshape(-1) >= float(min_dynamic_probability))
+
+        temporal_weight = _event_window_weight(
+            frame_idx,
+            frame_start,
+            frame_end,
+            event.get("event_beta", 1.0),
+        )
+        strength = max(0.0, min(1.0, float(event.get("opacity_attenuation", 0.95))))
+        scale_value = max(0.0, min(1.0, 1.0 - strength * temporal_weight))
+        if support.any():
+            event_scale = torch.full_like(gate_scale, scale_value)
+            gate_scale = torch.where(support[:, None], torch.minimum(gate_scale, event_scale), gate_scale)
+
+        stats.append(
+            {
+                "window_id": str(event.get("window_id", "")),
+                "frame_idx": int(frame_idx),
+                "selected_gaussians": int(support.sum().detach().cpu()),
+                "temporal_weight": float(temporal_weight),
+                "opacity_scale": float(scale_value),
+            }
+        )
+    return opacity * gate_scale, stats
+
+
 def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
     """
     Render the scene. 
@@ -100,6 +164,14 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
             marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
             opacity = opacity * marginal_t
+
+    opacity, runtime_hide_reveal_stats = _apply_runtime_hide_reveal_gate(
+        opacity,
+        means3D,
+        dynamic_probability,
+        viewpoint_camera,
+        pc,
+    )
 
     # If precomputed colors are provided, use them. Otherwise, if it is desired to precompute colors
     # from SHs in Python, do it. If not, then SH -> RGB conversion will be done by rasterizer.
@@ -245,4 +317,5 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             "viewspace_points_static": screenspace_points_static,
             "soft_routing": use_soft_routing,
             "hard_static_count": hard_static_count,
+            "hide_reveal_gate_stats": runtime_hide_reveal_stats,
             }

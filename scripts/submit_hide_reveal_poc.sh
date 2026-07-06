@@ -8,14 +8,21 @@ Usage:
   scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/real_windows.json [--dry-run]
   scripts/submit_hide_reveal_poc.sh --stage derive-real-renders --manifest refine-logs/real_windows.json \
     --route0-eval /path/to/test/ours_6000 [--dry-run]
+  scripts/submit_hide_reveal_poc.sh --stage actual-real-renders --manifest refine-logs/real_windows.json \
+    --residual-manifest refine-logs/r011_manifest.json --matched-manifest refine-logs/r012_manifest.json [--dry-run]
 
 Submit proof-of-concept hide/reveal jobs through Slurm. Outputs go under
 refine-logs/hide_reveal_poc/<stage>/ and scheduler logs go under logs/.
 
 Options:
-  --stage synthetic|real|derive-real-renders  PoC stage to run.
-  --manifest PATH        Required for --stage real and derive-real-renders.
+  --stage synthetic|real|derive-real-renders|actual-real-renders
+                         PoC stage to run.
+  --manifest PATH        Required for real, derive-real-renders, and actual-real-renders.
   --route0-eval PATH     Eval folder with renders/ and gt/ for derived renders.
+  --residual-manifest PATH
+                         Optional residual_uncertainty baseline manifest for actual-real-renders.
+  --matched-manifest PATH
+                         Optional matched_lifespan baseline manifest for actual-real-renders.
   --out-dir PATH         Override output directory.
   --eval-out-dir PATH    Output directory for real-eval after derived renders.
   --overwrite            Replace non-empty derived output render folders.
@@ -39,6 +46,8 @@ MANIFEST=""
 OUT_DIR=""
 ROUTE0_EVAL=""
 EVAL_OUT_DIR=""
+RESIDUAL_MANIFEST=""
+MATCHED_MANIFEST=""
 OVERWRITE_DERIVED=0
 DRY_RUN=0
 
@@ -58,6 +67,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --route0-eval)
       ROUTE0_EVAL="${2:-}"
+      shift 2
+      ;;
+    --residual-manifest)
+      RESIDUAL_MANIFEST="${2:-}"
+      shift 2
+      ;;
+    --matched-manifest)
+      MATCHED_MANIFEST="${2:-}"
       shift 2
       ;;
     --eval-out-dir)
@@ -88,8 +105,8 @@ if [[ "$STAGE" == "derive" ]]; then
   STAGE="derive-real-renders"
 fi
 
-if [[ "$STAGE" != "synthetic" && "$STAGE" != "real" && "$STAGE" != "derive-real-renders" ]]; then
-  echo "ERROR: --stage must be synthetic, real, or derive-real-renders." >&2
+if [[ "$STAGE" != "synthetic" && "$STAGE" != "real" && "$STAGE" != "derive-real-renders" && "$STAGE" != "actual-real-renders" ]]; then
+  echo "ERROR: --stage must be synthetic, real, derive-real-renders, or actual-real-renders." >&2
   usage >&2
   exit 2
 fi
@@ -133,7 +150,7 @@ cmd=(
   -t "$TIME"
   -o "$LOG_DIR/hide_reveal_${STAGE}_%j.out"
   -e "$LOG_DIR/hide_reveal_${STAGE}_%j.err"
-  --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",HIDE_REVEAL_STAGE="$STAGE",HIDE_REVEAL_OUT_DIR="$OUT_DIR",HIDE_REVEAL_MANIFEST="$MANIFEST",HIDE_REVEAL_ROUTE0_EVAL="$ROUTE0_EVAL",HIDE_REVEAL_EVAL_OUT_DIR="$EVAL_OUT_DIR",HIDE_REVEAL_OVERWRITE="$OVERWRITE_DERIVED"
+  --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",HIDE_REVEAL_STAGE="$STAGE",HIDE_REVEAL_OUT_DIR="$OUT_DIR",HIDE_REVEAL_MANIFEST="$MANIFEST",HIDE_REVEAL_ROUTE0_EVAL="$ROUTE0_EVAL",HIDE_REVEAL_RESIDUAL_MANIFEST="$RESIDUAL_MANIFEST",HIDE_REVEAL_MATCHED_MANIFEST="$MATCHED_MANIFEST",HIDE_REVEAL_EVAL_OUT_DIR="$EVAL_OUT_DIR",HIDE_REVEAL_OVERWRITE="$OVERWRITE_DERIVED"
   "$REPO_ROOT/scripts/run_hide_reveal_poc_job.sh"
 )
 
