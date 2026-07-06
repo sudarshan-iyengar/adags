@@ -4,11 +4,11 @@
 
 - Current run ID: R010
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
+- Last local commit: `3be77ceeef57fabcf2428e802c9becbe59bf1da2`
 - Last pushed milestone commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
 - Last HPC job ID: none in this session
-- Latest success/failure: R009 PASS; frozen manifest validated on HPC temp copy with 5 windows, 0 errors, 0 warnings
-- Next command to run: sync HPC repo to the pushed branch and run R010 route0 smooth-transport real-window evaluation
+- Latest success/failure: HPC repo fast-forwarded to `3be77ceeef57fabcf2428e802c9becbe59bf1da2`; R009 auto-sampled placeholder preserved as backup before pull
+- Next command to run: submit R010 route0 real evaluation via `scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r010_route0_real_eval`
 - Open blockers: none known yet
 
 ## Session Log
@@ -39,6 +39,13 @@
 - Committed R009 frozen real-window manifest and visual audit evidence as `5914743f84c3ff4bec0b893f06e8557742a5348c` (`Freeze R009 real window manifest`).
 - Pushed `codex/hide-reveal-poc-implementation` to origin: `a00bfd9..5914743`.
 - R009 decision remains PASS; next milestone is R010 route0 smooth-transport evaluation on the frozen manifest.
+
+### 2026-07-06T02:27:55+02:00 - HPC sync before R010
+
+- Pushed bookkeeping commit `3be77ceeef57fabcf2428e802c9becbe59bf1da2` (`Record R009 push status`).
+- On HPC, moved the untracked auto-sampled placeholder manifest from `refine-logs/hide_reveal_real_windows.json` to `refine-logs/hide_reveal_poc/r009_autosampled_manifest_20260705_223347.pre_frozen_backup.json` before pulling.
+- Fast-forwarded HPC repo from `e211e418e749de7e5f503d41197f87e2c0ec391b` to `3be77ceeef57fabcf2428e802c9becbe59bf1da2`.
+- Next R010 submission command: `scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r010_route0_real_eval`.
 
 ## Milestone Decisions
 
