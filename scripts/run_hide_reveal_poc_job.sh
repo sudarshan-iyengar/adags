@@ -32,7 +32,7 @@ fi
 # Leonardo boost nodes are A100-backed; set a default so PyTorch's CUDA
 # extension JIT does not need to infer architectures before CUDA is visible.
 export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-8.0}"
-export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-$PROJECT_ROOT/build/torch_extensions_jobs/${SLURM_JOB_ID:-manual}}"
+export TORCH_EXTENSIONS_DIR="${HIDE_REVEAL_TORCH_EXTENSIONS_DIR:-$PROJECT_ROOT/build/torch_extensions_jobs/${SLURM_JOB_ID:-manual}}"
 export MAX_JOBS="${MAX_JOBS:-${SLURM_CPUS_PER_TASK:-4}}"
 mkdir -p "$TORCH_EXTENSIONS_DIR"
 
