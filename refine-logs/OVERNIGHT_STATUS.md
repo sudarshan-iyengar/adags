@@ -4,11 +4,11 @@
 
 - Current run ID: R012
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit: `d079e2f134641d0beec78a15fe86305078917433`
+- Last local commit: `da1d71b635618330d330fa94789bc293d73e06e7`
 - Last pushed milestone commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
 - Last HPC job ID: `48653948`
-- Latest success/failure: R011 PASS; residual/uncertainty real eval completed (`COMPLETED`, exit `0:0`) and metrics were collected
-- Next command to run: inspect/prepare R012 matched-lifespan baseline on the frozen R009 windows
+- Latest success/failure: R012/R013 derive-real-renders dry run produced valid Slurm command on HPC
+- Next command to run: submit `scripts/submit_hide_reveal_poc.sh --stage derive-real-renders --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_renders --eval-out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_eval --overwrite`
 - Open blockers: none known yet
 
 ## Session Log
@@ -111,6 +111,27 @@
 - Residual/uncertainty summary over five frozen windows: mean PSNR `30.073395341209725`, mean L1/proxy-LPIPS `0.01657234113663435`, mean flicker `0.008039021119475364`, mean static ghost `0.1457015424966812`.
 - Against the paired route0 rows in the same R011 output, residual-minus-route0 deltas were PSNR `-0.4287238515243956`, L1 `+0.0017407802864909186`, flicker `+0.0000481950119137764`, static ghost `+0.01836880445480346`.
 - Learned LPIPS was not computed (`lpips=null`); confident-track identity switches remain unavailable in the current evaluator.
+
+### 2026-07-06T02:42:09+02:00 - R012/R013 pre-submit snapshot
+
+- Ran `git status --short --branch` and `git rev-parse HEAD` before submitting the derived matched-lifespan/full hide-reveal job.
+- Active branch: `codex/hide-reveal-poc-implementation`.
+- Active commit: `da1d71b635618330d330fa94789bc293d73e06e7`.
+- Dirty/untracked state remains unrelated user/project files only:
+  - `.obsidian/`
+  - `AGENTS.md`
+  - `Untitled.canvas`
+  - `configs/n3v/bootstrap.yaml`
+  - `det_con.yaml`
+  - `follow-up.md`
+  - `idea-stage/`
+  - `requirements.txt`
+  - `verify_mask.jpg`
+  - `verify_masked_flow.jpg`
+  - `verify_raw_flow.jpg`
+- Pulled HPC repo to `da1d71b635618330d330fa94789bc293d73e06e7`.
+- Dry-run command succeeded for: `scripts/submit_hide_reveal_poc.sh --stage derive-real-renders --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_renders --eval-out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_eval --overwrite`.
+- R012/R013 caveat: this job creates derived image-level PoC render folders from route0 and the frozen manifest. It is not a retrained Gaussian checkpoint; `derived_poc_metadata.json` must be used to preserve that limitation.
 
 ## Milestone Decisions
 
