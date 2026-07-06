@@ -32,6 +32,9 @@ fi
 # Leonardo boost nodes are A100-backed; set a default so PyTorch's CUDA
 # extension JIT does not need to infer architectures before CUDA is visible.
 export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-8.0}"
+export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-$PROJECT_ROOT/build/torch_extensions_jobs/${SLURM_JOB_ID:-manual}}"
+export MAX_JOBS="${MAX_JOBS:-${SLURM_CPUS_PER_TASK:-4}}"
+mkdir -p "$TORCH_EXTENSIONS_DIR"
 
 if [[ "$PYTHON_BIN" == "python" && -x "$REPO_ROOT/.venv/Scripts/python.exe" ]]; then
   PYTHON_BIN="$REPO_ROOT/.venv/Scripts/python.exe"
@@ -62,6 +65,8 @@ mkdir -p "$OUT_DIR"
   echo "slurm_gpus: ${SLURM_GPUS:-unset}"
   echo "cuda_visible_devices: ${CUDA_VISIBLE_DEVICES:-unset}"
   echo "torch_cuda_arch_list: ${TORCH_CUDA_ARCH_LIST:-unset}"
+  echo "torch_extensions_dir: ${TORCH_EXTENSIONS_DIR:-unset}"
+  echo "max_jobs: ${MAX_JOBS:-unset}"
   if command -v nvidia-smi >/dev/null 2>&1; then
     nvidia-smi -L | sed 's/^/nvidia_smi: /' || true
   else
