@@ -4,11 +4,11 @@
 
 - Current run ID: R011
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit: `8a2383719ffb4209e9852fbfa3bd06fed49ec937`
+- Last local commit: `f078860c3daaf1560b926d92739687988fbe3f27`
 - Last pushed milestone commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
 - Last HPC job ID: `48653179`
-- Latest success/failure: R010 PASS; route0 real eval completed (`COMPLETED`, exit `0:0`) and metrics were collected
-- Next command to run: inspect/prepare R011 residual/uncertainty gating baseline against the frozen R009 windows
+- Latest success/failure: R011 manifest validated on HPC temp copy with route0 and residual/uncertainty systems; 5 windows, 0 errors, 0 warnings
+- Next command to run: commit/push R011 manifest/status, then submit R011 real eval via `scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/hide_reveal_poc/r011_residual_uncertainty_manifest.json --out-dir refine-logs/hide_reveal_poc/r011_residual_uncertainty_real_eval`
 - Open blockers: none known yet
 
 ## Session Log
@@ -71,6 +71,27 @@
   - `refine-logs/hide_reveal_poc_real_jobs_20260706_022851.tsv`
 - Route0 summary over five frozen windows: mean PSNR `30.50211919273412`, mean L1/proxy-LPIPS `0.014831560850143432`, mean flicker `0.007990826107561588`, mean static ghost `0.12733273804187775`.
 - Learned LPIPS was not computed (`lpips=null`); confident-track identity switches are not inferred by the current evaluator because no track/confidence sidecar was found during R009 discovery.
+
+### 2026-07-06T02:34:55+02:00 - R011 prep snapshot
+
+- Ran `git status --short --branch`, `git rev-parse --abbrev-ref HEAD`, and `git rev-parse HEAD` before creating R011 files.
+- Active branch: `codex/hide-reveal-poc-implementation`.
+- Active commit: `f078860c3daaf1560b926d92739687988fbe3f27`.
+- Dirty/untracked state remains unrelated user/project files only:
+  - `.obsidian/`
+  - `AGENTS.md`
+  - `Untitled.canvas`
+  - `configs/n3v/bootstrap.yaml`
+  - `det_con.yaml`
+  - `follow-up.md`
+  - `idea-stage/`
+  - `requirements.txt`
+  - `verify_mask.jpg`
+  - `verify_masked_flow.jpg`
+  - `verify_raw_flow.jpg`
+- R011 candidate baseline source selected for evaluation: existing `fixed_budget_lora_route0_filemask_residual_600k` eval folders for `cut_roasted_beef`, `flame_steak`, and `sear_steak`; each has 300 `renders`, 300 `gt`, 300 `static`, and 300 `dynamic` frames at 676x507.
+- Created `refine-logs/hide_reveal_poc/r011_residual_uncertainty_manifest.json` by augmenting the frozen R009 manifest with `residual_uncertainty` system paths.
+- Validation: copied manifest to `/leonardo_work/EUHPC_D21_034/proj_adags/tmp/r011_residual_uncertainty_manifest_validation_20260706.json` and ran `python scripts/run_hide_reveal_poc.py validate-real-manifest --manifest ... --require-system route0 --require-system residual_uncertainty` after sourcing `exp_index/leonardo_env.sh`; result `validation_ok=True`, `windows=5`, `errors=0`, `warnings=0`.
 
 ## Milestone Decisions
 

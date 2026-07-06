@@ -104,3 +104,4 @@ Created: 2026-06-30T20:13:16+02:00
 | `hide_reveal_poc/r010_route0_real_eval/real_event_window_metrics.csv` | Per-window route0 smooth-transport metrics for the frozen R009 windows. |
 | `hide_reveal_poc/r010_route0_real_eval/real_event_window_summary.json` | Machine-readable R010 route0 summary metrics. |
 | `hide_reveal_poc/r010_route0_real_eval/real_event_window_report.md` | Human-readable R010 route0 baseline report. |
+| `hide_reveal_poc/r011_residual_uncertainty_manifest.json` | R011 manifest augmenting the frozen R009 windows with existing residual/filemask baseline render folders. |
