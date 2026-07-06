@@ -4,11 +4,11 @@
 
 - Current run ID: R010
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit: `3be77ceeef57fabcf2428e802c9becbe59bf1da2`
+- Last local commit: `81b57e3f4714723f1b639fe5928ae19511424eae`
 - Last pushed milestone commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
-- Last HPC job ID: none in this session
-- Latest success/failure: HPC repo fast-forwarded to `3be77ceeef57fabcf2428e802c9becbe59bf1da2`; R009 auto-sampled placeholder preserved as backup before pull
-- Next command to run: submit R010 route0 real evaluation via `scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r010_route0_real_eval`
+- Last HPC job ID: `48653179`
+- Latest success/failure: R010 submitted and pending in Slurm (`PENDING`, reason `Priority`)
+- Next command to run: poll `squeue -j 48653179` and `sacct -j 48653179 --format=JobID,JobName%30,State,ExitCode,Elapsed,NodeList -P`
 - Open blockers: none known yet
 
 ## Session Log
@@ -46,6 +46,17 @@
 - On HPC, moved the untracked auto-sampled placeholder manifest from `refine-logs/hide_reveal_real_windows.json` to `refine-logs/hide_reveal_poc/r009_autosampled_manifest_20260705_223347.pre_frozen_backup.json` before pulling.
 - Fast-forwarded HPC repo from `e211e418e749de7e5f503d41197f87e2c0ec391b` to `3be77ceeef57fabcf2428e802c9becbe59bf1da2`.
 - Next R010 submission command: `scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r010_route0_real_eval`.
+
+### 2026-07-06T02:29:04+02:00 - R010 submitted
+
+- Pushed pre-submit checkpoint `81b57e3f4714723f1b639fe5928ae19511424eae` (`Record R010 pre-submit state`) and pulled it on HPC.
+- Submitted R010 route0 real evaluation with: `scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r010_route0_real_eval`.
+- Slurm job ID: `48653179`.
+- Submit manifest: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc_real_jobs_20260706_022851.tsv`.
+- Expected stdout: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48653179.out`.
+- Expected stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48653179.err`.
+- Output dir: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r010_route0_real_eval`.
+- First poll: `squeue` reports `PD` / `Priority`; `sacct` reports `PENDING`, `ExitCode=0:0`, `Elapsed=00:00:00`.
 
 ## Milestone Decisions
 
