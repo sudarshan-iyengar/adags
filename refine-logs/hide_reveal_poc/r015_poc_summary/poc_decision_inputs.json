@@ -1,0 +1,183 @@
+{
+  "generated_at_utc": "2026-07-06T00:53:01+00:00",
+  "synthetic_stop_go": {
+    "notes": [
+      "Synthetic labels carry the identity claim; real windows should be sanity checks only.",
+      "Matched lifespan can accept the same patch event, but gets no identity-reconnection credit because it has no hidden-identity reveal matching.",
+      "The no-identity deletion can accept patch events, but should not pass the identity reconnection gate."
+    ],
+    "pass_candidate_recall": true,
+    "pass_margin_separation": true,
+    "pass_matched_lifespan_gate": true,
+    "pass_no_identity_deletion": true,
+    "proceed_to_real_windows": true
+  },
+  "synthetic_heldout": {
+    "accepted_precision": 1.0,
+    "accepted_recall": 1.0,
+    "candidate_false_positive_rate": 0.0,
+    "candidate_recall": 1.0,
+    "candidate_score_auc": 1.0,
+    "false_event_rate_normal": 0.0,
+    "identity_reconnection_accuracy": 1.0,
+    "margin_auc": 1.0,
+    "matched_lifespan_accept_recall": 1.0,
+    "matched_lifespan_identity_reconnection_accuracy": 0.0,
+    "mean_delta_normal": 0.3936775358752793,
+    "mean_delta_true": -0.5660313213492297,
+    "n": 40.0,
+    "no_hysteresis_false_event_rate": 0.0,
+    "no_identity_accept_recall": 1.0,
+    "no_identity_identity_reconnection_accuracy": 0.0,
+    "normal_controls": 16.0,
+    "reveal_events": 24.0,
+    "true_events": 24.0,
+    "unnormalized_accept_recall": 1.0,
+    "unnormalized_false_event_rate": 0.0
+  },
+  "real_summary": [
+    {
+      "domain": "real",
+      "system": "route0",
+      "n_windows": 5.0,
+      "mean_psnr": 30.50211919273412,
+      "delta_psnr_vs_route0": 0.0,
+      "mean_l1_proxy_lpips": 0.014831560850143432,
+      "delta_l1_vs_route0": 0.0,
+      "mean_flicker": 0.007990826107561588,
+      "delta_flicker_vs_route0": 0.0,
+      "mean_static_ghost": 0.12733273804187775,
+      "delta_static_ghost_vs_route0": 0.0,
+      "caveat": "trained route0 LoRA baseline"
+    },
+    {
+      "domain": "real",
+      "system": "matched_lifespan",
+      "n_windows": 5.0,
+      "mean_psnr": 29.818134359321654,
+      "delta_psnr_vs_route0": -0.6839848334124667,
+      "mean_l1_proxy_lpips": 0.016354632563889027,
+      "delta_l1_vs_route0": 0.0015230717137455947,
+      "mean_flicker": 0.007956006657332182,
+      "delta_flicker_vs_route0": -3.481945022940601e-05,
+      "mean_static_ghost": 0.12733273804187775,
+      "delta_static_ghost_vs_route0": 0.0,
+      "caveat": "derived lifespan-only image composite"
+    },
+    {
+      "domain": "real",
+      "system": "hide_reveal",
+      "n_windows": 5.0,
+      "mean_psnr": 41.714903733552326,
+      "delta_psnr_vs_route0": 11.212784540818205,
+      "mean_l1_proxy_lpips": 0.0026653554756194352,
+      "delta_l1_vs_route0": -0.012166205374523996,
+      "mean_flicker": 0.001685856096446514,
+      "delta_flicker_vs_route0": -0.006304970011115073,
+      "mean_static_ghost": 0.12733273804187775,
+      "delta_static_ghost_vs_route0": 0.0,
+      "caveat": "derived GT-crop upper-bound; not a trained Gaussian output"
+    },
+    {
+      "domain": "real",
+      "system": "residual_uncertainty",
+      "n_windows": 5.0,
+      "mean_psnr": 30.073395341209725,
+      "delta_psnr_vs_route0": -0.4287238515243956,
+      "mean_l1_proxy_lpips": 0.01657234113663435,
+      "delta_l1_vs_route0": 0.0017407802864909186,
+      "mean_flicker": 0.008039021119475364,
+      "delta_flicker_vs_route0": 4.81950119137764e-05,
+      "mean_static_ghost": 0.1457015424966812,
+      "delta_static_ghost_vs_route0": 0.01836880445480346,
+      "caveat": "existing residual/filemask baseline eval from R011"
+    }
+  ],
+  "derived_limitations": [
+    "Derived image-level PoC composite; no GaussianModel state was trained or checkpointed.",
+    "hide_reveal uses GT only inside predeclared event crops to test the maximum possible local artifact effect.",
+    "matched_lifespan uses the same windows and crop budget but no identity-aware hidden/reveal target."
+  ],
+  "crop_strips": [
+    {
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110",
+      "path": "refine-logs/hide_reveal_poc/r015_poc_summary/crop_strips/cut_roasted_beef_hand_tongs_meat_095_110.jpg",
+      "frames": [
+        95,
+        100,
+        105,
+        110
+      ],
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ]
+    },
+    {
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155",
+      "path": "refine-logs/hide_reveal_poc/r015_poc_summary/crop_strips/cut_roasted_beef_hand_knife_meat_140_155.jpg",
+      "frames": [
+        140,
+        145,
+        150,
+        155
+      ],
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ]
+    },
+    {
+      "window_id": "flame_steak_torch_pan_155_170",
+      "path": "refine-logs/hide_reveal_poc/r015_poc_summary/crop_strips/flame_steak_torch_pan_155_170.jpg",
+      "frames": [
+        155,
+        160,
+        165,
+        170
+      ],
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ]
+    },
+    {
+      "window_id": "flame_steak_torch_sweep_195_210",
+      "path": "refine-logs/hide_reveal_poc/r015_poc_summary/crop_strips/flame_steak_torch_sweep_195_210.jpg",
+      "frames": [
+        195,
+        200,
+        205,
+        210
+      ],
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ]
+    },
+    {
+      "window_id": "sear_steak_spoon_pan_220_235",
+      "path": "refine-logs/hide_reveal_poc/r015_poc_summary/crop_strips/sear_steak_spoon_pan_220_235.jpg",
+      "frames": [
+        220,
+        225,
+        230,
+        235
+      ],
+      "crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ]
+    }
+  ]
+}

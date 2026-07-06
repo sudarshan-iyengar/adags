@@ -118,3 +118,8 @@ Created: 2026-06-30T20:13:16+02:00
 | `hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_metrics.csv` | Per-window route0, matched-lifespan, and derived hide/reveal metrics. |
 | `hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_summary.json` | Machine-readable R012/R013 summary metrics. |
 | `hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_report.md` | Human-readable R012/R013 derived real-window report. |
+| `hide_reveal_poc/r015_poc_summary/poc_table.md` | R015 human-readable PoC table summarizing synthetic gates, real-window metrics, caveats, and crop-strip links. |
+| `hide_reveal_poc/r015_poc_summary/poc_table.csv` | R015 machine-readable real-window system comparison table. |
+| `hide_reveal_poc/r015_poc_summary/poc_decision_inputs.json` | R015 bundled decision inputs for R016, including synthetic gates, real metrics, limitations, and crop-strip paths. |
+| `hide_reveal_poc/r015_poc_summary/crop_strip_manifest.json` | R015 source-frame manifest listing exact remote PNGs used for qualitative crop strips. |
+| `hide_reveal_poc/r015_poc_summary/crop_strips/` | R015 qualitative strips for the five frozen real event windows, comparing route0, matched-lifespan, and derived hide/reveal rows. |
