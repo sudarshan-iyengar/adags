@@ -1,0 +1,47 @@
+# Overnight Status
+
+## Recovery Snapshot
+
+- Current run ID: R010
+- Current branch: `codex/hide-reveal-poc-implementation`
+- Last local commit: `a00bfd9c9aebb1889f7b026413c0910b430d7fe3`
+- Last HPC job ID: none in this session
+- Latest success/failure: R009 PASS; frozen manifest validated on HPC temp copy with 5 windows, 0 errors, 0 warnings
+- Next command to run: commit and push R009 frozen manifest/status, then sync HPC repo and run R010 route0 smooth-transport real-window evaluation
+- Open blockers: none known yet
+
+## Session Log
+
+### 2026-07-06T02:07:53+02:00 - Initialization
+
+- Read goal objective from `C:\Users\Sudarshan\.codex\attachments\ed75f206-df9c-4390-aa3e-2e3c0c1f66b4\goal-objective.md`.
+- Read ARIS skills: `experiment-queue`, `monitor-experiment`, and `run-experiment`.
+- Ran `git status --short --branch`, `git rev-parse --abbrev-ref HEAD`, and `git rev-parse HEAD` before changing files.
+- Active branch: `codex/hide-reveal-poc-implementation`.
+- Active commit: `a00bfd9c9aebb1889f7b026413c0910b430d7fe3`.
+- Dirty/untracked state at start:
+  - `.obsidian/`
+  - `AGENTS.md`
+  - `Untitled.canvas`
+  - `configs/n3v/bootstrap.yaml`
+  - `det_con.yaml`
+  - `follow-up.md`
+  - `idea-stage/`
+  - `requirements.txt`
+  - `verify_mask.jpg`
+  - `verify_masked_flow.jpg`
+  - `verify_raw_flow.jpg`
+- `refine-logs/OVERNIGHT_STATUS.md` and `refine-logs/OVERNIGHT_RUNBOOK.md` were missing locally and are being created for durable recovery.
+
+## Milestone Decisions
+
+- R009: PASS. Frozen 2026-07-06T00:20:08Z in `refine-logs/hide_reveal_real_windows.json` with five pre-scoring windows:
+  - `cut_roasted_beef_hand_tongs_meat_095_110`
+  - `cut_roasted_beef_hand_knife_meat_140_155`
+  - `flame_steak_torch_pan_155_170`
+  - `flame_steak_torch_sweep_195_210`
+  - `sear_steak_spoon_pan_220_235`
+  - Evidence: `refine-logs/hide_reveal_poc/r009_visual_audit/selection_notes.md` plus contact/crop sheets.
+  - Data availability: route0 renders/gt/static/dynamic complete for selected scenes; masks and flow sidecars found; track-confidence sidecars not found and recorded as unavailable.
+  - Validation: copied manifest to `/leonardo_work/EUHPC_D21_034/proj_adags/tmp/r009_frozen_manifest_validation_20260706.json` and ran `python scripts/run_hide_reveal_poc.py validate-real-manifest --manifest ... --require-system route0` after sourcing `exp_index/leonardo_env.sh`; result `validation_ok=True`, `windows=5`, `errors=0`, `warnings=0`.
+- R010-R016: pending.

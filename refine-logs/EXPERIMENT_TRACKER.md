@@ -1,0 +1,20 @@
+# Experiment Tracker
+
+| Run ID | Milestone | Purpose | System / Variant | Split | Metrics | Priority | Status | Notes |
+|--------|-----------|---------|------------------|-------|---------|----------|--------|-------|
+| R001 | M0 | Verify synthetic labels, event windows, support crops, and identity IDs. | synthetic fixture + route0-style trajectories | synthetic-smoke | label sanity, support coverage | MUST | TODO | No heavy job; fail fast if labels/supports are inconsistent. |
+| R002 | M0 | Unit-check score sign and normalization. | `H_smooth` vs `H_event` on tiny known cases | synthetic-smoke | `Delta_event`, support denominator, static ghost term | MUST | TODO | `Delta_event` must be negative only when event should win. |
+| R003 | M1 | Measure deterministic candidate recall. | frozen candidate ranking | synthetic-calibration | candidate recall, candidate count, false candidates | MUST | TODO | Tune only on calibration split, then freeze. |
+| R004 | M1 | Main synthetic no-refinement margin test. | full normalized hide/reveal, `N_shadow=0` | synthetic-heldout | margin AUC, precision/recall, identity reconnection | MUST | TODO | First decisive go/no-go result. |
+| R005 | M1 | Conditional equal-budget shadow diagnostic. | full normalized hide/reveal, `N_shadow=8` | synthetic-heldout-conditional | margin stability, identity reconnection, overhead | CONDITIONAL | TODO | Run only if `N_shadow=0` margins are too noisy; report separately. |
+| R006 | M2 | Matched lifespan kill comparison. | full method vs matched lifespan-only | synthetic-heldout | identity reconnection, false reveal rate, patch loss | MUST | TODO | Kill/demote if lifespan matches identity behavior. |
+| R007 | M2 | Minimal mechanism deletion diagnostics. | no identity term, unnormalized score, no hysteresis | synthetic-heldout | false reveal rate, false event rate, static ghosts | MUST | TODO | Keep small; no broad ablation matrix yet. |
+| R008 | M2 | Freeze PoC thresholds and score weights. | fixed `C_min`, `m_event`, lambdas, matching thresholds | synthetic-calibration | held-out margin check, false event rate | MUST | TODO | Write frozen values into run metadata before real windows. |
+| R009 | M3 | Predeclare real event-window manifest. | 4-6 fixed windows | real-window-manifest | frame range, crop, occluder, mask/track/flow availability | MUST | PASS | Frozen 5 windows in `refine-logs/hide_reveal_real_windows.json` before scoring; HPC validation on temp copy returned `validation_ok=True`, `windows=5`, `errors=0`, `warnings=0`. |
+| R010 | M3 | Smooth transport baseline on real windows. | ADAGS route0 LoRA | real-4-6-windows | LPIPS/PSNR, flicker, static ghost, ID switches | MUST | TODO | Use existing route0 checkpoints when available. |
+| R011 | M3 | Candidate heuristic baseline on real windows. | residual/uncertainty gating | real-4-6-windows | event artifacts, false event count, ID switches | MUST | TODO | Same candidate caps and local budget. |
+| R012 | M3 | Matched lifespan baseline on real windows. | matched lifespan-only | real-4-6-windows | event artifacts, static ghost, ID switches | MUST | TODO | Same opacity/lifespan gate family and hysteresis. |
+| R013 | M3 | Full hide/reveal sanity check on real windows. | normalized hide/reveal, frozen synthetic thresholds, `N_shadow=0` | real-4-6-windows | event artifacts, accepted events, ID switches | MUST | TODO | No per-scene threshold tuning. |
+| R014 | M3 | Equal-budget refinement diagnostic if needed. | full method and baselines, `N_shadow=8` | real-conditional | margin stability, artifacts, overhead | CONDITIONAL | TODO | Run only if no-refinement score is too noisy. |
+| R015 | M4 | PoC table and qualitative crop strip. | route0 vs lifespan vs full hide/reveal | synthetic + real | summary tables, crop panels | MUST | TODO | Enough for internal go/no-go, not paper polish. |
+| R016 | M4 | Decide whether to expand to paper-scale validation. | PoC decision memo | all PoC outputs | pass/fail on C1-C3 | MUST | TODO | Do not add broad baselines unless PoC passes. |
