@@ -1,0 +1,37 @@
+timestamp: 2026-07-06T02:39:12+02:00
+stage: real
+out_dir: refine-logs/hide_reveal_poc/r011_residual_uncertainty_real_eval
+manifest: refine-logs/hide_reveal_poc/r011_residual_uncertainty_manifest.json
+route0_eval: none
+eval_out_dir: /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/real
+repo_root: /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags
+project_root: /leonardo_work/EUHPC_D21_034/proj_adags
+env_script: /leonardo_work/EUHPC_D21_034/proj_adags/exp_index/leonardo_env.sh
+env_loaded: true
+host: lrdn0071.leonardo.local
+slurm_job_id: 48653948
+python: /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/bin/python
+python_bin: python
+git_branch: codex/hide-reveal-poc-implementation
+git_commit: d079e2f134641d0beec78a15fe86305078917433
+git_dirty: true
+git_status: ?? configs/n3v/bootstrap.yaml
+git_status: ?? configs/n3v/distill.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_600k.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_lowroi_600k.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_residual_600k.yaml
+git_status: ?? configs/panopticsports/
+git_status: ?? diff-gaussian-rasterization/diff_gaussian_rasterization/
+git_status: ?? eval_all_runs.sh
+git_status: ?? follow-up.md
+git_status: ?? logs/
+git_status: ?? scripts/analyze_wandb_adags.py
+git_status: ?? scripts/export_results.py
+git_status: ?? scripts/extract_results.py
+git_status: ?? scripts/make_downscaled_n3v.py
+git_status: ?? scripts/submit_lora_mask_mechanism_screen.sh
+git_status: ?? scripts/sync_wandb_runs.sh
+git_status: ?? scripts/test_wandb_online_compute.sh
+git_status: ?? simple-knn/simple_knn/__init__.py
+git_status: ?? submit_results.sh
+---
