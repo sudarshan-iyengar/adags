@@ -1,3 +1,4 @@
+import ast
 import csv
 import hashlib
 import json
@@ -6,7 +7,7 @@ import re
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 from PIL import Image
@@ -1524,6 +1525,101 @@ def infer_checkpoint_from_render_dir(render_dir: Path) -> Tuple[Path, int]:
     return checkpoint, iteration
 
 
+def parse_simple_yaml_scalar(value: str) -> Any:
+    value = value.split("#", 1)[0].strip()
+    if not value:
+        return ""
+    lower = value.lower()
+    if lower == "true":
+        return True
+    if lower == "false":
+        return False
+    if lower in {"null", "none"}:
+        return None
+    try:
+        return ast.literal_eval(value)
+    except (SyntaxError, ValueError):
+        return value.strip("\"'")
+
+
+def load_simple_yaml_config(path: Path) -> Dict[str, Any]:
+    try:
+        import yaml  # type: ignore
+
+        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
+        return loaded if isinstance(loaded, dict) else {}
+    except ImportError:
+        pass
+
+    data: Dict[str, Any] = {}
+    current_section: Optional[str] = None
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        line = raw_line.split("#", 1)[0].rstrip()
+        if not line.strip() or ":" not in line:
+            continue
+        if line.startswith(" "):
+            if current_section is None or not isinstance(data.get(current_section), dict):
+                continue
+            key, value = line.strip().split(":", 1)
+            data[current_section][key.strip()] = parse_simple_yaml_scalar(value)
+            continue
+        key, value = line.split(":", 1)
+        key = key.strip()
+        if value.strip():
+            data[key] = parse_simple_yaml_scalar(value)
+            current_section = None
+        else:
+            data[key] = {}
+            current_section = key
+    return data
+
+
+def load_run_family_config(run_dir: Path) -> Tuple[Optional[Path], Dict[str, Any]]:
+    config_dir = Path.cwd() / "configs" / "n3v"
+    candidates = []
+    if run_dir.parent.name:
+        candidates.append(config_dir / f"{run_dir.parent.name}.yaml")
+    if config_dir.exists():
+        for config_path in sorted(config_dir.glob("*.yaml")):
+            if run_dir.name.endswith(f"_{config_path.stem}"):
+                candidates.append(config_path)
+    for config_path in candidates:
+        if config_path.exists():
+            return config_path, load_simple_yaml_config(config_path)
+    return None, {}
+
+
+def apply_run_config_defaults(args: object, run_dir: Path) -> Optional[Path]:
+    config_path, config = load_run_family_config(run_dir)
+    if not config:
+        return config_path
+    for key, value in config.items():
+        if isinstance(value, dict):
+            continue
+        if not hasattr(args, key):
+            setattr(args, key, value)
+    for section in ("ModelParams", "PipelineParams"):
+        section_values = config.get(section, {})
+        if not isinstance(section_values, dict):
+            continue
+        for key, value in section_values.items():
+            if not hasattr(args, key):
+                setattr(args, key, value)
+    return config_path
+
+
+def infer_gaussian_dim_from_checkpoint_args(model_args: object) -> Optional[int]:
+    if not isinstance(model_args, (tuple, list)):
+        return None
+    if len(model_args) == 12:
+        return 3
+    if len(model_args) >= 29:
+        return 4
+    return None
+
+
 def load_run_cfg_args(run_dir: Path, scene: str) -> object:
     from argparse import Namespace
 
@@ -1531,6 +1627,8 @@ def load_run_cfg_args(run_dir: Path, scene: str) -> object:
     if not cfg_path.exists():
         raise FileNotFoundError(f"Missing cfg_args for checkpoint-backed render stage: {cfg_path}")
     args = eval(cfg_path.read_text(encoding="utf-8"), {"Namespace": Namespace})
+    config_path = apply_run_config_defaults(args, run_dir)
+    args.hide_reveal_config_path = str(config_path) if config_path else None
     args.model_path = str(run_dir)
     if not getattr(args, "source_path", ""):
         args.source_path = str(Path("/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v") / scene)
@@ -1673,6 +1771,16 @@ def render_actual_hide_reveal_real_windows(
             ensure_render_dir_writable(directory, overwrite)
 
         args = load_run_cfg_args(Path(group["run_dir"]), str(group["scene"]))
+        model_params, loaded_iteration = torch.load(str(group["checkpoint"]))
+        checkpoint_gaussian_dim = infer_gaussian_dim_from_checkpoint_args(model_params)
+        configured_gaussian_dim = getattr(args, "gaussian_dim", None)
+        gaussian_dim = int(checkpoint_gaussian_dim or configured_gaussian_dim or 3)
+        if configured_gaussian_dim is not None and checkpoint_gaussian_dim is not None:
+            if int(configured_gaussian_dim) != int(checkpoint_gaussian_dim):
+                raise ValueError(
+                    f"Checkpoint {group['checkpoint']} is gaussian_dim={checkpoint_gaussian_dim}, "
+                    f"but run config says gaussian_dim={configured_gaussian_dim}"
+                )
         pipe = Namespace(
             convert_SHs_python=getattr(args, "convert_SHs_python", False),
             compute_cov3D_python=getattr(args, "compute_cov3D_python", False),
@@ -1685,7 +1793,7 @@ def render_actual_hide_reveal_real_windows(
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
         gaussians = GaussianModel(
             getattr(args, "sh_degree", 3),
-            gaussian_dim=getattr(args, "gaussian_dim", 3),
+            gaussian_dim=gaussian_dim,
             time_duration=getattr(args, "time_duration", [-0.5, 0.5]),
             rot_4d=getattr(args, "rot_4d", False),
             force_sh_3d=getattr(args, "force_sh_3d", False),
@@ -1699,7 +1807,6 @@ def render_actual_hide_reveal_real_windows(
             num_pts_ratio=getattr(args, "num_pts_ratio", 1.0),
             time_duration=getattr(args, "time_duration", [-0.5, 0.5]),
         )
-        model_params, loaded_iteration = torch.load(str(group["checkpoint"]))
         gaussians.restore(model_params, None)
         gaussians.hide_reveal_runtime_events = [
             {
@@ -1740,6 +1847,8 @@ def render_actual_hide_reveal_real_windows(
                 "scene": group["scene"],
                 "checkpoint": group["checkpoint"],
                 "checkpoint_iteration": int(loaded_iteration),
+                "run_config_path": getattr(args, "hide_reveal_config_path", None),
+                "gaussian_dim": int(gaussian_dim),
                 "render_dir": str(render_dir.resolve()),
                 "static_dir": str(static_dir.resolve()),
                 "dynamic_dir": str(dynamic_dir.resolve()),
