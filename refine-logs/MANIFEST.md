@@ -99,3 +99,8 @@ Created: 2026-06-30T20:13:16+02:00
 | `hide_reveal_poc/r009_visual_audit/selection_notes.md` | R009 selection policy, selected/excluded candidate notes, source availability, and evidence links. |
 | `hide_reveal_poc/r009_visual_audit/contact_sheets/` | Sparse GT/render visual audit sheets used before scoring. |
 | `hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/` | Cropped candidate sheets used to freeze the final R009 windows. |
+| `hide_reveal_poc_real_jobs_20260706_022851.tsv` | Slurm submission manifest for R010 route0 real-window evaluation job `48653179`. |
+| `hide_reveal_poc/r010_route0_real_eval/job_metadata.txt` | R010 job metadata captured by the Slurm wrapper. |
+| `hide_reveal_poc/r010_route0_real_eval/real_event_window_metrics.csv` | Per-window route0 smooth-transport metrics for the frozen R009 windows. |
+| `hide_reveal_poc/r010_route0_real_eval/real_event_window_summary.json` | Machine-readable R010 route0 summary metrics. |
+| `hide_reveal_poc/r010_route0_real_eval/real_event_window_report.md` | Human-readable R010 route0 baseline report. |
