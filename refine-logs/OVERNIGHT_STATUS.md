@@ -4,10 +4,11 @@
 
 - Current run ID: R010
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit: `a00bfd9c9aebb1889f7b026413c0910b430d7fe3`
+- Last local commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
+- Last pushed milestone commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
 - Last HPC job ID: none in this session
 - Latest success/failure: R009 PASS; frozen manifest validated on HPC temp copy with 5 windows, 0 errors, 0 warnings
-- Next command to run: commit and push R009 frozen manifest/status, then sync HPC repo and run R010 route0 smooth-transport real-window evaluation
+- Next command to run: sync HPC repo to the pushed branch and run R010 route0 smooth-transport real-window evaluation
 - Open blockers: none known yet
 
 ## Session Log
@@ -32,6 +33,12 @@
   - `verify_masked_flow.jpg`
   - `verify_raw_flow.jpg`
 - `refine-logs/OVERNIGHT_STATUS.md` and `refine-logs/OVERNIGHT_RUNBOOK.md` were missing locally and are being created for durable recovery.
+
+### 2026-07-06T02:25:39+02:00 - R009 frozen manifest commit
+
+- Committed R009 frozen real-window manifest and visual audit evidence as `5914743f84c3ff4bec0b893f06e8557742a5348c` (`Freeze R009 real window manifest`).
+- Pushed `codex/hide-reveal-poc-implementation` to origin: `a00bfd9..5914743`.
+- R009 decision remains PASS; next milestone is R010 route0 smooth-transport evaluation on the frozen manifest.
 
 ## Milestone Decisions
 
