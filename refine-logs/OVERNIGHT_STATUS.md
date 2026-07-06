@@ -2,13 +2,13 @@
 
 ## Recovery Snapshot
 
-- Current run ID: R012
+- Current run ID: R015
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit: `da1d71b635618330d330fa94789bc293d73e06e7`
+- Last local commit: `840907a232a2a08df09b480fbdfae52d71aba5cd`
 - Last pushed milestone commit: `5914743f84c3ff4bec0b893f06e8557742a5348c`
-- Last HPC job ID: `48653948`
-- Latest success/failure: R012/R013 derive-real-renders dry run produced valid Slurm command on HPC
-- Next command to run: submit `scripts/submit_hide_reveal_poc.sh --stage derive-real-renders --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_renders --eval-out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_eval --overwrite`
+- Last HPC job ID: `48654171`
+- Latest success/failure: R012 PASS, R013 PASS, R014 SKIP; derived matched-lifespan/hide-reveal outputs and metrics collected
+- Next command to run: generate R015 PoC table and qualitative crop-strip artifacts from R010-R013 outputs
 - Open blockers: none known yet
 
 ## Session Log
@@ -133,6 +133,34 @@
 - Dry-run command succeeded for: `scripts/submit_hide_reveal_poc.sh --stage derive-real-renders --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_renders --eval-out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_eval --overwrite`.
 - R012/R013 caveat: this job creates derived image-level PoC render folders from route0 and the frozen manifest. It is not a retrained Gaussian checkpoint; `derived_poc_metadata.json` must be used to preserve that limitation.
 
+### 2026-07-06T02:45:15+02:00 - R012/R013 completed; R014 skipped
+
+- Committed and pushed pre-submit status as `840907a232a2a08df09b480fbdfae52d71aba5cd` (`Record R012 R013 pre-submit state`), then pulled it on HPC.
+- Submitted R012/R013 with `scripts/submit_hide_reveal_poc.sh --stage derive-real-renders --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_renders --eval-out-dir refine-logs/hide_reveal_poc/r012_r013_derived_real_eval --overwrite`.
+- Slurm job `48654171` completed with `State=COMPLETED`, `ExitCode=0:0`, `Elapsed=00:00:27`, `NodeList=lrdn0070`.
+- Submit manifest: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc_derive-real-renders_jobs_20260706_024307.tsv`.
+- Logs:
+  - `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_derive-real-renders_48654171.out`
+  - `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_derive-real-renders_48654171.err`
+- Derived-render metadata:
+  - `refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_poc_metadata.json`
+  - `refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_real_windows_manifest.json`
+  - `refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_real_windows_validation.json`
+  - `derived_poc_metadata.json` records `is_trained_model_output=false`.
+- Derived render folders remain on HPC under:
+  - `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/matched_lifespan/`
+  - `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/hide_reveal/`
+- Collected eval outputs locally:
+  - `refine-logs/hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_metrics.csv`
+  - `refine-logs/hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_report.md`
+  - `refine-logs/hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_summary.json`
+  - `refine-logs/hide_reveal_poc_derive-real-renders_jobs_20260706_024307.tsv`
+- Matched-lifespan summary over five windows: mean PSNR `29.818134359321654`, mean L1/proxy-LPIPS `0.016354632563889027`, mean flicker `0.007956006657332182`, mean static ghost `0.12733273804187775`.
+- Matched-lifespan minus route0 deltas: PSNR `-0.6839848334124667`, L1 `+0.0015230717137455947`, flicker `-0.00003481945022940601`, static ghost `0.0`.
+- Derived hide/reveal summary over five windows: mean PSNR `41.714903733552326`, mean L1/proxy-LPIPS `0.0026653554756194352`, mean flicker `0.001685856096446514`, mean static ghost `0.12733273804187775`.
+- Derived hide/reveal minus route0 deltas: PSNR `+11.212784540818205`, L1 `-0.012166205374523996`, flicker `-0.006304970011115073`, static ghost `0.0`.
+- R014 decision: SKIP. The conditional equal-budget refinement diagnostic is not triggered because R012/R013 produced complete comparable derived outputs without noisy or unstable scoring, and the PoC policy says not to expand compute unless needed.
+
 ## Milestone Decisions
 
 - R009: PASS. Frozen 2026-07-06T00:20:08Z in `refine-logs/hide_reveal_real_windows.json` with five pre-scoring windows:
@@ -146,4 +174,7 @@
   - Validation: copied manifest to `/leonardo_work/EUHPC_D21_034/proj_adags/tmp/r009_frozen_manifest_validation_20260706.json` and ran `python scripts/run_hide_reveal_poc.py validate-real-manifest --manifest ... --require-system route0` after sourcing `exp_index/leonardo_env.sh`; result `validation_ok=True`, `windows=5`, `errors=0`, `warnings=0`.
 - R010: PASS. Route0 smooth-transport baseline generated by Slurm job `48653179`; outputs in `refine-logs/hide_reveal_poc/r010_route0_real_eval/`; summary metrics listed above.
 - R011: PASS. Residual/uncertainty baseline generated by Slurm job `48653948`; outputs in `refine-logs/hide_reveal_poc/r011_residual_uncertainty_real_eval/`; summary metrics and route0 deltas listed above.
-- R012-R016: pending.
+- R012: PASS. Matched-lifespan derived image-level baseline generated by Slurm job `48654171`; outputs in `refine-logs/hide_reveal_poc/r012_r013_derived_real_eval/`; render metadata in `refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/`.
+- R013: PASS. Derived image-level hide/reveal PoC output generated by Slurm job `48654171`; caveat `is_trained_model_output=false` recorded in metadata.
+- R014: SKIP. Conditional equal-budget refinement diagnostic not triggered.
+- R015-R016: pending.

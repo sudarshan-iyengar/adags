@@ -110,3 +110,11 @@ Created: 2026-06-30T20:13:16+02:00
 | `hide_reveal_poc/r011_residual_uncertainty_real_eval/real_event_window_metrics.csv` | Per-window residual/uncertainty and paired route0 metrics for the frozen R009 windows. |
 | `hide_reveal_poc/r011_residual_uncertainty_real_eval/real_event_window_summary.json` | Machine-readable R011 residual/uncertainty summary metrics. |
 | `hide_reveal_poc/r011_residual_uncertainty_real_eval/real_event_window_report.md` | Human-readable R011 residual/uncertainty baseline report. |
+| `hide_reveal_poc_derive-real-renders_jobs_20260706_024307.tsv` | Slurm submission manifest for combined R012/R013 derived render/eval job `48654171`. |
+| `hide_reveal_poc/r012_r013_derived_real_renders/job_metadata.txt` | R012/R013 derive job metadata captured by the Slurm wrapper. |
+| `hide_reveal_poc/r012_r013_derived_real_renders/derived_poc_metadata.json` | Metadata and limitations for derived matched-lifespan and hide/reveal image-level PoC render folders. |
+| `hide_reveal_poc/r012_r013_derived_real_renders/derived_real_windows_manifest.json` | Derived manifest adding `matched_lifespan` and `hide_reveal` systems to the frozen windows. |
+| `hide_reveal_poc/r012_r013_derived_real_renders/derived_real_windows_validation.json` | Validation report for the derived manifest and render folders. |
+| `hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_metrics.csv` | Per-window route0, matched-lifespan, and derived hide/reveal metrics. |
+| `hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_summary.json` | Machine-readable R012/R013 summary metrics. |
+| `hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_report.md` | Human-readable R012/R013 derived real-window report. |

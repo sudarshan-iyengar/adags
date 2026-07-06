@@ -1,0 +1,2 @@
+job_id	stage	manifest	out_dir	log_stdout	log_stderr
+48654171	derive-real-renders	refine-logs/hide_reveal_real_windows.json	refine-logs/hide_reveal_poc/r012_r013_derived_real_renders	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_derive-real-renders_48654171.out	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_derive-real-renders_48654171.err
