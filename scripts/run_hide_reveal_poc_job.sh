@@ -29,6 +29,10 @@ if [[ -f "$ENV_SCRIPT" ]]; then
   source "$ENV_SCRIPT"
 fi
 
+# Leonardo boost nodes are A100-backed; set a default so PyTorch's CUDA
+# extension JIT does not need to infer architectures before CUDA is visible.
+export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-8.0}"
+
 if [[ "$PYTHON_BIN" == "python" && -x "$REPO_ROOT/.venv/Scripts/python.exe" ]]; then
   PYTHON_BIN="$REPO_ROOT/.venv/Scripts/python.exe"
 fi
@@ -54,6 +58,13 @@ mkdir -p "$OUT_DIR"
   echo "env_loaded: $([[ -f "$ENV_SCRIPT" ]] && echo true || echo false)"
   echo "host: $(hostname)"
   echo "slurm_job_id: ${SLURM_JOB_ID:-none}"
+  echo "cuda_visible_devices: ${CUDA_VISIBLE_DEVICES:-unset}"
+  echo "torch_cuda_arch_list: ${TORCH_CUDA_ARCH_LIST:-unset}"
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    nvidia-smi -L | sed 's/^/nvidia_smi: /' || true
+  else
+    echo "nvidia_smi: unavailable"
+  fi
   echo "python: $(command -v "$PYTHON_BIN" 2>/dev/null || echo "$PYTHON_BIN")"
   echo "python_bin: $PYTHON_BIN"
   echo "git_branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
