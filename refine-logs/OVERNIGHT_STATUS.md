@@ -7,7 +7,7 @@
 - Current method candidate: M1 non-oracle residual-component local refinement; candidate-discovery dry-run being repaired, local Gaussian refinement pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `0bf0967483e622af5cb6ac81de2b3f09060c33d9`
+- Last pushed milestone commit: `f69034be1ca32ddcd24756d945ead467d59e3c24`
 - Last HPC job ID: `48760448`
 - Latest success/failure: R018 structural PASS but detector FAIL; non-oracle candidate job `48763378` completed with validation_ok=True and 24 candidates, but posthoc frozen-overlap audit covered 0/5 windows
 - Next command to run: commit/push A2 motion-supported detector, pull on Leonardo, dry-run and submit R019 through Slurm
@@ -84,6 +84,7 @@ Recorded before new event-crop evidence edits.
 - Local smoke command completed:
   `scripts/run_hide_reveal_poc.py nonoracle-candidates --manifest refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/smoke_manifest.json --out-dir refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/out_motion_supported --window-length 4 --temporal-stride 2 --tile-size 16 --tile-stride 8 --top-k-per-scene 3`
 - A2 local smoke result: `validation_ok=True`, `validation_errors=0`, `candidates=3`, with selected crop `[24, 32, 40, 48]` over the synthetic moving square.
+- Committed A2 implementation and R018 evidence as `f69034be1ca32ddcd24756d945ead467d59e3c24` (`Require motion support for event candidates`).
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
