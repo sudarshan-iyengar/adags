@@ -7,9 +7,9 @@
 - Current method candidate: M1 non-oracle residual-component local refinement; replacement candidate-local training jobs pending, eval/scoring pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `345e743cbb86a329a1877f658e7f4e1d7833463a`
+- Last pushed milestone commit: `9224dc8bbab8dd9251598f66f74cad67d9d203da`
 - Last HPC job ID: `48796174`
-- Latest success/failure: R021 train jobs timed out before writing checkpoints; R022 replacement train jobs submitted with per-job torch extension dirs and 2h walltime, still pending on scheduler priority at 2026-07-07T11:27:49+02:00
+- Latest success/failure: R021 train jobs timed out before writing checkpoints; R022 replacement train jobs submitted with per-job torch extension dirs and 2h walltime, still pending on scheduler priority at 2026-07-07T11:39:50+02:00 with no stdout logs yet
 - Next command to run: monitor train jobs `48796168`, `48796170`, `48796174`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv` if `chkpnt6200.pth` files exist
 - Open blockers: none known yet
 
@@ -148,6 +148,13 @@ Recorded before new event-crop evidence edits.
 - Pushed R021/R022 evidence checkpoint `345e743cbb86a329a1877f658e7f4e1d7833463a` (`Record R021 timeout and R022 submission`).
 - Leonardo `squeue` and `sacct` poll reported R022 replacement train jobs `48796168`, `48796170`, and `48796174` all `PENDING`, elapsed `00:00:00`, reason `(Priority)`, no nodes assigned.
 - Next action remains to monitor those jobs; if they complete and write `chkpnt6200.pth`, submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv`.
+
+### 2026-07-07T11:39:50+02:00 - R022 scheduler wait continues
+
+- Pushed status breadcrumb `9224dc8bbab8dd9251598f66f74cad67d9d203da` (`Record R022 pending poll`).
+- Additional Leonardo polls showed R022 train jobs `48796168`, `48796170`, and `48796174` still `PENDING`, reason `(Priority)`, elapsed `00:00:00`; no `logs/event_candidate_refine_train_*_487961*.out` files exist yet.
+- `scontrol show job 48796168` showed no dependency, correct account/QOS `euhpc_d21_034` / `boost_qos_lprod`, partition `boost_usr_prod`, one GPU requested, and priority wait as the only scheduler reason.
+- Next command: `ssh -o ConnectTimeout=15 siyengar@login.leonardo.cineca.it "squeue -j 48796168,48796170,48796174 -o '%i %T %M %D %R'"`.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
