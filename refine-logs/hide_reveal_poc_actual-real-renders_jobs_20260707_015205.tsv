@@ -1,0 +1,2 @@
+job_id	stage	manifest	out_dir	log_stdout	log_stderr
+48760029	actual-real-renders	refine-logs/hide_reveal_real_windows.json	refine-logs/hide_reveal_poc/r017_actual_real_renders	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_actual-real-renders_48760029.out	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_actual-real-renders_48760029.err

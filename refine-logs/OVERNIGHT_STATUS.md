@@ -6,12 +6,22 @@
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Last local commit before R017 implementation: `5df0027a021a032cf21a3ebb031fa1d88f9efff2`
 - Last pushed milestone commit before R017 implementation: `5df0027a021a032cf21a3ebb031fa1d88f9efff2`
-- Last HPC job ID: `48654171`
-- Latest success/failure: R016 FAIL / NO-GO for paper-scale validation; R017 implementation check requested
-- Next command to run: push R017 implementation, pull on Leonardo, validate shell wrapper, then submit `actual-real-renders` on the frozen R009 manifest
+- Last HPC job ID: `48760448`
+- Latest success/failure: R017 FAIL / actual checkpoint-backed runtime opacity gate passed 0/5 frozen R009 real-window gates
+- Next command to run: none for R017; stop before paper-scale validation unless a new actual-method idea is specified
 - Open blockers: none known yet
 
 ## Session Log
+
+### 2026-07-07T02:18:00+02:00 - R017 completed
+
+- Implemented checkpoint-backed `actual-real-renders` for frozen R009 windows with runtime opacity gating in the Gaussian renderer; no GT crop compositing.
+- Pushed implementation/support commits through `efae3edea355f158f6ab3c827a9694d6f3453a64`.
+- Scheduler fixes required explicit `--gres=gpu:1`, default `TORCH_CUDA_ARCH_LIST=8.0`, and per-job `TORCH_EXTENSIONS_DIR` to avoid stale PyTorch extension locks.
+- Render job `48760029` generated `refine-logs/hide_reveal_poc/r017_actual_real_renders/actual_real_windows_manifest.json`, `actual_render_metadata.json`, and validation `ok=true`, then failed only during optional LPIPS sidecar download because the compute node had no outbound network.
+- Eval-only job `48760448` completed with LPIPS disabled and wrote `refine-logs/hide_reveal_poc/r017_actual_real_eval/real_event_window_metrics.csv`, `real_event_window_summary.json`, and `real_event_window_report.md`.
+- R017 decision: FAIL. Actual checkpoint-backed hide/reveal passed 0/5 strict gates; mean PSNR/L1/flicker/static-ghost all worsened versus route0 and the real baselines.
+- Durable result files added: `refine-logs/hide_reveal_poc/r017_actual_method_report.md` and `research-wiki/experiments/r017-actual-method-real-window-check.md`.
 
 ### 2026-07-06T02:07:53+02:00 - Initialization
 
