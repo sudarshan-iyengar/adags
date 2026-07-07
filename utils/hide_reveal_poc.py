@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 
 TRUE_EVENT_TYPES = {"hide_reveal", "hide_only", "boundary_occlusion", "identity_confuser"}
@@ -1772,6 +1772,173 @@ def edge_map(mask: np.ndarray) -> np.ndarray:
     return np.clip(dx + dy, 0.0, 1.0)
 
 
+def resize_float_map(arr: np.ndarray, target_hw: Tuple[int, int]) -> np.ndarray:
+    arr = np.asarray(arr, dtype=np.float32)
+    if arr.ndim == 3:
+        if arr.shape[-1] in (1, 3, 4):
+            arr = arr[..., 0]
+        else:
+            arr = arr[0]
+    if arr.shape == tuple(target_hw):
+        return arr.astype(np.float32)
+    height, width = target_hw
+    finite = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+    lo = float(np.min(finite)) if finite.size else 0.0
+    hi = float(np.max(finite)) if finite.size else 1.0
+    if hi > lo:
+        scaled = (finite - lo) / (hi - lo)
+    else:
+        scaled = np.zeros_like(finite, dtype=np.float32)
+    image = Image.fromarray(np.clip(np.rint(scaled * 255.0), 0, 255).astype(np.uint8), mode="L")
+    resized = np.asarray(image.resize((int(width), int(height)), Image.BILINEAR), dtype=np.float32) / 255.0
+    return resized * (hi - lo) + lo
+
+
+def dilate_binary_map(mask: np.ndarray, radius: int) -> np.ndarray:
+    binary = np.asarray(mask, dtype=np.float32) > 0
+    if radius <= 0 or binary.size == 0:
+        return binary.astype(np.float32)
+    image = Image.fromarray(binary.astype(np.uint8) * 255, mode="L")
+    size = int(2 * radius + 1)
+    dilated = image.filter(ImageFilter.MaxFilter(size=size))
+    return (np.asarray(dilated, dtype=np.float32) > 0).astype(np.float32)
+
+
+def normalize_positive_map(arr: np.ndarray, eps: float = 1e-6) -> np.ndarray:
+    arr = np.nan_to_num(np.asarray(arr, dtype=np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+    arr = np.clip(arr, 0.0, None)
+    positive = arr[arr > 0]
+    if positive.size == 0:
+        return np.zeros_like(arr, dtype=np.float32)
+    scale = float(np.quantile(positive, 0.9))
+    return np.clip(arr / max(scale, eps), 0.0, 1.0).astype(np.float32)
+
+
+def frame_index_from_name(value: object) -> Optional[int]:
+    stem = Path(str(value)).stem
+    matches = re.findall(r"\d+", stem)
+    if not matches:
+        return None
+    return int(matches[-1])
+
+
+def index_named_files(directory: Optional[Path], suffixes: Set[str]) -> Dict[str, Path]:
+    if directory is None or not directory.is_dir():
+        return {}
+    return {
+        path.stem: path
+        for path in sorted(directory.iterdir())
+        if path.is_file() and path.suffix.lower() in suffixes
+    }
+
+
+def select_npz_array(npz_obj: object, keys: Sequence[str]) -> Optional[np.ndarray]:
+    if not hasattr(npz_obj, "files"):
+        return None
+    for key in keys:
+        if key in npz_obj.files:
+            return np.asarray(npz_obj[key])
+    if npz_obj.files:
+        return np.asarray(npz_obj[npz_obj.files[0]])
+    return None
+
+
+def load_flow_support(path: Optional[Path], target_hw: Tuple[int, int]) -> Tuple[np.ndarray, np.ndarray, bool]:
+    if path is None or not path.exists():
+        return (
+            np.zeros(target_hw, dtype=np.float32),
+            np.zeros(target_hw, dtype=np.float32),
+            False,
+        )
+    if path.suffix.lower() != ".npz":
+        return (
+            np.zeros(target_hw, dtype=np.float32),
+            np.zeros(target_hw, dtype=np.float32),
+            False,
+        )
+    with np.load(path, allow_pickle=False) as npz:
+        flow = select_npz_array(npz, ("flow", "flow.npy", "track_flow", "forward_flow"))
+        valid = select_npz_array(npz, ("mask", "mask.npy", "flow_mask", "valid", "valid_mask"))
+    if flow is None:
+        return (
+            np.zeros(target_hw, dtype=np.float32),
+            np.zeros(target_hw, dtype=np.float32),
+            False,
+        )
+    flow = np.asarray(flow, dtype=np.float32)
+    if flow.ndim == 3 and flow.shape[0] == 2:
+        mag = np.sqrt(flow[0] ** 2 + flow[1] ** 2)
+    elif flow.ndim == 3 and flow.shape[-1] == 2:
+        mag = np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
+    else:
+        return (
+            np.zeros(target_hw, dtype=np.float32),
+            np.zeros(target_hw, dtype=np.float32),
+            False,
+        )
+    mag = resize_float_map(mag, target_hw)
+    if valid is None:
+        valid_map = np.isfinite(mag).astype(np.float32)
+    else:
+        valid_map = resize_float_map(np.asarray(valid, dtype=np.float32), target_hw)
+    return normalize_positive_map(mag), np.clip(valid_map, 0.0, 1.0).astype(np.float32), True
+
+
+def support_components_from_mask(
+    mask: np.ndarray,
+    score: np.ndarray,
+    min_area: int,
+) -> List[Dict[str, object]]:
+    binary = np.asarray(mask, dtype=bool)
+    height, width = binary.shape
+    visited = np.zeros(binary.shape, dtype=bool)
+    components: List[Dict[str, object]] = []
+    ys, xs = np.nonzero(binary)
+    for start_y, start_x in zip(ys.tolist(), xs.tolist()):
+        if visited[start_y, start_x]:
+            continue
+        stack = [(start_y, start_x)]
+        visited[start_y, start_x] = True
+        comp_y: List[int] = []
+        comp_x: List[int] = []
+        while stack:
+            y, x = stack.pop()
+            comp_y.append(y)
+            comp_x.append(x)
+            for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if ny < 0 or nx < 0 or ny >= height or nx >= width:
+                    continue
+                if visited[ny, nx] or not binary[ny, nx]:
+                    continue
+                visited[ny, nx] = True
+                stack.append((ny, nx))
+        area = len(comp_y)
+        if area < int(min_area):
+            continue
+        comp_y_arr = np.asarray(comp_y, dtype=np.int32)
+        comp_x_arr = np.asarray(comp_x, dtype=np.int32)
+        values = score[comp_y_arr, comp_x_arr]
+        mean_score = float(np.mean(values)) if values.size else 0.0
+        peak_score = float(np.max(values)) if values.size else 0.0
+        components.append(
+            {
+                "area": int(area),
+                "bbox_xyxy": [
+                    int(comp_x_arr.min()),
+                    int(comp_y_arr.min()),
+                    int(comp_x_arr.max() + 1),
+                    int(comp_y_arr.max() + 1),
+                ],
+                "mean_score": mean_score,
+                "peak_score": peak_score,
+                "component_score": float(0.8 * mean_score + 0.2 * peak_score),
+                "_ys": comp_y_arr,
+                "_xs": comp_x_arr,
+            }
+        )
+    return components
+
+
 def crop_iou(a: Sequence[int], b: Sequence[int]) -> float:
     ax0, ay0, ax1, ay1 = [int(v) for v in a]
     bx0, by0, bx1, by1 = [int(v) for v in b]
@@ -2187,6 +2354,347 @@ def write_nonoracle_candidate_report(
             "- `nonoracle_candidate_metadata.json`",
             "- `nonoracle_candidate_components.csv`",
             "- `nonoracle_candidate_validation.json`",
+        ]
+    )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def discover_event_boundary_support(
+    manifest_path: Path,
+    out_dir: Path,
+    route0_system: str = "route0",
+    max_components_per_scene: int = 36,
+    max_pixel_fraction: float = 0.03,
+    boundary_dilate: int = 6,
+    min_component_area: int = 16,
+    min_score: float = 0.05,
+    use_flow: bool = True,
+) -> Dict[str, object]:
+    manifest_path = manifest_path.resolve()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    scene_sources = manifest.get("scene_sources")
+    if not isinstance(scene_sources, dict):
+        raise ValueError(f"Manifest lacks scene_sources needed for boundary support: {manifest_path}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    support_root = out_dir / "support_masks"
+    support_root.mkdir(parents=True, exist_ok=True)
+
+    all_components: List[Dict[str, object]] = []
+    selected_components: List[Dict[str, object]] = []
+    support_frames: List[Dict[str, object]] = []
+    scene_reports: List[Dict[str, object]] = []
+
+    for scene, raw_scene_source in scene_sources.items():
+        if not isinstance(raw_scene_source, dict):
+            continue
+        scene = str(scene)
+        frame_range = raw_scene_source.get("frame_range", [0, 299])
+        frame_start, frame_end = int(frame_range[0]), int(frame_range[1])
+        eval_dir = Path(str(raw_scene_source["route0_eval_dir"]))
+        render_dir = eval_dir / "renders"
+        static_dir = eval_dir / "static"
+        dynamic_dir = eval_dir / "dynamic"
+        mask_dir = Path(str(raw_scene_source.get("mask_dir", ""))) if raw_scene_source.get("mask_dir") else None
+        flow_dir = Path(str(raw_scene_source.get("flow_dir", ""))) if raw_scene_source.get("flow_dir") else None
+        render_index = index_image_frames(render_dir) if render_dir.is_dir() else {}
+        static_index = index_image_frames(static_dir) if static_dir.is_dir() else {}
+        dynamic_index = index_image_frames(dynamic_dir) if dynamic_dir.is_dir() else {}
+        mask_by_name = index_named_files(mask_dir, IMAGE_SUFFIXES)
+        flow_by_name = index_named_files(flow_dir, {".npz"}) if use_flow else {}
+
+        first_path = first_indexed_frame(render_index)
+        if first_path is not None:
+            width, height = image_size(first_path)
+            target_hw = (height, width)
+        else:
+            image_size_xy = raw_scene_source.get("image_size_xy", [676, 507])
+            target_hw = (int(image_size_xy[1]), int(image_size_xy[0]))
+
+        prev_render_by_frame: Dict[int, np.ndarray] = {}
+        for frame_idx, path in render_index.items():
+            prev_render_by_frame[int(frame_idx)] = gray_image(path, target_hw=target_hw)
+
+        scene_components: List[Dict[str, object]] = []
+        n_flow_used = 0
+        n_nonempty_frame_masks = 0
+        for image_name, mask_path in sorted(mask_by_name.items()):
+            frame_idx = frame_index_from_name(image_name)
+            if frame_idx is None or frame_idx < frame_start or frame_idx > frame_end:
+                continue
+            mask_gray = gray_image(mask_path, target_hw=target_hw)
+            mask_boundary = dilate_binary_map(edge_map(mask_gray) > 0.05, boundary_dilate)
+            dynamic_gray = indexed_gray(dynamic_index, frame_idx, target_hw)
+            dynamic_boundary = dilate_binary_map(edge_map(dynamic_gray) > 0.02, max(1, boundary_dilate // 2))
+            static_gray = indexed_gray(static_index, frame_idx, target_hw)
+            render_gray = prev_render_by_frame.get(frame_idx)
+            if render_gray is None:
+                render_gray = np.zeros(target_hw, dtype=np.float32)
+            static_delta = np.abs(render_gray - static_gray).astype(np.float32) if static_index else np.zeros(target_hw, dtype=np.float32)
+            static_delta_boundary = dilate_binary_map(edge_map(static_delta) > 0.02, max(1, boundary_dilate // 2))
+            prev_render = prev_render_by_frame.get(frame_idx - 1)
+            if prev_render is None:
+                flicker_boundary = np.zeros(target_hw, dtype=np.float32)
+            else:
+                flicker_boundary = dilate_binary_map(edge_map(np.abs(render_gray - prev_render)) > 0.02, max(1, boundary_dilate // 2))
+
+            flow_path = flow_by_name.get(image_name)
+            flow_mag, flow_valid, flow_available = load_flow_support(flow_path, target_hw)
+            if flow_available:
+                n_flow_used += 1
+            flow_valid_boundary = dilate_binary_map(edge_map(flow_valid) > 0.05, max(1, boundary_dilate // 2))
+            flow_mag_boundary = dilate_binary_map(edge_map(flow_mag) > 0.05, max(1, boundary_dilate // 2))
+
+            boundary_support = np.clip(np.maximum(mask_boundary, np.maximum(flow_valid_boundary, flow_mag_boundary)), 0.0, 1.0)
+            score = (
+                0.50 * mask_boundary
+                + 0.20 * flow_valid_boundary
+                + 0.10 * flow_mag_boundary
+                + 0.10 * dynamic_boundary
+                + 0.05 * static_delta_boundary
+                + 0.05 * flicker_boundary
+            )
+            score = np.clip(score * np.maximum(boundary_support, 0.0), 0.0, 1.0).astype(np.float32)
+            binary = score >= float(min_score)
+            max_pixels = max(1, int(float(max_pixel_fraction) * score.size))
+            if int(binary.sum()) > max_pixels:
+                positive = score[binary]
+                threshold = float(np.partition(positive, max(0, positive.size - max_pixels))[max(0, positive.size - max_pixels)])
+                binary = score >= threshold
+                if int(binary.sum()) > max_pixels:
+                    keep_idx = np.argpartition(score.reshape(-1), -max_pixels)[-max_pixels:]
+                    limited = np.zeros(score.size, dtype=bool)
+                    limited[keep_idx] = True
+                    binary = limited.reshape(score.shape)
+            if int(binary.sum()) > 0:
+                n_nonempty_frame_masks += 1
+            components = support_components_from_mask(binary, score, min_component_area)
+            for local_rank, component in enumerate(components):
+                component.update(
+                    {
+                        "scene": scene,
+                        "image_name": image_name,
+                        "frame_idx": int(frame_idx),
+                        "mask_source": str(mask_path),
+                        "flow_source": str(flow_path) if flow_path is not None else None,
+                        "local_component_rank": int(local_rank),
+                        "mask_boundary_mean": float(mask_boundary.mean()),
+                        "flow_valid_boundary_mean": float(flow_valid_boundary.mean()),
+                        "flow_mag_boundary_mean": float(flow_mag_boundary.mean()),
+                        "dynamic_boundary_mean": float(dynamic_boundary.mean()),
+                        "static_delta_boundary_mean": float(static_delta_boundary.mean()),
+                        "flicker_boundary_mean": float(flicker_boundary.mean()),
+                    }
+                )
+            scene_components.extend(components)
+
+        scene_components_sorted = sorted(
+            scene_components,
+            key=lambda item: (float(item["component_score"]), int(item["area"])),
+            reverse=True,
+        )
+        selected_scene_components = scene_components_sorted[: int(max_components_per_scene)]
+        selected_by_image: Dict[str, List[Dict[str, object]]] = {}
+        for rank, component in enumerate(selected_scene_components, start=1):
+            component_id = f"{scene}_boundary_{rank:03d}_{component['image_name']}"
+            component["component_id"] = component_id
+            selected_by_image.setdefault(str(component["image_name"]), []).append(component)
+            public_component = {
+                key: value
+                for key, value in component.items()
+                if not str(key).startswith("_")
+            }
+            selected_components.append(public_component)
+            all_components.append(public_component)
+
+        scene_support_dir = support_root / scene
+        scene_support_dir.mkdir(parents=True, exist_ok=True)
+        for image_name, components in sorted(selected_by_image.items()):
+            support_mask = np.zeros(target_hw, dtype=bool)
+            score_mask = np.zeros(target_hw, dtype=np.float32)
+            for component in components:
+                ys = component["_ys"]
+                xs = component["_xs"]
+                support_mask[ys, xs] = True
+                score_mask[ys, xs] = np.maximum(score_mask[ys, xs], float(component["component_score"]))
+            max_pixels = max(1, int(float(max_pixel_fraction) * support_mask.size))
+            if int(support_mask.sum()) > max_pixels:
+                flat_score = score_mask.reshape(-1)
+                keep_idx = np.argpartition(flat_score, -max_pixels)[-max_pixels:]
+                limited = np.zeros(flat_score.shape, dtype=bool)
+                limited[keep_idx] = True
+                support_mask = limited.reshape(support_mask.shape)
+            frame_idx = frame_index_from_name(image_name)
+            mask_rel = Path("support_masks") / scene / f"{image_name}.png"
+            mask_out = out_dir / mask_rel
+            Image.fromarray(support_mask.astype(np.uint8) * 255, mode="L").save(mask_out)
+            support_frames.append(
+                {
+                    "scene": scene,
+                    "image_name": image_name,
+                    "frame_idx": int(frame_idx) if frame_idx is not None else -1,
+                    "support_mask_path": str(mask_rel).replace("\\", "/"),
+                    "support_pixel_count": int(support_mask.sum()),
+                    "support_pixel_fraction": float(support_mask.mean()),
+                    "component_ids": [str(component["component_id"]) for component in components],
+                }
+            )
+
+        scene_reports.append(
+            {
+                "scene": scene,
+                "route0_eval_dir": str(eval_dir),
+                "mask_dir": str(mask_dir) if mask_dir is not None else None,
+                "flow_dir": str(flow_dir) if flow_dir is not None else None,
+                "n_masks_indexed": len(mask_by_name),
+                "n_flow_sidecars_indexed": len(flow_by_name),
+                "n_flow_sidecars_used": int(n_flow_used),
+                "n_nonempty_frame_masks": int(n_nonempty_frame_masks),
+                "n_raw_components": len(scene_components),
+                "n_selected_components": len(selected_scene_components),
+                "n_support_frames": len(selected_by_image),
+                "target_hw": [int(target_hw[0]), int(target_hw[1])],
+            }
+        )
+
+    support_manifest = {
+        "description": "M2 non-oracle occlusion-boundary support masks for event-local micro-densification.",
+        "frames_are_inclusive": True,
+        "generated_by": "event-boundary-support",
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "source_manifest": str(manifest_path),
+        "source_manifest_usage": "scene_sources_only_for_paths_and_frame_ranges",
+        "route0_system": route0_system,
+        "uses_gt_residual": False,
+        "uses_gt_crop_pixels": False,
+        "uses_frozen_window_labels": False,
+        "selection_parameters": {
+            "max_components_per_scene": int(max_components_per_scene),
+            "max_pixel_fraction": float(max_pixel_fraction),
+            "boundary_dilate": int(boundary_dilate),
+            "min_component_area": int(min_component_area),
+            "min_score": float(min_score),
+            "use_flow": bool(use_flow),
+            "score_weights": {
+                "dynamic_mask_boundary": 0.50,
+                "flow_valid_boundary": 0.20,
+                "flow_magnitude_boundary": 0.10,
+                "route0_dynamic_render_boundary": 0.10,
+                "route0_static_delta_boundary": 0.05,
+                "route0_render_flicker_boundary": 0.05,
+            },
+        },
+        "scene_reports": scene_reports,
+        "components": selected_components,
+        "support_frames": support_frames,
+    }
+    manifest_out = out_dir / "event_boundary_support_manifest.json"
+    metadata = {
+        "support_manifest": str(manifest_out.resolve()),
+        "source_manifest": str(manifest_path),
+        "scene_reports": scene_reports,
+        "n_components": len(selected_components),
+        "n_support_frames": len(support_frames),
+        "limitations": [
+            "This support artifact is not a rendered Gaussian method result.",
+            "Support uses dynamic-mask boundaries, flow sidecars when matched, and route0 render diagnostics, not frozen crop labels.",
+            "Final PASS/FAIL requires checkpoint-backed M2 renders scored on the frozen R009 windows.",
+        ],
+    }
+    validation = {
+        "ok": bool(support_frames) and all(int(report["n_selected_components"]) <= int(max_components_per_scene) for report in scene_reports),
+        "n_support_frames": len(support_frames),
+        "n_components": len(selected_components),
+        "errors": [],
+        "warnings": [],
+    }
+    if not support_frames:
+        validation["errors"].append("No support frames were generated.")
+        validation["ok"] = False
+    for report in scene_reports:
+        if int(report["n_selected_components"]) == 0:
+            validation["warnings"].append(f"Scene {report['scene']} has zero selected support components.")
+        if int(report["n_flow_sidecars_used"]) == 0 and use_flow:
+            validation["warnings"].append(f"Scene {report['scene']} did not match flow sidecars by image name; support falls back to mask/render boundaries.")
+    write_json(manifest_out, support_manifest)
+    write_json(out_dir / "event_boundary_support_metadata.json", metadata)
+    write_csv(out_dir / "event_boundary_support_components.csv", selected_components)
+    write_json(out_dir / "event_boundary_support_validation.json", validation)
+    write_event_boundary_support_report(out_dir / "event_boundary_support_report.md", support_manifest, metadata, validation)
+    return {
+        "manifest": support_manifest,
+        "manifest_path": str(manifest_out),
+        "metadata": metadata,
+        "metadata_path": str(out_dir / "event_boundary_support_metadata.json"),
+        "validation": validation,
+    }
+
+
+def write_event_boundary_support_report(
+    path: Path,
+    support_manifest: Dict[str, object],
+    metadata: Dict[str, object],
+    validation: Dict[str, object],
+) -> None:
+    lines = [
+        "# M2 Event-Boundary Support",
+        "",
+        f"Generated: {support_manifest.get('generated_at_utc')}",
+        "",
+        "## Scientific Guardrails",
+        "",
+        f"- Uses GT residual: `{support_manifest.get('uses_gt_residual')}`",
+        f"- Uses GT crop pixels: `{support_manifest.get('uses_gt_crop_pixels')}`",
+        f"- Uses frozen event-crop labels: `{support_manifest.get('uses_frozen_window_labels')}`",
+        f"- Source manifest usage: `{support_manifest.get('source_manifest_usage')}`",
+        "",
+        "## Parameters",
+        "",
+    ]
+    params = support_manifest.get("selection_parameters", {})
+    if isinstance(params, dict):
+        for key, value in params.items():
+            lines.append(f"- `{key}`: `{value}`")
+    lines.extend(["", "## Scene Summary", "", "| Scene | Masks | Flow matched | Raw comps | Selected comps | Support frames |", "| --- | ---: | ---: | ---: | ---: | ---: |"])
+    for report in metadata.get("scene_reports", []):
+        lines.append(
+            "| {scene} | {masks} | {flow} | {raw} | {selected} | {frames} |".format(
+                scene=report.get("scene"),
+                masks=report.get("n_masks_indexed"),
+                flow=report.get("n_flow_sidecars_used"),
+                raw=report.get("n_raw_components"),
+                selected=report.get("n_selected_components"),
+                frames=report.get("n_support_frames"),
+            )
+        )
+    lines.extend(["", "## Selected Components", "", "| Component | Scene | Image | Frame | Area | Score | BBox |", "| --- | --- | --- | ---: | ---: | ---: | --- |"])
+    for component in support_manifest.get("components", []):
+        lines.append(
+            "| `{cid}` | `{scene}` | `{image}` | {frame} | {area} | {score:.6f} | `{bbox}` |".format(
+                cid=component.get("component_id"),
+                scene=component.get("scene"),
+                image=component.get("image_name"),
+                frame=component.get("frame_idx"),
+                area=component.get("area"),
+                score=float(component.get("component_score", 0.0)),
+                bbox=component.get("bbox_xyxy"),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Validation",
+            "",
+            f"- validation_ok: `{validation.get('ok')}`",
+            f"- validation_errors: `{len(validation.get('errors', []))}`",
+            f"- validation_warnings: `{len(validation.get('warnings', []))}`",
+            "",
+            "## Outputs",
+            "",
+            "- `event_boundary_support_manifest.json`",
+            "- `event_boundary_support_metadata.json`",
+            "- `event_boundary_support_components.csv`",
+            "- `event_boundary_support_validation.json`",
+            "- `support_masks/`",
         ]
     )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")

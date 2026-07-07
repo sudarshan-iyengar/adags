@@ -11,14 +11,15 @@ Usage:
   scripts/submit_hide_reveal_poc.sh --stage actual-real-renders --manifest refine-logs/real_windows.json \
     --residual-manifest refine-logs/r011_manifest.json --matched-manifest refine-logs/r012_manifest.json [--dry-run]
   scripts/submit_hide_reveal_poc.sh --stage nonoracle-candidates --manifest refine-logs/real_windows.json [--dry-run]
+  scripts/submit_hide_reveal_poc.sh --stage event-boundary-support --manifest refine-logs/real_windows.json [--dry-run]
 
 Submit proof-of-concept hide/reveal jobs through Slurm. Outputs go under
 refine-logs/hide_reveal_poc/<stage>/ and scheduler logs go under logs/.
 
 Options:
-  --stage synthetic|real|derive-real-renders|actual-real-renders|nonoracle-candidates
+  --stage synthetic|real|derive-real-renders|actual-real-renders|nonoracle-candidates|event-boundary-support
                          PoC stage to run.
-  --manifest PATH        Required for real, derive-real-renders, actual-real-renders, and nonoracle-candidates.
+  --manifest PATH        Required for real, derive-real-renders, actual-real-renders, nonoracle-candidates, and event-boundary-support.
   --route0-eval PATH     Eval folder with renders/ and gt/ for derived renders.
   --residual-manifest PATH
                          Optional residual_uncertainty baseline manifest for actual-real-renders.
@@ -34,6 +35,12 @@ Environment overrides:
   HIDE_REVEAL_SEEDS="0 1 2"
   HIDE_REVEAL_CLIPS_PER_TYPE=8
   HIDE_REVEAL_COMPUTE_LPIPS=0
+  HIDE_REVEAL_BOUNDARY_MAX_COMPONENTS_PER_SCENE=36
+  HIDE_REVEAL_BOUNDARY_MAX_PIXEL_FRACTION=0.03
+  HIDE_REVEAL_BOUNDARY_DILATE=6
+  HIDE_REVEAL_BOUNDARY_MIN_COMPONENT_AREA=16
+  HIDE_REVEAL_BOUNDARY_MIN_SCORE=0.05
+  HIDE_REVEAL_BOUNDARY_USE_FLOW=1
   PARTITION=boost_usr_prod
   ACCOUNT=euhpc_d21_034
   QOS=boost_qos_lprod
@@ -107,8 +114,8 @@ if [[ "$STAGE" == "derive" ]]; then
   STAGE="derive-real-renders"
 fi
 
-if [[ "$STAGE" != "synthetic" && "$STAGE" != "real" && "$STAGE" != "derive-real-renders" && "$STAGE" != "actual-real-renders" && "$STAGE" != "nonoracle-candidates" ]]; then
-  echo "ERROR: --stage must be synthetic, real, derive-real-renders, actual-real-renders, or nonoracle-candidates." >&2
+if [[ "$STAGE" != "synthetic" && "$STAGE" != "real" && "$STAGE" != "derive-real-renders" && "$STAGE" != "actual-real-renders" && "$STAGE" != "nonoracle-candidates" && "$STAGE" != "event-boundary-support" ]]; then
+  echo "ERROR: --stage must be synthetic, real, derive-real-renders, actual-real-renders, nonoracle-candidates, or event-boundary-support." >&2
   usage >&2
   exit 2
 fi
@@ -144,6 +151,12 @@ TIME="${TIME:-00:20:00}"
 CPUS_PER_TASK="${CPUS_PER_TASK:-8}"
 GRES="${GRES:-gpu:1}"
 COMPUTE_LPIPS="${HIDE_REVEAL_COMPUTE_LPIPS:-0}"
+BOUNDARY_MAX_COMPONENTS_PER_SCENE="${HIDE_REVEAL_BOUNDARY_MAX_COMPONENTS_PER_SCENE:-36}"
+BOUNDARY_MAX_PIXEL_FRACTION="${HIDE_REVEAL_BOUNDARY_MAX_PIXEL_FRACTION:-0.03}"
+BOUNDARY_DILATE="${HIDE_REVEAL_BOUNDARY_DILATE:-6}"
+BOUNDARY_MIN_COMPONENT_AREA="${HIDE_REVEAL_BOUNDARY_MIN_COMPONENT_AREA:-16}"
+BOUNDARY_MIN_SCORE="${HIDE_REVEAL_BOUNDARY_MIN_SCORE:-0.05}"
+BOUNDARY_USE_FLOW="${HIDE_REVEAL_BOUNDARY_USE_FLOW:-1}"
 timestamp="$(date +%Y%m%d_%H%M%S)"
 submit_manifest="$REPO_ROOT/refine-logs/hide_reveal_poc_${STAGE}_jobs_${timestamp}.tsv"
 
@@ -155,7 +168,7 @@ cmd=(
   -t "$TIME"
   -o "$LOG_DIR/hide_reveal_${STAGE}_%j.out"
   -e "$LOG_DIR/hide_reveal_${STAGE}_%j.err"
-  --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",HIDE_REVEAL_STAGE="$STAGE",HIDE_REVEAL_OUT_DIR="$OUT_DIR",HIDE_REVEAL_MANIFEST="$MANIFEST",HIDE_REVEAL_ROUTE0_EVAL="$ROUTE0_EVAL",HIDE_REVEAL_RESIDUAL_MANIFEST="$RESIDUAL_MANIFEST",HIDE_REVEAL_MATCHED_MANIFEST="$MATCHED_MANIFEST",HIDE_REVEAL_EVAL_OUT_DIR="$EVAL_OUT_DIR",HIDE_REVEAL_OVERWRITE="$OVERWRITE_DERIVED",HIDE_REVEAL_COMPUTE_LPIPS="$COMPUTE_LPIPS"
+  --export=ALL,ADAGS_REPO_DIR="$REPO_ROOT",ADAGS_PROJECT_ROOT="$PROJECT_ROOT",HIDE_REVEAL_STAGE="$STAGE",HIDE_REVEAL_OUT_DIR="$OUT_DIR",HIDE_REVEAL_MANIFEST="$MANIFEST",HIDE_REVEAL_ROUTE0_EVAL="$ROUTE0_EVAL",HIDE_REVEAL_RESIDUAL_MANIFEST="$RESIDUAL_MANIFEST",HIDE_REVEAL_MATCHED_MANIFEST="$MATCHED_MANIFEST",HIDE_REVEAL_EVAL_OUT_DIR="$EVAL_OUT_DIR",HIDE_REVEAL_OVERWRITE="$OVERWRITE_DERIVED",HIDE_REVEAL_COMPUTE_LPIPS="$COMPUTE_LPIPS",HIDE_REVEAL_BOUNDARY_MAX_COMPONENTS_PER_SCENE="$BOUNDARY_MAX_COMPONENTS_PER_SCENE",HIDE_REVEAL_BOUNDARY_MAX_PIXEL_FRACTION="$BOUNDARY_MAX_PIXEL_FRACTION",HIDE_REVEAL_BOUNDARY_DILATE="$BOUNDARY_DILATE",HIDE_REVEAL_BOUNDARY_MIN_COMPONENT_AREA="$BOUNDARY_MIN_COMPONENT_AREA",HIDE_REVEAL_BOUNDARY_MIN_SCORE="$BOUNDARY_MIN_SCORE",HIDE_REVEAL_BOUNDARY_USE_FLOW="$BOUNDARY_USE_FLOW"
   "$REPO_ROOT/scripts/run_hide_reveal_poc_job.sh"
 )
 

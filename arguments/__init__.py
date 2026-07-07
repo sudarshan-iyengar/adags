@@ -141,6 +141,11 @@ class OptimizationParams(ParamGroup):
         self.event_candidate_manifest = ""
         self.event_candidate_scene = ""
         self.event_candidate_dilate = 0
+        self.event_boundary_support_manifest = ""
+        self.event_boundary_scene = ""
+        self.event_boundary_dilate = 0
+        self.event_boundary_replace_dynamic_mask = False
+        self.event_boundary_frame_fallback = False
         self.lambda_dynamic_roi = 0.0
         self.lambda_static_exclusion = 0.0
         self.lambda_track_flow = 0.0
@@ -161,6 +166,7 @@ class OptimizationParams(ParamGroup):
         self.enable_rendered_flow = False
         self.enable_motion_aware_densify = False
         self.motion_aware_densify_boost = 1.0
+        self.motion_aware_densify_use_residual = True
 
         self.blur_until_iter = 0       # Set > 0 to enable blurring
         self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel

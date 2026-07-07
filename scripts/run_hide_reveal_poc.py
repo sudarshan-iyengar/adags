@@ -12,6 +12,7 @@ from utils.hide_reveal_poc import (
     augment_real_manifest_system,
     create_real_manifest_from_eval,
     derive_real_poc_render_folders,
+    discover_event_boundary_support,
     discover_nonoracle_event_candidates,
     direct_window_spec,
     evaluate_real_manifest,
@@ -155,6 +156,20 @@ def parse_args():
     candidates.add_argument("--top-k-per-scene", type=int, default=8)
     candidates.add_argument("--crop-iou-threshold", type=float, default=0.5)
     candidates.add_argument("--temporal-iou-threshold", type=float, default=0.5)
+
+    boundary = subparsers.add_parser(
+        "event-boundary-support",
+        help="Build M2 non-oracle occlusion-boundary support masks without frozen crop labels.",
+    )
+    boundary.add_argument("--manifest", required=True)
+    boundary.add_argument("--out-dir", default="refine-logs/hide_reveal_poc/r026_m2_boundary_support")
+    boundary.add_argument("--route0-system", default="route0")
+    boundary.add_argument("--max-components-per-scene", type=int, default=36)
+    boundary.add_argument("--max-pixel-fraction", type=float, default=0.03)
+    boundary.add_argument("--boundary-dilate", type=int, default=6)
+    boundary.add_argument("--min-component-area", type=int, default=16)
+    boundary.add_argument("--min-score", type=float, default=0.05)
+    boundary.add_argument("--no-flow", action="store_true", help="Do not use flow sidecars even if present.")
 
     return parser.parse_args()
 
@@ -346,6 +361,28 @@ def main():
         print(f"validation_ok={result['validation']['ok']}")
         print(f"validation_errors={len(result['validation']['errors'])}")
         print(f"candidates={len(result['manifest']['windows'])}")
+        if result["validation"]["errors"]:
+            for error in result["validation"]["errors"][:8]:
+                print(f"ERROR: {error}", file=sys.stderr)
+            return 2
+    elif args.command == "event-boundary-support":
+        result = discover_event_boundary_support(
+            manifest_path=Path(args.manifest),
+            out_dir=Path(args.out_dir),
+            route0_system=args.route0_system,
+            max_components_per_scene=args.max_components_per_scene,
+            max_pixel_fraction=args.max_pixel_fraction,
+            boundary_dilate=args.boundary_dilate,
+            min_component_area=args.min_component_area,
+            min_score=args.min_score,
+            use_flow=not args.no_flow,
+        )
+        print(f"Wrote M2 event-boundary support outputs to {Path(args.out_dir).resolve()}")
+        print(f"support_manifest={Path(result['manifest_path']).resolve()}")
+        print(f"metadata={Path(result['metadata_path']).resolve()}")
+        print(f"validation_ok={result['validation']['ok']}")
+        print(f"validation_errors={len(result['validation']['errors'])}")
+        print(f"support_frames={len(result['manifest']['support_frames'])}")
         if result["validation"]["errors"]:
             for error in result["validation"]["errors"][:8]:
                 print(f"ERROR: {error}", file=sys.stderr)

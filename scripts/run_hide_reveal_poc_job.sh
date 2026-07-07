@@ -27,6 +27,12 @@ NONORACLE_TEMPORAL_STRIDE="${HIDE_REVEAL_NONORACLE_TEMPORAL_STRIDE:-4}"
 NONORACLE_TILE_SIZE="${HIDE_REVEAL_NONORACLE_TILE_SIZE:-160}"
 NONORACLE_TILE_STRIDE="${HIDE_REVEAL_NONORACLE_TILE_STRIDE:-80}"
 NONORACLE_TOP_K_PER_SCENE="${HIDE_REVEAL_NONORACLE_TOP_K_PER_SCENE:-8}"
+BOUNDARY_MAX_COMPONENTS_PER_SCENE="${HIDE_REVEAL_BOUNDARY_MAX_COMPONENTS_PER_SCENE:-36}"
+BOUNDARY_MAX_PIXEL_FRACTION="${HIDE_REVEAL_BOUNDARY_MAX_PIXEL_FRACTION:-0.03}"
+BOUNDARY_DILATE="${HIDE_REVEAL_BOUNDARY_DILATE:-6}"
+BOUNDARY_MIN_COMPONENT_AREA="${HIDE_REVEAL_BOUNDARY_MIN_COMPONENT_AREA:-16}"
+BOUNDARY_MIN_SCORE="${HIDE_REVEAL_BOUNDARY_MIN_SCORE:-0.05}"
+BOUNDARY_USE_FLOW="${HIDE_REVEAL_BOUNDARY_USE_FLOW:-1}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 ENV_SCRIPT="${ADAGS_ENV_SCRIPT:-$PROJECT_ROOT/exp_index/leonardo_env.sh}"
 
@@ -65,6 +71,12 @@ mkdir -p "$OUT_DIR"
   echo "nonoracle_tile_size: $NONORACLE_TILE_SIZE"
   echo "nonoracle_tile_stride: $NONORACLE_TILE_STRIDE"
   echo "nonoracle_top_k_per_scene: $NONORACLE_TOP_K_PER_SCENE"
+  echo "boundary_max_components_per_scene: $BOUNDARY_MAX_COMPONENTS_PER_SCENE"
+  echo "boundary_max_pixel_fraction: $BOUNDARY_MAX_PIXEL_FRACTION"
+  echo "boundary_dilate: $BOUNDARY_DILATE"
+  echo "boundary_min_component_area: $BOUNDARY_MIN_COMPONENT_AREA"
+  echo "boundary_min_score: $BOUNDARY_MIN_SCORE"
+  echo "boundary_use_flow: $BOUNDARY_USE_FLOW"
   echo "repo_root: $REPO_ROOT"
   echo "project_root: $PROJECT_ROOT"
   echo "env_script: $ENV_SCRIPT"
@@ -167,7 +179,26 @@ elif [[ "$STAGE" == "nonoracle-candidates" ]]; then
     --tile-size "$NONORACLE_TILE_SIZE" \
     --tile-stride "$NONORACLE_TILE_STRIDE" \
     --top-k-per-scene "$NONORACLE_TOP_K_PER_SCENE"
+elif [[ "$STAGE" == "event-boundary-support" ]]; then
+  if [[ -z "$MANIFEST" ]]; then
+    echo "ERROR: HIDE_REVEAL_MANIFEST is required for event-boundary-support stage." >&2
+    exit 2
+  fi
+  CMD=(
+    "$PYTHON_BIN" scripts/run_hide_reveal_poc.py event-boundary-support
+    --manifest "$MANIFEST"
+    --out-dir "$OUT_DIR"
+    --max-components-per-scene "$BOUNDARY_MAX_COMPONENTS_PER_SCENE"
+    --max-pixel-fraction "$BOUNDARY_MAX_PIXEL_FRACTION"
+    --boundary-dilate "$BOUNDARY_DILATE"
+    --min-component-area "$BOUNDARY_MIN_COMPONENT_AREA"
+    --min-score "$BOUNDARY_MIN_SCORE"
+  )
+  if [[ "$BOUNDARY_USE_FLOW" != "1" ]]; then
+    CMD+=(--no-flow)
+  fi
+  "${CMD[@]}"
 else
-  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic, real, derive-real-renders, actual-real-renders, or nonoracle-candidates. Got: $STAGE" >&2
+  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic, real, derive-real-renders, actual-real-renders, nonoracle-candidates, or event-boundary-support. Got: $STAGE" >&2
   exit 2
 fi

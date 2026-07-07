@@ -903,7 +903,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     loss = loss + opt.lambda_rigid * Lrigid
 
                 if getattr(opt, "enable_motion_aware_densify", False):
-                    residual_map = (image.detach() - gt_image.detach()).abs().mean(dim=0, keepdim=True)
+                    residual_map = None
+                    if getattr(opt, "motion_aware_densify_use_residual", True):
+                        residual_map = (image.detach() - gt_image.detach()).abs().mean(dim=0, keepdim=True)
                     dyn_weight = compute_dynamic_densify_weight(gaussians, viewpoint_cam, dynamic_mask, residual_map)
                     if dyn_weight is not None:
                         batch_dynamic_densify_weight.append(dyn_weight.squeeze(-1))
