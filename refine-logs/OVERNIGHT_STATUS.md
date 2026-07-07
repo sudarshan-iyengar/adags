@@ -3,14 +3,14 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R021 event-candidate local refinement train jobs submitted / monitoring blocked by SSH auth
-- Current method candidate: M1 non-oracle residual-component local refinement; candidate-local training jobs submitted, eval/scoring pending
+- Current run ID: R022 event-candidate local refinement replacement train jobs pending
+- Current method candidate: M1 non-oracle residual-component local refinement; replacement candidate-local training jobs pending, eval/scoring pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `86c1afc21da3948600b9b98f6e0c500c01f78dfc`
-- Last HPC job ID: `48764718`
-- Latest success/failure: R021 train jobs submitted and passed startup log inspection; monitoring currently blocked by SSH auth rejection from Leonardo
-- Next command to run: restore SSH access, monitor train jobs `48764715`, `48764716`, `48764718`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_033133.tsv` if `chkpnt6200.pth` files exist
+- Last pushed milestone commit: `657f0cd201dda6c84c0b4442e53380e4d837f1ad`
+- Last HPC job ID: `48796174`
+- Latest success/failure: R021 train jobs timed out before writing checkpoints; R022 replacement train jobs submitted with per-job torch extension dirs and 2h walltime, currently pending on priority
+- Next command to run: monitor train jobs `48796168`, `48796170`, `48796174`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv` if `chkpnt6200.pth` files exist
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -124,6 +124,24 @@ Recorded before new event-crop evidence edits.
 - Train submit manifest: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/event_candidate_refine_train_jobs_20260707_033133.tsv`.
 - Initial poll showed all three jobs running on compute nodes; stdout startup logs showed config `configs/n3v/event_candidate_local_refine_6200.yaml`, commit `5a3ded1d338dc7534317434907835c0de4da0e73`, correct checkpoints, and normal PyTorch extension startup.
 - Monitoring blocker: subsequent SSH attempts to `siyengar@login.leonardo.cineca.it` failed with `Permission denied (publickey,gssapi-keyex,gssapi-with-mic)` three times. Jobs are already submitted; eval/scoring remains pending until SSH access returns.
+
+### 2026-07-07T11:14:00+02:00 - R021 timed out; R022 replacement submitted
+
+- SSH access recovered. Slurm reported R021 train jobs `48764715`, `48764716`, and `48764718` as `TIMEOUT`, elapsed `00:55:14`, no `chkpnt6200.pth` files written.
+- R021 logs showed all three jobs reached `Using /leonardo_work/.../build/torch_extensions as PyTorch extensions root...` and then timed out, matching the prior shared-extension lock/stall failure mode from R017.
+- Collected R021 submit manifest and logs locally:
+  - `refine-logs/event_candidate_refine_train_jobs_20260707_033133.tsv`
+  - `logs/event_candidate_refine_train_cut_roasted_beef_48764715.{out,err}`
+  - `logs/event_candidate_refine_train_flame_steak_48764716.{out,err}`
+  - `logs/event_candidate_refine_train_sear_steak_48764718.{out,err}`
+- Patched `scripts/run_leonardo.sh` to set per-job `TORCH_EXTENSIONS_DIR=$PROJECT_ROOT/build/torch_extensions_jobs/$SLURM_JOB_ID`, `TORCH_CUDA_ARCH_LIST=8.0`, and `MAX_JOBS`.
+- Added and pushed manifest augmentation helper `scripts/run_hide_reveal_poc.py augment-real-manifest-system` in commit `657f0cd201dda6c84c0b4442e53380e4d837f1ad`; pulled it on Leonardo and verified the help command.
+- Submitted replacement train jobs with `TIME=02:00:00`:
+  - `cut_roasted_beef`: `48796168`
+  - `flame_steak`: `48796170`
+  - `sear_steak`: `48796174`
+- Replacement train manifest collected locally: `refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv`.
+- Current R022 scheduler state at last poll: all three jobs `PENDING` on `(Priority)`.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
