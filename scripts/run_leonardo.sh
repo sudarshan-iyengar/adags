@@ -77,6 +77,15 @@ mkdir -p "$META_DIR"
 source "$PROJECT_ROOT/exp_index/leonardo_env.sh"
 cd "$REPO_DIR"
 
+if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+  export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-$PROJECT_ROOT/build/torch_extensions_jobs/$SLURM_JOB_ID}"
+else
+  export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-$PROJECT_ROOT/build/torch_extensions_manual}"
+fi
+mkdir -p "$TORCH_EXTENSIONS_DIR"
+export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-8.0}"
+export MAX_JOBS="${MAX_JOBS:-${CPUS_PER_TASK:-4}}"
+
 # ---- Minimal logging (append per run, don’t overwrite) ----
 {
   echo "timestamp: $(date -Iseconds)"
@@ -91,6 +100,9 @@ cd "$REPO_DIR"
   echo "slurm_job_id: ${SLURM_JOB_ID:-none}"
   echo "python: $(which python)"
   python -V
+  echo "torch_extensions_dir: ${TORCH_EXTENSIONS_DIR}"
+  echo "torch_cuda_arch_list: ${TORCH_CUDA_ARCH_LIST}"
+  echo "max_jobs: ${MAX_JOBS}"
   echo "git_branch: $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   echo "git_commit: $(git rev-parse HEAD 2>/dev/null || echo unknown)"
   if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
