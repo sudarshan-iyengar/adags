@@ -1,0 +1,554 @@
+{
+  "compute_lpips_requested": false,
+  "lpips_unavailable_reason": null,
+  "manifest": "refine-logs/hide_reveal_poc/r025_event_candidate_refine_manifest.json",
+  "rows": [
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.007203780580312014,
+      "frame_end": 110,
+      "frame_start": 95,
+      "l1": 0.01593163050711155,
+      "lpips": null,
+      "lpips_proxy_l1": 0.01593163050711155,
+      "occluder": "hands, tongs, and knife over sliced meat",
+      "psnr": 30.474907843407657,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.09057895839214325,
+      "system": "event_candidate_refine",
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.0014486043946817517,
+      "frame_end": 110,
+      "frame_start": 95,
+      "l1": 0.002306039910763502,
+      "lpips": null,
+      "lpips_proxy_l1": 0.002306039910763502,
+      "occluder": "hands, tongs, and knife over sliced meat",
+      "psnr": 43.59380638432117,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.08188918232917786,
+      "system": "hide_reveal",
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.007102718111127615,
+      "frame_end": 110,
+      "frame_start": 95,
+      "l1": 0.015275571495294571,
+      "lpips": null,
+      "lpips_proxy_l1": 0.015275571495294571,
+      "occluder": "hands, tongs, and knife over sliced meat",
+      "psnr": 30.482685988291212,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.08188918232917786,
+      "system": "matched_lifespan",
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.007159698288887739,
+      "frame_end": 110,
+      "frame_start": 95,
+      "l1": 0.013778427615761757,
+      "lpips": null,
+      "lpips_proxy_l1": 0.013778427615761757,
+      "occluder": "hands, tongs, and knife over sliced meat",
+      "psnr": 30.935332676143396,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.09964189678430557,
+      "system": "residual_uncertainty",
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.007048923056572676,
+      "frame_end": 110,
+      "frame_start": 95,
+      "l1": 0.013761249370872974,
+      "lpips": null,
+      "lpips_proxy_l1": 0.013761249370872974,
+      "occluder": "hands, tongs, and knife over sliced meat",
+      "psnr": 31.15618716744271,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.08188918232917786,
+      "system": "route0",
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.006985278334468603,
+      "frame_end": 155,
+      "frame_start": 140,
+      "l1": 0.018793325871229172,
+      "lpips": null,
+      "lpips_proxy_l1": 0.018793325871229172,
+      "occluder": "hand and knife over sliced meat",
+      "psnr": 30.286656984117336,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.07997220754623413,
+      "system": "event_candidate_refine",
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.0015295763732865453,
+      "frame_end": 155,
+      "frame_start": 140,
+      "l1": 0.0026991632767021656,
+      "lpips": null,
+      "lpips_proxy_l1": 0.0026991632767021656,
+      "occluder": "hand and knife over sliced meat",
+      "psnr": 43.05443012889751,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.07416507601737976,
+      "system": "hide_reveal",
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.006295213475823402,
+      "frame_end": 155,
+      "frame_start": 140,
+      "l1": 0.01527091208845377,
+      "lpips": null,
+      "lpips_proxy_l1": 0.01527091208845377,
+      "occluder": "hand and knife over sliced meat",
+      "psnr": 32.015472014993335,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.07416507601737976,
+      "system": "matched_lifespan",
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.006373135838657618,
+      "frame_end": 155,
+      "frame_start": 140,
+      "l1": 0.014006872661411762,
+      "lpips": null,
+      "lpips_proxy_l1": 0.014006872661411762,
+      "occluder": "hand and knife over sliced meat",
+      "psnr": 32.48406194447511,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.08859097212553024,
+      "system": "residual_uncertainty",
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "flicker": 0.006457529962062836,
+      "frame_end": 155,
+      "frame_start": 140,
+      "l1": 0.014663624577224255,
+      "lpips": null,
+      "lpips_proxy_l1": 0.014663624577224255,
+      "occluder": "hand and knife over sliced meat",
+      "psnr": 32.393153957246966,
+      "scene": "cut_roasted_beef",
+      "static_ghost_score": 0.07416507601737976,
+      "system": "route0",
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.012130998075008392,
+      "frame_end": 170,
+      "frame_start": 155,
+      "l1": 0.023255936801433563,
+      "lpips": null,
+      "lpips_proxy_l1": 0.023255936801433563,
+      "occluder": "torch flame over steak and pan",
+      "psnr": 25.560335253232203,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.1486142873764038,
+      "system": "event_candidate_refine",
+      "window_id": "flame_steak_torch_pan_155_170"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.0021899614948779345,
+      "frame_end": 170,
+      "frame_start": 155,
+      "l1": 0.0032282660249620676,
+      "lpips": null,
+      "lpips_proxy_l1": 0.0032282660249620676,
+      "occluder": "torch flame over steak and pan",
+      "psnr": 38.20920566046299,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.1622045338153839,
+      "system": "hide_reveal",
+      "window_id": "flame_steak_torch_pan_155_170"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.011202520690858364,
+      "frame_end": 170,
+      "frame_start": 155,
+      "l1": 0.021138880401849747,
+      "lpips": null,
+      "lpips_proxy_l1": 0.021138880401849747,
+      "occluder": "torch flame over steak and pan",
+      "psnr": 25.56963509917687,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.1622045338153839,
+      "system": "matched_lifespan",
+      "window_id": "flame_steak_torch_pan_155_170"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.011404960416257381,
+      "frame_end": 170,
+      "frame_start": 155,
+      "l1": 0.02228061854839325,
+      "lpips": null,
+      "lpips_proxy_l1": 0.02228061854839325,
+      "occluder": "torch flame over steak and pan",
+      "psnr": 25.66580481811432,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.16628292202949524,
+      "system": "residual_uncertainty",
+      "window_id": "flame_steak_torch_pan_155_170"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.011281110346317291,
+      "frame_end": 170,
+      "frame_start": 155,
+      "l1": 0.0183443333953619,
+      "lpips": null,
+      "lpips_proxy_l1": 0.0183443333953619,
+      "occluder": "torch flame over steak and pan",
+      "psnr": 26.23009771306009,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.1622045338153839,
+      "system": "route0",
+      "window_id": "flame_steak_torch_pan_155_170"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.008080147206783295,
+      "frame_end": 210,
+      "frame_start": 195,
+      "l1": 0.01872856728732586,
+      "lpips": null,
+      "lpips_proxy_l1": 0.01872856728732586,
+      "occluder": "torch flame sweep over steak",
+      "psnr": 28.954938422525068,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.16457118093967438,
+      "system": "event_candidate_refine",
+      "window_id": "flame_steak_torch_sweep_195_210"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.0017799175111576915,
+      "frame_end": 210,
+      "frame_start": 195,
+      "l1": 0.0025727597530931234,
+      "lpips": null,
+      "lpips_proxy_l1": 0.0025727597530931234,
+      "occluder": "torch flame sweep over steak",
+      "psnr": 40.241667211114056,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.17469395697116852,
+      "system": "hide_reveal",
+      "window_id": "flame_steak_torch_sweep_195_210"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.007444621063768864,
+      "frame_end": 210,
+      "frame_start": 195,
+      "l1": 0.014926236122846603,
+      "lpips": null,
+      "lpips_proxy_l1": 0.014926236122846603,
+      "occluder": "torch flame sweep over steak",
+      "psnr": 30.26823420201216,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.17469395697116852,
+      "system": "matched_lifespan",
+      "window_id": "flame_steak_torch_sweep_195_210"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.007507477421313524,
+      "frame_end": 210,
+      "frame_start": 195,
+      "l1": 0.018760668113827705,
+      "lpips": null,
+      "lpips_proxy_l1": 0.018760668113827705,
+      "occluder": "torch flame sweep over steak",
+      "psnr": 29.999180822767258,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.18018801510334015,
+      "system": "residual_uncertainty",
+      "window_id": "flame_steak_torch_sweep_195_210"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "flicker": 0.0074854651466012,
+      "frame_end": 210,
+      "frame_start": 195,
+      "l1": 0.013225510716438293,
+      "lpips": null,
+      "lpips_proxy_l1": 0.013225510716438293,
+      "occluder": "torch flame sweep over steak",
+      "psnr": 31.124489157608117,
+      "scene": "flame_steak",
+      "static_ghost_score": 0.17469395697116852,
+      "system": "route0",
+      "window_id": "flame_steak_torch_sweep_195_210"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "flicker": 0.007985263131558895,
+      "frame_end": 235,
+      "frame_start": 220,
+      "l1": 0.017665451392531395,
+      "lpips": null,
+      "lpips_proxy_l1": 0.017665451392531395,
+      "occluder": "spoon and hand over steak",
+      "psnr": 29.419464375142105,
+      "scene": "sear_steak",
+      "static_ghost_score": 0.14452247321605682,
+      "system": "event_candidate_refine",
+      "window_id": "sear_steak_spoon_pan_220_235"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "flicker": 0.0014812207082286477,
+      "frame_end": 235,
+      "frame_start": 220,
+      "l1": 0.002520548412576318,
+      "lpips": null,
+      "lpips_proxy_l1": 0.002520548412576318,
+      "occluder": "spoon and hand over steak",
+      "psnr": 43.4754092829659,
+      "scene": "sear_steak",
+      "static_ghost_score": 0.1437109410762787,
+      "system": "hide_reveal",
+      "window_id": "sear_steak_spoon_pan_220_235"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "flicker": 0.0077349599450826645,
+      "frame_end": 235,
+      "frame_start": 220,
+      "l1": 0.015161562711000443,
+      "lpips": null,
+      "lpips_proxy_l1": 0.015161562711000443,
+      "occluder": "spoon and hand over steak",
+      "psnr": 30.75464449213467,
+      "scene": "sear_steak",
+      "static_ghost_score": 0.1437109410762787,
+      "system": "matched_lifespan",
+      "window_id": "sear_steak_spoon_pan_220_235"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "flicker": 0.007749833632260561,
+      "frame_end": 235,
+      "frame_start": 220,
+      "l1": 0.014035118743777275,
+      "lpips": null,
+      "lpips_proxy_l1": 0.014035118743777275,
+      "occluder": "spoon and hand over steak",
+      "psnr": 31.282596444548542,
+      "scene": "sear_steak",
+      "static_ghost_score": 0.19380390644073486,
+      "system": "residual_uncertainty",
+      "window_id": "sear_steak_spoon_pan_220_235"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "flicker": 0.007681102026253939,
+      "frame_end": 235,
+      "frame_start": 220,
+      "l1": 0.01416308619081974,
+      "lpips": null,
+      "lpips_proxy_l1": 0.01416308619081974,
+      "occluder": "spoon and hand over steak",
+      "psnr": 31.6066679683127,
+      "scene": "sear_steak",
+      "static_ghost_score": 0.1437109410762787,
+      "system": "route0",
+      "window_id": "sear_steak_spoon_pan_220_235"
+    }
+  ],
+  "summary": {
+    "event_candidate_refine": {
+      "mean_flicker": 0.00847709346562624,
+      "mean_l1": 0.018874982371926308,
+      "mean_lpips": null,
+      "mean_lpips_proxy_l1": 0.018874982371926308,
+      "mean_psnr": 28.93926057568487,
+      "mean_static_ghost_score": 0.12565182149410248,
+      "n_windows": 5.0
+    },
+    "hide_reveal": {
+      "mean_flicker": 0.001685856096446514,
+      "mean_l1": 0.0026653554756194352,
+      "mean_lpips": null,
+      "mean_lpips_proxy_l1": 0.0026653554756194352,
+      "mean_psnr": 41.714903733552326,
+      "mean_static_ghost_score": 0.12733273804187775,
+      "n_windows": 5.0
+    },
+    "matched_lifespan": {
+      "mean_flicker": 0.007956006657332182,
+      "mean_l1": 0.016354632563889027,
+      "mean_lpips": null,
+      "mean_lpips_proxy_l1": 0.016354632563889027,
+      "mean_psnr": 29.818134359321654,
+      "mean_static_ghost_score": 0.12733273804187775,
+      "n_windows": 5.0
+    },
+    "residual_uncertainty": {
+      "mean_flicker": 0.008039021119475364,
+      "mean_l1": 0.01657234113663435,
+      "mean_lpips": null,
+      "mean_lpips_proxy_l1": 0.01657234113663435,
+      "mean_psnr": 30.073395341209725,
+      "mean_static_ghost_score": 0.1457015424966812,
+      "n_windows": 5.0
+    },
+    "route0": {
+      "mean_flicker": 0.007990826107561588,
+      "mean_l1": 0.014831560850143432,
+      "mean_lpips": null,
+      "mean_lpips_proxy_l1": 0.014831560850143432,
+      "mean_psnr": 30.50211919273412,
+      "mean_static_ghost_score": 0.12733273804187775,
+      "n_windows": 5.0
+    }
+  }
+}

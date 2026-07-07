@@ -4,9 +4,9 @@ Generated: 2026-07-07
 
 ## Current Phase
 
-Phase 2: define the non-oracle target and choose the first method candidate.
+Phase 4: R025 scoring completed for the first non-oracle method candidate.
 
-The R017 runtime opacity gate is closed as a failed actual-method check. Future methods must not use the frozen R009 event crops as test-time method inputs.
+The R017 runtime opacity gate is closed as a failed actual-method check. M1 non-oracle residual-component local refinement is also closed as a failed checkpoint-backed Gaussian method check. Future methods must not use the frozen R009 event crops as test-time method inputs.
 
 ## Source Metrics
 
@@ -17,6 +17,7 @@ The R017 runtime opacity gate is closed as a failed actual-method check. Future 
 | baseline | residual_uncertainty | 30.0734 | 0.0165723 | 0.00803902 | 0.145702 | `refine-logs/hide_reveal_poc/r011_residual_uncertainty_real_eval/real_event_window_summary.json` |
 | upper_bound | derived oracle hide_reveal | 41.7149 | 0.00266536 | 0.00168586 | 0.127333 | `refine-logs/hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_summary.json` |
 | failed actual | R017 actual_hide_reveal | 19.3667 | 0.0761056 | 0.0162899 | 0.152789 | `refine-logs/hide_reveal_poc/r017_actual_real_eval/real_event_window_summary.json` |
+| failed non-oracle | R025 event_candidate_refine | 28.9393 | 0.0188750 | 0.00847709 | 0.125652 | `refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval/real_event_window_summary.json` |
 
 Oracle upper-bound deltas versus route0:
 - PSNR: `+11.2128`
@@ -61,14 +62,14 @@ FAIL gate:
 
 | Candidate | Mechanism | Why It Might Recover Oracle-Like Fix | Cost | Failure Modes | Required Data | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| M1 non-oracle residual-component local refinement | Detect candidate event supports from high residual, dynamic masks, flow validity/disagreement, and local flicker in training/eval render diagnostics; select connected components without R009 crop labels; locally optimize a small set of Gaussian color/opacity/visibility parameters under a fixed budget; render normally. | R013 says the error is local and large. R017 failed by subtracting content; M1 can add/refine local appearance while preserving route0 elsewhere. | Medium. Reuses route0 checkpoints and renderer; needs candidate-map generation, local optimization CLI, Slurm wrapper, metadata. | Detector selects easy residuals or wrong regions; local fitting overfits observed view; static ghost rises; output becomes crop-like if support leaks from evaluation labels. | Route0 renders/GT/static/dynamic, masks, flow, checkpoints. | R023 training completed; R024 eval renders pending. |
+| M1 non-oracle residual-component local refinement | Detect candidate event supports from high residual, dynamic masks, flow validity/disagreement, and local flicker in training/eval render diagnostics; select connected components without R009 crop labels; locally optimize a small set of Gaussian color/opacity/visibility parameters under a fixed budget; render normally. | R013 says the error is local and large. R017 failed by subtracting content; M1 can add/refine local appearance while preserving route0 elsewhere. | Medium. Reuses route0 checkpoints and renderer; needs candidate-map generation, local optimization CLI, Slurm wrapper, metadata. | Detector selects easy residuals or wrong regions; local fitting overfits observed view; static ghost rises; output becomes crop-like if support leaks from evaluation labels. | Route0 renders/GT/static/dynamic, masks, flow, checkpoints. | R025 FAIL: checkpoint-backed Gaussian renders completed, but 0/5 frozen windows improved and mean PSNR/L1 worsened versus route0. |
 | M2 occlusion-boundary gated micro-densification | Use dynamic-mask boundaries and flow occlusion/disocclusion cues to seed a small event-local set of Gaussians, with strict budget and no use of frozen crop labels. | The oracle fix may require new or sharper local capacity, not just opacity changes. | Medium-high. Requires densification/update path and budget accounting. | Novelty pressure from visibility-aware densification; may become known densification rather than identity event; may fragment identity. | Masks, flow, checkpoints, training images. | Backup. |
 | M3 temporal inconsistency event proposal plus conservative visibility gate | Build non-oracle event candidates from route0 render flicker/residual over time; apply a much narrower, component-local gate than R017 and log selected Gaussian counts. | R017 selected too many Gaussians. A component-local proposal may avoid broad content deletion. | Low-medium. Reuses R017 renderer hook with non-oracle support maps. | Still only removes content; likely cannot synthesize revealed texture; may repeat R017 failure with smaller damage. | Route0 renders/GT for candidate construction, masks. | Backup or diagnostic. |
 | M4 identity-aware reveal matching with tracks/features | If reliable track/feature sidecars can be generated, commit hide/reveal only when hidden identity evidence reconnects across the event; train/refine selected carriers. | Aligns with original novelty boundary against lifespan-only gating. | High. Track sidecars were absent in R009; generation may be a separate project. | Blocked by unavailable tracks; noisy tracks around occlusions; high implementation burden. | Confident tracks/features, checkpoints, masks/flow. | Deferred. |
 
 ## Selected First Candidate
 
-Tentative first candidate: M1 non-oracle residual-component local refinement.
+Selected first candidate: M1 non-oracle residual-component local refinement.
 
 Reason:
 - It directly addresses the R017 failure mode: opacity attenuation removed/dimmed content but did not synthesize the hidden/revealed surface.
@@ -81,6 +82,18 @@ Before full local-refinement implementation:
 - Verify candidate-map inputs exist on HPC for the three scenes with the R018 dry-run output.
 - Use the A1 dry-run output to choose whether M1 has plausible event support before writing any checkpoint-updating code.
 - Record the exact command and output directory before submitting any Slurm job.
+
+Outcome:
+- R023 trained three resumed checkpoints to `chkpnt6200.pth`.
+- R024 rendered complete `test/ours_6200` folders for `cut_roasted_beef`, `flame_steak`, and `sear_steak`.
+- R025 evaluated those folders on the frozen windows and failed the predeclared gate:
+  - 0/5 windows improved over all three baselines on both PSNR and L1/proxy-LPIPS.
+  - 0/5 windows improved over route0 on both PSNR and L1/proxy-LPIPS.
+  - 2/5 windows were no worse than route0 on static ghost, below the 3/5 requirement.
+  - Mean PSNR delta versus route0: `-1.5629 dB`.
+  - Mean L1/proxy-LPIPS delta versus route0: `+0.004043`.
+  - Oracle recovery fractions were negative for both PSNR and L1.
+  - Independent result-to-claim review returned `claim_supported: no`, confidence `high`.
 
 ## Attempt Log
 
@@ -99,4 +112,6 @@ Before full local-refinement implementation:
 | R022 | Candidate-local refinement replacement train jobs | `657f0cd201dda6c84c0b4442e53380e4d837f1ad` | `48796168`, `48796170`, `48796174` | `refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv` | CANCELLED / RUNNER ENV BUG | Jobs started but logs showed inherited shared `TORCH_EXTENSIONS_DIR=/leonardo_work/.../build/torch_extensions`; cancelled before repeating the full R021 timeout. |
 | R022b | Forced per-job extension-root fix | `ad637f3ec50129fe40c5715804d446dfe6bdc90d` | n/a | `scripts/run_leonardo.sh` | COMPLETE | Slurm jobs now force `$PROJECT_ROOT/build/torch_extensions_jobs/$SLURM_JOB_ID` unless `ADAGS_TORCH_EXTENSIONS_DIR` is explicitly set, avoiding `leonardo_env.sh` shared-root override. |
 | R023 | Candidate-local refinement train jobs after forced extension-root fix | `ad637f3ec50129fe40c5715804d446dfe6bdc90d` | `48799988`, `48799992`, `48799995` | `refine-logs/event_candidate_refine_train_jobs_20260707_114908.tsv`, `logs/event_candidate_refine_train_*_487999*.{out,err}` | TRAIN COMPLETE | Jobs completed in 13-14 minutes, used per-job extension roots, and wrote three `chkpnt6200.pth` checkpoints plus point clouds under `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_*`. |
-| R024 | Candidate-local refinement eval renders | `ad637f3ec50129fe40c5715804d446dfe6bdc90d` | `48802355`, `48802357`, `48802359` | `refine-logs/event_candidate_refine_eval_jobs_20260707_121022.tsv` | PENDING | Eval jobs submitted against the R023 `chkpnt6200.pth` files; frozen-window manifest augmentation and scoring pending. |
+| R024 | Candidate-local refinement eval renders | `ad637f3ec50129fe40c5715804d446dfe6bdc90d` | `48802355`, `48802357`, `48802359` | `refine-logs/event_candidate_refine_eval_jobs_20260707_121022.tsv`, `logs/event_candidate_refine_eval_*_488023*.{out,err}` | EVAL COMPLETE | All three eval jobs completed with `ExitCode=0:0`; each output folder has 300 `renders`, `gt`, `static`, and `dynamic` frames under `test/ours_6200`. |
+| R025 | Candidate-local refinement frozen-window scoring | `1a747fae7079f7352c3103f51d735912fcedf10a` | `48805053` | `refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval/`, `refine-logs/hide_reveal_poc/r025_event_candidate_refine_summary/` | FAIL | Valid scoring job completed with `ExitCode=0:0`. R025 mean PSNR `28.9393` vs route0 `30.5021`; mean L1 `0.0188750` vs route0 `0.0148316`; 0/5 windows improved on PSNR+L1; static no-worse was 2/5. |
+| R025 review | Result-to-claim audit | n/a | n/a | `.aris/traces/result-to-claim/2026-07-07_run01/`, `research-wiki/experiments/r025-event-candidate-refine-real-window-check.md`, `findings.md` | CLAIM NOT SUPPORTED | Independent reviewer judged `claim_supported: no` with high confidence. The method-form constraint was satisfied, but the quantitative gate failed decisively. |

@@ -1,0 +1,2 @@
+job_id	stage	manifest	out_dir	log_stdout	log_stderr
+48805053	real	refine-logs/hide_reveal_poc/r025_event_candidate_refine_manifest.json	refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48805053.out	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48805053.err

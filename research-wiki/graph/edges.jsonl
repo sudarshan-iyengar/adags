@@ -1,0 +1,129 @@
+{"from":"idea:dynamic-mask-static-exclusion","to":"gap:G1","type":"addresses_gap","evidence":"Targets dynamic-region sharpness with dynamic ROI loss and dynamic PSNR."}
+{"from":"idea:dynamic-mask-static-exclusion","to":"gap:G2","type":"addresses_gap","evidence":"Penalizes static probability inside dynamic masks."}
+{"from":"idea:track-prior-scaffold-motion","to":"gap:G3","type":"addresses_gap","evidence":"Turns currently inactive track-flow hook into the central test."}
+{"from":"idea:track-prior-scaffold-motion","to":"gap:G4","type":"addresses_gap","evidence":"Tests whether scaffold residuals need track supervision."}
+{"from":"idea:rendered-flow-gated-supervision","to":"gap:G3","type":"addresses_gap","evidence":"Restricts flow supervision to reliable mask regions."}
+{"from":"idea:motion-aware-densification-budget","to":"gap:G5","type":"addresses_gap","evidence":"Tests dynamic allocation under matched point budgets."}
+{"from":"idea:part-aware-reversible-routing","to":"gap:G6","type":"addresses_gap","evidence":"Revisits part-aware motion with reversible routing and external priors."}
+{"from":"idea:dynamic-region-diagnostic-benchmark","to":"gap:G7","type":"addresses_gap","evidence":"Converts W&B runs into claim-ready diagnostic evidence."}
+{"from":"idea:track-prior-scaffold-motion","to":"paper:lei2025_mosca","type":"inspired_by","evidence":"Motion scaffold idea is the closest comparison."}
+{"from":"idea:track-prior-scaffold-motion","to":"paper:wang2024_shape_of_motion","type":"inspired_by","evidence":"Long-range tracks motivate active correspondence supervision."}
+{"from":"idea:rendered-flow-gated-supervision","to":"paper:jiang2024_motiongs","type":"inspired_by","evidence":"Explicit motion guidance motivates flow supervision and its failure analysis."}
+{"from":"idea:dynamic-mask-static-exclusion","to":"exp:wandb-mechanism-screen-20260617","type":"tested_by","evidence":"Mechanism-screen includes dynamic mask variants but lacks synced diagnostics."}
+{"from":"idea:track-prior-scaffold-motion","to":"exp:wandb-fixed-budget-20260612","type":"tested_by","evidence":"Scaffold variants were tested, but track-flow loss was inactive."}
+{"from":"exp:wandb-fixed-budget-20260612","to":"idea:track-prior-scaffold-motion","type":"invalidates","evidence":"Unanchored scaffold does not uniformly beat LoRA route0 in aggregate PSNR."}
+{"from":"exp:wandb-mechanism-screen-20260617","to":"idea:dynamic-mask-static-exclusion","type":"invalidates","evidence":"Current dynamic/scaffold variants do not beat LoRA route0 on mean PSNR; diagnostics remain missing."}
+{"from":"exp:wandb-flow-phase2-20260619-24","to":"idea:rendered-flow-gated-supervision","type":"supports","evidence":"Render-gated flow mean PSNR is higher than ungated flow lanes in queried eval-6000 cohort."}
+{"from":"idea:archive-gaussian-blur-curriculum","to":"gap:G1","type":"addresses_gap","evidence":"Archived weak attempt at coarse-to-fine sharpness."}
+{"from":"idea:archive-hard-static-conversion","to":"gap:G2","type":"addresses_gap","evidence":"Archived brittle approach to static/dynamic separation."}
+{"from":"idea:archive-part-basis-motion","to":"gap:G6","type":"addresses_gap","evidence":"Archived early part-basis result while preserving stronger future formulation."}
+{"from":"paper:wu2024_4dgs","to":"gap:G7","type":"addresses_gap","evidence":"Baseline dynamic GS evaluation context for ADAGS comparisons."}
+{"from":"paper:yang2024_deformable3dgs","to":"gap:G6","type":"addresses_gap","evidence":"Canonical deformation baseline pressures ADAGS motion representation claims."}
+{"from":"paper:shaw2024_swings","to":"gap:G2","type":"addresses_gap","evidence":"Static/dynamic weighting is prior art."}
+{"from":"paper:katsumata2024_compact_dynamic_3dgs","to":"gap:G5","type":"addresses_gap","evidence":"Compact dynamic representation pressures fixed-budget claims."}
+{"from":"paper:lee2024_fully_explicit_dgs","to":"gap:G6","type":"addresses_gap","evidence":"Explicit motion representation baseline."}
+{"from":"paper:gao2024_hicom","to":"gap:G6","type":"addresses_gap","evidence":"Hierarchical coherent motion addresses specialized local dynamics."}
+{"from":"paper:xu2024_grid4d","to":"gap:G6","type":"addresses_gap","evidence":"High-capacity 4D encoding competitor."}
+{"from":"paper:sun2025_splatflow","to":"gap:G8","type":"addresses_gap","evidence":"Flow-field dynamic GS overlaps with ADAGS flow supervision."}
+{"from":"paper:wang2025_shape_of_motion","to":"gap:G3","type":"addresses_gap","evidence":"Long-range tracks are central to monocular 4D reconstruction."}
+{"from":"paper:shih2025_prior_enhanced_gs","to":"gap:G3","type":"addresses_gap","evidence":"Uses masks, tracks, depth, and scaffold projection priors."}
+{"from":"paper:shih2025_prior_enhanced_gs","to":"gap:G4","type":"addresses_gap","evidence":"Crowds scaffold-plus-prior novelty."}
+{"from":"paper:liang2025_monodygaubench","to":"gap:G7","type":"addresses_gap","evidence":"Shows monocular dynamic GS is brittle and scene-dependent."}
+{"from":"paper:jiao2026_mapo","to":"gap:G1","type":"addresses_gap","evidence":"Targets blur in highly dynamic regions via motion-aware partitioning."}
+{"from":"paper:jiao2026_mapo","to":"gap:G6","type":"addresses_gap","evidence":"Partitions high-dynamic motion rather than using one global model."}
+{"from":"paper:liao2026_sharptimegs","to":"gap:G1","type":"addresses_gap","evidence":"Targets sharp and stable dynamic Gaussian Splatting."}
+{"from":"paper:liao2026_sharptimegs","to":"gap:G5","type":"addresses_gap","evidence":"Uses velocity-aware densification and temporal lifespan."}
+{"from":"paper:tu2026_speede3dgs","to":"gap:G5","type":"addresses_gap","evidence":"Motion-aware pruning and consistent densification."}
+{"from":"paper:zhang2026_continuous_motion","to":"gap:G6","type":"addresses_gap","evidence":"Continuous SE(3) motion bases compete with LoRA/scaffold motion."}
+{"from":"paper:guo2026_usplat4d","to":"gap:G9","type":"addresses_gap","evidence":"Uncertainty-aware reconstruction suggests confidence-weighted priors."}
+{"from":"paper:jin2026_moegs","to":"gap:G6","type":"addresses_gap","evidence":"Mixture of experts specializes dynamic representation."}
+{"from":"paper:deng2026_pamosplat","to":"gap:G6","type":"addresses_gap","evidence":"Part-aware motion directly pressures ADAGS part-routing idea."}
+{"from":"paper:zhao2026_ground4d","to":"gap:G12","type":"addresses_gap","evidence":"Geometry-grounded monocular 4D reconstruction raises the baseline for photometric-only dynamic GS."}
+{"from":"paper:zhao2026_ground4d","to":"gap:G15","type":"addresses_gap","evidence":"Geometry consistency is a prior whose usefulness must be routed rather than blindly trusted."}
+{"from":"idea:event-causal-visibility-gaussians","to":"gap:G13","type":"addresses_gap","evidence":"Models occlusion/disocclusion as differentiable visibility events rather than smooth deformation."}
+{"from":"idea:event-causal-visibility-gaussians","to":"paper:wang2026_multi4d","type":"inspired_by","evidence":"Builds beyond persistent/transient allocation by making visibility events explicit."}
+{"from":"idea:event-causal-visibility-gaussians","to":"paper:wu2026_rigs","type":"inspired_by","evidence":"Builds beyond static/rigid/transient primitives with event-causal lifecycle transitions."}
+{"from":"idea:event-causal-visibility-gaussians","to":"paper:zhao2026_ground4d","type":"inspired_by","evidence":"Uses geometry-consistency cues to distinguish deformation from visibility events."}
+{"from":"idea:identity-conserving-detail-carriers","to":"gap:G14","type":"addresses_gap","evidence":"Constrains transient detail with parented identity and promotion/demotion rules."}
+{"from":"idea:identity-conserving-detail-carriers","to":"paper:wang2026_multi4d","type":"inspired_by","evidence":"Retains Multi4D's persistent/transient tension but adds explicit identity parentage."}
+{"from":"idea:identity-conserving-detail-carriers","to":"paper:chan2026_adagar","type":"inspired_by","evidence":"Targets high-frequency dynamic detail while preserving temporal identity."}
+{"from":"idea:frequency-adaptive-temporal-support","to":"gap:G14","type":"addresses_gap","evidence":"Links dynamic detail frequency to temporal support and stability constraints."}
+{"from":"idea:frequency-adaptive-temporal-support","to":"paper:chan2026_adagar","type":"inspired_by","evidence":"Extends frequency-aware representation with temporal support allocation."}
+{"from":"idea:frequency-adaptive-temporal-support","to":"paper:liao2026_sharptimegs","type":"inspired_by","evidence":"Extends lifespan modulation with frequency/detail-dependent support."}
+{"from":"idea:counterfactual-prior-usefulness-routing","to":"gap:G15","type":"addresses_gap","evidence":"Routes priors by estimated downstream usefulness rather than confidence alone."}
+{"from":"idea:counterfactual-prior-usefulness-routing","to":"paper:guo2026_usplat4d","type":"inspired_by","evidence":"Starts from uncertainty-aware dynamic GS but asks whether the prior improves future reconstruction."}
+{"from":"idea:counterfactual-prior-usefulness-routing","to":"paper:shih2025_prior_enhanced_gs","type":"inspired_by","evidence":"Treats masks, tracks, depth, and scaffold priors as actions whose usefulness must be tested."}
+{"from":"paper:deng2026_pamosplat","to":"gap:G8","type":"addresses_gap","evidence":"Uses flow-guided part-aware motion."}
+{"from":"idea:track-prior-scaffold-motion","to":"paper:shih2025_prior_enhanced_gs","type":"inspired_by","evidence":"Prior-enhanced scaffold projection is the closest competing setup."}
+{"from":"idea:rendered-flow-gated-supervision","to":"paper:sun2025_splatflow","type":"inspired_by","evidence":"Flow-field supervision motivates reliability gating."}
+{"from":"idea:motion-aware-densification-budget","to":"paper:liao2026_sharptimegs","type":"inspired_by","evidence":"Velocity-aware densification is the key recent comparator."}
+{"from":"idea:part-aware-reversible-routing","to":"paper:deng2026_pamosplat","type":"inspired_by","evidence":"Part-aware motion is direct prior art."}
+{"from":"idea:dynamic-region-diagnostic-benchmark","to":"paper:liang2025_monodygaubench","type":"inspired_by","evidence":"Benchmark motivates robust failure-mode metrics."}
+{"from":"paper:wu2026_rigs","to":"gap:G2","type":"addresses_gap","evidence":"Rigid-aware decomposition pressures static/dynamic and coherent/residual motion separation."}
+{"from":"paper:wu2026_rigs","to":"gap:G6","type":"addresses_gap","evidence":"Splits long-term rigid motion from short-term deformation instead of one global motion model."}
+{"from":"paper:chan2026_adagar","to":"gap:G1","type":"addresses_gap","evidence":"Adaptive Gabor representation targets high-frequency dynamic detail."}
+{"from":"paper:chan2026_adagar","to":"gap:G11","type":"addresses_gap","evidence":"Makes representation frequency a direct dynamic sharpness axis."}
+{"from":"paper:zhang2025_d4rt","to":"gap:G12","type":"addresses_gap","evidence":"Feedforward 4D reconstruction raises speed and generalization baselines."}
+{"from":"paper:zhou2026_motionscale","to":"gap:G6","type":"addresses_gap","evidence":"Scalable 4DGS reconstructs appearance, geometry, and motion jointly."}
+{"from":"paper:zhou2026_motionscale","to":"gap:G7","type":"addresses_gap","evidence":"Motivates geometry-motion diagnostics beyond image PSNR."}
+{"from":"paper:oh2025_hybrid_3d_4dgs","to":"gap:G2","type":"addresses_gap","evidence":"Hybrid 3D/4D capacity is foundational prior art for ADAGS."}
+{"from":"paper:oh2025_hybrid_3d_4dgs","to":"gap:G5","type":"addresses_gap","evidence":"Static/dynamic representation allocation pressures fixed-budget claims."}
+{"from":"paper:feng2025_disentangled4dgs","to":"gap:G5","type":"addresses_gap","evidence":"High-FPS disentangled representation pressures efficiency claims."}
+{"from":"paper:feng2025_disentangled4dgs","to":"gap:G6","type":"addresses_gap","evidence":"Disentanglement is another specialization route."}
+{"from":"paper:liu2025_mono4dgs_hdr","to":"gap:G7","type":"addresses_gap","evidence":"Photometric and exposure artifacts must be separated from motion errors."}
+{"from":"paper:zhou2026_4c4d","to":"gap:G10","type":"addresses_gap","evidence":"Sparse multi-view 4DGS clarifies ADAGS's monocular/N3V niche."}
+{"from":"paper:wang2026_flow4dgs_slam","to":"gap:G8","type":"addresses_gap","evidence":"Flow guidance is crowded even in adjacent 4DGS SLAM."}
+{"from":"paper:wang2026_flow4dgs_slam","to":"gap:G2","type":"addresses_gap","evidence":"Dynamic/static handling remains central in flow-guided SLAM."}
+{"from":"paper:wang2026_multi4d","to":"gap:G1","type":"addresses_gap","evidence":"Frames oversmoothing versus overparameterization for dynamic detail."}
+{"from":"paper:wang2026_multi4d","to":"gap:G5","type":"addresses_gap","evidence":"Multi-level competitive allocation directly pressures ADAGS capacity claims."}
+{"from":"paper:wang2026_multi4d","to":"gap:G11","type":"addresses_gap","evidence":"Connects allocation with high-frequency dynamic fidelity."}
+{"from":"idea:part-aware-reversible-routing","to":"paper:wu2026_rigs","type":"inspired_by","evidence":"Route0/residual split should be compared to rigid-aware decomposition."}
+{"from":"idea:dynamic-region-diagnostic-benchmark","to":"paper:chan2026_adagar","type":"inspired_by","evidence":"Dynamic diagnostics need high-frequency/detail measurements."}
+{"from":"idea:dynamic-region-diagnostic-benchmark","to":"paper:zhang2025_d4rt","type":"inspired_by","evidence":"D4RT motivates speed/generalization baselines beyond per-scene optimization."}
+{"from":"idea:motion-aware-densification-budget","to":"paper:wang2026_multi4d","type":"inspired_by","evidence":"Competitive allocation is a direct comparator for budgeted densification."}
+{"from":"idea:route0-residual-specialist-motion","to":"gap:G6","type":"addresses_gap","evidence":"Specializes residual motion while keeping route0 as coherent base."}
+{"from":"idea:route0-residual-specialist-motion","to":"gap:G11","type":"addresses_gap","evidence":"Targets localized high-frequency dynamic failures rather than global PSNR."}
+{"from":"idea:route0-residual-specialist-motion","to":"paper:wu2026_rigs","type":"inspired_by","evidence":"RiGS pressures the coherent/residual decomposition claim."}
+{"from":"idea:route0-residual-specialist-motion","to":"paper:jin2026_moegs","type":"inspired_by","evidence":"MoE-GS motivates specialized motion capacity."}
+{"from":"idea:confidence-aware-prior-gating","to":"gap:G8","type":"addresses_gap","evidence":"Reframes flow supervision around reliability gating instead of broad application."}
+{"from":"idea:confidence-aware-prior-gating","to":"gap:G9","type":"addresses_gap","evidence":"Adds confidence/uncertainty to masks, tracks, and flow losses."}
+{"from":"idea:confidence-aware-prior-gating","to":"paper:guo2026_usplat4d","type":"inspired_by","evidence":"USplat4D motivates uncertainty-aware dynamic reconstruction."}
+{"from":"idea:dynamic-frequency-detail-budget","to":"gap:G11","type":"addresses_gap","evidence":"Makes dynamic frequency/detail preservation explicit under fixed budget."}
+{"from":"idea:dynamic-frequency-detail-budget","to":"gap:G5","type":"addresses_gap","evidence":"Requires matched realized point counts when claiming allocation gains."}
+{"from":"idea:dynamic-frequency-detail-budget","to":"paper:chan2026_adagar","type":"inspired_by","evidence":"AdaGaR frames dynamic blur as a high-frequency representation problem."}
+{"from":"idea:dynamic-frequency-detail-budget","to":"paper:wang2026_multi4d","type":"inspired_by","evidence":"Multi4D connects allocation with high-fidelity dynamic detail."}
+{"from":"idea:archive-unanchored-scaffold-residual","to":"exp:wandb-mechanism-screen-20260617","type":"invalidates","evidence":"Unanchored scaffold variants trail LoRA route0 in the 600k mechanism screen."}
+{"from":"idea:archive-unanchored-scaffold-residual","to":"paper:lei2025_mosca","type":"inspired_by","evidence":"MoSca is the crowded scaffold comparison."}
+{"from":"idea:archive-naive-broad-flow-supervision","to":"exp:wandb-flow-phase2-20260619-24","type":"invalidates","evidence":"Naive and core-mask broad flow lanes underperform render-gated flow in eval-6000."}
+{"from":"idea:archive-naive-broad-flow-supervision","to":"paper:jiang2024_motiongs","type":"inspired_by","evidence":"MotionGS crowds plain explicit flow guidance."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"gap:G1","type":"addresses_gap","evidence":"Ranks dynamic-region sharpness and diagnostic metrics as the main paper surface."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"gap:G2","type":"addresses_gap","evidence":"Makes static/dynamic leakage a required diagnostic rather than a generic split claim."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"gap:G3","type":"addresses_gap","evidence":"Ranks track/flow priors only with reliability gating or anchoring."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"gap:G7","type":"addresses_gap","evidence":"Recommends a dynamic-region diagnostic benchmark as the paper backbone."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"gap:G8","type":"addresses_gap","evidence":"Ranks render-gated flow above naive flow based on W&B eval-6000 evidence."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"gap:G11","type":"addresses_gap","evidence":"Adds dynamic frequency/detail preservation as a candidate paper axis."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"exp:wandb-mechanism-screen-20260617","type":"informed_by","evidence":"Uses mechanism-screen route0 and scaffold results to eliminate broad scaffold claims."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"exp:wandb-flow-phase2-20260619-24","type":"informed_by","evidence":"Uses eval-6000 flow and phase-2 LoRA evidence to rank render-gated flow and residual-specialist ideas."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"idea:archive-gaussian-blur-curriculum","type":"archives","evidence":"Keeps blur curriculum out of the lead paper path."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"idea:archive-hard-static-conversion","type":"archives","evidence":"Keeps hard static conversion as ablation-only negative knowledge."}
+{"from":"idea:adags-paper-direction-discovery-20260630","to":"idea:archive-part-basis-motion","type":"archives","evidence":"Preserves early part-basis as weak evidence unless reformulated with route0 and priors."}
+{"from":"idea:self-calibrated-prior-reliability-field","to":"gap:G1","type":"addresses_gap","evidence":"Reliability-gated priors target dynamic-region sharpness rather than global PSNR."}
+{"from":"idea:self-calibrated-prior-reliability-field","to":"gap:G2","type":"addresses_gap","evidence":"Static-anchor consistency and static exclusion reduce static/dynamic leakage."}
+{"from":"idea:self-calibrated-prior-reliability-field","to":"gap:G8","type":"addresses_gap","evidence":"Flow supervision is applied only where reliability predicts usefulness."}
+{"from":"idea:self-calibrated-prior-reliability-field","to":"gap:G9","type":"addresses_gap","evidence":"Adds a calibrated reliability field over masks, tracks, flow, and anchors."}
+{"from":"idea:self-calibrated-prior-reliability-field","to":"idea:boundary-aware-static-anchor-negative-space","type":"uses_component","evidence":"Boundary/static-anchor zoning is the deterministic baseline and safeguard for reliability gating."}
+{"from":"idea:self-calibrated-prior-reliability-field","to":"idea:rendered-flow-gated-supervision","type":"uses_component","evidence":"Rendered-flow gating is the first concrete instantiation of reliability-gated priors."}
+{"from":"idea:self-calibrated-prior-reliability-field","to":"idea:adags-failure-atlas-mechanism-screen","type":"requires_evidence","evidence":"Failure atlas and diagnostics provide the required claim surface and backup paper frame."}
+{"from":"idea:adags-failure-atlas-mechanism-screen","to":"gap:G7","type":"addresses_gap","evidence":"Standardizes dynamic/static diagnostics and failure panels."}
+{"from":"idea:competitive-route0-residual-budget-allocator","to":"gap:G5","type":"addresses_gap","evidence":"Preserves a future competitive capacity-allocation direction under matched budgets."}
+{"from":"idea:reliable-temporal-detail-transport","to":"gap:G11","type":"addresses_gap","evidence":"Preserves a high-risk temporal detail transport idea for dynamic high-frequency failures."}
+{"from":"paper:sandu2026_temporally_aware_densification","to":"gap:G5","type":"addresses_gap","evidence":"Visibility-aware densification adapts refinement to temporal presence and lifespan."}
+{"from":"paper:sandu2026_temporally_aware_densification","to":"gap:G13","type":"addresses_gap","evidence":"Temporal visibility is used to improve dynamic reconstruction, pressuring event-causal visibility claims."}
+{"from":"idea:event-causal-visibility-gaussians","to":"paper:sandu2026_temporally_aware_densification","type":"pressured_by","evidence":"Event-causal hide/reveal must distinguish identity-preserving visibility transitions from visibility-aware densification."}
+{"from":"paper:ramlal2026_persistgs","to":"gap:G13","type":"addresses_gap","evidence":"Object permanence under occlusion directly pressures visibility-event and hidden-identity claims."}
+{"from":"idea:event-causal-visibility-gaussians","to":"paper:ramlal2026_persistgs","type":"pressured_by","evidence":"PersistGS uses differentiable rigid-body physics for object permanence; event-causal hide/reveal should target primitive-level non-rigid-compatible visibility decisions."}
+{"from":"paper:zhang2026_vad_gs","to":"gap:G5","type":"addresses_gap","evidence":"Visibility-aware geometry recovery and densification pressure capacity/densification claims."}
+{"from":"paper:zhang2026_vad_gs","to":"gap:G13","type":"addresses_gap","evidence":"Voxel visibility reasoning explicitly handles occlusion-aware geometry updates."}
+{"from":"idea:event-causal-visibility-gaussians","to":"paper:zhang2026_vad_gs","type":"pressured_by","evidence":"VAD-GS pressures visibility-aware wording; the event-causal idea should avoid making geometry densification the main claim."}
+{"from":"experiment:r017-actual-method-real-window-check","to":"idea:event-causal-visibility-gaussians","type":"invalidates_current_form","evidence":"Checkpoint-backed runtime opacity gate on frozen R009 windows passed 0/5 gates and degraded PSNR/L1/flicker/static ghost versus route0, matched-lifespan, and residual baselines."}
+{"from":"experiment:r025-event-candidate-refine-real-window-check","to":"idea:event-causal-visibility-gaussians","type":"invalidates_current_form","evidence":"M1 non-oracle residual-component local refinement produced checkpoint-backed Gaussian renders but passed 0/5 frozen windows on PSNR+L1, worsened mean PSNR by 1.5629 dB, worsened mean L1 by 0.004043 versus route0, and recovered negative oracle fraction."}

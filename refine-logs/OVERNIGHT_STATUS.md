@@ -2,15 +2,16 @@
 
 ## Recovery Snapshot
 
-- Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R024 event-candidate local refinement eval jobs pending
-- Current method candidate: M1 non-oracle residual-component local refinement; R023 training completed and R024 eval renders pending, scoring pending
+- Current objective phase: event-crop non-oracle M1 decision recorded
+- Current run ID: R025 event-candidate refined render frozen-window scoring completed
+- Current method candidate: M1 non-oracle residual-component local refinement; closed as FAIL on frozen-window scoring
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `a724ce68373854447edaa385b3e94bf1809b8824`
-- Last HPC job ID: `48802359`
-- Latest success/failure: R023 training completed successfully with per-job extension roots and wrote three `chkpnt6200.pth` files; R024 eval jobs `48802355`, `48802357`, and `48802359` are pending on scheduler priority at 2026-07-07T12:11:10+02:00.
-- Next command to run: monitor eval jobs `48802355`, `48802357`, `48802359`, then augment `refine-logs/hide_reveal_real_windows.json` with the refined eval render folders and run frozen-window scoring.
+- Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
+- Last pushed milestone commit: `1a747fae7079f7352c3103f51d735912fcedf10a`
+- Last HPC job ID: `48805053`
+- Latest success/failure: R025 scoring completed with `ExitCode=0:0`, but M1 failed the predeclared scientific gate: 0/5 windows improved on PSNR+L1, mean PSNR worsened by `-1.5629 dB`, mean L1 worsened by `+0.004043`, and independent result-to-claim review returned `claim_supported: no` with high confidence.
+- Next command to run: no active Slurm job. If continuing beyond this FAIL decision, start a new predeclared method candidate such as M2 occlusion-boundary gated micro-densification; do not expand M1 to paper-scale validation or ablations as a positive method.
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -23,6 +24,29 @@ Recorded before new event-crop evidence edits.
   - `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md` (line-ending/formatting only in `git diff`)
   - `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md` (Markdown table formatting)
 - Untracked files/directories present before this recovery edit:
+  - `.obsidian/`
+  - `AGENTS.md`
+  - `Untitled.canvas`
+  - `configs/n3v/bootstrap.yaml`
+  - `det_con.yaml`
+  - `follow-up.md`
+  - `idea-stage/`
+  - `requirements.txt`
+  - `verify_mask.jpg`
+  - `verify_masked_flow.jpg`
+  - `verify_raw_flow.jpg`
+- Preservation rule: do not revert or restage those unrelated/pre-existing changes unless explicitly requested.
+
+## Dirty State At 2026-07-07T12:25:00+02:00 Pre-R025 Edit
+
+Recorded before collecting R024 logs and creating the R025 scoring manifest.
+
+- Branch: `codex/hide-reveal-poc-implementation`
+- HEAD: `1a747fae7079f7352c3103f51d735912fcedf10a`
+- Tracked dirty files present before this edit:
+  - `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md`
+  - `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md`
+- Untracked files/directories present before this edit:
   - `.obsidian/`
   - `AGENTS.md`
   - `Untitled.canvas`
@@ -201,6 +225,46 @@ Recorded before new event-crop evidence edits.
   - `sear_steak`: `48802359`
 - Eval manifest collected locally: `refine-logs/event_candidate_refine_eval_jobs_20260707_121022.tsv`.
 - Current R024 scheduler state at submission poll: all three jobs `PENDING` on `(Priority)`.
+
+### 2026-07-07T12:25:00+02:00 - R024 eval completed
+
+- Slurm reported all three R024 eval jobs completed with `ExitCode=0:0`:
+  - `48802355` cut_roasted_beef: `COMPLETED`, elapsed `00:08:27`, node `lrdn1670`
+  - `48802357` flame_steak: `COMPLETED`, elapsed `00:08:52`, node `lrdn0873`
+  - `48802359` sear_steak: `COMPLETED`, elapsed `00:08:36`, node `lrdn2343`
+- Eval logs show checkpoint loading from the R023 `chkpnt6200.pth` files and export of `test/ours_6200` outputs.
+- Next command: collect `logs/event_candidate_refine_eval_*_488023*.{out,err}`, build `refine-logs/hide_reveal_poc/r025_event_candidate_refine_manifest.json`, validate it, and submit frozen-window scoring.
+
+### 2026-07-07T12:29:00+02:00 - R025 scoring pre-submit
+
+- Collected R024 eval logs locally under `logs/event_candidate_refine_eval_*_488023*.{out,err}`.
+- Verified each R024 eval folder contains 300 `renders`, 300 `gt`, 300 `static`, and 300 `dynamic` frames under `test/ours_6200`.
+- Built remote manifest `refine-logs/hide_reveal_poc/r025_event_candidate_refine_manifest.json` with `system_name=event_candidate_refine` from eval root `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200`.
+- Strict validation passed with `validation_ok=True`, `windows=5`, `errors=0`, `warnings=0` for required systems `route0`, `event_candidate_refine`, `residual_uncertainty`, and `matched_lifespan`.
+- Dry-run command succeeded:
+  `scripts/submit_hide_reveal_poc.sh --stage real --manifest refine-logs/hide_reveal_poc/r025_event_candidate_refine_manifest.json --out-dir refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval --dry-run`
+- Submitted R025 scoring job `48805053`.
+- Submit manifest on Leonardo: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc_real_jobs_20260707_122508.tsv`.
+- Next command: monitor Slurm job `48805053`, then collect logs and scoring outputs.
+
+### 2026-07-07T12:37:00+02:00 - R025 completed; M1 claim rejected
+
+- Slurm job `48805053` completed with `State=COMPLETED`, `ExitCode=0:0`, elapsed `00:01:02`, node `lrdn1214`.
+- Collected locally:
+  - `logs/hide_reveal_real_48805053.{out,err}`
+  - `refine-logs/hide_reveal_poc_real_jobs_20260707_122508.tsv`
+  - `refine-logs/hide_reveal_poc/r025_event_candidate_refine_manifest.json`
+  - `refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval/real_event_window_summary.json`
+  - `refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval/real_event_window_metrics.csv`
+  - `refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval/real_event_window_report.md`
+  - `refine-logs/hide_reveal_poc/r025_event_candidate_refine_summary/crop_strips/*.jpg`
+- Raw R025 means: event_candidate_refine PSNR `28.9393`, L1/proxy-LPIPS `0.0188750`, flicker `0.00847709`, static ghost `0.125652`.
+- Route0 means: PSNR `30.5021`, L1/proxy-LPIPS `0.0148316`, flicker `0.00799083`, static ghost `0.127333`.
+- Gate counts: 0/5 windows improved over all three baselines on both PSNR and L1; 0/5 improved over route0 on both PSNR and L1; 2/5 were no worse on static ghost.
+- Oracle recovery fractions: PSNR `-0.1394`, L1 `-0.3323`.
+- Result-to-claim reviewer verdict: `claim_supported: no`, confidence `high`.
+- Decision: FAIL for M1. The method produced valid checkpoint-backed Gaussian renders without GT crop compositing, but did not recover the oracle event-crop fix.
+- Next scientific step, if continuing: change mechanism rather than tuning M1 on the frozen windows. The most defensible next candidate is M2 occlusion-boundary gated micro-densification or a detector/optimization decomposition that separates candidate support quality from refinement damage.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
@@ -408,3 +472,11 @@ Recorded before new event-crop evidence edits.
 - R015: PASS. Generated `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md`, `poc_table.csv`, `poc_decision_inputs.json`, `crop_strip_manifest.json`, and five qualitative crop strips under `crop_strips/`.
 - R016: FAIL / NO-GO for paper-scale validation. Memo: `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md`.
 - R017: FAIL. Actual checkpoint-backed opacity gate passed 0/5 frozen windows. Report: `refine-logs/hide_reveal_poc/r017_actual_method_report.md`.
+- R018: FAIL. First non-oracle candidate detector validated structurally but covered 0/5 frozen windows in posthoc overlap audit.
+- R019: PARTIAL. Motion-supported detector removed the top-band artifact but covered only 2/5 frozen windows.
+- R020: SUPPORT POOL. High-recall detector produced 72 candidates and posthoc coverage of 3/5 windows, but it was not a rendered Gaussian method result.
+- R021: FAIL. First candidate-local refinement training attempt timed out at shared PyTorch extension startup.
+- R022: CANCELLED. Replacement jobs were stopped after logs showed the shared extension-root bug persisted.
+- R023: PASS. Forced per-job extension roots allowed all three candidate-local refinement train jobs to complete and write `chkpnt6200.pth`.
+- R024: PASS. Eval jobs rendered complete `test/ours_6200` folders for all three scenes.
+- R025: FAIL. Checkpoint-backed non-oracle `event_candidate_refine` scoring passed 0/5 PSNR+L1 gates and worsened mean PSNR/L1 versus route0. Decision memo: `refine-logs/hide_reveal_poc/r025_event_candidate_refine_decision_memo.md`.
