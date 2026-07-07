@@ -3,14 +3,14 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R021 event-candidate local refinement ready for Slurm dry-run
-- Current method candidate: M1 non-oracle residual-component local refinement; candidate-local training plumbing committed, train/eval jobs pending
+- Current run ID: R021 event-candidate local refinement train jobs submitted / monitoring blocked by SSH auth
+- Current method candidate: M1 non-oracle residual-component local refinement; candidate-local training jobs submitted, eval/scoring pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Last pushed milestone commit: `86c1afc21da3948600b9b98f6e0c500c01f78dfc`
-- Last HPC job ID: `48764048`
-- Latest success/failure: R020 high-recall candidate pool structural PASS and posthoc coverage 3/5, but no Gaussian-rendered method output yet
-- Next command to run: push R021 plumbing, pull on Leonardo, run `bash -n`, dry-run `scripts/submit_event_candidate_refine.sh --mode train`, then submit train jobs if checks pass
+- Last HPC job ID: `48764718`
+- Latest success/failure: R021 train jobs submitted and passed startup log inspection; monitoring currently blocked by SSH auth rejection from Leonardo
+- Next command to run: restore SSH access, monitor train jobs `48764715`, `48764716`, `48764718`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_033133.tsv` if `chkpnt6200.pth` files exist
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -111,6 +111,19 @@ Recorded before new event-crop evidence edits.
 - Added Slurm helper `scripts/submit_event_candidate_refine.sh` for train/eval submission. Training derives route0 checkpoints from `refine-logs/hide_reveal_real_windows.json`; eval consumes the train submit manifest and renders `test/ours_6200`.
 - Local verification: bundled Python `py_compile` passed for `utils/motion_prior_utils.py` and `main.py`; cached whitespace check passed.
 - Committed R021 plumbing as `86c1afc21da3948600b9b98f6e0c500c01f78dfc` (`Add event-candidate local refinement jobs`).
+
+### 2026-07-07T03:34:00+02:00 - R021 train jobs submitted
+
+- Fixed executable bit for `scripts/submit_event_candidate_refine.sh` and pushed commit `5a3ded1d338dc7534317434907835c0de4da0e73`.
+- Pulled R021 on Leonardo and ran `bash -n scripts/submit_event_candidate_refine.sh`.
+- Dry-run succeeded for three train jobs, each resuming the correct route0 `chkpnt6000.pth` and writing under `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/`.
+- Submitted train jobs:
+  - `cut_roasted_beef`: `48764715`
+  - `flame_steak`: `48764716`
+  - `sear_steak`: `48764718`
+- Train submit manifest: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/event_candidate_refine_train_jobs_20260707_033133.tsv`.
+- Initial poll showed all three jobs running on compute nodes; stdout startup logs showed config `configs/n3v/event_candidate_local_refine_6200.yaml`, commit `5a3ded1d338dc7534317434907835c0de4da0e73`, correct checkpoints, and normal PyTorch extension startup.
+- Monitoring blocker: subsequent SSH attempts to `siyengar@login.leonardo.cineca.it` failed with `Permission denied (publickey,gssapi-keyex,gssapi-with-mic)` three times. Jobs are already submitted; eval/scoring remains pending until SSH access returns.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
