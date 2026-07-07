@@ -7,9 +7,9 @@
 - Current method candidate: M1 non-oracle residual-component local refinement; forced per-job extension-root replacement train jobs pending, eval/scoring pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `ad637f3ec50129fe40c5715804d446dfe6bdc90d`
+- Last pushed milestone commit: `9840830abe3124525413770b31fe9ef3120e196e`
 - Last HPC job ID: `48799995`
-- Latest success/failure: R022 started but still inherited shared `TORCH_EXTENSIONS_DIR`; jobs were cancelled after startup. Commit `ad637f3ec50129fe40c5715804d446dfe6bdc90d` forces per-job extension roots for Slurm jobs, and R023 train jobs are pending on scheduler priority at 2026-07-07T11:49:43+02:00.
+- Latest success/failure: R022 started but still inherited shared `TORCH_EXTENSIONS_DIR`; jobs were cancelled after startup. Commit `ad637f3ec50129fe40c5715804d446dfe6bdc90d` forces per-job extension roots for Slurm jobs, and R023 train jobs are pending on scheduler priority at 2026-07-07T11:54:57+02:00 with no stdout logs yet.
 - Next command to run: monitor train jobs `48799988`, `48799992`, `48799995`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_114908.tsv` if `chkpnt6200.pth` files exist
 - Open blockers: none known yet
 
@@ -172,6 +172,13 @@ Recorded before new event-crop evidence edits.
   - `sear_steak`: `48799995`
 - Replacement train manifest collected locally: `refine-logs/event_candidate_refine_train_jobs_20260707_114908.tsv`.
 - Current R023 scheduler state at submission poll: all three jobs `PENDING` on `(Priority)`.
+
+### 2026-07-07T11:54:57+02:00 - R023 still pending after first start estimate
+
+- Pushed R022/R023 evidence checkpoint `9840830abe3124525413770b31fe9ef3120e196e` (`Record R022 cancellation and R023 submission`).
+- Leonardo polls showed R023 train jobs `48799988`, `48799992`, and `48799995` still `PENDING`, reason `(Priority)`, elapsed `00:00:00`; no `logs/event_candidate_refine_train_*_487999*.out` files exist yet.
+- `scontrol show job 48799988` confirmed no dependency, partition `boost_usr_prod`, account/QOS `euhpc_d21_034` / `boost_qos_lprod`, one GPU requested, and priority wait as the scheduler reason.
+- Next command: `ssh -o ConnectTimeout=15 siyengar@login.leonardo.cineca.it "squeue -j 48799988,48799992,48799995 -o '%i %T %M %D %R'"`.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
