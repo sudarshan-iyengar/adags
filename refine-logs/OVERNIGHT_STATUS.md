@@ -3,14 +3,14 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R020 high-recall motion-supported candidates collected / pre-local-refinement
-- Current method candidate: M1 non-oracle residual-component local refinement; high-recall candidate pool available, local Gaussian refinement pending
+- Current run ID: R021 event-candidate local refinement ready for Slurm dry-run
+- Current method candidate: M1 non-oracle residual-component local refinement; candidate-local training plumbing committed, train/eval jobs pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `f69034be1ca32ddcd24756d945ead467d59e3c24`
+- Last pushed milestone commit: `86c1afc21da3948600b9b98f6e0c500c01f78dfc`
 - Last HPC job ID: `48764048`
 - Latest success/failure: R020 high-recall candidate pool structural PASS and posthoc coverage 3/5, but no Gaussian-rendered method output yet
-- Next command to run: inspect smallest checkpoint-backed local-refinement/render path for M1 using the R020 candidate pool
+- Next command to run: push R021 plumbing, pull on Leonardo, run `bash -n`, dry-run `scripts/submit_event_candidate_refine.sh --mode train`, then submit train jobs if checks pass
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -102,6 +102,15 @@ Recorded before new event-crop evidence edits.
 - R020 structural result: PASS. `validation_ok=True`, `validation_errors=0`, `candidates=72`, `top_k_per_scene=24`.
 - R020 posthoc coverage: `3/5` frozen windows under crop-IoU >= 0.1 and temporal-IoU >= 0.25. Audit: `refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/frozen_overlap_audit.md`.
 - Interpretation: R020 provides a non-oracle high-recall support pool for a possible local-refinement attempt, but it is not a clean detector pass and still is not a Gaussian-rendered method result.
+
+### 2026-07-07T03:32:00+02:00 - R021 local-refinement plumbing committed
+
+- Added optional `event_candidate_manifest` support to `utils/motion_prior_utils.py`; when enabled, dynamic ROI masks are intersected with non-oracle candidate boxes for matching frames, and frames with no candidate support receive no ROI loss.
+- Added optimization args `event_candidate_manifest`, `event_candidate_scene`, and `event_candidate_dilate`.
+- Added short-run config `configs/n3v/event_candidate_local_refine_6200.yaml`, resuming route0 `chkpnt6000.pth` to `chkpnt6200.pth` with candidate-local ROI loss, motion-aware densify boost, and a small 620k point budget cap.
+- Added Slurm helper `scripts/submit_event_candidate_refine.sh` for train/eval submission. Training derives route0 checkpoints from `refine-logs/hide_reveal_real_windows.json`; eval consumes the train submit manifest and renders `test/ours_6200`.
+- Local verification: bundled Python `py_compile` passed for `utils/motion_prior_utils.py` and `main.py`; cached whitespace check passed.
+- Committed R021 plumbing as `86c1afc21da3948600b9b98f6e0c500c01f78dfc` (`Add event-candidate local refinement jobs`).
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
