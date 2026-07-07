@@ -1,0 +1,162 @@
+{
+  "audit_type": "posthoc_frozen_window_overlap_only_not_candidate_input",
+  "candidate_manifest": "refine-logs\\hide_reveal_poc\\r020_high_recall_motion_supported_nonoracle_candidates\\nonoracle_candidate_manifest.json",
+  "coverage_rule": "crop_iou >= 0.1 and temporal_iou >= 0.25",
+  "covered_windows": 3,
+  "frozen_manifest": "refine-logs\\hide_reveal_real_windows.json",
+  "generated_at_utc": "2026-07-07T01:22:08+00:00",
+  "interpretation": "R020 high-recall motion-supported candidate pool covers 3/5 frozen windows, improving over R019 but still not clean full-event support; this is not a rendered method result.",
+  "rows": [
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          320,
+          240,
+          480,
+          400
+        ],
+        "candidate_frames": [
+          248,
+          263
+        ],
+        "candidate_id": "cut_roasted_beef_nonoracle_01_248_263_320_240_480_400",
+        "crop_iou": 0.2458489555436529,
+        "joint_iou": 0.0,
+        "temporal_iou": 0.0
+      },
+      "frozen_crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "frozen_frames": [
+        95,
+        110
+      ],
+      "frozen_window_id": "cut_roasted_beef_hand_tongs_meat_095_110",
+      "scene": "cut_roasted_beef"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          240,
+          320,
+          400,
+          480
+        ],
+        "candidate_frames": [
+          148,
+          163
+        ],
+        "candidate_id": "cut_roasted_beef_nonoracle_09_148_163_240_320_400_480",
+        "crop_iou": 0.666189111747851,
+        "joint_iou": 0.22206303724928367,
+        "temporal_iou": 0.3333333333333333
+      },
+      "frozen_crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "frozen_frames": [
+        140,
+        155
+      ],
+      "frozen_window_id": "cut_roasted_beef_hand_knife_meat_140_155",
+      "scene": "cut_roasted_beef"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          320,
+          320,
+          480,
+          480
+        ],
+        "candidate_frames": [
+          156,
+          171
+        ],
+        "candidate_id": "flame_steak_nonoracle_07_156_171_320_320_480_480",
+        "crop_iou": 0.44529262086513993,
+        "joint_iou": 0.3929052537045352,
+        "temporal_iou": 0.8823529411764706
+      },
+      "frozen_crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "frozen_frames": [
+        155,
+        170
+      ],
+      "frozen_window_id": "flame_steak_torch_pan_155_170",
+      "scene": "flame_steak"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          240,
+          320,
+          400,
+          480
+        ],
+        "candidate_frames": [
+          184,
+          199
+        ],
+        "candidate_id": "flame_steak_nonoracle_10_184_199_240_320_400_480",
+        "crop_iou": 0.5865921787709497,
+        "joint_iou": 0.10862818125387957,
+        "temporal_iou": 0.18518518518518517
+      },
+      "frozen_crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "frozen_frames": [
+        195,
+        210
+      ],
+      "frozen_window_id": "flame_steak_torch_sweep_195_210",
+      "scene": "flame_steak"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          240,
+          320,
+          400,
+          480
+        ],
+        "candidate_frames": [
+          220,
+          235
+        ],
+        "candidate_id": "sear_steak_nonoracle_03_220_235_240_320_400_480",
+        "crop_iou": 0.702416918429003,
+        "joint_iou": 0.702416918429003,
+        "temporal_iou": 1.0
+      },
+      "frozen_crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "frozen_frames": [
+        220,
+        235
+      ],
+      "frozen_window_id": "sear_steak_spoon_pan_220_235",
+      "scene": "sear_steak"
+    }
+  ],
+  "total_windows": 5
+}

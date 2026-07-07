@@ -1,0 +1,72 @@
+{
+  "candidate_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r019_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json",
+  "limitations": [
+    "This is candidate discovery only; it does not prove a Gaussian method improves the frozen windows.",
+    "Scores do not use GT residual or frozen crop labels, but they can still select easy motion rather than the target event-crop failures.",
+    "The candidate manifest includes gt_dir only so downstream evaluators can score renders; gt_dir is not used for candidate scoring."
+  ],
+  "n_candidates": 24,
+  "scene_reports": [
+    {
+      "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+      "image_size_hw": [
+        507,
+        676
+      ],
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks",
+      "n_dynamic_frames_indexed": 300,
+      "n_mask_frames_indexed": 300,
+      "n_raw_candidates": 3456,
+      "n_render_frames_indexed": 300,
+      "n_scored_frames": 300,
+      "n_selected_candidates": 8,
+      "n_static_frames_indexed": 300,
+      "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000",
+      "route0_system": "route0",
+      "scene": "cut_roasted_beef",
+      "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+    },
+    {
+      "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+      "image_size_hw": [
+        507,
+        676
+      ],
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks",
+      "n_dynamic_frames_indexed": 300,
+      "n_mask_frames_indexed": 300,
+      "n_raw_candidates": 3456,
+      "n_render_frames_indexed": 300,
+      "n_scored_frames": 300,
+      "n_selected_candidates": 8,
+      "n_static_frames_indexed": 300,
+      "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "route0_system": "route0",
+      "scene": "flame_steak",
+      "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+    },
+    {
+      "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+      "image_size_hw": [
+        507,
+        676
+      ],
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks",
+      "n_dynamic_frames_indexed": 300,
+      "n_mask_frames_indexed": 300,
+      "n_raw_candidates": 3456,
+      "n_render_frames_indexed": 300,
+      "n_scored_frames": 300,
+      "n_selected_candidates": 8,
+      "n_static_frames_indexed": 300,
+      "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "route0_system": "route0",
+      "scene": "sear_steak",
+      "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+    }
+  ],
+  "source_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_real_windows.json"
+}

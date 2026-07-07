@@ -1,0 +1,796 @@
+{
+  "description": "Non-oracle event-support candidates discovered without frozen event-crop labels.",
+  "frames_are_inclusive": true,
+  "generated_at_utc": "2026-07-07T01:13:19+00:00",
+  "generated_by": "nonoracle-candidates",
+  "route0_system": "route0",
+  "selection_parameters": {
+    "crop_iou_threshold": 0.5,
+    "score_weights": {
+      "motion_mask_boundary": 0.1,
+      "motion_mask_interior": 0.25,
+      "motion_supported_dynamic_render": 0.35,
+      "motion_supported_route0_render_flicker": 0.05,
+      "motion_supported_static_render_delta": 0.25
+    },
+    "temporal_iou_threshold": 0.5,
+    "temporal_stride": 4,
+    "tile_size": 160,
+    "tile_stride": 80,
+    "top_k_per_scene": 8,
+    "window_length": 16
+  },
+  "source_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_real_windows.json",
+  "uses_frozen_window_labels": false,
+  "uses_gt_residual": false,
+  "windows": [
+    {
+      "candidate_score": 0.05998587242793291,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.027632387646008283,
+        "flicker_motion_mean": 0.006248082368983887,
+        "mask_boundary_mean": 0.07429283508099616,
+        "motion_mask_mean": 0.13896595546975732,
+        "score_mean": 0.056505509885028005,
+        "score_peak": 0.06810671836137772,
+        "static_delta_motion_mean": 0.01740398973925039
+      },
+      "crop_xyxy": [
+        320,
+        240,
+        480,
+        400
+      ],
+      "frame_end": 263,
+      "frame_start": 248,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_01_248_263_320_240_480_400"
+    },
+    {
+      "candidate_score": 0.051115292590111494,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.021567066723946482,
+        "flicker_motion_mean": 0.004537581968179438,
+        "mask_boundary_mean": 0.06534746440593153,
+        "motion_mask_mean": 0.10541427321732044,
+        "score_mean": 0.04383325297385454,
+        "score_peak": 0.06810671836137772,
+        "static_delta_motion_mean": 0.012678340950515121
+      },
+      "crop_xyxy": [
+        320,
+        240,
+        480,
+        400
+      ],
+      "frame_end": 271,
+      "frame_start": 256,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_02_256_271_320_240_480_400"
+    },
+    {
+      "candidate_score": 0.04841211740858853,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.024828541674651206,
+        "flicker_motion_mean": 0.004461369622731581,
+        "mask_boundary_mean": 0.06283079646527767,
+        "motion_mask_mean": 0.10725887678563595,
+        "score_mean": 0.04641983611509204,
+        "score_peak": 0.05306077376008034,
+        "static_delta_motion_mean": 0.017635919561143965
+      },
+      "crop_xyxy": [
+        320,
+        320,
+        480,
+        480
+      ],
+      "frame_end": 267,
+      "frame_start": 252,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_03_252_267_320_320_480_480"
+    },
+    {
+      "candidate_score": 0.04636632022447884,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.02046298037748784,
+        "flicker_motion_mean": 0.0049660404765745625,
+        "mask_boundary_mean": 0.054941990645602345,
+        "motion_mask_mean": 0.10448086052201688,
+        "score_mean": 0.04254292277619243,
+        "score_peak": 0.05528758093714714,
+        "static_delta_motion_mean": 0.01407265244051814
+      },
+      "crop_xyxy": [
+        240,
+        240,
+        400,
+        400
+      ],
+      "frame_end": 259,
+      "frame_start": 244,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_04_244_259_240_240_400_400"
+    },
+    {
+      "candidate_score": 0.04598837254452519,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.017730318068061024,
+        "flicker_motion_mean": 0.003895244146406185,
+        "mask_boundary_mean": 0.05235345859546214,
+        "motion_mask_mean": 0.08935773721896112,
+        "score_mean": 0.03703052207129076,
+        "score_peak": 0.06689002364873886,
+        "static_delta_motion_mean": 0.0122214718721807
+      },
+      "crop_xyxy": [
+        320,
+        240,
+        480,
+        400
+      ],
+      "frame_end": 255,
+      "frame_start": 240,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_05_240_255_320_240_480_400"
+    },
+    {
+      "candidate_score": 0.04532237742096186,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.020506318716797978,
+        "flicker_motion_mean": 0.004437610892637167,
+        "mask_boundary_mean": 0.05287691461853683,
+        "motion_mask_mean": 0.10345702292397618,
+        "score_mean": 0.042272774502635,
+        "score_peak": 0.05243811756372452,
+        "static_delta_motion_mean": 0.014886942750308663
+      },
+      "crop_xyxy": [
+        320,
+        320,
+        480,
+        480
+      ],
+      "frame_end": 259,
+      "frame_start": 244,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_06_244_259_320_320_480_480"
+    },
+    {
+      "candidate_score": 0.041339225019328296,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.021262136986479163,
+        "flicker_motion_mean": 0.005030591375543736,
+        "mask_boundary_mean": 0.04452487314119935,
+        "motion_mask_mean": 0.09386359946802258,
+        "score_mean": 0.038669751258566976,
+        "score_peak": 0.04756799712777138,
+        "static_delta_motion_mean": 0.012232345179654658
+      },
+      "crop_xyxy": [
+        320,
+        160,
+        480,
+        320
+      ],
+      "frame_end": 263,
+      "frame_start": 248,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_07_248_263_320_160_480_320"
+    },
+    {
+      "candidate_score": 0.04057288456824608,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.015779763518366963,
+        "flicker_motion_mean": 0.004017523082438856,
+        "mask_boundary_mean": 0.04643678187858313,
+        "motion_mask_mean": 0.08545462763868272,
+        "score_mean": 0.03426658612443134,
+        "score_peak": 0.05528758093714714,
+        "static_delta_motion_mean": 0.010141828730411362
+      },
+      "crop_xyxy": [
+        240,
+        240,
+        400,
+        400
+      ],
+      "frame_end": 267,
+      "frame_start": 252,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_nonoracle_08_252_267_240_240_400_400"
+    },
+    {
+      "candidate_score": 0.056723646330647165,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.03373949637170881,
+        "flicker_motion_mean": 0.00791465220390819,
+        "mask_boundary_mean": 0.042862591333687305,
+        "motion_mask_mean": 0.11723186587914824,
+        "score_mean": 0.051955147879198194,
+        "score_peak": 0.06785014271736145,
+        "static_delta_motion_mean": 0.02462546608876437
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 183,
+      "frame_start": 168,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_01_168_183_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.05417929473333061,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.030354059068486094,
+        "flicker_motion_mean": 0.0063685489585623145,
+        "mask_boundary_mean": 0.06834275485016406,
+        "motion_mask_mean": 0.11975475633516908,
+        "score_mean": 0.05276779131963849,
+        "score_peak": 0.05747280269861221,
+        "static_delta_motion_mean": 0.02020991308381781
+      },
+      "crop_xyxy": [
+        240,
+        240,
+        400,
+        400
+      ],
+      "frame_end": 191,
+      "frame_start": 176,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_02_176_191_240_240_400_400"
+    },
+    {
+      "candidate_score": 0.052715601853560654,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.0286567744333297,
+        "flicker_motion_mean": 0.0067537897703005,
+        "mask_boundary_mean": 0.03467508207540959,
+        "motion_mask_mean": 0.10743434866890311,
+        "score_mean": 0.04622937005478889,
+        "score_peak": 0.06785014271736145,
+        "static_delta_motion_mean": 0.022142855887068436
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 175,
+      "frame_start": 160,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_03_160_175_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.051428171410225335,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.028665788588114083,
+        "flicker_motion_mean": 0.007017401745542884,
+        "mask_boundary_mean": 0.03586113569326699,
+        "motion_mask_mean": 0.10356245096772909,
+        "score_mean": 0.04537766450084746,
+        "score_peak": 0.06554602086544037,
+        "static_delta_motion_mean": 0.022068167512770742
+      },
+      "crop_xyxy": [
+        320,
+        320,
+        480,
+        480
+      ],
+      "frame_end": 179,
+      "frame_start": 164,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_04_164_179_320_320_480_480"
+    },
+    {
+      "candidate_score": 0.049174917105119675,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.026494808087591082,
+        "flicker_motion_mean": 0.005953495186986402,
+        "mask_boundary_mean": 0.05389525950886309,
+        "motion_mask_mean": 0.1047888514585793,
+        "score_mean": 0.0456186804221943,
+        "score_peak": 0.05747280269861221,
+        "static_delta_motion_mean": 0.01784434146247804
+      },
+      "crop_xyxy": [
+        240,
+        240,
+        400,
+        400
+      ],
+      "frame_end": 183,
+      "frame_start": 168,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_05_168_183_240_240_400_400"
+    },
+    {
+      "candidate_score": 0.04762279712595045,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.029947903705760837,
+        "flicker_motion_mean": 0.005276254960335791,
+        "mask_boundary_mean": 0.04958735476247966,
+        "motion_mask_mean": 0.09994166484102607,
+        "score_mean": 0.04603516450151801,
+        "score_peak": 0.05132727324962616,
+        "static_delta_motion_mean": 0.021381738130003214
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 191,
+      "frame_start": 176,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_06_176_191_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.04469762496883049,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.02219952968880534,
+        "flicker_motion_mean": 0.004324780835304409,
+        "mask_boundary_mean": 0.03257957973983139,
+        "motion_mask_mean": 0.08065591147169471,
+        "score_mean": 0.035762598155997694,
+        "score_peak": 0.06554602086544037,
+        "static_delta_motion_mean": 0.01741834610584192
+      },
+      "crop_xyxy": [
+        320,
+        320,
+        480,
+        480
+      ],
+      "frame_end": 171,
+      "frame_start": 156,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_07_156_171_320_320_480_480"
+    },
+    {
+      "candidate_score": 0.04429568956838921,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.02202040795236826,
+        "flicker_motion_mean": 0.005156387662282214,
+        "mask_boundary_mean": 0.039325443329289556,
+        "motion_mask_mean": 0.08024739613756537,
+        "score_mean": 0.03587692778091878,
+        "score_peak": 0.06393946707248688,
+        "static_delta_motion_mean": 0.015670291264541447
+      },
+      "crop_xyxy": [
+        320,
+        320,
+        480,
+        480
+      ],
+      "frame_end": 187,
+      "frame_start": 172,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_nonoracle_08_172_187_320_320_480_480"
+    },
+    {
+      "candidate_score": 0.03213027903111651,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.016085029987152666,
+        "flicker_motion_mean": 0.0023961883853189647,
+        "mask_boundary_mean": 0.03562432050239295,
+        "motion_mask_mean": 0.07348421332426369,
+        "score_mean": 0.029631844605319202,
+        "score_peak": 0.03795995935797691,
+        "static_delta_motion_mean": 0.007795157580403611
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 291,
+      "frame_start": 276,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_01_276_291_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.029121139540802685,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.013447309262119234,
+        "flicker_motion_mean": 0.0012394563855195884,
+        "mask_boundary_mean": 0.03217096533626318,
+        "motion_mask_mean": 0.0707082583103329,
+        "score_mean": 0.027399150771088898,
+        "score_peak": 0.03313911333680153,
+        "static_delta_motion_mean": 0.006945837027160451
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 299,
+      "frame_start": 284,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_02_284_299_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.025405139446957034,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.013858547492418438,
+        "flicker_motion_mean": 0.0013547311482398072,
+        "mask_boundary_mean": 0.023871887649875134,
+        "motion_mask_mean": 0.03913671791087836,
+        "score_mean": 0.019437371578533202,
+        "score_peak": 0.039329931139945984,
+        "static_delta_motion_mean": 0.009391101950313896
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 235,
+      "frame_start": 220,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_03_220_235_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.024538879675969835,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.01145106050597633,
+        "flicker_motion_mean": 0.0019024871085999706,
+        "mask_boundary_mean": 0.019982757403340656,
+        "motion_mask_mean": 0.04500805148973086,
+        "score_mean": 0.01878698838368109,
+        "score_peak": 0.03795995935797691,
+        "static_delta_motion_mean": 0.005734815709843133
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 283,
+      "frame_start": 268,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_04_268_283_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.024045536329504104,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.012136039571487345,
+        "flicker_motion_mean": 0.0011850129230879247,
+        "mask_boundary_mean": 0.022458590916357934,
+        "motion_mask_mean": 0.03589640697464347,
+        "score_mean": 0.017495081410743296,
+        "score_peak": 0.039329931139945984,
+        "static_delta_motion_mean": 0.007873025926528499
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 243,
+      "frame_start": 228,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_05_228_243_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.018540603306610136,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.010396325116744265,
+        "flicker_motion_mean": 0.0018988146803167183,
+        "mask_boundary_mean": 0.02589130529668182,
+        "motion_mask_mean": 0.03616564243566245,
+        "score_mean": 0.016689459676854312,
+        "score_peak": 0.022859938442707062,
+        "static_delta_motion_mean": 0.00530105632788036
+      },
+      "crop_xyxy": [
+        320,
+        160,
+        480,
+        320
+      ],
+      "frame_end": 95,
+      "frame_start": 80,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_06_080_095_320_160_480_320"
+    },
+    {
+      "candidate_score": 0.01834301550989039,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.011133406369481236,
+        "flicker_motion_mean": 0.0012699886319751386,
+        "mask_boundary_mean": 0.019328833383042365,
+        "motion_mask_mean": 0.03418036736547947,
+        "score_mean": 0.016429646115284413,
+        "score_peak": 0.022807544097304344,
+        "static_delta_motion_mean": 0.007965915443492122
+      },
+      "crop_xyxy": [
+        240,
+        320,
+        400,
+        480
+      ],
+      "frame_end": 219,
+      "frame_start": 204,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_07_204_219_240_320_400_480"
+    },
+    {
+      "candidate_score": 0.01813465651939623,
+      "candidate_terms": {
+        "dynamic_motion_mean": 0.010112956748344004,
+        "flicker_motion_mean": 0.0018599089453346096,
+        "mask_boundary_mean": 0.025281661713961512,
+        "motion_mask_mean": 0.03563001734437421,
+        "score_mean": 0.01637135521741584,
+        "score_peak": 0.022249026224017143,
+        "static_delta_motion_mean": 0.005212617426877841
+      },
+      "crop_xyxy": [
+        240,
+        160,
+        400,
+        320
+      ],
+      "frame_end": 95,
+      "frame_start": 80,
+      "notes": "Automatically discovered from motion-supported route0 dynamic output, route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; no GT residual and no frozen event-crop labels used.",
+      "occluder": "NONORACLE_CANDIDATE",
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_nonoracle_08_080_095_240_160_400_320"
+    }
+  ]
+}

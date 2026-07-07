@@ -1,0 +1,1451 @@
+{
+  "errors": [],
+  "manifest": "refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json",
+  "n_windows": 72,
+  "ok": true,
+  "warnings": [
+    "R009 expected 4-6 windows; manifest has 72."
+  ],
+  "windows": [
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_01_248_263_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_02_256_271_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_03_252_267_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_04_244_259_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_05_240_255_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_06_244_259_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_07_248_263_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_08_252_267_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_09_148_163_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_10_260_275_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_11_184_199_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_12_156_171_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_13_184_199_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_14_176_191_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_15_256_271_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_16_244_259_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_17_152_167_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_18_120_135_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_19_236_251_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_20_176_191_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_21_248_263_240_160_400_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_22_240_255_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_23_264_279_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "cut_roasted_beef",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "cut_roasted_beef_nonoracle_24_208_223_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_01_168_183_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_02_176_191_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_03_160_175_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_04_164_179_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_05_168_183_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_06_176_191_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_07_156_171_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_08_172_187_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_09_172_187_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_10_184_199_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_11_248_263_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_12_256_271_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_13_184_199_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_14_180_195_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_15_164_179_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_16_240_255_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_17_076_091_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_18_176_191_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_19_080_095_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_20_176_191_240_160_400_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_21_204_219_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_22_168_183_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_23_160_175_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "flame_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "flame_steak_nonoracle_24_264_279_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_01_276_291_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_02_284_299_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_03_220_235_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_04_268_283_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_05_228_243_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_06_080_095_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_07_204_219_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_08_080_095_240_160_400_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_09_276_291_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_10_212_227_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_11_164_179_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_12_280_295_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_13_284_299_320_320_480_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_14_228_243_160_320_320_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_15_280_295_160_240_320_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_16_172_187_240_320_400_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_17_088_103_240_160_400_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_18_008_023_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_19_088_103_320_160_480_320"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_20_220_235_160_320_320_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_21_080_095_320_240_480_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_22_284_299_160_320_320_480"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_23_084_099_240_240_400_400"
+    },
+    {
+      "errors": [],
+      "ok": true,
+      "scene": "sear_steak",
+      "systems": {
+        "route0": {
+          "errors": [],
+          "n_frames": 16,
+          "ok": true,
+          "paths": {
+            "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+            "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+            "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+          },
+          "warnings": []
+        }
+      },
+      "warnings": [],
+      "window_id": "sear_steak_nonoracle_24_008_023_240_160_400_320"
+    }
+  ]
+}

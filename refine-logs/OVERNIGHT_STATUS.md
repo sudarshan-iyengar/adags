@@ -3,14 +3,14 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R018 detector failure analyzed / A2 motion-supported detector local smoke passed / pre-R019
-- Current method candidate: M1 non-oracle residual-component local refinement; candidate-discovery dry-run being repaired, local Gaussian refinement pending
+- Current run ID: R020 high-recall motion-supported candidates collected / pre-local-refinement
+- Current method candidate: M1 non-oracle residual-component local refinement; high-recall candidate pool available, local Gaussian refinement pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Last pushed milestone commit: `f69034be1ca32ddcd24756d945ead467d59e3c24`
-- Last HPC job ID: `48760448`
-- Latest success/failure: R018 structural PASS but detector FAIL; non-oracle candidate job `48763378` completed with validation_ok=True and 24 candidates, but posthoc frozen-overlap audit covered 0/5 windows
-- Next command to run: commit/push A2 motion-supported detector, pull on Leonardo, dry-run and submit R019 through Slurm
+- Last HPC job ID: `48764048`
+- Latest success/failure: R020 high-recall candidate pool structural PASS and posthoc coverage 3/5, but no Gaussian-rendered method output yet
+- Next command to run: inspect smallest checkpoint-backed local-refinement/render path for M1 using the R020 candidate pool
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -85,6 +85,23 @@ Recorded before new event-crop evidence edits.
   `scripts/run_hide_reveal_poc.py nonoracle-candidates --manifest refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/smoke_manifest.json --out-dir refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/out_motion_supported --window-length 4 --temporal-stride 2 --tile-size 16 --tile-stride 8 --top-k-per-scene 3`
 - A2 local smoke result: `validation_ok=True`, `validation_errors=0`, `candidates=3`, with selected crop `[24, 32, 40, 48]` over the synthetic moving square.
 - Committed A2 implementation and R018 evidence as `f69034be1ca32ddcd24756d945ead467d59e3c24` (`Require motion support for event candidates`).
+
+### 2026-07-07T03:15:30+02:00 - R019 motion-supported candidate job completed
+
+- Pulled A2 on Leonardo; shell syntax checks passed with `bash -n`.
+- Submitted `scripts/submit_hide_reveal_poc.sh --stage nonoracle-candidates --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r019_motion_supported_nonoracle_candidates`.
+- Slurm job `48763799` completed on `lrdn0122` with `State=COMPLETED`, `ExitCode=0:0`, `Elapsed=00:02:01`.
+- R019 structural result: PASS. `validation_ok=True`, `validation_errors=0`, `candidates=24`.
+- R019 detector result: PARTIAL / insufficient for full M1. Posthoc audit in `refine-logs/hide_reveal_poc/r019_motion_supported_nonoracle_candidates/frozen_overlap_audit.md` covered `2/5` frozen windows. It fixed the R018 top-band artifact but missed both `cut_roasted_beef` windows and the second `flame_steak` window under the fixed overlap rule.
+
+### 2026-07-07T03:21:00+02:00 - R020 high-recall candidate pool completed
+
+- Submitted the same A2 detector with `HIDE_REVEAL_NONORACLE_TOP_K_PER_SCENE=24` to test whether the remaining failure was proposal-budget limited.
+- Command: `HIDE_REVEAL_NONORACLE_TOP_K_PER_SCENE=24 scripts/submit_hide_reveal_poc.sh --stage nonoracle-candidates --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates`.
+- Slurm job `48764048` completed on `lrdn0085` with `State=COMPLETED`, `ExitCode=0:0`, `Elapsed=00:02:04`.
+- R020 structural result: PASS. `validation_ok=True`, `validation_errors=0`, `candidates=72`, `top_k_per_scene=24`.
+- R020 posthoc coverage: `3/5` frozen windows under crop-IoU >= 0.1 and temporal-IoU >= 0.25. Audit: `refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/frozen_overlap_audit.md`.
+- Interpretation: R020 provides a non-oracle high-recall support pool for a possible local-refinement attempt, but it is not a clean detector pass and still is not a Gaussian-rendered method result.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 

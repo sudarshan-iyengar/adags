@@ -1,0 +1,2 @@
+job_id	stage	manifest	out_dir	log_stdout	log_stderr
+48764048	nonoracle-candidates	refine-logs/hide_reveal_real_windows.json	refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_nonoracle-candidates_48764048.out	/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_nonoracle-candidates_48764048.err
