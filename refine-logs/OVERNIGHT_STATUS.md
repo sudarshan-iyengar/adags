@@ -7,9 +7,9 @@
 - Current method candidate: M1 non-oracle residual-component local refinement; replacement candidate-local training jobs pending, eval/scoring pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `657f0cd201dda6c84c0b4442e53380e4d837f1ad`
+- Last pushed milestone commit: `345e743cbb86a329a1877f658e7f4e1d7833463a`
 - Last HPC job ID: `48796174`
-- Latest success/failure: R021 train jobs timed out before writing checkpoints; R022 replacement train jobs submitted with per-job torch extension dirs and 2h walltime, currently pending on priority
+- Latest success/failure: R021 train jobs timed out before writing checkpoints; R022 replacement train jobs submitted with per-job torch extension dirs and 2h walltime, still pending on scheduler priority at 2026-07-07T11:27:49+02:00
 - Next command to run: monitor train jobs `48796168`, `48796170`, `48796174`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv` if `chkpnt6200.pth` files exist
 - Open blockers: none known yet
 
@@ -142,6 +142,12 @@ Recorded before new event-crop evidence edits.
   - `sear_steak`: `48796174`
 - Replacement train manifest collected locally: `refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv`.
 - Current R022 scheduler state at last poll: all three jobs `PENDING` on `(Priority)`.
+
+### 2026-07-07T11:27:49+02:00 - R022 still pending
+
+- Pushed R021/R022 evidence checkpoint `345e743cbb86a329a1877f658e7f4e1d7833463a` (`Record R021 timeout and R022 submission`).
+- Leonardo `squeue` and `sacct` poll reported R022 replacement train jobs `48796168`, `48796170`, and `48796174` all `PENDING`, elapsed `00:00:00`, reason `(Priority)`, no nodes assigned.
+- Next action remains to monitor those jobs; if they complete and write `chkpnt6200.pth`, submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv`.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
