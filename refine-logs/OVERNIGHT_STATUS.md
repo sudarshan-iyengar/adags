@@ -3,14 +3,14 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R022 event-candidate local refinement replacement train jobs pending
-- Current method candidate: M1 non-oracle residual-component local refinement; replacement candidate-local training jobs pending, eval/scoring pending
+- Current run ID: R023 event-candidate local refinement train jobs pending
+- Current method candidate: M1 non-oracle residual-component local refinement; forced per-job extension-root replacement train jobs pending, eval/scoring pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `9224dc8bbab8dd9251598f66f74cad67d9d203da`
-- Last HPC job ID: `48796174`
-- Latest success/failure: R021 train jobs timed out before writing checkpoints; R022 replacement train jobs submitted with per-job torch extension dirs and 2h walltime, still pending on scheduler priority at 2026-07-07T11:39:50+02:00 with no stdout logs yet
-- Next command to run: monitor train jobs `48796168`, `48796170`, `48796174`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_110953.tsv` if `chkpnt6200.pth` files exist
+- Last pushed milestone commit: `ad637f3ec50129fe40c5715804d446dfe6bdc90d`
+- Last HPC job ID: `48799995`
+- Latest success/failure: R022 started but still inherited shared `TORCH_EXTENSIONS_DIR`; jobs were cancelled after startup. Commit `ad637f3ec50129fe40c5715804d446dfe6bdc90d` forces per-job extension roots for Slurm jobs, and R023 train jobs are pending on scheduler priority at 2026-07-07T11:49:43+02:00.
+- Next command to run: monitor train jobs `48799988`, `48799992`, `48799995`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_114908.tsv` if `chkpnt6200.pth` files exist
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -155,6 +155,23 @@ Recorded before new event-crop evidence edits.
 - Additional Leonardo polls showed R022 train jobs `48796168`, `48796170`, and `48796174` still `PENDING`, reason `(Priority)`, elapsed `00:00:00`; no `logs/event_candidate_refine_train_*_487961*.out` files exist yet.
 - `scontrol show job 48796168` showed no dependency, correct account/QOS `euhpc_d21_034` / `boost_qos_lprod`, partition `boost_usr_prod`, one GPU requested, and priority wait as the only scheduler reason.
 - Next command: `ssh -o ConnectTimeout=15 siyengar@login.leonardo.cineca.it "squeue -j 48796168,48796170,48796174 -o '%i %T %M %D %R'"`.
+
+### 2026-07-07T11:49:43+02:00 - R022 cancelled; R023 submitted with forced per-job extension roots
+
+- R022 jobs `48796168`, `48796170`, and `48796174` started, but stdout showed `torch_extensions_dir: /leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions`, proving the previous default was overridden by `leonardo_env.sh` and the jobs were still using the shared extension root.
+- Cancelled R022 with `scancel` after roughly 2-3 minutes; Slurm accounting reports `CANCELLED by 132193`.
+- Collected R022 startup logs locally:
+  - `logs/event_candidate_refine_train_cut_roasted_beef_48796168.{out,err}`
+  - `logs/event_candidate_refine_train_flame_steak_48796170.{out,err}`
+  - `logs/event_candidate_refine_train_sear_steak_48796174.{out,err}`
+- Patched and pushed `scripts/run_leonardo.sh` in commit `ad637f3ec50129fe40c5715804d446dfe6bdc90d` so Slurm jobs force `TORCH_EXTENSIONS_DIR=$PROJECT_ROOT/build/torch_extensions_jobs/$SLURM_JOB_ID` unless `ADAGS_TORCH_EXTENSIONS_DIR` is explicitly set.
+- Pulled `ad637f3ec50129fe40c5715804d446dfe6bdc90d` on Leonardo and verified `bash -n scripts/run_leonardo.sh scripts/submit_event_candidate_refine.sh`.
+- Submitted R023 replacement train jobs with `TIME=02:00:00` and login-side `ADAGS_ENV_SCRIPT=/dev/null` to avoid slow env setup during manifest parsing:
+  - `cut_roasted_beef`: `48799988`
+  - `flame_steak`: `48799992`
+  - `sear_steak`: `48799995`
+- Replacement train manifest collected locally: `refine-logs/event_candidate_refine_train_jobs_20260707_114908.tsv`.
+- Current R023 scheduler state at submission poll: all three jobs `PENDING` on `(Priority)`.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
