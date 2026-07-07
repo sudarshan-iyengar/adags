@@ -2,16 +2,51 @@
 
 ## Recovery Snapshot
 
-- Current run ID: R017
+- Current objective phase: event-crop non-oracle recovery and method planning
+- Current run ID: post-R017 / pre-R018
+- Current method candidate: M1 non-oracle residual-component local refinement, tentative pending code-path inspection
 - Current branch: `codex/hide-reveal-poc-implementation`
-- Last local commit before R017 implementation: `5df0027a021a032cf21a3ebb031fa1d88f9efff2`
-- Last pushed milestone commit before R017 implementation: `5df0027a021a032cf21a3ebb031fa1d88f9efff2`
+- Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
+- Last pushed milestone commit: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Last HPC job ID: `48760448`
 - Latest success/failure: R017 FAIL / actual checkpoint-backed runtime opacity gate passed 0/5 frozen R009 real-window gates
-- Next command to run: none for R017; stop before paper-scale validation unless a new actual-method idea is specified
+- Next command to run: inspect existing training/render paths for M1 local-refinement implementation and add a dry-run candidate discovery CLI before any HPC job
 - Open blockers: none known yet
 
+## Dirty State At 2026-07-07 Recovery Start
+
+Recorded before new event-crop evidence edits.
+
+- Branch: `codex/hide-reveal-poc-implementation`
+- HEAD: `f5d43539aee500051f2a4c5eeca5420293b636f1`
+- Tracked dirty files present before this recovery edit:
+  - `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md` (line-ending/formatting only in `git diff`)
+  - `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md` (Markdown table formatting)
+- Untracked files/directories present before this recovery edit:
+  - `.obsidian/`
+  - `AGENTS.md`
+  - `Untitled.canvas`
+  - `configs/n3v/bootstrap.yaml`
+  - `det_con.yaml`
+  - `follow-up.md`
+  - `idea-stage/`
+  - `requirements.txt`
+  - `verify_mask.jpg`
+  - `verify_masked_flow.jpg`
+  - `verify_raw_flow.jpg`
+- Preservation rule: do not revert or restage those unrelated/pre-existing changes unless explicitly requested.
+
 ## Session Log
+
+### 2026-07-07 - Event-crop non-oracle objective recovery
+
+- Read goal objective file `C:\Users\Sudarshan\.codex\attachments\833ea181-b1f3-4a27-a22e-ea7ccafec21a\goal-objective.md`.
+- Read prior Codex thread `019f34bf-83e1-7191-b3b6-64dc6bf3f06e`; retained that R013/R015 were GT-crop upper bounds and R017 was the actual checkpoint-backed renderer failure.
+- Read `research-wiki/query_pack.md`, `research-wiki/gap_map.md`, relevant idea/experiment/paper pages, and the R017 wiki experiment page.
+- Wrote evidence summary `refine-logs/EVENT_CROP_FIX_EVIDENCE.md`.
+- Wrote wiki memory `research-wiki/event-crop-fix.md`.
+- Wrote predeclared method/evaluation tracker `refine-logs/EVENT_CROP_METHOD_TRACKER.md`.
+- Predeclared first candidate: M1 non-oracle residual-component local refinement, pending code inspection.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
@@ -218,4 +253,4 @@
 - R014: SKIP. Conditional equal-budget refinement diagnostic not triggered.
 - R015: PASS. Generated `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md`, `poc_table.csv`, `poc_decision_inputs.json`, `crop_strip_manifest.json`, and five qualitative crop strips under `crop_strips/`.
 - R016: FAIL / NO-GO for paper-scale validation. Memo: `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md`.
-- R017: pending.
+- R017: FAIL. Actual checkpoint-backed opacity gate passed 0/5 frozen windows. Report: `refine-logs/hide_reveal_poc/r017_actual_method_report.md`.

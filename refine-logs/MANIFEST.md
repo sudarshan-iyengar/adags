@@ -124,3 +124,5 @@ Created: 2026-06-30T20:13:16+02:00
 | `hide_reveal_poc/r015_poc_summary/crop_strip_manifest.json` | R015 source-frame manifest listing exact remote PNGs used for qualitative crop strips. |
 | `hide_reveal_poc/r015_poc_summary/crop_strips/` | R015 qualitative strips for the five frozen real event windows, comparing route0, matched-lifespan, and derived hide/reveal rows. |
 | `hide_reveal_poc/r016_go_no_go_memo.md` | R016 final go/no-go memo: no-go for paper-scale validation until an actual trained Gaussian/checkpoint-backed hide/reveal real-window check passes. |
+| `EVENT_CROP_FIX_EVIDENCE.md` | Compact source-of-truth evidence summary for the post-R017 event-crop non-oracle objective. |
+| `EVENT_CROP_METHOD_TRACKER.md` | Predeclared metrics, thresholds, candidate methods, and attempt log for non-oracle event-crop fix attempts. |

@@ -1,0 +1,89 @@
+# Event-Crop Method Tracker
+
+Generated: 2026-07-07
+
+## Current Phase
+
+Phase 2: define the non-oracle target and choose the first method candidate.
+
+The R017 runtime opacity gate is closed as a failed actual-method check. Future methods must not use the frozen R009 event crops as test-time method inputs.
+
+## Source Metrics
+
+| Role | System | Mean PSNR | Mean L1/proxy-LPIPS | Mean flicker | Mean static ghost | Source |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| baseline | route0 | 30.5021 | 0.0148316 | 0.00799083 | 0.127333 | `refine-logs/hide_reveal_poc/r010_route0_real_eval/real_event_window_summary.json` |
+| baseline | matched_lifespan | 29.8181 | 0.0163546 | 0.00795601 | 0.127333 | `refine-logs/hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_summary.json` |
+| baseline | residual_uncertainty | 30.0734 | 0.0165723 | 0.00803902 | 0.145702 | `refine-logs/hide_reveal_poc/r011_residual_uncertainty_real_eval/real_event_window_summary.json` |
+| upper_bound | derived oracle hide_reveal | 41.7149 | 0.00266536 | 0.00168586 | 0.127333 | `refine-logs/hide_reveal_poc/r012_r013_derived_real_eval/real_event_window_summary.json` |
+| failed actual | R017 actual_hide_reveal | 19.3667 | 0.0761056 | 0.0162899 | 0.152789 | `refine-logs/hide_reveal_poc/r017_actual_real_eval/real_event_window_summary.json` |
+
+Oracle upper-bound deltas versus route0:
+- PSNR: `+11.2128`
+- L1/proxy-LPIPS: `-0.0121662`
+- Flicker: `-0.0063050`
+- Static ghost: `0.0`
+
+## Predeclared Evaluation Protocol
+
+Evaluation split:
+- Frozen R009 windows in `refine-logs/hide_reveal_real_windows.json`.
+- Crops are evaluation-only and must not be consumed by the method as test-time event support.
+
+Primary metrics:
+- Per-window crop PSNR, higher is better.
+- Per-window crop L1/proxy-LPIPS, lower is better.
+- Per-window crop flicker, lower is better.
+- Per-window static ghost score, lower is better.
+- Accepted event count and false/broad event count if the method produces event candidates.
+- Qualitative crop strips using the same five frozen windows.
+
+Currently unavailable metrics:
+- Learned LPIPS: unavailable unless sidecar weights are made available without compute-node network downloads.
+- Confident-track identity switches: unavailable because R009 discovery found no track-confidence sidecars.
+
+Strict PASS gate for a method:
+- The method is checkpoint-backed or newly trained Gaussian-rendered output, not GT crop compositing.
+- The method does not use R009 frozen event crops as test-time support.
+- At least 3/5 frozen windows improve versus route0, matched_lifespan, and residual_uncertainty on both PSNR and L1/proxy-LPIPS.
+- At least 3/5 frozen windows do not worsen static ghost versus route0.
+- Mean PSNR improves over route0 by at least `+0.5 dB` and mean L1/proxy-LPIPS improves over route0 by at least `-0.001`.
+- The method recovers at least 25% of the oracle upper bound on either mean PSNR improvement or mean L1/proxy-LPIPS reduction:
+  - PSNR fraction: `(method_psnr - 30.5021) / 11.2128`
+  - L1 fraction: `(0.0148316 - method_l1) / 0.0121662`
+
+FAIL gate:
+- A complete method run worsens mean PSNR and L1/proxy-LPIPS versus route0, or passes fewer than 3/5 windows, after logs and outputs are valid.
+- A method requires oracle event-crop labels at test time to obtain its gain.
+- A method cannot produce comparable Gaussian-rendered folders and only produces image composites.
+
+## Candidate Methods
+
+| Candidate | Mechanism | Why It Might Recover Oracle-Like Fix | Cost | Failure Modes | Required Data | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| M1 non-oracle residual-component local refinement | Detect candidate event supports from high residual, dynamic masks, flow validity/disagreement, and local flicker in training/eval render diagnostics; select connected components without R009 crop labels; locally optimize a small set of Gaussian color/opacity/visibility parameters under a fixed budget; render normally. | R013 says the error is local and large. R017 failed by subtracting content; M1 can add/refine local appearance while preserving route0 elsewhere. | Medium. Reuses route0 checkpoints and renderer; needs candidate-map generation, local optimization CLI, Slurm wrapper, metadata. | Detector selects easy residuals or wrong regions; local fitting overfits observed view; static ghost rises; output becomes crop-like if support leaks from evaluation labels. | Route0 renders/GT/static/dynamic, masks, flow, checkpoints. | Preferred first candidate pending code-path inspection. |
+| M2 occlusion-boundary gated micro-densification | Use dynamic-mask boundaries and flow occlusion/disocclusion cues to seed a small event-local set of Gaussians, with strict budget and no use of frozen crop labels. | The oracle fix may require new or sharper local capacity, not just opacity changes. | Medium-high. Requires densification/update path and budget accounting. | Novelty pressure from visibility-aware densification; may become known densification rather than identity event; may fragment identity. | Masks, flow, checkpoints, training images. | Backup. |
+| M3 temporal inconsistency event proposal plus conservative visibility gate | Build non-oracle event candidates from route0 render flicker/residual over time; apply a much narrower, component-local gate than R017 and log selected Gaussian counts. | R017 selected too many Gaussians. A component-local proposal may avoid broad content deletion. | Low-medium. Reuses R017 renderer hook with non-oracle support maps. | Still only removes content; likely cannot synthesize revealed texture; may repeat R017 failure with smaller damage. | Route0 renders/GT for candidate construction, masks. | Backup or diagnostic. |
+| M4 identity-aware reveal matching with tracks/features | If reliable track/feature sidecars can be generated, commit hide/reveal only when hidden identity evidence reconnects across the event; train/refine selected carriers. | Aligns with original novelty boundary against lifespan-only gating. | High. Track sidecars were absent in R009; generation may be a separate project. | Blocked by unavailable tracks; noisy tracks around occlusions; high implementation burden. | Confident tracks/features, checkpoints, masks/flow. | Deferred. |
+
+## Selected First Candidate
+
+Tentative first candidate: M1 non-oracle residual-component local refinement.
+
+Reason:
+- It directly addresses the R017 failure mode: opacity attenuation removed/dimmed content but did not synthesize the hidden/revealed surface.
+- It is non-oracle if candidate components are generated from residual/mask/flow cues without reading R009 crop labels.
+- It can produce actual Gaussian-rendered output folders if implemented as checkpoint-backed local refinement.
+- It has a clear fail interpretation: if local Gaussian refinement cannot beat route0 on the frozen windows, the oracle crop fix may require stronger geometry/identity machinery rather than simple local updates.
+
+Before implementation:
+- Inspect existing train/resume/render code for the smallest local-refinement entry point.
+- Verify candidate-map inputs exist on HPC for the three scenes.
+- Add a dry-run that emits candidate components and metadata without rendering or training.
+- Record the exact command and output directory before submitting any Slurm job.
+
+## Attempt Log
+
+| Attempt | Candidate | Commit | Job ID | Output | Verdict | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| A0 | R017 runtime opacity gate | `f5d43539aee500051f2a4c5eeca5420293b636f1` | `48760029`, `48760448` | `refine-logs/hide_reveal_poc/r017_actual_real_eval/` | FAIL | Checkpoint-backed renderer output, no GT pixels, but 0/5 windows passed and all mean metrics worsened. |
