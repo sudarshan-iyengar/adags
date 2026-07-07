@@ -77,8 +77,10 @@ mkdir -p "$META_DIR"
 source "$PROJECT_ROOT/exp_index/leonardo_env.sh"
 cd "$REPO_DIR"
 
-if [[ -n "${SLURM_JOB_ID:-}" ]]; then
-  export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-$PROJECT_ROOT/build/torch_extensions_jobs/$SLURM_JOB_ID}"
+if [[ -n "${ADAGS_TORCH_EXTENSIONS_DIR:-}" ]]; then
+  export TORCH_EXTENSIONS_DIR="$ADAGS_TORCH_EXTENSIONS_DIR"
+elif [[ -n "${SLURM_JOB_ID:-}" ]]; then
+  export TORCH_EXTENSIONS_DIR="$PROJECT_ROOT/build/torch_extensions_jobs/$SLURM_JOB_ID"
 else
   export TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-$PROJECT_ROOT/build/torch_extensions_manual}"
 fi
