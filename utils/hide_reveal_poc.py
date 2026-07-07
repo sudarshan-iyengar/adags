@@ -16,6 +16,7 @@ from PIL import Image
 TRUE_EVENT_TYPES = {"hide_reveal", "hide_only", "boundary_occlusion", "identity_confuser"}
 REVEAL_EVENT_TYPES = {"hide_reveal", "boundary_occlusion", "identity_confuser"}
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
+LPIPS_UNAVAILABLE_REASON: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -2121,7 +2122,13 @@ def evaluate_real_manifest(manifest_path: Path, out_dir: Path, compute_lpips: bo
         rows.extend(evaluate_real_window(window, manifest_path.parent, compute_lpips=compute_lpips))
     write_csv(out_dir / "real_event_window_metrics.csv", rows)
     summary = summarize_real_rows(rows)
-    payload = {"manifest": str(manifest_path), "summary": summary, "rows": rows}
+    payload = {
+        "manifest": str(manifest_path),
+        "compute_lpips_requested": bool(compute_lpips),
+        "lpips_unavailable_reason": LPIPS_UNAVAILABLE_REASON,
+        "summary": summary,
+        "rows": rows,
+    }
     write_json(out_dir / "real_event_window_summary.json", payload)
     write_real_report(out_dir / "real_event_window_report.md", payload)
     return payload
@@ -2234,18 +2241,26 @@ def image_window_metrics(render_frames: np.ndarray, gt_frames: np.ndarray) -> Di
 
 
 def compute_lpips_metric(render_frames: np.ndarray, gt_frames: np.ndarray) -> Optional[float]:
+    global LPIPS_UNAVAILABLE_REASON
+    if LPIPS_UNAVAILABLE_REASON is not None:
+        return None
     try:
         import torch
         from lpipsPyTorch import lpips
-    except Exception:
+    except Exception as exc:
+        LPIPS_UNAVAILABLE_REASON = repr(exc)
         return None
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     values = []
-    with torch.no_grad():
-        for render, gt in zip(render_frames, gt_frames):
-            x = torch.from_numpy(render.transpose(2, 0, 1)).unsqueeze(0).to(device)
-            y = torch.from_numpy(gt.transpose(2, 0, 1)).unsqueeze(0).to(device)
-            values.append(float(lpips(x, y).mean().detach().cpu()))
+    try:
+        with torch.no_grad():
+            for render, gt in zip(render_frames, gt_frames):
+                x = torch.from_numpy(render.transpose(2, 0, 1)).unsqueeze(0).to(device)
+                y = torch.from_numpy(gt.transpose(2, 0, 1)).unsqueeze(0).to(device)
+                values.append(float(lpips(x, y).mean().detach().cpu()))
+    except Exception as exc:
+        LPIPS_UNAVAILABLE_REASON = repr(exc)
+        return None
     return mean_or_none(values)
 
 
