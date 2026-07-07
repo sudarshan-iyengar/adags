@@ -1,0 +1,162 @@
+{
+  "audit_type": "posthoc_frozen_window_overlap_only_not_candidate_input",
+  "candidate_manifest": "refine-logs\\hide_reveal_poc\\r018_nonoracle_candidates\\nonoracle_candidate_manifest.json",
+  "coverage_rule": "crop_iou >= 0.1 and temporal_iou >= 0.25",
+  "covered_windows": 0,
+  "frozen_manifest": "refine-logs\\hide_reveal_real_windows.json",
+  "generated_at_utc": "2026-07-07T01:08:20+00:00",
+  "interpretation": "R018 candidate discovery validated structurally but failed to propose spatial support near the frozen event crops; selected boxes clustered on top image bands with zero motion-mask support in a follow-up mask audit.",
+  "rows": [
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          320,
+          0,
+          480,
+          160
+        ],
+        "candidate_frames": [
+          88,
+          103
+        ],
+        "candidate_id": "cut_roasted_beef_nonoracle_01_088_103_320_0_480_160",
+        "crop_iou": 0.0,
+        "joint_iou": 0.0,
+        "temporal_iou": 0.391304347826087
+      },
+      "frozen_crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "frozen_frames": [
+        95,
+        110
+      ],
+      "frozen_window_id": "cut_roasted_beef_hand_tongs_meat_095_110",
+      "scene": "cut_roasted_beef"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          320,
+          0,
+          480,
+          160
+        ],
+        "candidate_frames": [
+          88,
+          103
+        ],
+        "candidate_id": "cut_roasted_beef_nonoracle_01_088_103_320_0_480_160",
+        "crop_iou": 0.0,
+        "joint_iou": 0.0,
+        "temporal_iou": 0.0
+      },
+      "frozen_crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "frozen_frames": [
+        140,
+        155
+      ],
+      "frozen_window_id": "cut_roasted_beef_hand_knife_meat_140_155",
+      "scene": "cut_roasted_beef"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          240,
+          0,
+          400,
+          160
+        ],
+        "candidate_frames": [
+          164,
+          179
+        ],
+        "candidate_id": "flame_steak_nonoracle_01_164_179_240_0_400_160",
+        "crop_iou": 0.0,
+        "joint_iou": 0.0,
+        "temporal_iou": 0.28
+      },
+      "frozen_crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "frozen_frames": [
+        155,
+        170
+      ],
+      "frozen_window_id": "flame_steak_torch_pan_155_170",
+      "scene": "flame_steak"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          240,
+          0,
+          400,
+          160
+        ],
+        "candidate_frames": [
+          164,
+          179
+        ],
+        "candidate_id": "flame_steak_nonoracle_01_164_179_240_0_400_160",
+        "crop_iou": 0.0,
+        "joint_iou": 0.0,
+        "temporal_iou": 0.0
+      },
+      "frozen_crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "frozen_frames": [
+        195,
+        210
+      ],
+      "frozen_window_id": "flame_steak_torch_sweep_195_210",
+      "scene": "flame_steak"
+    },
+    {
+      "best_candidate": {
+        "candidate_crop_xyxy": [
+          320,
+          0,
+          480,
+          160
+        ],
+        "candidate_frames": [
+          128,
+          143
+        ],
+        "candidate_id": "sear_steak_nonoracle_01_128_143_320_0_480_160",
+        "crop_iou": 0.0,
+        "joint_iou": 0.0,
+        "temporal_iou": 0.0
+      },
+      "frozen_crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "frozen_frames": [
+        220,
+        235
+      ],
+      "frozen_window_id": "sear_steak_spoon_pan_220_235",
+      "scene": "sear_steak"
+    }
+  ],
+  "total_windows": 5
+}

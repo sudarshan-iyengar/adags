@@ -1781,24 +1781,30 @@ def score_maps_for_scene(
         static_gray = indexed_gray(static_index, int(frame_idx), target_hw)
         static_delta = np.abs(render_gray - static_gray).astype(np.float32) if static_index else np.zeros(target_hw, dtype=np.float32)
         mask_gray = indexed_gray(mask_index, int(frame_idx), target_hw)
+        motion_support = mask_gray if mask_index else np.ones(target_hw, dtype=np.float32)
         mask_boundary = edge_map(mask_gray)
         if prev_render is None:
             flicker_gray = np.zeros(target_hw, dtype=np.float32)
         else:
             flicker_gray = np.abs(render_gray - prev_render).astype(np.float32)
         prev_render = render_gray
+        dynamic_motion = (dynamic_gray * motion_support).astype(np.float32)
+        static_delta_motion = (static_delta * motion_support).astype(np.float32)
+        flicker_motion = (flicker_gray * np.maximum(motion_support, mask_boundary)).astype(np.float32)
         score = (
-            0.35 * dynamic_gray
-            + 0.25 * static_delta
-            + 0.25 * mask_boundary
-            + 0.15 * flicker_gray
+            0.35 * dynamic_motion
+            + 0.25 * static_delta_motion
+            + 0.25 * motion_support
+            + 0.10 * mask_boundary
+            + 0.05 * flicker_motion
         )
         maps[int(frame_idx)] = {
             "score": np.clip(score, 0.0, 1.0).astype(np.float32),
-            "dynamic": dynamic_gray,
-            "static_delta": static_delta,
+            "dynamic_motion": dynamic_motion,
+            "static_delta_motion": static_delta_motion,
+            "motion_mask": motion_support.astype(np.float32),
             "mask_boundary": mask_boundary,
-            "flicker": flicker_gray,
+            "flicker_motion": flicker_motion,
         }
         used_frames.append(int(frame_idx))
 
@@ -1859,7 +1865,13 @@ def tile_rows_for_scene(
             for x0 in x_starts:
                 x1 = min(width, x0 + tile_width)
                 score_values = []
-                term_values = {"dynamic": [], "static_delta": [], "mask_boundary": [], "flicker": []}
+                term_values = {
+                    "dynamic_motion": [],
+                    "static_delta_motion": [],
+                    "motion_mask": [],
+                    "mask_boundary": [],
+                    "flicker_motion": [],
+                }
                 for frame_idx in frames:
                     frame_maps = maps[frame_idx]
                     score_values.append(float(frame_maps["score"][y0:y1, x0:x1].mean()))
@@ -1877,10 +1889,11 @@ def tile_rows_for_scene(
                         "score": float(score),
                         "score_mean": score_mean,
                         "score_peak": score_peak,
-                        "dynamic_mean": float(np.mean(term_values["dynamic"])),
-                        "static_delta_mean": float(np.mean(term_values["static_delta"])),
+                        "dynamic_motion_mean": float(np.mean(term_values["dynamic_motion"])),
+                        "static_delta_motion_mean": float(np.mean(term_values["static_delta_motion"])),
+                        "motion_mask_mean": float(np.mean(term_values["motion_mask"])),
                         "mask_boundary_mean": float(np.mean(term_values["mask_boundary"])),
-                        "flicker_mean": float(np.mean(term_values["flicker"])),
+                        "flicker_motion_mean": float(np.mean(term_values["flicker_motion"])),
                     }
                 )
     return rows
@@ -1940,18 +1953,19 @@ def discover_nonoracle_event_candidates(
                 "crop_xyxy": [int(v) for v in row["crop_xyxy"]],
                 "occluder": "NONORACLE_CANDIDATE",
                 "notes": (
-                    "Automatically discovered from route0 dynamic output, route0-vs-static deltas, "
-                    "motion-mask boundaries, and route0 render flicker; "
+                    "Automatically discovered from motion-supported route0 dynamic output, "
+                    "route0-vs-static deltas, motion masks, motion-mask boundaries, and route0 render flicker; "
                     "no GT residual and no frozen event-crop labels used."
                 ),
                 "candidate_score": float(row["score"]),
                 "candidate_terms": {
                     "score_mean": float(row["score_mean"]),
                     "score_peak": float(row["score_peak"]),
-                    "dynamic_mean": float(row["dynamic_mean"]),
-                    "static_delta_mean": float(row["static_delta_mean"]),
+                    "dynamic_motion_mean": float(row["dynamic_motion_mean"]),
+                    "static_delta_motion_mean": float(row["static_delta_motion_mean"]),
+                    "motion_mask_mean": float(row["motion_mask_mean"]),
                     "mask_boundary_mean": float(row["mask_boundary_mean"]),
-                    "flicker_mean": float(row["flicker_mean"]),
+                    "flicker_motion_mean": float(row["flicker_motion_mean"]),
                 },
                 "systems": {route0_system: route0_spec},
             }
@@ -1985,10 +1999,11 @@ def discover_nonoracle_event_candidates(
             "crop_iou_threshold": float(crop_iou_threshold),
             "temporal_iou_threshold": float(temporal_iou_threshold),
             "score_weights": {
-                "dynamic_render": 0.35,
-                "static_render_delta": 0.25,
-                "motion_mask_boundary": 0.25,
-                "route0_render_flicker": 0.15,
+                "motion_supported_dynamic_render": 0.35,
+                "motion_supported_static_render_delta": 0.25,
+                "motion_mask_interior": 0.25,
+                "motion_mask_boundary": 0.10,
+                "motion_supported_route0_render_flicker": 0.05,
             },
         },
         "windows": selected_windows,
@@ -2035,7 +2050,7 @@ def write_nonoracle_candidate_report(
         "",
         f"- Uses GT residual: `{candidate_manifest.get('uses_gt_residual')}`",
         f"- Uses frozen event-crop labels: `{candidate_manifest.get('uses_frozen_window_labels')}`",
-        "- Candidate scores use route0 dynamic output, route0-vs-static render deltas, motion-mask boundaries, and route0 render flicker.",
+        "- Candidate scores use motion-supported route0 dynamic output, route0-vs-static render deltas, motion masks, motion-mask boundaries, and route0 render flicker.",
         "- The generated candidate crops are method inputs; the frozen R009 crops remain evaluation-only.",
         "",
         "## Parameters",

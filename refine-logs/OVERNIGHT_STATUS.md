@@ -3,14 +3,14 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R018 nonoracle-candidates local smoke passed / pre-HPC
-- Current method candidate: M1 non-oracle residual-component local refinement; candidate-discovery dry-run implemented, local Gaussian refinement pending
+- Current run ID: R018 detector failure analyzed / A2 motion-supported detector local smoke passed / pre-R019
+- Current method candidate: M1 non-oracle residual-component local refinement; candidate-discovery dry-run being repaired, local Gaussian refinement pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Last pushed milestone commit: `0bf0967483e622af5cb6ac81de2b3f09060c33d9`
 - Last HPC job ID: `48760448`
-- Latest success/failure: R017 FAIL; A1 local non-oracle candidate-discovery smoke PASS with validation_ok=True and 3/3 generated smoke candidates valid
-- Next command to run: commit/push A1 candidate-discovery implementation, pull on Leonardo, run shell syntax checks, dry-run `nonoracle-candidates`, then submit R018 through Slurm
+- Latest success/failure: R018 structural PASS but detector FAIL; non-oracle candidate job `48763378` completed with validation_ok=True and 24 candidates, but posthoc frozen-overlap audit covered 0/5 windows
+- Next command to run: commit/push A2 motion-supported detector, pull on Leonardo, dry-run and submit R019 through Slurm
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -59,6 +59,31 @@ Recorded before new event-crop evidence edits.
 - Smoke report: `refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/out/nonoracle_candidate_report.md`.
 - Local Windows `bash` is unavailable, so shell wrapper syntax checks are deferred to Leonardo before Slurm submission.
 - Committed A1 implementation as `0bf0967483e622af5cb6ac81de2b3f09060c33d9` (`Add non-oracle event candidate discovery`).
+
+### 2026-07-07T03:08:00+02:00 - R018 non-oracle candidate job completed
+
+- Pulled branch on Leonardo to `db467a328b6b0e02482eb0e36de24b27b850b907`; shell syntax checks passed with `bash -n`.
+- Submitted `scripts/submit_hide_reveal_poc.sh --stage nonoracle-candidates --manifest refine-logs/hide_reveal_real_windows.json --out-dir refine-logs/hide_reveal_poc/r018_nonoracle_candidates`.
+- Slurm job `48763378` completed on `lrdn3301` with `State=COMPLETED`, `ExitCode=0:0`, `Elapsed=00:02:01`.
+- Outputs collected locally:
+  - `refine-logs/hide_reveal_poc/r018_nonoracle_candidates/nonoracle_candidate_manifest.json`
+  - `refine-logs/hide_reveal_poc/r018_nonoracle_candidates/nonoracle_candidate_metadata.json`
+  - `refine-logs/hide_reveal_poc/r018_nonoracle_candidates/nonoracle_candidate_components.csv`
+  - `refine-logs/hide_reveal_poc/r018_nonoracle_candidates/nonoracle_candidate_validation.json`
+  - `refine-logs/hide_reveal_poc/r018_nonoracle_candidates/nonoracle_candidate_report.md`
+  - `refine-logs/hide_reveal_poc_nonoracle-candidates_jobs_20260707_030101.tsv`
+  - `logs/hide_reveal_nonoracle-candidates_48763378.out`
+  - `logs/hide_reveal_nonoracle-candidates_48763378.err`
+- R018 structural result: PASS. `validation_ok=True`, `validation_errors=0`, `candidates=24`.
+- R018 detector result: FAIL / diagnostic. Posthoc audit in `refine-logs/hide_reveal_poc/r018_nonoracle_candidates/frozen_overlap_audit.md` covered `0/5` frozen windows under crop-IoU >= 0.1 and temporal-IoU >= 0.25; candidates clustered on top image bands and had zero motion-mask support.
+
+### 2026-07-07T03:08:30+02:00 - A2 motion-supported candidate detector
+
+- Revised candidate scoring so route0 dynamic output, route0-vs-static deltas, and route0 flicker are multiplied by motion-mask support when masks are available.
+- Score terms are now motion-supported dynamic render, motion-supported static-render delta, motion-mask interior, motion-mask boundary, and motion-supported flicker.
+- Local smoke command completed:
+  `scripts/run_hide_reveal_poc.py nonoracle-candidates --manifest refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/smoke_manifest.json --out-dir refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/out_motion_supported --window-length 4 --temporal-stride 2 --tile-size 16 --tile-stride 8 --top-k-per-scene 3`
+- A2 local smoke result: `validation_ok=True`, `validation_errors=0`, `candidates=3`, with selected crop `[24, 32, 40, 48]` over the synthetic moving square.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
