@@ -1,0 +1,162 @@
+timestamp: 2026-07-07T11:56:48+02:00
+mode: train
+scene: sear_steak
+run_tag: event_candidate_local_refine_6200
+run_label: event_candidate_local_refine_6200
+run_dir: /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200
+repo_dir: /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags
+project_root: /leonardo_work/EUHPC_D21_034/proj_adags
+host: lrdn2003.leonardo.local
+slurm_job_id: 48799995
+python: /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/bin/python
+Python 3.11.7
+torch_extensions_dir: /leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48799995
+torch_cuda_arch_list: 8.0
+max_jobs: 4
+git_branch: codex/hide-reveal-poc-implementation
+git_commit: ad637f3ec50129fe40c5715804d446dfe6bdc90d
+git_dirty: true
+git_status: ?? configs/n3v/bootstrap.yaml
+git_status: ?? configs/n3v/distill.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_600k.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_lowroi_600k.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_residual_600k.yaml
+git_status: ?? configs/panopticsports/
+git_status: ?? diff-gaussian-rasterization/diff_gaussian_rasterization/
+git_status: ?? eval_all_runs.sh
+git_status: ?? follow-up.md
+git_status: ?? logs/event_candidate_refine_train_cut_roasted_beef_48796168.err
+git_status: ?? logs/event_candidate_refine_train_cut_roasted_beef_48796168.out
+git_status: ?? logs/event_candidate_refine_train_cut_roasted_beef_48799988.err
+git_status: ?? logs/event_candidate_refine_train_cut_roasted_beef_48799988.out
+git_status: ?? logs/event_candidate_refine_train_flame_steak_48796170.err
+git_status: ?? logs/event_candidate_refine_train_flame_steak_48796170.out
+git_status: ?? logs/event_candidate_refine_train_flame_steak_48799992.err
+git_status: ?? logs/event_candidate_refine_train_flame_steak_48799992.out
+git_status: ?? logs/event_candidate_refine_train_sear_steak_48796174.err
+git_status: ?? logs/event_candidate_refine_train_sear_steak_48796174.out
+git_status: ?? logs/event_candidate_refine_train_sear_steak_48799995.err
+git_status: ?? logs/event_candidate_refine_train_sear_steak_48799995.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48758979.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48758979.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759225.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759225.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759305.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759305.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759561.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759561.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759691.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759691.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48760029.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48760029.out
+git_status: ?? logs/hide_reveal_derive-real-renders_48644898.err
+git_status: ?? logs/hide_reveal_derive-real-renders_48644898.out
+git_status: ?? logs/hide_reveal_derive-real-renders_48646250.err
+git_status: ?? logs/hide_reveal_derive-real-renders_48646250.out
+git_status: ?? logs/hide_reveal_derive-real-renders_48654171.err
+git_status: ?? logs/hide_reveal_derive-real-renders_48654171.out
+git_status: ?? logs/hide_reveal_real_48653179.err
+git_status: ?? logs/hide_reveal_real_48653179.out
+git_status: ?? logs/hide_reveal_real_48653948.err
+git_status: ?? logs/hide_reveal_real_48653948.out
+git_status: ?? logs/hide_reveal_real_48760448.err
+git_status: ?? logs/hide_reveal_real_48760448.out
+git_status: ?? logs/hide_reveal_synthetic_48239816.err
+git_status: ?? logs/hide_reveal_synthetic_48239816.out
+git_status: ?? logs/hide_reveal_synthetic_48241130.err
+git_status: ?? logs/hide_reveal_synthetic_48241130.out
+git_status: ?? logs/hide_reveal_synthetic_48241746.err
+git_status: ?? logs/hide_reveal_synthetic_48241746.out
+git_status: ?? logs/pre_pull_untracked_backup_20260707_1148/
+git_status: ?? scripts/analyze_wandb_adags.py
+git_status: ?? scripts/export_results.py
+git_status: ?? scripts/extract_results.py
+git_status: ?? scripts/make_downscaled_n3v.py
+git_status: ?? scripts/submit_lora_mask_mechanism_screen.sh
+git_status: ?? scripts/sync_wandb_runs.sh
+git_status: ?? scripts/test_wandb_online_compute.sh
+git_status: ?? simple-knn/simple_knn/__init__.py
+git_status: ?? submit_results.sh
+config: configs/n3v/event_candidate_local_refine_6200.yaml
+dataset_path: /leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak
+ckpt_iter: 6000
+ckpt_path: /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/chkpnt6000.pth
+wandb_project: adags
+wandb_entity: none
+wandb_group: n3v
+wandb_mode: offline
+wandb_extra_tags: experiment:event_candidate_refine method:M1_candidate_local_refine source_ckpt:6000 refine_iter:6200
+experiment_name: event_candidate_refine
+method_family: M1_candidate_local_refine
+budget_label: event_candidate_local_refine_6200
+---
+python main.py --config configs/n3v/event_candidate_local_refine_6200.yaml --model_path /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200 --source_path /leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak --use_wandb --wandb_project adags --wandb_mode offline --wandb_run_name 20260707_114908_sear_steak_event_candidate_local_refine_6200 --wandb_group n3v --wandb_resume 20260707_114908_sear_steak_event_candidate_local_refine_6200 --wandb_tags sear_steak event_candidate_local_refine_6200 experiment:event_candidate_refine method:M1_candidate_local_refine source_ckpt:6000 refine_iter:6200 train --experiment_name event_candidate_refine --method_family M1_candidate_local_refine --budget_label event_candidate_local_refine_6200 --start_checkpoint /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/chkpnt6000.pth Launching...
+Using /leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48799995 as PyTorch extensions root...
+Creating extension directory /leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48799995/diff_gaussian_rasterization...
+Detected CUDA files, patching ldflags
+Emitting ninja build file /leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48799995/diff_gaussian_rasterization/build.ninja...
+Building extension module diff_gaussian_rasterization...
+Using envvar MAX_JOBS (4) as the number of workers...
+[1/6] /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/bin/nvcc --generate-dependencies-with-compile --dependency-output backward.cuda.o.d -ccbin gcc -DTORCH_EXTENSION_NAME=diff_gaussian_rasterization -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1011\" -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/torch/csrc/api/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/TH -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/THC -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/include -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/python-3.11.7-ziwh63aulhhzxksf42k5u3gnim2rbpmp/include/python3.11 -D_GLIBCXX_USE_CXX11_ABI=0 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr -gencode=arch=compute_80,code=sm_80 --compiler-options '-fPIC' -I /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/third_party/glm/ -g -std=c++17 -c /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/cuda_rasterizer/backward.cu -o backward.cuda.o 
+[2/6] /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/bin/nvcc --generate-dependencies-with-compile --dependency-output forward.cuda.o.d -ccbin gcc -DTORCH_EXTENSION_NAME=diff_gaussian_rasterization -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1011\" -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/torch/csrc/api/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/TH -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/THC -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/include -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/python-3.11.7-ziwh63aulhhzxksf42k5u3gnim2rbpmp/include/python3.11 -D_GLIBCXX_USE_CXX11_ABI=0 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr -gencode=arch=compute_80,code=sm_80 --compiler-options '-fPIC' -I /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/third_party/glm/ -g -std=c++17 -c /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/cuda_rasterizer/forward.cu -o forward.cuda.o 
+[3/6] /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/bin/nvcc --generate-dependencies-with-compile --dependency-output rasterizer_impl.cuda.o.d -ccbin gcc -DTORCH_EXTENSION_NAME=diff_gaussian_rasterization -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1011\" -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/torch/csrc/api/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/TH -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/THC -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/include -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/python-3.11.7-ziwh63aulhhzxksf42k5u3gnim2rbpmp/include/python3.11 -D_GLIBCXX_USE_CXX11_ABI=0 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr -gencode=arch=compute_80,code=sm_80 --compiler-options '-fPIC' -I /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/third_party/glm/ -g -std=c++17 -c /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.cu -o rasterizer_impl.cuda.o 
+[4/6] g++ -MMD -MF ext.o.d -DTORCH_EXTENSION_NAME=diff_gaussian_rasterization -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1011\" -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/torch/csrc/api/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/TH -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/THC -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/include -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/python-3.11.7-ziwh63aulhhzxksf42k5u3gnim2rbpmp/include/python3.11 -D_GLIBCXX_USE_CXX11_ABI=0 -fPIC -std=c++17 -c /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/ext.cpp -o ext.o 
+[5/6] /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/bin/nvcc --generate-dependencies-with-compile --dependency-output rasterize_points.cuda.o.d -ccbin gcc -DTORCH_EXTENSION_NAME=diff_gaussian_rasterization -DTORCH_API_INCLUDE_EXTENSION_H -DPYBIND11_COMPILER_TYPE=\"_gcc\" -DPYBIND11_STDLIB=\"_libstdcpp\" -DPYBIND11_BUILD_ABI=\"_cxxabi1011\" -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/torch/csrc/api/include -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/TH -isystem /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/include/THC -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/include -isystem /leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/python-3.11.7-ziwh63aulhhzxksf42k5u3gnim2rbpmp/include/python3.11 -D_GLIBCXX_USE_CXX11_ABI=0 -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr -gencode=arch=compute_80,code=sm_80 --compiler-options '-fPIC' -I /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/third_party/glm/ -g -std=c++17 -c /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/diff-gaussian-rasterization/rasterize_points.cu -o rasterize_points.cuda.o 
+[6/6] g++ rasterizer_impl.cuda.o forward.cuda.o backward.cuda.o rasterize_points.cuda.o ext.o -shared -L/leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torch/lib -lc10 -lc10_cuda -ltorch_cpu -ltorch_cuda -ltorch -ltorch_python -L/leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/cuda-12.2.0-o6rr2unwsp4e4av6ukobro6plj7ceeos/lib64 -lcudart -o diff_gaussian_rasterization.so
+Loading extension module diff_gaussian_rasterization...
+/leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/lib/python3.11/site-packages/torchmetrics/utilities/prints.py:62: FutureWarning: Importing `MultiScaleStructuralSimilarityIndexMeasure` from `torchmetrics` was deprecated and will be removed in 2.0. Import `MultiScaleStructuralSimilarityIndexMeasure` from `torchmetrics.image` instead.
+  _future_warning(
+wandb: WARNING `resume` will be ignored since W&B syncing is set to `offline`. Starting a new run with run id 20260707_114908_sear_steak_event_candidate_local_refine_6200.
+wandb: Tracking run with wandb version 0.26.1
+wandb: W&B syncing is set to `offline` in this directory. Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+wandb: Run data is saved locally in /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200/wandb/offline-run-20260707_120044-20260707_114908_sear_steak_event_candidate_local_refine_6200
+Optimizing /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200
+Output folder: /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200 [07/07 12:00:47]
+Found transforms_train.json file, assuming Blender data set! [07/07 12:00:47]
+Reading Training Transforms [07/07 12:00:48]
+  0%|          | 0/6000 [00:00<?, ?it/s]  2%|▏         | 94/6000 [00:00<00:06, 924.74it/s]  3%|▎         | 187/6000 [00:00<00:06, 903.41it/s]  3%|▎         | 188/6000 [00:00<00:06, 899.96it/s]  5%|▍         | 285/6000 [00:00<00:06, 923.48it/s]  5%|▍         | 286/6000 [00:00<00:06, 939.24it/s]  6%|▋         | 383/6000 [00:00<00:05, 947.89it/s]  8%|▊         | 478/6000 [00:00<00:06, 903.00it/s]  8%|▊         | 479/6000 [00:00<00:06, 878.12it/s]  9%|▉         | 568/6000 [00:00<00:06, 816.06it/s]  9%|▉         | 569/6000 [00:00<00:06, 779.63it/s] 11%|█         | 648/6000 [00:00<00:06, 773.72it/s] 12%|█▏        | 740/6000 [00:00<00:06, 813.79it/s] 12%|█▏        | 741/6000 [00:00<00:06, 845.57it/s] 14%|█▍        | 828/6000 [00:00<00:06, 845.22it/s] 14%|█▍        | 829/6000 [00:00<00:06, 846.72it/s] 16%|█▌        | 931/6000 [00:01<00:05, 895.00it/s] 17%|█▋        | 1024/6000 [00:01<00:05, 900.25it/s] 19%|█▉        | 1129/6000 [00:01<00:05, 942.42it/s] 20%|██        | 1224/6000 [00:01<00:05, 929.98it/s] 22%|██▏       | 1322/6000 [00:01<00:04, 944.62it/s] 22%|██▏       | 1323/6000 [00:01<00:04, 957.63it/s] 24%|██▎       | 1419/6000 [00:01<00:04, 925.05it/s] 25%|██▌       | 1517/6000 [00:01<00:04, 937.67it/s] 25%|██▌       | 1518/6000 [00:01<00:04, 949.20it/s] 27%|██▋       | 1615/6000 [00:01<00:04, 947.07it/s] 28%|██▊       | 1710/6000 [00:01<00:04, 938.42it/s] 30%|███       | 1804/6000 [00:01<00:04, 929.44it/s] 32%|███▏      | 1903/6000 [00:02<00:04, 939.09it/s] 33%|███▎      | 1997/6000 [00:02<00:04, 913.17it/s] 33%|███▎      | 1998/6000 [00:02<00:04, 897.69it/s] 35%|███▍      | 2095/6000 [00:02<00:04, 914.14it/s] 36%|███▋      | 2187/6000 [00:02<00:04, 915.21it/s] 36%|███▋      | 2188/6000 [00:02<00:04, 918.55it/s] 38%|███▊      | 2286/6000 [00:02<00:03, 936.13it/s] 40%|███▉      | 2386/6000 [00:02<00:03, 953.84it/s] 41%|████▏     | 2482/6000 [00:02<00:03, 954.69it/s] 43%|████▎     | 2593/6000 [00:02<00:03, 998.86it/s] 43%|████▎     | 2596/6000 [00:02<00:03, 1079.83it/s] 43%|████▎     | 2596/6000 [00:02<00:03, 1079.83it/s] 43%|████▎     | 2596/6000 [00:02<00:03, 1079.83it/s] 45%|████▌     | 2705/6000 [00:02<00:03, 1040.46it/s] 47%|████▋     | 2810/6000 [00:03<00:03, 1000.61it/s] 49%|████▊     | 2911/6000 [00:03<00:03, 982.14it/s]  50%|█████     | 3010/6000 [00:03<00:03, 978.71it/s] 52%|█████▏    | 3109/6000 [00:03<00:02, 981.71it/s] 53%|█████▎    | 3208/6000 [00:03<00:02, 975.66it/s] 53%|█████▎    | 3209/6000 [00:03<00:02, 973.45it/s] 55%|█████▌    | 3309/6000 [00:03<00:02, 975.82it/s] 57%|█████▋    | 3427/6000 [00:03<00:02, 1028.42it/s] 59%|█████▉    | 3530/6000 [00:03<00:02, 1011.30it/s] 61%|██████    | 3632/6000 [00:03<00:02, 1002.34it/s] 62%|██████▏   | 3742/6000 [00:03<00:02, 1025.39it/s] 64%|██████▍   | 3845/6000 [00:04<00:02, 1020.83it/s] 66%|██████▌   | 3952/6000 [00:04<00:01, 1032.99it/s] 68%|██████▊   | 4057/6000 [00:04<00:01, 1037.86it/s] 69%|██████▉   | 4161/6000 [00:04<00:01, 1027.13it/s] 71%|███████   | 4274/6000 [00:04<00:01, 1049.70it/s] 73%|███████▎  | 4379/6000 [00:04<00:01, 1023.71it/s] 75%|███████▍  | 4491/6000 [00:04<00:01, 1051.08it/s] 77%|███████▋  | 4601/6000 [00:04<00:01, 1062.05it/s] 78%|███████▊  | 4708/6000 [00:04<00:01, 1058.08it/s] 80%|████████  | 4815/6000 [00:04<00:01, 1059.72it/s] 82%|████████▏ | 4922/6000 [00:05<00:01, 1018.40it/s] 84%|████████▍ | 5025/6000 [00:05<00:00, 1021.05it/s] 85%|████████▌ | 5128/6000 [00:05<00:00, 1019.45it/s] 87%|████████▋ | 5232/6000 [00:05<00:00, 1024.77it/s] 89%|████████▉ | 5335/6000 [00:05<00:00, 1014.11it/s] 91%|█████████ | 5437/6000 [00:05<00:00, 973.88it/s]  92%|█████████▏| 5542/6000 [00:05<00:00, 995.38it/s] 92%|█████████▏| 5543/6000 [00:05<00:00, 1013.40it/s] 94%|█████████▍| 5645/6000 [00:05<00:00, 987.85it/s]  96%|█████████▌| 5745/6000 [00:05<00:00, 963.27it/s] 97%|█████████▋| 5842/6000 [00:06<00:00, 843.73it/s] 99%|█████████▉| 5930/6000 [00:06<00:00, 716.20it/s]100%|██████████| 6000/6000 [00:06<00:00, 894.38it/s]
+Reading Test Transforms [07/07 12:00:54]
+  0%|          | 0/300 [00:00<?, ?it/s] 34%|███▎      | 101/300 [00:00<00:00, 995.95it/s] 73%|███████▎  | 219/300 [00:00<00:00, 1102.74it/s]100%|██████████| 300/300 [00:00<00:00, 764.83it/s] 
+/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/main.py:731: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  (model_params, first_iter) = torch.load(checkpoint)
+Loading Training Cameras [07/07 12:00:55]
+Loading Test Cameras [07/07 12:00:57]
+Number of points at initialisation :  329246 [07/07 12:00:59]
+Training progress:   0%|          | 0/200 [00:00<?, ?it/s]Training progress:   0%|          | 0/200 [00:28<?, ?it/s, Loss=0.1012033, PSNR=37.97, Ll1=0.0097, Lssim=0.0280, points=489004, static=0, Ldynamic_roi=0.0098, Lstatic_exclusion=0.0011]Training progress:   5%|▌         | 10/200 [00:28<08:55,  2.82s/it, Loss=0.1012033, PSNR=37.97, Ll1=0.0097, Lssim=0.0280, points=489004, static=0, Ldynamic_roi=0.0098, Lstatic_exclusion=0.0011]Training progress:   5%|▌         | 10/200 [00:46<08:55,  2.82s/it, Loss=0.0796562, PSNR=37.84, Ll1=0.0102, Lssim=0.0322, points=489004, static=0, Ldynamic_roi=0.0057, Lstatic_exclusion=0.0006]Training progress:  10%|█         | 20/200 [00:46<06:37,  2.21s/it, Loss=0.0796562, PSNR=37.84, Ll1=0.0102, Lssim=0.0322, points=489004, static=0, Ldynamic_roi=0.0057, Lstatic_exclusion=0.0006]Training progress:  10%|█         | 20/200 [01:03<06:37,  2.21s/it, Loss=0.0956456, PSNR=32.56, Ll1=0.0135, Lssim=0.0393, points=489004, static=0, Ldynamic_roi=0.0077, Lstatic_exclusion=0.0007]Training progress:  15%|█▌        | 30/200 [01:03<05:42,  2.02s/it, Loss=0.0956456, PSNR=32.56, Ll1=0.0135, Lssim=0.0393, points=489004, static=0, Ldynamic_roi=0.0077, Lstatic_exclusion=0.0007]Training progress:  15%|█▌        | 30/200 [01:21<05:42,  2.02s/it, Loss=0.0890772, PSNR=33.76, Ll1=0.0119, Lssim=0.0284, points=489004, static=0, Ldynamic_roi=0.0082, Lstatic_exclusion=0.0010]Training progress:  20%|██        | 40/200 [01:21<05:08,  1.93s/it, Loss=0.0890772, PSNR=33.76, Ll1=0.0119, Lssim=0.0284, points=489004, static=0, Ldynamic_roi=0.0082, Lstatic_exclusion=0.0010]Training progress:  20%|██        | 40/200 [01:39<05:08,  1.93s/it, Loss=0.0868227, PSNR=34.83, Ll1=0.0102, Lssim=0.0285, points=489004, static=0, Ldynamic_roi=0.0081, Lstatic_exclusion=0.0008]Training progress:  25%|██▌       | 50/200 [01:39<04:41,  1.87s/it, Loss=0.0868227, PSNR=34.83, Ll1=0.0102, Lssim=0.0285, points=489004, static=0, Ldynamic_roi=0.0081, Lstatic_exclusion=0.0008]Training progress:  25%|██▌       | 50/200 [01:58<04:41,  1.87s/it, Loss=0.1058569, PSNR=36.83, Ll1=0.0099, Lssim=0.0316, points=498416, static=0, Ldynamic_roi=0.0107, Lstatic_exclusion=0.0010]Training progress:  30%|███       | 60/200 [01:58<04:22,  1.87s/it, Loss=0.1058569, PSNR=36.83, Ll1=0.0099, Lssim=0.0316, points=498416, static=0, Ldynamic_roi=0.0107, Lstatic_exclusion=0.0010]Training progress:  30%|███       | 60/200 [02:16<04:22,  1.87s/it, Loss=0.0950244, PSNR=36.11, Ll1=0.0095, Lssim=0.0305, points=498416, static=0, Ldynamic_roi=0.0084, Lstatic_exclusion=0.0007]Training progress:  35%|███▌      | 70/200 [02:16<04:00,  1.85s/it, Loss=0.0950244, PSNR=36.11, Ll1=0.0095, Lssim=0.0305, points=498416, static=0, Ldynamic_roi=0.0084, Lstatic_exclusion=0.0007]Training progress:  35%|███▌      | 70/200 [02:34<04:00,  1.85s/it, Loss=0.1041386, PSNR=36.34, Ll1=0.0107, Lssim=0.0300, points=498416, static=0, Ldynamic_roi=0.0111, Lstatic_exclusion=0.0011]Training progress:  40%|████      | 80/200 [02:34<03:40,  1.84s/it, Loss=0.1041386, PSNR=36.34, Ll1=0.0107, Lssim=0.0300, points=498416, static=0, Ldynamic_roi=0.0111, Lstatic_exclusion=0.0011]Training progress:  40%|████      | 80/200 [02:52<03:40,  1.84s/it, Loss=0.0918824, PSNR=34.45, Ll1=0.0107, Lssim=0.0374, points=498416, static=0, Ldynamic_roi=0.0072, Lstatic_exclusion=0.0007]Training progress:  45%|████▌     | 90/200 [02:52<03:21,  1.83s/it, Loss=0.0918824, PSNR=34.45, Ll1=0.0107, Lssim=0.0374, points=498416, static=0, Ldynamic_roi=0.0072, Lstatic_exclusion=0.0007]Training progress:  45%|████▌     | 90/200 [03:10<03:21,  1.83s/it, Loss=0.0781864, PSNR=36.35, Ll1=0.0100, Lssim=0.0288, points=498416, static=0, Ldynamic_roi=0.0057, Lstatic_exclusion=0.0005]Training progress:  50%|█████     | 100/200 [03:10<03:02,  1.82s/it, Loss=0.0781864, PSNR=36.35, Ll1=0.0100, Lssim=0.0288, points=498416, static=0, Ldynamic_roi=0.0057, Lstatic_exclusion=0.0005]Training progress:  50%|█████     | 100/200 [03:29<03:02,  1.82s/it, Loss=0.0908672, PSNR=36.63, Ll1=0.0110, Lssim=0.0322, points=517736, static=0, Ldynamic_roi=0.0073, Lstatic_exclusion=0.0006]Training progress:  55%|█████▌    | 110/200 [03:29<02:45,  1.84s/it, Loss=0.0908672, PSNR=36.63, Ll1=0.0110, Lssim=0.0322, points=517736, static=0, Ldynamic_roi=0.0073, Lstatic_exclusion=0.0006]Training progress:  55%|█████▌    | 110/200 [03:48<02:45,  1.84s/it, Loss=0.1063445, PSNR=35.75, Ll1=0.0099, Lssim=0.0368, points=517736, static=0, Ldynamic_roi=0.0113, Lstatic_exclusion=0.0009]Training progress:  60%|██████    | 120/200 [03:48<02:28,  1.85s/it, Loss=0.1063445, PSNR=35.75, Ll1=0.0099, Lssim=0.0368, points=517736, static=0, Ldynamic_roi=0.0113, Lstatic_exclusion=0.0009]Training progress:  60%|██████    | 120/200 [04:06<02:28,  1.85s/it, Loss=0.1139590, PSNR=33.21, Ll1=0.0125, Lssim=0.0391, points=517736, static=0, Ldynamic_roi=0.0120, Lstatic_exclusion=0.0011]Training progress:  65%|██████▌   | 130/200 [04:06<02:09,  1.85s/it, Loss=0.1139590, PSNR=33.21, Ll1=0.0125, Lssim=0.0391, points=517736, static=0, Ldynamic_roi=0.0120, Lstatic_exclusion=0.0011]Training progress:  65%|██████▌   | 130/200 [04:25<02:09,  1.85s/it, Loss=0.0929669, PSNR=34.53, Ll1=0.0118, Lssim=0.0343, points=517736, static=0, Ldynamic_roi=0.0059, Lstatic_exclusion=0.0005]Training progress:  70%|███████   | 140/200 [04:25<01:51,  1.86s/it, Loss=0.0929669, PSNR=34.53, Ll1=0.0118, Lssim=0.0343, points=517736, static=0, Ldynamic_roi=0.0059, Lstatic_exclusion=0.0005]Training progress:  70%|███████   | 140/200 [04:44<01:51,  1.86s/it, Loss=0.1044696, PSNR=32.78, Ll1=0.0110, Lssim=0.0352, points=517736, static=0, Ldynamic_roi=0.0115, Lstatic_exclusion=0.0010]Training progress:  75%|███████▌  | 150/200 [04:44<01:33,  1.86s/it, Loss=0.1044696, PSNR=32.78, Ll1=0.0110, Lssim=0.0352, points=517736, static=0, Ldynamic_roi=0.0115, Lstatic_exclusion=0.0010]Training progress:  75%|███████▌  | 150/200 [05:03<01:33,  1.86s/it, Loss=0.1002554, PSNR=37.14, Ll1=0.0096, Lssim=0.0318, points=553033, static=0, Ldynamic_roi=0.0089, Lstatic_exclusion=0.0007]Training progress:  80%|████████  | 160/200 [05:03<01:15,  1.89s/it, Loss=0.1002554, PSNR=37.14, Ll1=0.0096, Lssim=0.0318, points=553033, static=0, Ldynamic_roi=0.0089, Lstatic_exclusion=0.0007]Training progress:  80%|████████  | 160/200 [05:23<01:15,  1.89s/it, Loss=0.0980528, PSNR=35.92, Ll1=0.0112, Lssim=0.0328, points=553033, static=0, Ldynamic_roi=0.0080, Lstatic_exclusion=0.0006]Training progress:  85%|████████▌ | 170/200 [05:23<00:57,  1.92s/it, Loss=0.0980528, PSNR=35.92, Ll1=0.0112, Lssim=0.0328, points=553033, static=0, Ldynamic_roi=0.0080, Lstatic_exclusion=0.0006]Training progress:  85%|████████▌ | 170/200 [05:43<00:57,  1.92s/it, Loss=0.1005650, PSNR=36.49, Ll1=0.0104, Lssim=0.0359, points=553033, static=0, Ldynamic_roi=0.0097, Lstatic_exclusion=0.0008]Training progress:  90%|█████████ | 180/200 [05:43<00:38,  1.94s/it, Loss=0.1005650, PSNR=36.49, Ll1=0.0104, Lssim=0.0359, points=553033, static=0, Ldynamic_roi=0.0097, Lstatic_exclusion=0.0008]Training progress:  90%|█████████ | 180/200 [06:03<00:38,  1.94s/it, Loss=0.0975251, PSNR=33.55, Ll1=0.0129, Lssim=0.0335, points=553033, static=0, Ldynamic_roi=0.0076, Lstatic_exclusion=0.0006]Training progress:  95%|█████████▌| 190/200 [06:03<00:19,  1.95s/it, Loss=0.0975251, PSNR=33.55, Ll1=0.0129, Lssim=0.0335, points=553033, static=0, Ldynamic_roi=0.0076, Lstatic_exclusion=0.0006]Training progress:  95%|█████████▌| 190/200 [06:23<00:19,  1.95s/it, Loss=0.0977379, PSNR=36.07, Ll1=0.0104, Lssim=0.0332, points=553033, static=0, Ldynamic_roi=0.0088, Lstatic_exclusion=0.0006]Training progress: 100%|██████████| 200/200 [06:23<00:00,  1.96s/it, Loss=0.0977379, PSNR=36.07, Ll1=0.0104, Lssim=0.0332, points=553033, static=0, Ldynamic_roi=0.0088, Lstatic_exclusion=0.0006]Training progress: 100%|██████████| 200/200 [06:23<00:00,  1.92s/it, Loss=0.0977379, PSNR=36.07, Ll1=0.0104, Lssim=0.0332, points=553033, static=0, Ldynamic_roi=0.0088, Lstatic_exclusion=0.0006]
+wandb: 
+wandb: Run history:
+wandb:     gpu/memory_allocated_MB ▄▁▁▁▁▅▅▁▁▅▅▁▅▅▇▇▃▇▇▇▆▃▇▄▃▃▄▇▄▄▄█▄███████
+wandb:      gpu/memory_reserved_MB ▁▃▃▄▄▄▂▄▅▅▅▅▅▅▅▄▅▅▆▇▇▇▇▇▇▇▇▇▇▇▂▅▅▅▅▆▆▆▆█
+wandb: motion_lora/basis_norm_mean █████▇▇▇▇█▆▆▆▆▆▅▅▅▅▅▄▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁
+wandb: motion_lora/coeff_norm_mean ▁▁▁▁▁▁▁▁▁▁▁▁▂▂▂▂▂▂▂▂▄▅▅▅████████████████
+wandb:              points/dynamic ▁▁▁▁▁▁▁▁▁▁▂▂▂▂▂▂▂▂▂▂▄▄▄▄▄▄▄▄▄▄██████████
+wandb:         points/hard_dynamic ▁▁▁▁▁▁▁▁▁▁▁▁▁▂▂▂▂▂▄▄▄▄▄▄▄▄▄▄▄███████████
+wandb:          points/hard_static ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb: points/hard_static_fraction ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:               points/static ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                points/total ▁▁▁▁▁▁▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▄▄▄▄▄▄▄▄▄▄▄██████
+wandb:                         +29 ...
+wandb: 
+wandb: Run summary:
+wandb:                       best_test_psnr 32.86209
+wandb:      best_val/dynamic_edge_magnitude 0.04396
+wandb:           best_val/dynamic_mask_psnr 22.67334
+wandb: best_val/motion_lora/basis_norm_mean 0.19116
+wandb: best_val/motion_lora/coeff_norm_mean 0.14122
+wandb:              best_val/points/dynamic 553033
+wandb:         best_val/points/hard_dynamic 553033
+wandb:          best_val/points/hard_static 0
+wandb: best_val/points/hard_static_fraction 0
+wandb:               best_val/points/static 0
+wandb:                                 +107 ...
+wandb: 
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200/wandb/offline-run-20260707_120044-20260707_114908_sear_steak_event_candidate_local_refine_6200
+wandb: Find logs at: /leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200/wandb/offline-run-20260707_120044-20260707_114908_sear_steak_event_candidate_local_refine_6200/logs
+
+[ITER 6200] Saving best checkpoint [07/07 12:08:50]
+
+[ITER 6200] Saving Gaussians [07/07 12:08:50]
+
+Complete. [07/07 12:08:54]
+Done.

@@ -3,14 +3,14 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop non-oracle candidate discovery
-- Current run ID: R023 event-candidate local refinement train jobs pending
-- Current method candidate: M1 non-oracle residual-component local refinement; forced per-job extension-root replacement train jobs pending, eval/scoring pending
+- Current run ID: R024 event-candidate local refinement eval jobs pending
+- Current method candidate: M1 non-oracle residual-component local refinement; R023 training completed and R024 eval renders pending, scoring pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `9840830abe3124525413770b31fe9ef3120e196e`
-- Last HPC job ID: `48799995`
-- Latest success/failure: R022 started but still inherited shared `TORCH_EXTENSIONS_DIR`; jobs were cancelled after startup. Commit `ad637f3ec50129fe40c5715804d446dfe6bdc90d` forces per-job extension roots for Slurm jobs, and R023 train jobs are pending on scheduler priority at 2026-07-07T11:54:57+02:00 with no stdout logs yet.
-- Next command to run: monitor train jobs `48799988`, `48799992`, `48799995`, then submit eval with `scripts/submit_event_candidate_refine.sh --mode eval --run-manifest refine-logs/event_candidate_refine_train_jobs_20260707_114908.tsv` if `chkpnt6200.pth` files exist
+- Last pushed milestone commit: `a724ce68373854447edaa385b3e94bf1809b8824`
+- Last HPC job ID: `48802359`
+- Latest success/failure: R023 training completed successfully with per-job extension roots and wrote three `chkpnt6200.pth` files; R024 eval jobs `48802355`, `48802357`, and `48802359` are pending on scheduler priority at 2026-07-07T12:11:10+02:00.
+- Next command to run: monitor eval jobs `48802355`, `48802357`, `48802359`, then augment `refine-logs/hide_reveal_real_windows.json` with the refined eval render folders and run frozen-window scoring.
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -179,6 +179,28 @@ Recorded before new event-crop evidence edits.
 - Leonardo polls showed R023 train jobs `48799988`, `48799992`, and `48799995` still `PENDING`, reason `(Priority)`, elapsed `00:00:00`; no `logs/event_candidate_refine_train_*_487999*.out` files exist yet.
 - `scontrol show job 48799988` confirmed no dependency, partition `boost_usr_prod`, account/QOS `euhpc_d21_034` / `boost_qos_lprod`, one GPU requested, and priority wait as the scheduler reason.
 - Next command: `ssh -o ConnectTimeout=15 siyengar@login.leonardo.cineca.it "squeue -j 48799988,48799992,48799995 -o '%i %T %M %D %R'"`.
+
+### 2026-07-07T12:11:10+02:00 - R023 completed; R024 eval submitted
+
+- R023 train jobs completed:
+  - `48799988` cut_roasted_beef: `COMPLETED`, elapsed `00:13:45`, node `lrdn1933`
+  - `48799992` flame_steak: `COMPLETED`, elapsed `00:13:38`, node `lrdn1930`
+  - `48799995` sear_steak: `COMPLETED`, elapsed `00:13:00`, node `lrdn2003`
+- Startup logs confirm forced per-job extension roots:
+  - `/leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48799988`
+  - `/leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48799992`
+  - `/leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48799995`
+- Checkpoints and point clouds exist:
+  - `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_cut_roasted_beef_event_candidate_local_refine_6200/chkpnt6200.pth`
+  - `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_flame_steak_event_candidate_local_refine_6200/chkpnt6200.pth`
+  - `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_candidate_local_refine_6200/20260707_114908_sear_steak_event_candidate_local_refine_6200/chkpnt6200.pth`
+- Collected R023 train logs locally under `logs/event_candidate_refine_train_*_487999*.{out,err}`.
+- Eval dry-run resolved the three `chkpnt6200.pth` files, then R024 eval jobs were submitted:
+  - `cut_roasted_beef`: `48802355`
+  - `flame_steak`: `48802357`
+  - `sear_steak`: `48802359`
+- Eval manifest collected locally: `refine-logs/event_candidate_refine_eval_jobs_20260707_121022.tsv`.
+- Current R024 scheduler state at submission poll: all three jobs `PENDING` on `(Priority)`.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
