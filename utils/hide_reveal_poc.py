@@ -1014,6 +1014,95 @@ def create_real_manifest_from_eval(
     }
 
 
+def match_eval_run_for_scene(scene: str, runs: Sequence[EvalFrameRun]) -> EvalFrameRun:
+    exact = [run for run in runs if run.scene == scene]
+    if len(exact) == 1:
+        return exact[0]
+    scene_token = str(scene).lower()
+    embedded = [run for run in runs if scene_token in str(run.eval_dir).lower()]
+    if len(embedded) == 1:
+        return embedded[0]
+    if len(exact) > 1 or len(embedded) > 1:
+        matches = exact or embedded
+        joined = ", ".join(str(run.eval_dir) for run in matches)
+        raise ValueError(f"Multiple eval runs match scene {scene}: {joined}")
+    known = ", ".join(f"{run.scene}:{run.eval_dir}" for run in runs)
+    raise ValueError(f"No eval run matches scene {scene}. Known eval runs: {known}")
+
+
+def augment_real_manifest_system(
+    manifest_path: Path,
+    search_roots: Sequence[Path],
+    out_path: Path,
+    system_name: str,
+    merge_manifest_paths: Optional[Sequence[Path]] = None,
+    max_depth: int = 5,
+    validate: bool = True,
+) -> Dict[str, object]:
+    manifest_path = manifest_path.resolve()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    windows = manifest.get("windows")
+    if not isinstance(windows, list) or not windows:
+        raise ValueError(f"Manifest has no windows: {manifest_path}")
+    runs = discover_eval_frame_runs(search_roots, max_depth=max_depth)
+    if not runs:
+        roots = ", ".join(str(root) for root in search_roots)
+        raise FileNotFoundError(f"No eval folders with renders/ and gt/ found under: {roots}")
+
+    merge_payloads = []
+    for merge_path in merge_manifest_paths or []:
+        merge_payloads.append(json.loads(Path(merge_path).read_text(encoding="utf-8")))
+
+    augmented_windows: List[Dict[str, object]] = []
+    matched_runs = {}
+    for window in windows:
+        if not isinstance(window, dict):
+            raise ValueError("Every manifest window must be an object")
+        scene = str(window.get("scene", ""))
+        if not scene:
+            raise ValueError(f"Window {window.get('window_id', '<unknown>')} has no scene")
+        run = match_eval_run_for_scene(scene, runs)
+        matched_runs[scene] = run
+        augmented = dict(window)
+        systems = dict(augmented.get("systems", {}))
+        for merge_payload in merge_payloads:
+            systems.update(merge_baseline_systems(augmented, merge_payload.get("windows", []), merge_payload_system_names(merge_payload)))
+        systems[system_name] = run_system_spec(run)
+        augmented["systems"] = systems
+        augmented_windows.append(augmented)
+
+    payload = dict(manifest)
+    payload["generated_by"] = "augment-real-manifest-system"
+    payload["generated_at_utc"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    payload["source_manifest"] = str(manifest_path)
+    payload["augmented_system"] = system_name
+    payload["eval_roots"] = [str(Path(root)) for root in search_roots]
+    payload["merge_manifests"] = [str(Path(path)) for path in merge_manifest_paths or []]
+    payload["matched_eval_runs"] = {scene: eval_run_to_row(run) for scene, run in sorted(matched_runs.items())}
+    payload["windows"] = augmented_windows
+    write_json(out_path, payload)
+    validation = validate_real_manifest(out_path, require_systems=["route0", system_name]) if validate else None
+    if validation is not None:
+        write_json(out_path.with_suffix(".validation.json"), validation)
+    return {
+        "manifest": payload,
+        "out_path": str(out_path),
+        "eval_runs": [eval_run_to_row(run) for run in runs],
+        "validation": validation,
+    }
+
+
+def merge_payload_system_names(payload: Dict[str, object]) -> List[str]:
+    names: Set[str] = set()
+    for window in payload.get("windows", []):
+        if not isinstance(window, dict):
+            continue
+        systems = window.get("systems", {})
+        if isinstance(systems, dict):
+            names.update(str(name) for name in systems)
+    return sorted(names)
+
+
 def replace_eval_scene(run: EvalFrameRun, scene: str) -> EvalFrameRun:
     return EvalFrameRun(
         scene=scene,

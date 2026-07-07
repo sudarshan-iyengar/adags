@@ -9,6 +9,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from utils.hide_reveal_poc import (
     FrozenHideRevealParams,
+    augment_real_manifest_system,
     create_real_manifest_from_eval,
     derive_real_poc_render_folders,
     discover_nonoracle_event_candidates,
@@ -64,6 +65,27 @@ def parse_args():
     from_eval.add_argument("--windows-csv", help="CSV with scene, frame_start, frame_end, crop_xyxy or x0/y0/x1/y1.")
     from_eval.add_argument("--max-depth", type=int, default=5)
     from_eval.add_argument("--skip-validate", action="store_true")
+
+    augment = subparsers.add_parser(
+        "augment-real-manifest-system",
+        help="Add a rendered system from eval folders to existing frozen real windows.",
+    )
+    augment.add_argument("--manifest", required=True)
+    augment.add_argument(
+        "--eval-root",
+        action="append",
+        required=True,
+        help="Eval folder containing renders/ and gt/, or a parent directory to scan. Repeatable.",
+    )
+    augment.add_argument("--system-name", required=True)
+    augment.add_argument("--out", required=True)
+    augment.add_argument(
+        "--merge-manifest",
+        action="append",
+        help="Optional manifest whose systems should be merged by matching window_id before adding the new system.",
+    )
+    augment.add_argument("--max-depth", type=int, default=5)
+    augment.add_argument("--skip-validate", action="store_true")
 
     validate = subparsers.add_parser(
         "validate-real-manifest",
@@ -206,6 +228,27 @@ def main():
             print(f"validation_warnings={len(validation['warnings'])}")
             if validation["errors"]:
                 for error in validation["errors"][:8]:
+                    print(f"ERROR: {error}", file=sys.stderr)
+                return 2
+    elif args.command == "augment-real-manifest-system":
+        result = augment_real_manifest_system(
+            manifest_path=Path(args.manifest),
+            search_roots=[Path(path) for path in args.eval_root],
+            out_path=Path(args.out),
+            system_name=args.system_name,
+            merge_manifest_paths=[Path(path) for path in args.merge_manifest or []],
+            max_depth=args.max_depth,
+            validate=not args.skip_validate,
+        )
+        print(f"Wrote augmented real manifest to {Path(result['out_path']).resolve()}")
+        print(f"systems_added={args.system_name}")
+        print(f"eval_runs={len(result['eval_runs'])}")
+        if result["validation"] is not None:
+            print(f"validation_ok={result['validation']['ok']}")
+            print(f"validation_errors={len(result['validation']['errors'])}")
+            print(f"validation_warnings={len(result['validation']['warnings'])}")
+            if result["validation"]["errors"]:
+                for error in result["validation"]["errors"][:8]:
                     print(f"ERROR: {error}", file=sys.stderr)
                 return 2
     elif args.command == "validate-real-manifest":
