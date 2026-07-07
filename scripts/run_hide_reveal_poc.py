@@ -11,6 +11,7 @@ from utils.hide_reveal_poc import (
     FrozenHideRevealParams,
     create_real_manifest_from_eval,
     derive_real_poc_render_folders,
+    discover_nonoracle_event_candidates,
     direct_window_spec,
     evaluate_real_manifest,
     load_window_specs,
@@ -117,6 +118,21 @@ def parse_args():
     actual.add_argument("--event-beta", type=float, default=1.0)
     actual.add_argument("--overwrite", action="store_true")
     actual.add_argument("--compute-lpips", action="store_true")
+
+    candidates = subparsers.add_parser(
+        "nonoracle-candidates",
+        help="Discover non-oracle event-support candidate boxes without frozen crop labels.",
+    )
+    candidates.add_argument("--manifest", required=True)
+    candidates.add_argument("--out-dir", default="refine-logs/hide_reveal_poc/r018_nonoracle_candidates")
+    candidates.add_argument("--route0-system", default="route0")
+    candidates.add_argument("--window-length", type=int, default=16)
+    candidates.add_argument("--temporal-stride", type=int, default=4)
+    candidates.add_argument("--tile-size", type=int, default=160)
+    candidates.add_argument("--tile-stride", type=int, default=80)
+    candidates.add_argument("--top-k-per-scene", type=int, default=8)
+    candidates.add_argument("--crop-iou-threshold", type=float, default=0.5)
+    candidates.add_argument("--temporal-iou-threshold", type=float, default=0.5)
 
     return parser.parse_args()
 
@@ -268,6 +284,29 @@ def main():
         if result.get("eval"):
             print(f"Wrote real event-window outputs to {Path(args.eval_out_dir).resolve()}")
             print(f"systems={', '.join(result['eval']['summary'].keys())}")
+    elif args.command == "nonoracle-candidates":
+        result = discover_nonoracle_event_candidates(
+            manifest_path=Path(args.manifest),
+            out_dir=Path(args.out_dir),
+            route0_system=args.route0_system,
+            window_length=args.window_length,
+            temporal_stride=args.temporal_stride,
+            tile_size=args.tile_size,
+            tile_stride=args.tile_stride,
+            top_k_per_scene=args.top_k_per_scene,
+            crop_iou_threshold=args.crop_iou_threshold,
+            temporal_iou_threshold=args.temporal_iou_threshold,
+        )
+        print(f"Wrote non-oracle candidate outputs to {Path(args.out_dir).resolve()}")
+        print(f"candidate_manifest={Path(result['manifest_path']).resolve()}")
+        print(f"metadata={Path(result['metadata_path']).resolve()}")
+        print(f"validation_ok={result['validation']['ok']}")
+        print(f"validation_errors={len(result['validation']['errors'])}")
+        print(f"candidates={len(result['manifest']['windows'])}")
+        if result["validation"]["errors"]:
+            for error in result["validation"]["errors"][:8]:
+                print(f"ERROR: {error}", file=sys.stderr)
+            return 2
     else:
         raise RuntimeError(f"Unhandled command: {args.command}")
     return 0

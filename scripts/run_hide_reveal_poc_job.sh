@@ -22,6 +22,11 @@ OVERWRITE_DERIVED="${HIDE_REVEAL_OVERWRITE:-0}"
 SEEDS="${HIDE_REVEAL_SEEDS:-0 1 2}"
 CLIPS_PER_TYPE="${HIDE_REVEAL_CLIPS_PER_TYPE:-8}"
 COMPUTE_LPIPS="${HIDE_REVEAL_COMPUTE_LPIPS:-0}"
+NONORACLE_WINDOW_LENGTH="${HIDE_REVEAL_NONORACLE_WINDOW_LENGTH:-16}"
+NONORACLE_TEMPORAL_STRIDE="${HIDE_REVEAL_NONORACLE_TEMPORAL_STRIDE:-4}"
+NONORACLE_TILE_SIZE="${HIDE_REVEAL_NONORACLE_TILE_SIZE:-160}"
+NONORACLE_TILE_STRIDE="${HIDE_REVEAL_NONORACLE_TILE_STRIDE:-80}"
+NONORACLE_TOP_K_PER_SCENE="${HIDE_REVEAL_NONORACLE_TOP_K_PER_SCENE:-8}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 ENV_SCRIPT="${ADAGS_ENV_SCRIPT:-$PROJECT_ROOT/exp_index/leonardo_env.sh}"
 
@@ -55,6 +60,11 @@ mkdir -p "$OUT_DIR"
   echo "residual_manifest: ${RESIDUAL_MANIFEST:-none}"
   echo "matched_manifest: ${MATCHED_MANIFEST:-none}"
   echo "eval_out_dir: $EVAL_OUT_DIR"
+  echo "nonoracle_window_length: $NONORACLE_WINDOW_LENGTH"
+  echo "nonoracle_temporal_stride: $NONORACLE_TEMPORAL_STRIDE"
+  echo "nonoracle_tile_size: $NONORACLE_TILE_SIZE"
+  echo "nonoracle_tile_stride: $NONORACLE_TILE_STRIDE"
+  echo "nonoracle_top_k_per_scene: $NONORACLE_TOP_K_PER_SCENE"
   echo "repo_root: $REPO_ROOT"
   echo "project_root: $PROJECT_ROOT"
   echo "env_script: $ENV_SCRIPT"
@@ -144,7 +154,20 @@ elif [[ "$STAGE" == "actual-real-renders" ]]; then
     CMD+=(--compute-lpips)
   fi
   "${CMD[@]}"
+elif [[ "$STAGE" == "nonoracle-candidates" ]]; then
+  if [[ -z "$MANIFEST" ]]; then
+    echo "ERROR: HIDE_REVEAL_MANIFEST is required for nonoracle-candidates stage." >&2
+    exit 2
+  fi
+  "$PYTHON_BIN" scripts/run_hide_reveal_poc.py nonoracle-candidates \
+    --manifest "$MANIFEST" \
+    --out-dir "$OUT_DIR" \
+    --window-length "$NONORACLE_WINDOW_LENGTH" \
+    --temporal-stride "$NONORACLE_TEMPORAL_STRIDE" \
+    --tile-size "$NONORACLE_TILE_SIZE" \
+    --tile-stride "$NONORACLE_TILE_STRIDE" \
+    --top-k-per-scene "$NONORACLE_TOP_K_PER_SCENE"
 else
-  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic, real, derive-real-renders, or actual-real-renders. Got: $STAGE" >&2
+  echo "ERROR: HIDE_REVEAL_STAGE must be synthetic, real, derive-real-renders, actual-real-renders, or nonoracle-candidates. Got: $STAGE" >&2
   exit 2
 fi

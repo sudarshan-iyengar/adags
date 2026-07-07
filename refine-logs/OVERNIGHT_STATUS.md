@@ -2,15 +2,15 @@
 
 ## Recovery Snapshot
 
-- Current objective phase: event-crop non-oracle recovery and method planning
-- Current run ID: post-R017 / pre-R018
-- Current method candidate: M1 non-oracle residual-component local refinement, tentative pending code-path inspection
+- Current objective phase: event-crop non-oracle candidate discovery
+- Current run ID: R018 nonoracle-candidates local smoke passed / pre-HPC
+- Current method candidate: M1 non-oracle residual-component local refinement; candidate-discovery dry-run implemented, local Gaussian refinement pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `f5d43539aee500051f2a4c5eeca5420293b636f1`
+- Last pushed milestone commit: `0b18166bec6d1a2d371764c70bdcf53b23319a5e`
 - Last HPC job ID: `48760448`
-- Latest success/failure: R017 FAIL / actual checkpoint-backed runtime opacity gate passed 0/5 frozen R009 real-window gates
-- Next command to run: inspect existing training/render paths for M1 local-refinement implementation and add a dry-run candidate discovery CLI before any HPC job
+- Latest success/failure: R017 FAIL; A1 local non-oracle candidate-discovery smoke PASS with validation_ok=True and 3/3 generated smoke candidates valid
+- Next command to run: commit/push A1 candidate-discovery implementation, pull on Leonardo, run shell syntax checks, dry-run `nonoracle-candidates`, then submit R018 through Slurm
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -47,6 +47,17 @@ Recorded before new event-crop evidence edits.
 - Wrote wiki memory `research-wiki/event-crop-fix.md`.
 - Wrote predeclared method/evaluation tracker `refine-logs/EVENT_CROP_METHOD_TRACKER.md`.
 - Predeclared first candidate: M1 non-oracle residual-component local refinement, pending code inspection.
+- Committed and pushed recovery evidence as `0b18166bec6d1a2d371764c70bdcf53b23319a5e` (`Record event-crop recovery evidence`).
+
+### 2026-07-07T02:56:22+02:00 - A1 non-oracle candidate-discovery smoke
+
+- Implemented a new `nonoracle-candidates` PoC stage in `scripts/run_hide_reveal_poc.py`, `utils/hide_reveal_poc.py`, and Slurm wrappers.
+- Candidate scoring uses route0 dynamic output, route0-vs-static render deltas, motion-mask boundaries, and route0 render flicker; it explicitly records `uses_gt_residual=false` and `uses_frozen_window_labels=false`.
+- Local smoke command completed with bundled Python:
+  `scripts/run_hide_reveal_poc.py nonoracle-candidates --manifest refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/smoke_manifest.json --out-dir refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/out --window-length 4 --temporal-stride 2 --tile-size 16 --tile-stride 8 --top-k-per-scene 3`
+- Smoke result: `validation_ok=True`, `validation_errors=0`, `candidates=3`.
+- Smoke report: `refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/out/nonoracle_candidate_report.md`.
+- Local Windows `bash` is unavailable, so shell wrapper syntax checks are deferred to Leonardo before Slurm submission.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 

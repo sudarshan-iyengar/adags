@@ -1656,6 +1656,438 @@ def merge_baseline_systems(
     return merged
 
 
+def gray_image(path: Path, target_hw: Optional[Tuple[int, int]] = None) -> np.ndarray:
+    with Image.open(path) as image:
+        arr = np.asarray(image.convert("L"), dtype=np.float32) / 255.0
+    if target_hw is not None and arr.shape != tuple(target_hw):
+        height, width = target_hw
+        pil = Image.fromarray(np.clip(np.rint(arr * 255.0), 0, 255).astype(np.uint8), mode="L")
+        arr = np.asarray(pil.resize((int(width), int(height)), Image.BILINEAR), dtype=np.float32) / 255.0
+    return arr.astype(np.float32)
+
+
+def indexed_gray(index: Dict[int, Path], frame_idx: int, target_hw: Tuple[int, int]) -> np.ndarray:
+    path = index.get(int(frame_idx))
+    if path is None:
+        return np.zeros(target_hw, dtype=np.float32)
+    return gray_image(path, target_hw=target_hw)
+
+
+def edge_map(mask: np.ndarray) -> np.ndarray:
+    if mask.size == 0:
+        return mask.astype(np.float32)
+    dx = np.zeros_like(mask, dtype=np.float32)
+    dy = np.zeros_like(mask, dtype=np.float32)
+    dx[:, 1:] = np.abs(mask[:, 1:] - mask[:, :-1])
+    dy[1:, :] = np.abs(mask[1:, :] - mask[:-1, :])
+    return np.clip(dx + dy, 0.0, 1.0)
+
+
+def crop_iou(a: Sequence[int], b: Sequence[int]) -> float:
+    ax0, ay0, ax1, ay1 = [int(v) for v in a]
+    bx0, by0, bx1, by1 = [int(v) for v in b]
+    ix0, iy0 = max(ax0, bx0), max(ay0, by0)
+    ix1, iy1 = min(ax1, bx1), min(ay1, by1)
+    inter = max(0, ix1 - ix0) * max(0, iy1 - iy0)
+    area_a = max(0, ax1 - ax0) * max(0, ay1 - ay0)
+    area_b = max(0, bx1 - bx0) * max(0, by1 - by0)
+    denom = area_a + area_b - inter
+    return float(inter / denom) if denom > 0 else 0.0
+
+
+def temporal_iou(a_start: int, a_end: int, b_start: int, b_end: int) -> float:
+    inter = max(0, min(int(a_end), int(b_end)) - max(int(a_start), int(b_start)) + 1)
+    union = max(int(a_end), int(b_end)) - min(int(a_start), int(b_start)) + 1
+    return float(inter / union) if union > 0 else 0.0
+
+
+def nms_candidate_rows(
+    rows: Sequence[Dict[str, object]],
+    max_candidates: int,
+    crop_iou_threshold: float,
+    temporal_iou_threshold: float,
+) -> List[Dict[str, object]]:
+    selected: List[Dict[str, object]] = []
+    for row in sorted(rows, key=lambda item: float(item["score"]), reverse=True):
+        suppress = False
+        for kept in selected:
+            if str(row["scene"]) != str(kept["scene"]):
+                continue
+            if crop_iou(row["crop_xyxy"], kept["crop_xyxy"]) < crop_iou_threshold:
+                continue
+            if temporal_iou(
+                int(row["frame_start"]),
+                int(row["frame_end"]),
+                int(kept["frame_start"]),
+                int(kept["frame_end"]),
+            ) < temporal_iou_threshold:
+                continue
+            suppress = True
+            break
+        if not suppress:
+            selected.append(dict(row))
+        if len(selected) >= max_candidates:
+            break
+    return selected
+
+
+def route0_spec_from_scene_source(scene_source: Dict[str, object]) -> Dict[str, str]:
+    eval_dir = Path(str(scene_source["route0_eval_dir"]))
+    spec = {
+        "render_dir": str((eval_dir / "renders").resolve()),
+        "gt_dir": str((eval_dir / "gt").resolve()),
+    }
+    static_dir = eval_dir / "static"
+    dynamic_dir = eval_dir / "dynamic"
+    if static_dir.is_dir() or str(scene_source.get("route0_eval_dir", "")).startswith("/"):
+        spec["static_dir"] = str(static_dir.resolve())
+    if dynamic_dir.is_dir() or str(scene_source.get("route0_eval_dir", "")).startswith("/"):
+        spec["dynamic_dir"] = str(dynamic_dir.resolve())
+    return spec
+
+
+def score_maps_for_scene(
+    scene_source: Dict[str, object],
+    frame_ids: Sequence[int],
+    route0_system: str,
+) -> Tuple[Dict[int, Dict[str, np.ndarray]], Tuple[int, int], Dict[str, object]]:
+    eval_dir = Path(str(scene_source["route0_eval_dir"]))
+    render_dir = eval_dir / "renders"
+    static_dir = eval_dir / "static"
+    dynamic_dir = eval_dir / "dynamic"
+    mask_dir = Path(str(scene_source.get("mask_dir", ""))) if scene_source.get("mask_dir") else None
+    if not render_dir.is_dir():
+        raise FileNotFoundError(f"Route0 render directory does not exist: {render_dir}")
+
+    render_index = index_image_frames(render_dir)
+    static_index = index_image_frames(static_dir) if static_dir.is_dir() else {}
+    dynamic_index = index_image_frames(dynamic_dir) if dynamic_dir.is_dir() else {}
+    mask_index = index_image_frames(mask_dir) if mask_dir is not None and mask_dir.is_dir() else {}
+
+    first_path = first_indexed_frame(render_index)
+    if first_path is None:
+        raise FileNotFoundError(f"No route0 render frames found in {render_dir}")
+    width, height = image_size(first_path)
+    target_hw = (height, width)
+    maps: Dict[int, Dict[str, np.ndarray]] = {}
+    prev_render: Optional[np.ndarray] = None
+    used_frames = []
+    for frame_idx in frame_ids:
+        render_path = render_index.get(int(frame_idx))
+        if render_path is None:
+            continue
+        render_gray = gray_image(render_path, target_hw=target_hw)
+        dynamic_gray = indexed_gray(dynamic_index, int(frame_idx), target_hw)
+        static_gray = indexed_gray(static_index, int(frame_idx), target_hw)
+        static_delta = np.abs(render_gray - static_gray).astype(np.float32) if static_index else np.zeros(target_hw, dtype=np.float32)
+        mask_gray = indexed_gray(mask_index, int(frame_idx), target_hw)
+        mask_boundary = edge_map(mask_gray)
+        if prev_render is None:
+            flicker_gray = np.zeros(target_hw, dtype=np.float32)
+        else:
+            flicker_gray = np.abs(render_gray - prev_render).astype(np.float32)
+        prev_render = render_gray
+        score = (
+            0.35 * dynamic_gray
+            + 0.25 * static_delta
+            + 0.25 * mask_boundary
+            + 0.15 * flicker_gray
+        )
+        maps[int(frame_idx)] = {
+            "score": np.clip(score, 0.0, 1.0).astype(np.float32),
+            "dynamic": dynamic_gray,
+            "static_delta": static_delta,
+            "mask_boundary": mask_boundary,
+            "flicker": flicker_gray,
+        }
+        used_frames.append(int(frame_idx))
+
+    metadata = {
+        "route0_system": route0_system,
+        "route0_eval_dir": str(eval_dir),
+        "render_dir": str(render_dir),
+        "static_dir": str(static_dir),
+        "dynamic_dir": str(dynamic_dir),
+        "mask_dir": str(mask_dir) if mask_dir is not None else None,
+        "n_render_frames_indexed": len(render_index),
+        "n_static_frames_indexed": len(static_index),
+        "n_dynamic_frames_indexed": len(dynamic_index),
+        "n_mask_frames_indexed": len(mask_index),
+        "n_scored_frames": len(used_frames),
+    }
+    return maps, target_hw, metadata
+
+
+def tile_rows_for_scene(
+    scene: str,
+    maps: Dict[int, Dict[str, np.ndarray]],
+    target_hw: Tuple[int, int],
+    window_length: int,
+    temporal_stride: int,
+    tile_size: int,
+    tile_stride: int,
+) -> List[Dict[str, object]]:
+    frame_ids = sorted(maps)
+    if len(frame_ids) < window_length:
+        return []
+    height, width = target_hw
+    rows: List[Dict[str, object]] = []
+    min_frame, max_frame = min(frame_ids), max(frame_ids)
+    frame_set = set(frame_ids)
+    window_length = max(1, int(window_length))
+    temporal_stride = max(1, int(temporal_stride))
+    tile_size = max(1, int(tile_size))
+    tile_stride = max(1, int(tile_stride))
+    tile_width = min(width, tile_size)
+    tile_height = min(height, tile_size)
+    max_x = max(0, width - tile_width)
+    max_y = max(0, height - tile_height)
+    x_starts = list(range(0, max_x + 1, max(1, tile_stride)))
+    y_starts = list(range(0, max_y + 1, max(1, tile_stride)))
+    if x_starts[-1] != max_x:
+        x_starts.append(max_x)
+    if y_starts[-1] != max_y:
+        y_starts.append(max_y)
+
+    for frame_start in range(min_frame, max_frame - window_length + 2, max(1, temporal_stride)):
+        frames = list(range(frame_start, frame_start + window_length))
+        if any(frame not in frame_set for frame in frames):
+            continue
+        frame_end = frames[-1]
+        for y0 in y_starts:
+            y1 = min(height, y0 + tile_height)
+            for x0 in x_starts:
+                x1 = min(width, x0 + tile_width)
+                score_values = []
+                term_values = {"dynamic": [], "static_delta": [], "mask_boundary": [], "flicker": []}
+                for frame_idx in frames:
+                    frame_maps = maps[frame_idx]
+                    score_values.append(float(frame_maps["score"][y0:y1, x0:x1].mean()))
+                    for key in term_values:
+                        term_values[key].append(float(frame_maps[key][y0:y1, x0:x1].mean()))
+                score_mean = float(np.mean(score_values))
+                score_peak = float(np.max(score_values))
+                score = 0.7 * score_mean + 0.3 * score_peak
+                rows.append(
+                    {
+                        "scene": scene,
+                        "frame_start": int(frame_start),
+                        "frame_end": int(frame_end),
+                        "crop_xyxy": [int(x0), int(y0), int(x1), int(y1)],
+                        "score": float(score),
+                        "score_mean": score_mean,
+                        "score_peak": score_peak,
+                        "dynamic_mean": float(np.mean(term_values["dynamic"])),
+                        "static_delta_mean": float(np.mean(term_values["static_delta"])),
+                        "mask_boundary_mean": float(np.mean(term_values["mask_boundary"])),
+                        "flicker_mean": float(np.mean(term_values["flicker"])),
+                    }
+                )
+    return rows
+
+
+def discover_nonoracle_event_candidates(
+    manifest_path: Path,
+    out_dir: Path,
+    route0_system: str = "route0",
+    window_length: int = 16,
+    temporal_stride: int = 4,
+    tile_size: int = 160,
+    tile_stride: int = 80,
+    top_k_per_scene: int = 8,
+    crop_iou_threshold: float = 0.5,
+    temporal_iou_threshold: float = 0.5,
+) -> Dict[str, object]:
+    manifest_path = manifest_path.resolve()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    scene_sources = manifest.get("scene_sources")
+    if not isinstance(scene_sources, dict):
+        raise ValueError(f"Manifest lacks scene_sources needed for non-oracle discovery: {manifest_path}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    all_rows: List[Dict[str, object]] = []
+    scene_reports: List[Dict[str, object]] = []
+    selected_windows: List[Dict[str, object]] = []
+    for scene, raw_scene_source in scene_sources.items():
+        if not isinstance(raw_scene_source, dict):
+            continue
+        frame_range = raw_scene_source.get("frame_range", [0, 299])
+        frame_start, frame_end = int(frame_range[0]), int(frame_range[1])
+        frame_ids = list(range(frame_start, frame_end + 1))
+        maps, target_hw, scene_metadata = score_maps_for_scene(raw_scene_source, frame_ids, route0_system)
+        rows = tile_rows_for_scene(
+            scene=str(scene),
+            maps=maps,
+            target_hw=target_hw,
+            window_length=window_length,
+            temporal_stride=temporal_stride,
+            tile_size=tile_size,
+            tile_stride=tile_stride,
+        )
+        selected = nms_candidate_rows(rows, top_k_per_scene, crop_iou_threshold, temporal_iou_threshold)
+        route0_spec = route0_spec_from_scene_source(raw_scene_source)
+        for rank, row in enumerate(selected, start=1):
+            candidate_id = (
+                f"{scene}_nonoracle_{rank:02d}_"
+                f"{int(row['frame_start']):03d}_{int(row['frame_end']):03d}_"
+                f"{'_'.join(str(v) for v in row['crop_xyxy'])}"
+            )
+            window = {
+                "window_id": candidate_id,
+                "scene": str(scene),
+                "frame_start": int(row["frame_start"]),
+                "frame_end": int(row["frame_end"]),
+                "crop_xyxy": [int(v) for v in row["crop_xyxy"]],
+                "occluder": "NONORACLE_CANDIDATE",
+                "notes": (
+                    "Automatically discovered from route0 dynamic output, route0-vs-static deltas, "
+                    "motion-mask boundaries, and route0 render flicker; "
+                    "no GT residual and no frozen event-crop labels used."
+                ),
+                "candidate_score": float(row["score"]),
+                "candidate_terms": {
+                    "score_mean": float(row["score_mean"]),
+                    "score_peak": float(row["score_peak"]),
+                    "dynamic_mean": float(row["dynamic_mean"]),
+                    "static_delta_mean": float(row["static_delta_mean"]),
+                    "mask_boundary_mean": float(row["mask_boundary_mean"]),
+                    "flicker_mean": float(row["flicker_mean"]),
+                },
+                "systems": {route0_system: route0_spec},
+            }
+            selected_windows.append(window)
+            all_rows.append({"candidate_id": candidate_id, **row})
+        scene_reports.append(
+            {
+                "scene": str(scene),
+                "n_raw_candidates": len(rows),
+                "n_selected_candidates": len(selected),
+                "image_size_hw": [int(target_hw[0]), int(target_hw[1])],
+                **scene_metadata,
+            }
+        )
+
+    candidate_manifest = {
+        "description": "Non-oracle event-support candidates discovered without frozen event-crop labels.",
+        "frames_are_inclusive": True,
+        "generated_by": "nonoracle-candidates",
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "source_manifest": str(manifest_path),
+        "route0_system": route0_system,
+        "uses_gt_residual": False,
+        "uses_frozen_window_labels": False,
+        "selection_parameters": {
+            "window_length": int(window_length),
+            "temporal_stride": int(temporal_stride),
+            "tile_size": int(tile_size),
+            "tile_stride": int(tile_stride),
+            "top_k_per_scene": int(top_k_per_scene),
+            "crop_iou_threshold": float(crop_iou_threshold),
+            "temporal_iou_threshold": float(temporal_iou_threshold),
+            "score_weights": {
+                "dynamic_render": 0.35,
+                "static_render_delta": 0.25,
+                "motion_mask_boundary": 0.25,
+                "route0_render_flicker": 0.15,
+            },
+        },
+        "windows": selected_windows,
+    }
+    manifest_out = out_dir / "nonoracle_candidate_manifest.json"
+    metadata = {
+        "candidate_manifest": str(manifest_out.resolve()),
+        "source_manifest": str(manifest_path),
+        "scene_reports": scene_reports,
+        "n_candidates": len(selected_windows),
+        "limitations": [
+            "This is candidate discovery only; it does not prove a Gaussian method improves the frozen windows.",
+            "Scores do not use GT residual or frozen crop labels, but they can still select easy motion rather than the target event-crop failures.",
+            "The candidate manifest includes gt_dir only so downstream evaluators can score renders; gt_dir is not used for candidate scoring.",
+        ],
+    }
+    write_json(manifest_out, candidate_manifest)
+    write_json(out_dir / "nonoracle_candidate_metadata.json", metadata)
+    write_csv(out_dir / "nonoracle_candidate_components.csv", all_rows)
+    validation = validate_real_manifest(manifest_out, require_systems=[route0_system])
+    write_json(out_dir / "nonoracle_candidate_validation.json", validation)
+    write_nonoracle_candidate_report(out_dir / "nonoracle_candidate_report.md", candidate_manifest, metadata, validation)
+    return {
+        "manifest": candidate_manifest,
+        "manifest_path": str(manifest_out),
+        "metadata": metadata,
+        "metadata_path": str(out_dir / "nonoracle_candidate_metadata.json"),
+        "validation": validation,
+    }
+
+
+def write_nonoracle_candidate_report(
+    path: Path,
+    candidate_manifest: Dict[str, object],
+    metadata: Dict[str, object],
+    validation: Dict[str, object],
+) -> None:
+    lines = [
+        "# Non-Oracle Event Candidate Discovery",
+        "",
+        f"Generated: {candidate_manifest.get('generated_at_utc')}",
+        "",
+        "## Scientific Guardrails",
+        "",
+        f"- Uses GT residual: `{candidate_manifest.get('uses_gt_residual')}`",
+        f"- Uses frozen event-crop labels: `{candidate_manifest.get('uses_frozen_window_labels')}`",
+        "- Candidate scores use route0 dynamic output, route0-vs-static render deltas, motion-mask boundaries, and route0 render flicker.",
+        "- The generated candidate crops are method inputs; the frozen R009 crops remain evaluation-only.",
+        "",
+        "## Parameters",
+        "",
+    ]
+    params = candidate_manifest.get("selection_parameters", {})
+    if isinstance(params, dict):
+        for key, value in params.items():
+            lines.append(f"- `{key}`: `{value}`")
+    lines.extend(["", "## Scene Summary", "", "| Scene | Raw candidates | Selected | Scored frames | Indexed masks |", "| --- | ---: | ---: | ---: | ---: |"])
+    for report in metadata.get("scene_reports", []):
+        lines.append(
+            "| {scene} | {raw} | {selected} | {frames} | {masks} |".format(
+                scene=report.get("scene"),
+                raw=report.get("n_raw_candidates"),
+                selected=report.get("n_selected_candidates"),
+                frames=report.get("n_scored_frames"),
+                masks=report.get("n_mask_frames_indexed"),
+            )
+        )
+    lines.extend(["", "## Selected Candidates", "", "| Candidate | Scene | Frames | Crop | Score |", "| --- | --- | --- | --- | ---: |"])
+    for window in candidate_manifest.get("windows", []):
+        lines.append(
+            "| `{wid}` | `{scene}` | {start}-{end} | `{crop}` | {score:.6f} |".format(
+                wid=window.get("window_id"),
+                scene=window.get("scene"),
+                start=window.get("frame_start"),
+                end=window.get("frame_end"),
+                crop=window.get("crop_xyxy"),
+                score=float(window.get("candidate_score", 0.0)),
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "## Validation",
+            "",
+            f"- validation_ok: `{validation.get('ok')}`",
+            f"- validation_errors: `{len(validation.get('errors', []))}`",
+            f"- validation_warnings: `{len(validation.get('warnings', []))}`",
+            "",
+            "## Outputs",
+            "",
+            "- `nonoracle_candidate_manifest.json`",
+            "- `nonoracle_candidate_metadata.json`",
+            "- `nonoracle_candidate_components.csv`",
+            "- `nonoracle_candidate_validation.json`",
+        ]
+    )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def render_actual_hide_reveal_real_windows(
     manifest_path: Path,
     out_dir: Path,

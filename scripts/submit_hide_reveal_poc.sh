@@ -10,14 +10,15 @@ Usage:
     --route0-eval /path/to/test/ours_6000 [--dry-run]
   scripts/submit_hide_reveal_poc.sh --stage actual-real-renders --manifest refine-logs/real_windows.json \
     --residual-manifest refine-logs/r011_manifest.json --matched-manifest refine-logs/r012_manifest.json [--dry-run]
+  scripts/submit_hide_reveal_poc.sh --stage nonoracle-candidates --manifest refine-logs/real_windows.json [--dry-run]
 
 Submit proof-of-concept hide/reveal jobs through Slurm. Outputs go under
 refine-logs/hide_reveal_poc/<stage>/ and scheduler logs go under logs/.
 
 Options:
-  --stage synthetic|real|derive-real-renders|actual-real-renders
+  --stage synthetic|real|derive-real-renders|actual-real-renders|nonoracle-candidates
                          PoC stage to run.
-  --manifest PATH        Required for real, derive-real-renders, and actual-real-renders.
+  --manifest PATH        Required for real, derive-real-renders, actual-real-renders, and nonoracle-candidates.
   --route0-eval PATH     Eval folder with renders/ and gt/ for derived renders.
   --residual-manifest PATH
                          Optional residual_uncertainty baseline manifest for actual-real-renders.
@@ -106,8 +107,8 @@ if [[ "$STAGE" == "derive" ]]; then
   STAGE="derive-real-renders"
 fi
 
-if [[ "$STAGE" != "synthetic" && "$STAGE" != "real" && "$STAGE" != "derive-real-renders" && "$STAGE" != "actual-real-renders" ]]; then
-  echo "ERROR: --stage must be synthetic, real, derive-real-renders, or actual-real-renders." >&2
+if [[ "$STAGE" != "synthetic" && "$STAGE" != "real" && "$STAGE" != "derive-real-renders" && "$STAGE" != "actual-real-renders" && "$STAGE" != "nonoracle-candidates" ]]; then
+  echo "ERROR: --stage must be synthetic, real, derive-real-renders, actual-real-renders, or nonoracle-candidates." >&2
   usage >&2
   exit 2
 fi
