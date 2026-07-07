@@ -2,16 +2,16 @@
 
 ## Recovery Snapshot
 
-- Current objective phase: event-crop non-oracle M1 decision recorded
-- Current run ID: R025 event-candidate refined render frozen-window scoring completed
-- Current method candidate: M1 non-oracle residual-component local refinement; closed as FAIL on frozen-window scoring
+- Current objective phase: event-crop non-oracle M2 in progress
+- Current run ID: R027 event-boundary micro-densification train submitted
+- Current method candidate: M2 occlusion-boundary gated micro-densification; R026 support artifact validated, R027 train jobs pending/running
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
-- Last pushed milestone commit: `69a877a897eb239dcb236be67542c641e5ae38aa`
-- Last HPC job ID: `48805053`
-- Latest success/failure: R025 scoring completed with `ExitCode=0:0`, but M1 failed the predeclared scientific gate: 0/5 windows improved on PSNR+L1, mean PSNR worsened by `-1.5629 dB`, mean L1 worsened by `+0.004043`, and independent result-to-claim review returned `claim_supported: no` with high confidence.
-- Next command to run: no active Slurm job. If continuing beyond this FAIL decision, start a new predeclared method candidate such as M2 occlusion-boundary gated micro-densification; do not expand M1 to paper-scale validation or ablations as a positive method.
+- Last pushed milestone commit: `efca178e7fd5fef49aa84c762350dfa8cbdd36d8`
+- Last HPC job ID: `48873219`, `48873220`, `48873221`
+- Latest success/failure: R026b support generation completed with `ExitCode=0:0`, validation `ok=true`, and guardrails `uses_gt_residual=false`, `uses_gt_crop_pixels=false`, `uses_frozen_window_labels=false`; this is support-only evidence, not a method PASS. R027 train jobs are submitted against route0 `chkpnt6000.pth` with target `chkpnt6400.pth`.
+- Next command to run: monitor R027 train jobs `48873219`, `48873220`, `48873221`; if they complete, submit eval using `refine-logs/event_boundary_micro_densify_train_jobs_20260707_234937.tsv`, then augment the frozen-window manifest and score system `event_boundary_micro_densify`.
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -278,6 +278,18 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - Submitted R026a support job `48872013` with output `refine-logs/hide_reveal_poc/r026_m2_boundary_support` and logs `logs/hide_reveal_event-boundary-support_48872013.{out,err}`.
 - R026a was cancelled after about 9 minutes on `lrdn0033` because it had produced only `job_metadata.txt`. Diagnosis: the first pure-Python connected-component pass was too slow for full-scene sidecars.
 - Current next action: push the tile-capped support-box fix, pull it on Leonardo, rerun `bash -n`/`py_compile`, then submit R026b.
+
+### 2026-07-07T23:52:00+02:00 - R026b support passed; R027 train submitted
+
+- Implemented and pushed commit `efca178e7fd5fef49aa84c762350dfa8cbdd36d8` (`Speed up M2 boundary support selection`): replaced the slow connected-component scan with tile-capped compact support boxes while preserving the non-oracle support contract and 3 percent pixel cap.
+- Reran Leonardo `bash -n` and `py_compile` after fast-forwarding the HPC repo to `efca178e7fd5fef49aa84c762350dfa8cbdd36d8`.
+- Submitted R026b support job `48872653`; it completed in `00:08:53` on `lrdn1861` with `ExitCode=0:0`.
+- R026b outputs are local and remote at `refine-logs/hide_reveal_poc/r026_m2_boundary_support/`: `event_boundary_support_manifest.json`, `event_boundary_support_validation.json`, `event_boundary_support_report.md`, `event_boundary_support_components.csv`, support-mask PNGs, and job metadata.
+- R026b validation: `ok=true`, errors `0`, warnings `0`, support frames `66`, selected components `108`, max support pixel fraction `0.005205`.
+- R026b guardrails: `uses_gt_residual=false`, `uses_gt_crop_pixels=false`, `uses_frozen_window_labels=false`, and `source_manifest_usage=scene_sources_only_for_paths_and_frame_ranges`.
+- Submitted R027 train jobs from route0 `chkpnt6000.pth` to target `chkpnt6400.pth` using `configs/n3v/event_boundary_micro_densify_6400.yaml`: `48873219` cut_roasted_beef, `48873220` flame_steak, `48873221` sear_steak.
+- R027 train manifest: `refine-logs/event_boundary_micro_densify_train_jobs_20260707_234937.tsv`.
+- Current next action: monitor R027 train completion, then submit eval and frozen-window scoring. Do not declare M2 PASS/FAIL until checkpoint-backed `test/ours_6400` renders have been scored on the frozen R009 windows.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 

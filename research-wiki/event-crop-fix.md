@@ -2,7 +2,7 @@
 
 Updated: 2026-07-07
 
-This page tracks the event-crop fix objective after R001-R025.
+This page tracks the event-crop fix objective after R001-R027.
 
 ## Core Evidence
 
@@ -15,7 +15,7 @@ The current state is therefore:
 - Oracle event-crop upper bound: positive and large.
 - Actual Gaussian opacity gate: negative.
 - Non-oracle residual-component local refinement: negative.
-- Non-oracle Gaussian method: unsolved.
+- Non-oracle Gaussian method: unsolved; M2 occlusion-boundary gated micro-densification is currently under checkpoint-backed train/eval.
 
 ## Frozen Evaluation Windows
 
@@ -41,6 +41,9 @@ These windows are evaluation-only for future non-oracle methods. The method must
 - R025 metrics: `refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval/real_event_window_summary.json`
 - R025 decision memo: `refine-logs/hide_reveal_poc/r025_event_candidate_refine_decision_memo.md`
 - R025 qualitative strips: `refine-logs/hide_reveal_poc/r025_event_candidate_refine_summary/crop_strips/`
+- R026 M2 support manifest: `refine-logs/hide_reveal_poc/r026_m2_boundary_support/event_boundary_support_manifest.json`
+- R026 M2 support validation: `refine-logs/hide_reveal_poc/r026_m2_boundary_support/event_boundary_support_validation.json`
+- R027 train manifest: `refine-logs/event_boundary_micro_densify_train_jobs_20260707_234937.tsv`
 - Wiki experiment page: `research-wiki/experiments/r017-actual-method-real-window-check.md`
 - R025 wiki experiment page: `research-wiki/experiments/r025-event-candidate-refine-real-window-check.md`
 
@@ -60,6 +63,12 @@ These windows are evaluation-only for future non-oracle methods. The method must
 Future attempts must use non-oracle event-support discovery. Acceptable cues include training residuals, dynamic masks, flow disagreement, visibility/occlusion boundaries, uncertainty, and learned or deterministic candidate maps computed without access to the frozen evaluation crop labels.
 
 The method must produce Gaussian-rendered output folders. GT crop compositing remains an upper bound only.
+
+## Active M2 Run
+
+R026b generated non-oracle support masks from dynamic-mask boundaries, flow sidecars, and route0 render diagnostics. Validation passed with `uses_gt_residual=false`, `uses_gt_crop_pixels=false`, `uses_frozen_window_labels=false`, 66 support frames, 108 selected components, and max support fraction `0.005205`.
+
+R027 train jobs `48873219`, `48873220`, and `48873221` are submitted on Leonardo using `configs/n3v/event_boundary_micro_densify_6400.yaml`, route0 `chkpnt6000.pth` sources, and target `chkpnt6400.pth`. No scientific PASS/FAIL decision exists until the resulting `test/ours_6400` renders are scored on the frozen R009 windows as system `event_boundary_micro_densify`.
 
 ## Wiki Links
 
