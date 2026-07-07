@@ -267,6 +267,18 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - Pushed evidence commit: `69a877a897eb239dcb236be67542c641e5ae38aa` (`Record R025 event candidate refine failure`).
 - Next scientific step, if continuing: change mechanism rather than tuning M1 on the frozen windows. The most defensible next candidate is M2 occlusion-boundary gated micro-densification or a detector/optimization decomposition that separates candidate support quality from refinement damage.
 
+### 2026-07-07T23:24:44+02:00 - M2 predeclared; R026a support builder cancelled for performance
+
+- Recovered from `refine-logs/M2_HANDOFF.md`, `EVENT_CROP_METHOD_TRACKER.md`, `OVERNIGHT_STATUS.md`, `EVENT_CROP_FIX_EVIDENCE.md`, `research-wiki/event-crop-fix.md`, `query_pack.md`, `gap_map.md`, and relevant idea/experiment/paper/claim pages.
+- Confirmed local branch `codex/hide-reveal-poc-implementation` at `f74ff87c9fad01a4d39d9574f9f9d1b48c0c41d2` before M2 edits, with the known unrelated dirty/untracked files preserved.
+- Predeclared M2 in `refine-logs/EVENT_CROP_METHOD_TRACKER.md`: non-oracle dynamic-mask/flow/render-boundary support, no frozen crop support, R026 support artifact, target `chkpnt6400.pth`, point cap `625000`, and strict unchanged PASS/FAIL gates.
+- Implemented and pushed commit `13297e290a8511512f4f3be08f7ceb425fcc3ca7` (`Add M2 boundary micro-densification plumbing`): added `event-boundary-support`, M2 support-mask loading in `MotionPriorCache`, residual-free motion-aware densify option, generic submit labels, and `configs/n3v/event_boundary_micro_densify_6400.yaml`.
+- Verification before remote submission: bundled local Python `py_compile` passed, CLI help passed, synthetic support smoke passed with `validation_ok=True`; Leonardo `bash -n` and `py_compile` passed after fast-forwarding the remote repo to `13297e2`.
+- Remote pull required moving conflicting untracked files listed by Git into `logs/pre_pull_untracked_backup_20260707_232249_m2/`; no tracked remote/user files were reverted.
+- Submitted R026a support job `48872013` with output `refine-logs/hide_reveal_poc/r026_m2_boundary_support` and logs `logs/hide_reveal_event-boundary-support_48872013.{out,err}`.
+- R026a was cancelled after about 9 minutes on `lrdn0033` because it had produced only `job_metadata.txt`. Diagnosis: the first pure-Python connected-component pass was too slow for full-scene sidecars.
+- Current next action: push the tile-capped support-box fix, pull it on Leonardo, rerun `bash -n`/`py_compile`, then submit R026b.
+
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
 - Implemented checkpoint-backed `actual-real-renders` for frozen R009 windows with runtime opacity gating in the Gaussian renderer; no GT crop compositing.

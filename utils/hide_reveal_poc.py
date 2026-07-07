@@ -1939,6 +1939,50 @@ def support_components_from_mask(
     return components
 
 
+def support_tiles_from_mask(
+    mask: np.ndarray,
+    score: np.ndarray,
+    min_area: int,
+    tile_size: int = 64,
+    tile_stride: int = 32,
+) -> List[Dict[str, object]]:
+    binary = np.asarray(mask, dtype=bool)
+    height, width = binary.shape
+    tile_size = max(1, int(tile_size))
+    tile_stride = max(1, int(tile_stride))
+    components: List[Dict[str, object]] = []
+    y_starts = list(range(0, max(1, height - tile_size + 1), tile_stride))
+    x_starts = list(range(0, max(1, width - tile_size + 1), tile_stride))
+    if not y_starts or y_starts[-1] != max(0, height - tile_size):
+        y_starts.append(max(0, height - tile_size))
+    if not x_starts or x_starts[-1] != max(0, width - tile_size):
+        x_starts.append(max(0, width - tile_size))
+    for y0 in y_starts:
+        y1 = min(height, y0 + tile_size)
+        for x0 in x_starts:
+            x1 = min(width, x0 + tile_size)
+            tile_mask = binary[y0:y1, x0:x1]
+            area = int(tile_mask.sum())
+            if area < int(min_area):
+                continue
+            values = score[y0:y1, x0:x1][tile_mask]
+            mean_score = float(np.mean(values)) if values.size else 0.0
+            peak_score = float(np.max(values)) if values.size else 0.0
+            ys_local, xs_local = np.nonzero(tile_mask)
+            components.append(
+                {
+                    "area": int(area),
+                    "bbox_xyxy": [int(x0), int(y0), int(x1), int(y1)],
+                    "mean_score": mean_score,
+                    "peak_score": peak_score,
+                    "component_score": float(0.8 * mean_score + 0.2 * peak_score),
+                    "_ys": (ys_local + y0).astype(np.int32),
+                    "_xs": (xs_local + x0).astype(np.int32),
+                }
+            )
+    return components
+
+
 def crop_iou(a: Sequence[int], b: Sequence[int]) -> float:
     ax0, ay0, ax1, ay1 = [int(v) for v in a]
     bx0, by0, bx1, by1 = [int(v) for v in b]
@@ -2467,7 +2511,12 @@ def discover_event_boundary_support(
                     binary = limited.reshape(score.shape)
             if int(binary.sum()) > 0:
                 n_nonempty_frame_masks += 1
-            components = support_components_from_mask(binary, score, min_component_area)
+            components = support_tiles_from_mask(binary, score, min_component_area)
+            components = sorted(
+                components,
+                key=lambda item: (float(item["component_score"]), int(item["area"])),
+                reverse=True,
+            )[:4]
             for local_rank, component in enumerate(components):
                 component.update(
                     {
