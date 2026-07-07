@@ -7,7 +7,7 @@
 - Current method candidate: M1 non-oracle residual-component local refinement; candidate-discovery dry-run implemented, local Gaussian refinement pending
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
-- Last pushed milestone commit: `0b18166bec6d1a2d371764c70bdcf53b23319a5e`
+- Last pushed milestone commit: `0bf0967483e622af5cb6ac81de2b3f09060c33d9`
 - Last HPC job ID: `48760448`
 - Latest success/failure: R017 FAIL; A1 local non-oracle candidate-discovery smoke PASS with validation_ok=True and 3/3 generated smoke candidates valid
 - Next command to run: commit/push A1 candidate-discovery implementation, pull on Leonardo, run shell syntax checks, dry-run `nonoracle-candidates`, then submit R018 through Slurm
@@ -58,6 +58,7 @@ Recorded before new event-crop evidence edits.
 - Smoke result: `validation_ok=True`, `validation_errors=0`, `candidates=3`.
 - Smoke report: `refine-logs/hide_reveal_poc/local_smoke/nonoracle_candidates/out/nonoracle_candidate_report.md`.
 - Local Windows `bash` is unavailable, so shell wrapper syntax checks are deferred to Leonardo before Slurm submission.
+- Committed A1 implementation as `0bf0967483e622af5cb6ac81de2b3f09060c33d9` (`Add non-oracle event candidate discovery`).
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 
