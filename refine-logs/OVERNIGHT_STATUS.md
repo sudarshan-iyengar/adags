@@ -8,7 +8,7 @@
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
-- Last pushed milestone commit: `1a747fae7079f7352c3103f51d735912fcedf10a`
+- Last pushed milestone commit: `69a877a897eb239dcb236be67542c641e5ae38aa`
 - Last HPC job ID: `48805053`
 - Latest success/failure: R025 scoring completed with `ExitCode=0:0`, but M1 failed the predeclared scientific gate: 0/5 windows improved on PSNR+L1, mean PSNR worsened by `-1.5629 dB`, mean L1 worsened by `+0.004043`, and independent result-to-claim review returned `claim_supported: no` with high confidence.
 - Next command to run: no active Slurm job. If continuing beyond this FAIL decision, start a new predeclared method candidate such as M2 occlusion-boundary gated micro-densification; do not expand M1 to paper-scale validation or ablations as a positive method.
@@ -264,6 +264,7 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - Oracle recovery fractions: PSNR `-0.1394`, L1 `-0.3323`.
 - Result-to-claim reviewer verdict: `claim_supported: no`, confidence `high`.
 - Decision: FAIL for M1. The method produced valid checkpoint-backed Gaussian renders without GT crop compositing, but did not recover the oracle event-crop fix.
+- Pushed evidence commit: `69a877a897eb239dcb236be67542c641e5ae38aa` (`Record R025 event candidate refine failure`).
 - Next scientific step, if continuing: change mechanism rather than tuning M1 on the frozen windows. The most defensible next candidate is M2 occlusion-boundary gated micro-densification or a detector/optimization decomposition that separates candidate support quality from refinement damage.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
