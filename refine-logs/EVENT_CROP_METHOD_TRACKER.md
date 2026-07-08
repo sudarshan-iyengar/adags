@@ -4,9 +4,9 @@ Generated: 2026-07-07
 
 ## Current Phase
 
-Phase 4: R025 scoring completed for the first non-oracle method candidate.
+Phase 5: R017/R025/R027 interpretation and compact disambiguation.
 
-The R017 runtime opacity gate is closed as a failed actual-method check. M1 non-oracle residual-component local refinement is also closed as a failed checkpoint-backed Gaussian method check. Future methods must not use the frozen R009 event crops as test-time method inputs.
+The R017 runtime opacity gate is closed as a failed actual-method check. M1 non-oracle residual-component local refinement is closed as a failed checkpoint-backed Gaussian method check. M2 boundary micro-densification is failed as tested, but R028 posthoc overlap audit shows the R026 boundary support essentially missed the frozen crop regions, so M2 is not a clean rejection of perfect-support micro-densification. Future deployable methods must not use the frozen R009 event crops as test-time method inputs; oracle-support runs are diagnostic only.
 
 ## Source Metrics
 
@@ -19,6 +19,11 @@ The R017 runtime opacity gate is closed as a failed actual-method check. M1 non-
 | failed actual | R017 actual_hide_reveal | 19.3667 | 0.0761056 | 0.0162899 | 0.152789 | `refine-logs/hide_reveal_poc/r017_actual_real_eval/real_event_window_summary.json` |
 | failed non-oracle | R025 event_candidate_refine | 28.9393 | 0.0188750 | 0.00847709 | 0.125652 | `refine-logs/hide_reveal_poc/r025_event_candidate_refine_real_eval/real_event_window_summary.json` |
 | failed non-oracle | R027 event_boundary_micro_densify | 30.5591 | 0.0147412 | 0.00801033 | 0.125634 | `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_real_eval/real_event_window_summary.json` |
+
+Interpretation update:
+- R028 posthoc overlap audit found R020 candidate boxes had mean support-frame fraction `0.6375` and mean crop coverage `0.491371`, but missed one frozen window entirely.
+- R028 found R026 boundary masks had mean support-frame fraction `0.0250` and mean crop coverage `0.000000`.
+- Therefore R027's failure is evidence against the concrete R026+R027 recipe, not against all good-support event-local densification.
 
 Oracle upper-bound deltas versus route0:
 - PSNR: `+11.2128`
@@ -171,3 +176,6 @@ FAIL/SKIP/BLOCKED gates:
 | R027 eval | M2 event-boundary micro-densification eval renders | `efca178e7fd5fef49aa84c762350dfa8cbdd36d8` | `48874148`, `48874152`, `48874155` | `refine-logs/event_boundary_micro_densify_eval_jobs_20260708_001303.tsv`, `logs/event_boundary_micro_densify_eval_*_488741*.{out,err}` | EVAL COMPLETE | Jobs completed with `ExitCode=0:0` in about 8 minutes and each eval folder contains 300 `renders`, 300 `gt`, 300 `static`, and 300 `dynamic` frames under `test/ours_6400`. |
 | R027 scoring | M2 frozen-window scoring | `efca178e7fd5fef49aa84c762350dfa8cbdd36d8` | `48874592` | `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_real_eval/`, `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_summary/` | FAIL | Valid scoring job completed with `ExitCode=0:0`. R027 mean PSNR `30.5591` vs route0 `30.5021`; mean L1 `0.0147412` vs route0 `0.0148316`; strict all-baseline PSNR+L1 wins `2/5`; route0 PSNR+L1 wins `3/5`; static no-worse `3/5`; oracle recovery PSNR `0.00508`, L1 `0.00743`. Fails mean thresholds and 25% oracle recovery. |
 | R027 review | Result-to-claim audit | n/a | n/a | `.aris/traces/result-to-claim/2026-07-08_run01/`, `research-wiki/experiments/r027-event-boundary-micro-densify-real-window-check.md`, `findings.md` | CLAIM NOT SUPPORTED | Independent reviewer judged `claim_supported: no` with high confidence. The run supports only weak directional improvement over route0 and the non-oracle setup constraints; it does not support saying M2 recovers the R009 event-crop failures. |
+| R028 support audit | Posthoc frozen-window support overlap | n/a | local | `refine-logs/hide_reveal_poc/r028_support_overlap_diagnostics/`, `scripts/audit_event_support_overlap.py` | DIAGNOSTIC PASS | R020 candidate boxes covered most of 4/5 frozen windows but missed one; R026 boundary support almost entirely missed the crops with mean support-frame fraction `0.0250` and mean crop coverage `0.000000`. This makes R027 inconclusive about good-support micro-densification while preserving FAIL for the tested R026/R027 recipe. |
+| R029 route0 continuation | Matched 6000-to-6400 continuation control | pending | pending | `configs/n3v/route0_continue_6400_control.yaml` | TODO | Tests whether R027's tiny gain is just extra training. Same route0 start checkpoints and target iteration, no event support and no motion-aware densification. |
+| R030 oracle-support diagnostic | Frozen-crop support, Gaussian-only micro-densification | pending | pending | `configs/n3v/oracle_crop_support_micro_densify_6400.yaml` | TODO | Diagnostic only; uses frozen R009 crops as support but no GT compositing. Distinguishes support-discovery failure from posthoc Gaussian optimization failure. |

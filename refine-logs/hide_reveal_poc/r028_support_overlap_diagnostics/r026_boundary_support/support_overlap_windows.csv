@@ -1,0 +1,6 @@
+window_id,scene,frame_start,frame_end,crop_xyxy,support_type,support_frame_fraction,mean_crop_coverage,max_crop_coverage,best_crop_iou,best_temporal_iou,missing_mask_files,notes
+cut_roasted_beef_hand_tongs_meat_095_110,cut_roasted_beef,95,110,"[245, 315, 455, 470]",support_masks,0.0,0.0,0.0,,,0,posthoc diagnostic; frozen labels not used by support generator
+cut_roasted_beef_hand_knife_meat_140_155,cut_roasted_beef,140,155,"[245, 315, 455, 470]",support_masks,0.0,0.0,0.0,,,0,posthoc diagnostic; frozen labels not used by support generator
+flame_steak_torch_pan_155_170,flame_steak,155,170,"[250, 300, 445, 460]",support_masks,0.0,0.0,0.0,,,0,posthoc diagnostic; frozen labels not used by support generator
+flame_steak_torch_sweep_195_210,flame_steak,195,210,"[250, 300, 445, 460]",support_masks,0.125,0.0,0.0,,,0,posthoc diagnostic; frozen labels not used by support generator
+sear_steak_spoon_pan_220_235,sear_steak,220,235,"[245, 320, 450, 470]",support_masks,0.0,0.0,0.0,,,0,posthoc diagnostic; frozen labels not used by support generator

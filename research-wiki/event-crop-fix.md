@@ -16,6 +16,7 @@ The current state is therefore:
 - Actual Gaussian opacity gate: negative.
 - Non-oracle residual-component local refinement: negative.
 - Non-oracle Gaussian method: unsolved; M2 occlusion-boundary gated micro-densification produced valid checkpoint-backed renders but failed the frozen-window recovery gate.
+- Posthoc support diagnosis: R026 boundary support missed the frozen crop regions almost entirely, so R027 is a failure of the tested support+training recipe rather than a clean rejection of good-support event-local densification.
 
 ## Frozen Evaluation Windows
 
@@ -47,9 +48,12 @@ These windows are evaluation-only for future non-oracle methods. The method must
 - R027 metrics: `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_real_eval/real_event_window_summary.json`
 - R027 gate summary: `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_summary/gate_decision.json`
 - R027 decision memo: `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_decision_memo.md`
+- R028 interpretation and next plan: `refine-logs/RESULT_INTERPRETATION_AND_NEXT_PLAN.md`
+- R028 support-overlap diagnostics: `refine-logs/hide_reveal_poc/r028_support_overlap_diagnostics/`
 - Wiki experiment page: `research-wiki/experiments/r017-actual-method-real-window-check.md`
 - R025 wiki experiment page: `research-wiki/experiments/r025-event-candidate-refine-real-window-check.md`
 - R027 wiki experiment page: `research-wiki/experiments/r027-event-boundary-micro-densify-real-window-check.md`
+- R028 wiki experiment page: `research-wiki/experiments/r028-support-overlap-diagnostics.md`
 
 ## Baseline Means
 
@@ -75,12 +79,18 @@ R026b generated non-oracle support masks from dynamic-mask boundaries, flow side
 
 R027 trained and evaluated checkpoint-backed `event_boundary_micro_densify` renders. It failed: strict all-baseline PSNR+L1 wins were `2/5`, mean PSNR improved over route0 by only `+0.0569 dB`, mean L1 improved by only `-0.0000903`, and oracle recovery fractions were PSNR `0.00508` and L1 `0.00743`. Independent result-to-claim review judged `claim_supported: no` with high confidence.
 
+R028 posthoc support-overlap audit changed the interpretation: R026 boundary masks had mean support-frame fraction `0.0250` and mean crop coverage `0.000000` on the frozen windows. Thus R027 remains a FAIL for the tested M2 recipe, but is not decisive against an event-local densification method with genuinely aligned support. R020 M1 candidate boxes had much better support overlap (`0.6375` mean support-frame fraction, `0.491371` mean crop coverage), so R025 is stronger negative evidence against the current posthoc local-refinement machinery.
+
+Next compact diagnostics are R029 route0 continuation control and R030 oracle-support Gaussian-only refinement. R030 is explicitly diagnostic and cannot support a non-oracle claim because it uses the frozen crop windows as support.
+
 ## Wiki Links
 
 - [[ideas/event-causal-visibility-gaussians]]
 - [[experiments/r017-actual-method-real-window-check]]
 - [[experiments/r025-event-candidate-refine-real-window-check]]
 - [[experiments/r027-event-boundary-micro-densify-real-window-check]]
+- [[experiments/r028-support-overlap-diagnostics]]
+- [[ideas/depth-occlusion-event-support]]
 - [[gap_map#G13 - Visibility Events Are Not Smooth Deformation]]
 - [[papers/sandu2026_temporally_aware_densification]]
 - [[papers/ramlal2026_persistgs]]

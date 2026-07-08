@@ -1,0 +1,168 @@
+# Gap Map
+
+Updated 2026-06-30 after a recent literature pass over CVPR, ICCV, ECCV, NeurIPS, ICLR, SIGGRAPH Asia, arXiv, and Semantic Scholar indexed pages. Tournament update added 2026-06-30.
+
+## Tournament Update - 2026-06-30
+
+The selected ADAGS direction is [[ideas/self-calibrated-prior-reliability-field]]. It addresses G1/G2/G3/G7/G8/G9/G11 by making reliability the mechanism that decides where masks, flow, tracks, static exclusion, and detail priors may act. [[ideas/boundary-aware-static-anchor-negative-space]] is the deterministic baseline/static-leakage safeguard. [[ideas/adags-failure-atlas-mechanism-screen]] is the backup and required reporting frame.
+
+New blocking gaps:
+
+- Reliability must be calibrated as an error/usefulness predictor, not just a mask recipe.
+- Evaluation masks must be independent enough to avoid circular validation.
+- Reliability must retain hard dynamic-core pixels; easy-pixel selection invalidates the method.
+- Wins must be shown against LoRA route0 under matched realized budget and static-quality preservation.
+
+## Problem-First Redo Update - 2026-06-30
+
+The problem-first redo deliberately treats ADAGS as prototype infrastructure, not the method boundary. It demotes reliability-gated priors to the safe ADAGS fallback and elevates representation-level questions that still remain after Multi4D, RiGS, SharpTimeGS, AdaGaR, MAPo, PaMoSplat, MoE-GS, USplat4D, Ground4D, MoSca, and Prior-Enhanced GS.
+
+New high-upside candidate directions:
+
+- [[ideas/event-causal-visibility-gaussians]]: visibility events for occlusion, disocclusion, birth, split, merge, and retirement.
+- [[ideas/identity-conserving-detail-carriers]]: parented transient detail carriers that preserve identity while recovering high-frequency motion detail.
+- [[ideas/frequency-adaptive-temporal-support]]: temporal support bandwidth tied to dynamic frequency/detail and uncertainty.
+- [[ideas/counterfactual-prior-usefulness-routing]]: route priors by estimated downstream usefulness, not confidence alone.
+
+New blocking gaps:
+
+- G13: occlusion/disocclusion are still often modeled as smooth deformation or implicit lifespan effects rather than causal visibility events.
+- G14: dynamic detail can be recovered by transient capacity, but identity-preserving promotion/demotion rules remain underdeveloped.
+- G15: prior confidence is not the same as prior usefulness; the field lacks counterfactual tests for when masks, tracks, flow, depth, or geometry priors should be trusted.
+
+## G1 - Dynamic-Region Sharpness Needs A Direct Objective
+
+Global PSNR can hide the failure ADAGS cares about: food, hands, and heads remain smeared even when full-image metrics improve. Recent papers make this gap explicit: MAPo targets blurred high-dynamic regions, SharpTimeGS targets sharp and stable temporal visibility, PaMoSplat targets substantial intricate motions, AdaGaR makes high-frequency dynamic detail explicit, and Multi4D frames the tradeoff between oversmoothed deformation fields and overparameterized 4D primitives.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/jiao2026_mapo]], [[papers/liao2026_sharptimegs]], [[papers/deng2026_pamosplat]], [[papers/chan2026_adagar]], [[papers/wang2026_multi4d]], [[papers/jiang2024_motiongs]]
+Related ideas: [[ideas/dynamic-mask-static-exclusion]], [[ideas/rendered-flow-gated-supervision]], [[ideas/dynamic-region-diagnostic-benchmark]]
+
+## G2 - Static/Dynamic Leakage Is A Representation And Evaluation Problem
+
+Static/dynamic separation is no longer novel by itself. SWinGS has static/dynamic weighting, SplatFlow decomposes static background and dynamic objects, 4DGS-SLAM classifies static and dynamic Gaussian sets, SharpTimeGS uses temporal lifespan to balance long-lived static and short-lived dynamic regions, Hybrid 3D-4DGS uses distinct static/dynamic representation capacity, and RiGS explicitly separates coherent rigid transformations from residual deformation. ADAGS needs a more precise claim around reducing static-branch ghosting under reversible routing.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/shaw2024_swings]], [[papers/sun2025_splatflow]], [[papers/li2025_4dgs_slam]], [[papers/liao2026_sharptimegs]], [[papers/oh2025_hybrid_3d_4dgs]], [[papers/wu2026_rigs]], [[papers/wang2026_flow4dgs_slam]]
+Related ideas: [[ideas/dynamic-mask-static-exclusion]], [[ideas/static-anchor-negative-space]]
+
+## G3 - Long-Range Tracks And Depth Priors Are Becoming Table Stakes
+
+MoSca, Shape of Motion, and Prior-Enhanced GS all use long-range tracks and/or depth/foundation priors. ADAGS already has a track-flow hook, but current configs leave `lambda_track_flow: 0.0`. A publishable method needs either to activate and improve this path or explain why a lighter alternative works.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/lei2025_mosca]], [[papers/wang2025_shape_of_motion]], [[papers/shih2025_prior_enhanced_gs]]
+Related ideas: [[ideas/track-prior-scaffold-motion]], [[ideas/rendered-flow-gated-supervision]]
+
+## G4 - Scaffold Residual Motion Is Crowded By MoSca And Prior-Enhanced GS
+
+Plain "motion scaffolds for dynamic Gaussian reconstruction" is occupied territory. MoSca uses 4D motion scaffolds, and Prior-Enhanced GS adds scaffold-projection loss tying motion nodes to tracks. ADAGS should not pitch scaffold residual motion alone; the gap is a lighter reversible LoRA plus scaffold variant with diagnostic proof, or a training-only prior/flow-gated version.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/lei2025_mosca]], [[papers/shih2025_prior_enhanced_gs]]
+Related ideas: [[ideas/track-prior-scaffold-motion]], [[ideas/rendered-flow-gated-supervision]]
+
+## G5 - Capacity Allocation Must Be Matched And Dynamic-Aware
+
+HiCoM, SharpTimeGS, SpeeDe3DGS, MAPo, Hybrid 3D-4DGS, Disentangled4DGS, and Multi4D all treat dynamic capacity, temporal pruning, grouping, partitioning, or representation allocation as central. ADAGS fixed-budget screens are useful, but realized point counts, dynamic-region point density, and high-frequency/detail retention must be audited before claiming allocation gains.
+
+Status: open
+Priority: medium-high
+Literature pressure: [[papers/gao2024_hicom]], [[papers/liao2026_sharptimegs]], [[papers/tu2026_speede3dgs]], [[papers/jiao2026_mapo]], [[papers/oh2025_hybrid_3d_4dgs]], [[papers/feng2025_disentangled4dgs]], [[papers/wang2026_multi4d]]
+Related ideas: [[ideas/motion-aware-densification-budget]]
+
+## G6 - Single Global Motion Models Are A Known Weakness
+
+MAPo partitions high-dynamic Gaussians, MoE-GS routes to specialized experts, PaMoSplat uses part-aware motion, HiCoM uses hierarchical coherent motion, RiGS separates rigid transforms from residual deformations, MotionScale scales motion/geometry reconstruction, Multi4D uses multi-level competitive allocation, and the SE(3) B-spline paper models continuous motion with explicit bases. ADAGS LoRA route0 is stable, but the novelty gap is specialized motion without losing stability.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/jiao2026_mapo]], [[papers/jin2026_moegs]], [[papers/deng2026_pamosplat]], [[papers/gao2024_hicom]], [[papers/wu2026_rigs]], [[papers/zhou2026_motionscale]], [[papers/wang2026_multi4d]], [[papers/zhang2026_continuous_motion]]
+Related ideas: [[ideas/part-aware-reversible-routing]], [[ideas/track-prior-scaffold-motion]]
+
+## G7 - A Benchmark/Diagnostic Claim Is Necessary
+
+MonoDyGauBench argues monocular dynamic Gaussian results are brittle and scene-dependent, and it standardizes apples-to-apples comparisons. D4RT also raises the speed/generalization baseline outside per-scene optimization, while MotionScale and Mono4DGS-HDR remind that geometry, motion, exposure, and photometric artifacts can be mixed together. ADAGS should report dynamic-mask PSNR, static ghost score, track-flow error, edge/sharpness proxies, realized point count, and qualitative panels, not just global PSNR.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/liang2025_monodygaubench]], [[papers/zhang2025_d4rt]], [[papers/zhou2026_motionscale]], [[papers/liu2025_mono4dgs_hdr]]
+Related ideas: [[ideas/dynamic-region-diagnostic-benchmark]]
+
+## G8 - Flow Supervision Needs Reliability Gating
+
+MotionGS, PaMoSplat, SplatFlow, and Flow4DGS-SLAM all support explicit flow/motion guidance in some form, but ADAGS W&B suggests naive flow lanes underperform while render-gated flow looks more plausible. The gap is not "add flow"; it is robustly gating flow to reliable dynamic cores and boundaries.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/jiang2024_motiongs]], [[papers/deng2026_pamosplat]], [[papers/sun2025_splatflow]], [[papers/wang2026_flow4dgs_slam]]
+Related ideas: [[ideas/rendered-flow-gated-supervision]]
+
+## G9 - Uncertainty And Occlusion Confidence Are Underused In ADAGS
+
+USplat4D shows uncertainty can improve monocular 4D reconstruction and motion tracking. ADAGS masks, residuals, tracks, and flow losses currently lack a principled confidence model for occlusion, disocclusion, and mask noise.
+
+Status: open
+Priority: medium
+Literature pressure: [[papers/guo2026_usplat4d]]
+Related ideas: [[ideas/rendered-flow-gated-supervision]], [[ideas/track-prior-scaffold-motion]]
+
+## G10 - Practical N3V Cooking-Scene Niche Is Still Available
+
+Many recent methods target autonomous driving, compression, SLAM, HDR/low-light, sparse multi-view capture, or general monocular reconstruction. ADAGS can still own a narrower claim if it demonstrates fast cooking-scene motion improvement under fixed budgets and training-only priors.
+
+Status: open
+Priority: medium
+Literature pressure: [[papers/sun2025_splatflow]], [[papers/song2025_coda4dgs]], [[papers/kumar2026_l2dgs]], [[papers/aerodgs2026]], [[papers/zhou2026_4c4d]], [[papers/liu2025_mono4dgs_hdr]]
+Related ideas: [[ideas/dynamic-region-diagnostic-benchmark]], [[ideas/dynamic-mask-static-exclusion]]
+
+## G11 - Representation Frequency Is A New Sharpness Axis
+
+AdaGaR, Multi4D, and frequency-oriented dynamic reconstruction framing make dynamic blur a representation-frequency problem, not just a missing loss or bad mask. ADAGS currently logs dynamic edge magnitude, but it does not yet claim or evaluate frequency/detail preservation directly.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/chan2026_adagar]], [[papers/wang2026_multi4d]]
+Related ideas: [[ideas/dynamic-region-diagnostic-benchmark]], [[ideas/motion-aware-densification-budget]]
+
+## G12 - Feedforward 4D Models Raise The Baseline
+
+D4RT-style feedforward 4D reconstruction changes the comparison space for speed and generalization. ADAGS can still be valuable as a per-scene, fixed-budget, diagnostic-driven method, but should avoid broad "fast 4D reconstruction" claims unless compared against amortized 4D baselines.
+
+Status: open
+Priority: medium-high
+Literature pressure: [[papers/zhang2025_d4rt]]
+Related ideas: [[ideas/dynamic-region-diagnostic-benchmark]]
+
+## G13 - Visibility Events Are Not Smooth Deformation
+
+Many dynamic GS methods improve motion smoothness, lifespan, partitioning, or transient capacity, but occlusion and disocclusion are event-like changes. Treating them as smooth deformation can create boundary blur, ghost trails, and flicker.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/wang2026_multi4d]], [[papers/wu2026_rigs]], [[papers/liao2026_sharptimegs]], [[papers/zhao2026_ground4d]]
+Related ideas: [[ideas/event-causal-visibility-gaussians]]
+
+Negative evidence: R017 actual opacity gating, R025 non-oracle candidate-local refinement, and R027 non-oracle boundary-gated micro-densification all failed the frozen R009 event-crop gate. R027 produced only small directional gains over route0 (`+0.0569 dB` PSNR, `-0.0000903` L1) and recovered less than 1% of the oracle crop upper bound. R028 posthoc audit found the R026 boundary support essentially missed the frozen crops, so R027 is strongest as a rejection of that concrete support+training recipe, not of all good-support visibility-event mechanisms. R025 remains stronger evidence that current posthoc local refinement can damage even with partially overlapping support.
+
+## G14 - Detail Needs Identity-Conserving Promotion Rules
+
+Persistent primitives preserve correspondence but can oversmooth high-frequency detail. Transient capacity can sharpen detail but risks fragmenting identity. The missing piece is a promotion/demotion rule that says when detail should remain attached, become new geometry, or retire.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/wang2026_multi4d]], [[papers/wu2026_rigs]], [[papers/chan2026_adagar]], [[papers/jin2026_moegs]]
+Related ideas: [[ideas/identity-conserving-detail-carriers]], [[ideas/frequency-adaptive-temporal-support]]
+
+## G15 - Prior Usefulness Needs Counterfactual Calibration
+
+Masks, tracks, flow, depth, and geometry priors can be confident but wrong near occlusions, boundaries, static/dynamic leakage, or out-of-distribution geometry. A routing field should estimate whether trusting a prior improves future reconstruction, not merely whether the prior appears confident.
+
+Status: open
+Priority: high
+Literature pressure: [[papers/guo2026_usplat4d]], [[papers/shih2025_prior_enhanced_gs]], [[papers/zhao2026_ground4d]], [[papers/sun2025_splatflow]]
+Related ideas: [[ideas/counterfactual-prior-usefulness-routing]], [[ideas/self-calibrated-prior-reliability-field]]

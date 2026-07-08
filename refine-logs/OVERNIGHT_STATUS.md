@@ -2,17 +2,17 @@
 
 ## Recovery Snapshot
 
-- Current objective phase: event-crop non-oracle M2 decision recorded
-- Current run ID: R027 event-boundary micro-densification frozen-window scoring completed
-- Current method candidate: M2 occlusion-boundary gated micro-densification; closed as FAIL on frozen-window scoring
+- Current objective phase: event-crop result interpretation and disambiguation wave
+- Current run ID: R028 support-overlap diagnostic completed locally; R029/R030 predeclared for HPC
+- Current method candidate: M2 is failed as tested; next wave separates support failure, continuation noise, and posthoc Gaussian optimization limits
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
 - Last pushed milestone commit: `efca178e7fd5fef49aa84c762350dfa8cbdd36d8`
 - Last HPC job ID: `48874592`
 - Latest success/failure: R027 scoring completed with `ExitCode=0:0`, but M2 failed the predeclared scientific gate. `event_boundary_micro_densify` mean PSNR was `30.5591` vs route0 `30.5021`, mean L1 was `0.0147412` vs route0 `0.0148316`, strict all-baseline PSNR+L1 wins were `2/5`, mean PSNR/L1 gains were far below thresholds, and oracle recovery was below 1%.
-- Next command to run: no active Slurm job. Do not expand M2 to paper-scale validation or positive ablations as a successful method. If continuing, start a new predeclared diagnostic/decomposition method that explains why support and micro-densification do not recover the oracle gap.
-- Open blockers: none known yet
+- Next command to run: retry SSH to `siyengar@login.leonardo.cineca.it`; when available, push/pull latest commits on HPC, submit R029 route0 continuation control and R030 oracle-support Gaussian-only diagnostic in a compact wave.
+- Open blockers: Leonardo SSH timed out on 2026-07-08 during initial retry attempts.
 
 ## Dirty State At 2026-07-07 Recovery Start
 
@@ -518,3 +518,17 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - R023: PASS. Forced per-job extension roots allowed all three candidate-local refinement train jobs to complete and write `chkpnt6200.pth`.
 - R024: PASS. Eval jobs rendered complete `test/ours_6200` folders for all three scenes.
 - R025: FAIL. Checkpoint-backed non-oracle `event_candidate_refine` scoring passed 0/5 PSNR+L1 gates and worsened mean PSNR/L1 versus route0. Decision memo: `refine-logs/hide_reveal_poc/r025_event_candidate_refine_decision_memo.md`.
+
+### 2026-07-08 - Interpretation and R028 support-overlap diagnostic
+
+- Used result-to-claim and experiment-audit style bounded reviews.
+- Result-to-claim verdict: current artifacts do not support the non-oracle recovery claim; this does not prove every future event/reveal method impossible.
+- Integrity audit verdict: WARN. No fake-GT, self-normalization, or phantom results found; caveats are proxy L1 instead of learned LPIPS, five-window scope, R017 oracle support, and oracle comparison rows in R025/R027.
+- Added `scripts/audit_event_support_overlap.py`.
+- Ran R028 locally:
+  - R020 candidates: mean support-frame fraction `0.6375`, mean crop coverage `0.491371`; one frozen window had zero support.
+  - R026 boundary support: mean support-frame fraction `0.0250`, mean crop coverage `0.000000`.
+- Interpretation update: R027 fails the R026/R027 recipe, but is not a clean rejection of good-support event-local micro-densification because R026 did not meaningfully cover the evaluated crops.
+- Predeclared next compact wave:
+  - R029 route0 `6000 -> 6400` continuation control, config `configs/n3v/route0_continue_6400_control.yaml`.
+  - R030 oracle-support Gaussian-only diagnostic, config `configs/n3v/oracle_crop_support_micro_densify_6400.yaml`.
