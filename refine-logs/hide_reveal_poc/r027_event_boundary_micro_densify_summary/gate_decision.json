@@ -1,0 +1,111 @@
+{
+  "verdict": "FAIL",
+  "pass_gate": false,
+  "method": "event_boundary_micro_densify",
+  "means": {
+    "event_boundary_micro_densify": {
+      "psnr": 30.559051226047625,
+      "l1": 0.01474121566861868,
+      "flicker": 0.00801033405587077,
+      "static_ghost_score": 0.12563430815935134
+    },
+    "hide_reveal": {
+      "psnr": 41.714903733552326,
+      "l1": 0.0026653554756194352,
+      "flicker": 0.001685856096446514,
+      "static_ghost_score": 0.12733273804187775
+    },
+    "matched_lifespan": {
+      "psnr": 29.818134359321654,
+      "l1": 0.016354632563889027,
+      "flicker": 0.007956006657332182,
+      "static_ghost_score": 0.12733273804187775
+    },
+    "residual_uncertainty": {
+      "psnr": 30.073395341209725,
+      "l1": 0.01657234113663435,
+      "flicker": 0.008039021119475364,
+      "static_ghost_score": 0.1457015424966812
+    },
+    "route0": {
+      "psnr": 30.50211919273412,
+      "l1": 0.014831560850143432,
+      "flicker": 0.007990826107561588,
+      "static_ghost_score": 0.12733273804187775
+    }
+  },
+  "counts": {
+    "strict_all_baselines_psnr_l1": 2,
+    "route0_psnr_l1": 3,
+    "static_no_worse_route0": 3,
+    "n_windows": 5
+  },
+  "mean_deltas_vs_route0": {
+    "psnr": 0.056932033313504604,
+    "l1": -9.034518152475218e-05,
+    "flicker": 1.950794830918312e-05,
+    "static_ghost_score": -0.0016984298825264144
+  },
+  "oracle_recovery": {
+    "psnr": 0.005077421500988748,
+    "l1": 0.007425912907399604
+  },
+  "window_results": [
+    {
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110",
+      "scene": "cut_roasted_beef",
+      "strict_all_baselines_psnr_l1": true,
+      "route0_psnr_l1": true,
+      "static_no_worse_route0": false,
+      "delta_psnr_vs_route0": 0.132177546139566,
+      "delta_l1_vs_route0": -1.0906718671321869e-05,
+      "delta_flicker_vs_route0": 2.8574373573064804e-05,
+      "delta_static_ghost_vs_route0": 0.0015164017677307129
+    },
+    {
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155",
+      "scene": "cut_roasted_beef",
+      "strict_all_baselines_psnr_l1": false,
+      "route0_psnr_l1": true,
+      "static_no_worse_route0": false,
+      "delta_psnr_vs_route0": 0.045628552182606086,
+      "delta_l1_vs_route0": -0.0002845395356416702,
+      "delta_flicker_vs_route0": 2.447003498673439e-05,
+      "delta_static_ghost_vs_route0": 0.00106000155210495
+    },
+    {
+      "window_id": "flame_steak_torch_pan_155_170",
+      "scene": "flame_steak",
+      "strict_all_baselines_psnr_l1": true,
+      "route0_psnr_l1": true,
+      "static_no_worse_route0": true,
+      "delta_psnr_vs_route0": 0.28260069274549693,
+      "delta_l1_vs_route0": -0.00035877525806427,
+      "delta_flicker_vs_route0": -7.97417014837265e-05,
+      "delta_static_ghost_vs_route0": -0.004807204008102417
+    },
+    {
+      "window_id": "flame_steak_torch_sweep_195_210",
+      "scene": "flame_steak",
+      "strict_all_baselines_psnr_l1": false,
+      "route0_psnr_l1": false,
+      "static_no_worse_route0": true,
+      "delta_psnr_vs_route0": -0.0835734367696439,
+      "delta_l1_vs_route0": 0.0005119340494275093,
+      "delta_flicker_vs_route0": 0.00010134605690836906,
+      "delta_static_ghost_vs_route0": -0.0035547763109207153
+    },
+    {
+      "window_id": "sear_steak_spoon_pan_220_235",
+      "scene": "sear_steak",
+      "strict_all_baselines_psnr_l1": false,
+      "route0_psnr_l1": false,
+      "static_no_worse_route0": true,
+      "delta_psnr_vs_route0": -0.09217318773048433,
+      "delta_l1_vs_route0": -0.00030943844467401505,
+      "delta_flicker_vs_route0": 2.2890977561473846e-05,
+      "delta_static_ghost_vs_route0": -0.002706572413444519
+    }
+  ],
+  "pass_gate_text": "Requires >=3/5 strict all-baseline PSNR+L1 wins, >=3/5 static no-worse, mean PSNR >= +0.5 dB, mean L1 <= -0.001, and >=25% oracle recovery on PSNR or L1."
+}

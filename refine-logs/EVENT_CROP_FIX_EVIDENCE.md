@@ -111,6 +111,10 @@ Local metrics and reports:
 - R026 M2 support manifest: `D:\adags\refine-logs\hide_reveal_poc\r026_m2_boundary_support\event_boundary_support_manifest.json`
 - R026 M2 support validation: `D:\adags\refine-logs\hide_reveal_poc\r026_m2_boundary_support\event_boundary_support_validation.json`
 - R026 M2 support report: `D:\adags\refine-logs\hide_reveal_poc\r026_m2_boundary_support\event_boundary_support_report.md`
+- R027 M2 metrics: `D:\adags\refine-logs\hide_reveal_poc\r027_event_boundary_micro_densify_real_eval\real_event_window_summary.json`
+- R027 M2 gate summary: `D:\adags\refine-logs\hide_reveal_poc\r027_event_boundary_micro_densify_summary\gate_decision.json`
+- R027 M2 decision memo: `D:\adags\refine-logs\hide_reveal_poc\r027_event_boundary_micro_densify_decision_memo.md`
+- R027 M2 crop strips: `D:\adags\refine-logs\hide_reveal_poc\r027_event_boundary_micro_densify_summary\crop_strips\`
 
 Local Slurm submission manifests:
 - R010: `D:\adags\refine-logs\hide_reveal_poc_real_jobs_20260706_022851.tsv`
@@ -119,6 +123,8 @@ Local Slurm submission manifests:
 - R017 render: `D:\adags\refine-logs\hide_reveal_poc_actual-real-renders_jobs_20260707_015205.tsv`
 - R017 eval: `D:\adags\refine-logs\hide_reveal_poc_real_jobs_20260707_020138.tsv`
 - R027 M2 train: `D:\adags\refine-logs\event_boundary_micro_densify_train_jobs_20260707_234937.tsv`
+- R027 M2 eval: `D:\adags\refine-logs\event_boundary_micro_densify_eval_jobs_20260708_001303.tsv`
+- R027 M2 scoring: `D:\adags\refine-logs\hide_reveal_poc_real_jobs_20260708_002250.tsv`
 
 Remote logs:
 - R010 stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48653179.out`, `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48653179.err`
@@ -129,6 +135,8 @@ Remote logs:
 - R026a support stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_event-boundary-support_48872013.out`, `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_event-boundary-support_48872013.err`
 - R026b support stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_event-boundary-support_48872653.out`, `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_event-boundary-support_48872653.err`
 - R027 train stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/event_boundary_micro_densify_train_*_488732*.{out,err}`
+- R027 eval stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/event_boundary_micro_densify_eval_*_488741*.{out,err}`
+- R027 scoring stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48874592.out`, `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48874592.err`
 
 Remote render folders:
 - Route0 source renders for `cut_roasted_beef`: `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders`
@@ -146,4 +154,4 @@ HPC roots:
 
 ## Next Decision
 
-M2 is active. R026b produced a validated non-oracle boundary-support artifact, but that is not a method pass. Continue by monitoring R027 checkpoint-backed training, submitting eval renders, and scoring system `event_boundary_micro_densify` on the frozen R009 windows. The frozen R009 crops remain evaluation-only.
+M2 is complete and failed the predeclared gate. R026b produced a validated non-oracle boundary-support artifact and R027 produced checkpoint-backed Gaussian renders, but frozen-window scoring recovered less than 1% of the oracle upper bound and passed only 2/5 strict all-baseline PSNR+L1 windows. The frozen R009 crops remain evaluation-only. Preserve M2 as negative knowledge rather than expanding it to paper-scale validation or positive ablations.

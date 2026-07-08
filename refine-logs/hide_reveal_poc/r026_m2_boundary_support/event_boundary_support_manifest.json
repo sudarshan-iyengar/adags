@@ -1,0 +1,3553 @@
+{
+  "components": [
+    {
+      "area": 47,
+      "bbox_xyxy": [
+        288,
+        192,
+        352,
+        256
+      ],
+      "component_id": "cut_roasted_beef_boundary_001_cam00_0091",
+      "component_score": 0.9940424919128419,
+      "dynamic_boundary_mean": 0.5539809465408325,
+      "flicker_boundary_mean": 0.04114877060055733,
+      "flow_mag_boundary_mean": 0.28557005524635315,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0091.npz",
+      "flow_valid_boundary_mean": 0.0377875417470932,
+      "frame_idx": 91,
+      "image_name": "cam00_0091",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0511157400906086,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0091.png",
+      "mean_score": 0.9925531148910522,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6649627089500427
+    },
+    {
+      "area": 41,
+      "bbox_xyxy": [
+        288,
+        192,
+        352,
+        256
+      ],
+      "component_id": "cut_roasted_beef_boundary_002_cam00_0090",
+      "component_score": 0.9931707382202148,
+      "dynamic_boundary_mean": 0.5528430342674255,
+      "flicker_boundary_mean": 0.03690055385231972,
+      "flow_mag_boundary_mean": 0.3377916216850281,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0090.npz",
+      "flow_valid_boundary_mean": 0.03995249792933464,
+      "frame_idx": 90,
+      "image_name": "cam00_0090",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05466661974787712,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0090.png",
+      "mean_score": 0.9914634227752686,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.663938581943512
+    },
+    {
+      "area": 177,
+      "bbox_xyxy": [
+        416,
+        224,
+        480,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_003_cam00_0160",
+      "component_score": 0.9929943561553956,
+      "dynamic_boundary_mean": 0.5510894656181335,
+      "flicker_boundary_mean": 0.044679224491119385,
+      "flow_mag_boundary_mean": 0.30958592891693115,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0160.npz",
+      "flow_valid_boundary_mean": 0.05310271680355072,
+      "frame_idx": 160,
+      "image_name": "cam00_0160",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07838486135005951,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0160.png",
+      "mean_score": 0.9912429451942444,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6712474822998047
+    },
+    {
+      "area": 35,
+      "bbox_xyxy": [
+        256,
+        224,
+        320,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_004_cam00_0251",
+      "component_score": 0.9908571243286133,
+      "dynamic_boundary_mean": 0.5531201958656311,
+      "flicker_boundary_mean": 0.045041024684906006,
+      "flow_mag_boundary_mean": 0.25184109807014465,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0251.npz",
+      "flow_valid_boundary_mean": 0.05052635818719864,
+      "frame_idx": 251,
+      "image_name": "cam00_0251",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06621208041906357,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0251.png",
+      "mean_score": 0.9885714054107666,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6661648154258728
+    },
+    {
+      "area": 126,
+      "bbox_xyxy": [
+        288,
+        224,
+        352,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_005_cam00_0263",
+      "component_score": 0.9885714054107666,
+      "dynamic_boundary_mean": 0.5552851557731628,
+      "flicker_boundary_mean": 0.04479009658098221,
+      "flow_mag_boundary_mean": 0.3126232624053955,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0263.npz",
+      "flow_valid_boundary_mean": 0.04776034876704216,
+      "frame_idx": 263,
+      "image_name": "cam00_0263",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07443133741617203,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0263.png",
+      "mean_score": 0.9857142567634583,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6675565838813782
+    },
+    {
+      "area": 131,
+      "bbox_xyxy": [
+        416,
+        224,
+        480,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_006_cam00_0158",
+      "component_score": 0.988396978378296,
+      "dynamic_boundary_mean": 0.5498815178871155,
+      "flicker_boundary_mean": 0.04621978849172592,
+      "flow_mag_boundary_mean": 0.30877187848091125,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0158.npz",
+      "flow_valid_boundary_mean": 0.05231492966413498,
+      "frame_idx": 158,
+      "image_name": "cam00_0158",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07888087630271912,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0158.png",
+      "mean_score": 0.9854962229728699,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6730564832687378
+    },
+    {
+      "area": 26,
+      "bbox_xyxy": [
+        416,
+        224,
+        480,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_007_cam00_0249",
+      "component_score": 0.9876923084259033,
+      "dynamic_boundary_mean": 0.5506839156150818,
+      "flicker_boundary_mean": 0.04252302274107933,
+      "flow_mag_boundary_mean": 0.15726865828037262,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0249.npz",
+      "flow_valid_boundary_mean": 0.04670704901218414,
+      "frame_idx": 249,
+      "image_name": "cam00_0249",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.059343744069337845,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0249.png",
+      "mean_score": 0.9846153855323792,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6652253270149231
+    },
+    {
+      "area": 106,
+      "bbox_xyxy": [
+        288,
+        224,
+        352,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_008_cam00_0264",
+      "component_score": 0.9864151477813721,
+      "dynamic_boundary_mean": 0.5555915236473083,
+      "flicker_boundary_mean": 0.04519566148519516,
+      "flow_mag_boundary_mean": 0.23963621258735657,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0264.npz",
+      "flow_valid_boundary_mean": 0.05085022747516632,
+      "frame_idx": 264,
+      "image_name": "cam00_0264",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07343930751085281,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0264.png",
+      "mean_score": 0.9830189347267151,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6686098575592041
+    },
+    {
+      "area": 46,
+      "bbox_xyxy": [
+        224,
+        288,
+        288,
+        352
+      ],
+      "component_id": "cut_roasted_beef_boundary_009_cam00_0159",
+      "component_score": 0.9860869884490968,
+      "dynamic_boundary_mean": 0.5504125952720642,
+      "flicker_boundary_mean": 0.04343918710947037,
+      "flow_mag_boundary_mean": 0.34373795986175537,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0159.npz",
+      "flow_valid_boundary_mean": 0.04860649257898331,
+      "frame_idx": 159,
+      "image_name": "cam00_0159",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.08033682405948639,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0159.png",
+      "mean_score": 0.9826087355613708,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6719068884849548
+    },
+    {
+      "area": 408,
+      "bbox_xyxy": [
+        416,
+        320,
+        480,
+        384
+      ],
+      "component_id": "cut_roasted_beef_boundary_010_cam00_0186",
+      "component_score": 0.9860784053802492,
+      "dynamic_boundary_mean": 0.5530093312263489,
+      "flicker_boundary_mean": 0.04032305255532265,
+      "flow_mag_boundary_mean": 0.2082064151763916,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0186.npz",
+      "flow_valid_boundary_mean": 0.06009651720523834,
+      "frame_idx": 186,
+      "image_name": "cam00_0186",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07342471927404404,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0186.png",
+      "mean_score": 0.9825980067253113,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6677082777023315
+    },
+    {
+      "area": 137,
+      "bbox_xyxy": [
+        384,
+        192,
+        448,
+        256
+      ],
+      "component_id": "cut_roasted_beef_boundary_011_cam00_0088",
+      "component_score": 0.9859854221343995,
+      "dynamic_boundary_mean": 0.552542507648468,
+      "flicker_boundary_mean": 0.03841777145862579,
+      "flow_mag_boundary_mean": 0.431558758020401,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0088.npz",
+      "flow_valid_boundary_mean": 0.03295578062534332,
+      "frame_idx": 88,
+      "image_name": "cam00_0088",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0549292154610157,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0088.png",
+      "mean_score": 0.9824817776679993,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6627656817436218
+    },
+    {
+      "area": 119,
+      "bbox_xyxy": [
+        224,
+        288,
+        288,
+        352
+      ],
+      "component_id": "cut_roasted_beef_boundary_012_cam00_0186",
+      "component_score": 0.9858823776245118,
+      "dynamic_boundary_mean": 0.5530093312263489,
+      "flicker_boundary_mean": 0.04032305255532265,
+      "flow_mag_boundary_mean": 0.2082064151763916,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0186.npz",
+      "flow_valid_boundary_mean": 0.06009651720523834,
+      "frame_idx": 186,
+      "image_name": "cam00_0186",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.07342471927404404,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0186.png",
+      "mean_score": 0.9823529720306396,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6677082777023315
+    },
+    {
+      "area": 474,
+      "bbox_xyxy": [
+        416,
+        320,
+        480,
+        384
+      ],
+      "component_id": "cut_roasted_beef_boundary_013_cam00_0187",
+      "component_score": 0.9858227729797364,
+      "dynamic_boundary_mean": 0.5535666346549988,
+      "flicker_boundary_mean": 0.0430423766374588,
+      "flow_mag_boundary_mean": 0.2132190763950348,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0187.npz",
+      "flow_valid_boundary_mean": 0.06349276006221771,
+      "frame_idx": 187,
+      "image_name": "cam00_0187",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0738857164978981,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0187.png",
+      "mean_score": 0.9822784662246704,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6675798892974854
+    },
+    {
+      "area": 114,
+      "bbox_xyxy": [
+        224,
+        352,
+        288,
+        416
+      ],
+      "component_id": "cut_roasted_beef_boundary_014_cam00_0119",
+      "component_score": 0.9856139659881593,
+      "dynamic_boundary_mean": 0.5570591688156128,
+      "flicker_boundary_mean": 0.040573976933956146,
+      "flow_mag_boundary_mean": 0.2793319523334503,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0119.npz",
+      "flow_valid_boundary_mean": 0.042858559638261795,
+      "frame_idx": 119,
+      "image_name": "cam00_0119",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05681407079100609,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0119.png",
+      "mean_score": 0.982017457485199,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6676791310310364
+    },
+    {
+      "area": 261,
+      "bbox_xyxy": [
+        288,
+        224,
+        352,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_015_cam00_0257",
+      "component_score": 0.9846743106842042,
+      "dynamic_boundary_mean": 0.5530093312263489,
+      "flicker_boundary_mean": 0.04643278196454048,
+      "flow_mag_boundary_mean": 0.29244714975357056,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0257.npz",
+      "flow_valid_boundary_mean": 0.048615243285894394,
+      "frame_idx": 257,
+      "image_name": "cam00_0257",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07170617580413818,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0257.png",
+      "mean_score": 0.9808428883552551,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6660918593406677
+    },
+    {
+      "area": 134,
+      "bbox_xyxy": [
+        416,
+        160,
+        480,
+        224
+      ],
+      "component_id": "cut_roasted_beef_boundary_016_cam00_0263",
+      "component_score": 0.9844775676727295,
+      "dynamic_boundary_mean": 0.5552851557731628,
+      "flicker_boundary_mean": 0.04479009658098221,
+      "flow_mag_boundary_mean": 0.3126232624053955,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0263.npz",
+      "flow_valid_boundary_mean": 0.04776034876704216,
+      "frame_idx": 263,
+      "image_name": "cam00_0263",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.07443133741617203,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0263.png",
+      "mean_score": 0.9805969595909119,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6675565838813782
+    },
+    {
+      "area": 419,
+      "bbox_xyxy": [
+        256,
+        256,
+        320,
+        320
+      ],
+      "component_id": "cut_roasted_beef_boundary_017_cam00_0186",
+      "component_score": 0.9841527462005615,
+      "dynamic_boundary_mean": 0.5530093312263489,
+      "flicker_boundary_mean": 0.04032305255532265,
+      "flow_mag_boundary_mean": 0.2082064151763916,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0186.npz",
+      "flow_valid_boundary_mean": 0.06009651720523834,
+      "frame_idx": 186,
+      "image_name": "cam00_0186",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.07342471927404404,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0186.png",
+      "mean_score": 0.9801909327507019,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6677082777023315
+    },
+    {
+      "area": 374,
+      "bbox_xyxy": [
+        384,
+        160,
+        448,
+        224
+      ],
+      "component_id": "cut_roasted_beef_boundary_018_cam00_0261",
+      "component_score": 0.9836363315582275,
+      "dynamic_boundary_mean": 0.5544157028198242,
+      "flicker_boundary_mean": 0.048139654099941254,
+      "flow_mag_boundary_mean": 0.3093145787715912,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0261.npz",
+      "flow_valid_boundary_mean": 0.05241413041949272,
+      "frame_idx": 261,
+      "image_name": "cam00_0261",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07674217969179153,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0261.png",
+      "mean_score": 0.9795454144477844,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6682130694389343
+    },
+    {
+      "area": 19,
+      "bbox_xyxy": [
+        256,
+        224,
+        320,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_019_cam00_0186",
+      "component_score": 0.9831579208374024,
+      "dynamic_boundary_mean": 0.5530093312263489,
+      "flicker_boundary_mean": 0.04032305255532265,
+      "flow_mag_boundary_mean": 0.2082064151763916,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0186.npz",
+      "flow_valid_boundary_mean": 0.06009651720523834,
+      "frame_idx": 186,
+      "image_name": "cam00_0186",
+      "local_component_rank": 3,
+      "mask_boundary_mean": 0.07342471927404404,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0186.png",
+      "mean_score": 0.9789474010467529,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6677082777023315
+    },
+    {
+      "area": 146,
+      "bbox_xyxy": [
+        224,
+        288,
+        288,
+        352
+      ],
+      "component_id": "cut_roasted_beef_boundary_020_cam00_0157",
+      "component_score": 0.9830137252807618,
+      "dynamic_boundary_mean": 0.5488544702529907,
+      "flicker_boundary_mean": 0.04621978849172592,
+      "flow_mag_boundary_mean": 0.2744593322277069,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0157.npz",
+      "flow_valid_boundary_mean": 0.05214570090174675,
+      "frame_idx": 157,
+      "image_name": "cam00_0157",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0758230909705162,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0157.png",
+      "mean_score": 0.9787671566009521,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6725400686264038
+    },
+    {
+      "area": 182,
+      "bbox_xyxy": [
+        32,
+        320,
+        96,
+        384
+      ],
+      "component_id": "cut_roasted_beef_boundary_021_cam00_0257",
+      "component_score": 0.982637357711792,
+      "dynamic_boundary_mean": 0.5530093312263489,
+      "flicker_boundary_mean": 0.04643278196454048,
+      "flow_mag_boundary_mean": 0.29244714975357056,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0257.npz",
+      "flow_valid_boundary_mean": 0.048615243285894394,
+      "frame_idx": 257,
+      "image_name": "cam00_0257",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.07170617580413818,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0257.png",
+      "mean_score": 0.97829669713974,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6660918593406677
+    },
+    {
+      "area": 182,
+      "bbox_xyxy": [
+        64,
+        320,
+        128,
+        384
+      ],
+      "component_id": "cut_roasted_beef_boundary_022_cam00_0257",
+      "component_score": 0.982637357711792,
+      "dynamic_boundary_mean": 0.5530093312263489,
+      "flicker_boundary_mean": 0.04643278196454048,
+      "flow_mag_boundary_mean": 0.29244714975357056,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0257.npz",
+      "flow_valid_boundary_mean": 0.048615243285894394,
+      "frame_idx": 257,
+      "image_name": "cam00_0257",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.07170617580413818,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0257.png",
+      "mean_score": 0.97829669713974,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6660918593406677
+    },
+    {
+      "area": 239,
+      "bbox_xyxy": [
+        288,
+        224,
+        352,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_023_cam00_0258",
+      "component_score": 0.9819247245788574,
+      "dynamic_boundary_mean": 0.554202675819397,
+      "flicker_boundary_mean": 0.0474218912422657,
+      "flow_mag_boundary_mean": 0.30214861035346985,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0258.npz",
+      "flow_valid_boundary_mean": 0.048495616763830185,
+      "frame_idx": 258,
+      "image_name": "cam00_0258",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0720738098025322,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0258.png",
+      "mean_score": 0.9774059057235718,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6654704213142395
+    },
+    {
+      "area": 87,
+      "bbox_xyxy": [
+        288,
+        224,
+        352,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_024_cam00_0265",
+      "component_score": 0.9816092014312745,
+      "dynamic_boundary_mean": 0.5569220185279846,
+      "flicker_boundary_mean": 0.04395854473114014,
+      "flow_mag_boundary_mean": 0.25766780972480774,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0265.npz",
+      "flow_valid_boundary_mean": 0.04422697797417641,
+      "frame_idx": 265,
+      "image_name": "cam00_0265",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0717586949467659,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0265.png",
+      "mean_score": 0.977011501789093,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6696339845657349
+    },
+    {
+      "area": 449,
+      "bbox_xyxy": [
+        256,
+        256,
+        320,
+        320
+      ],
+      "component_id": "cut_roasted_beef_boundary_025_cam00_0187",
+      "component_score": 0.9814699649810792,
+      "dynamic_boundary_mean": 0.5535666346549988,
+      "flicker_boundary_mean": 0.0430423766374588,
+      "flow_mag_boundary_mean": 0.2132190763950348,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0187.npz",
+      "flow_valid_boundary_mean": 0.06349276006221771,
+      "frame_idx": 187,
+      "image_name": "cam00_0187",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.0738857164978981,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0187.png",
+      "mean_score": 0.9768374562263489,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6675798892974854
+    },
+    {
+      "area": 366,
+      "bbox_xyxy": [
+        384,
+        160,
+        448,
+        224
+      ],
+      "component_id": "cut_roasted_beef_boundary_026_cam00_0260",
+      "component_score": 0.9813115119934082,
+      "dynamic_boundary_mean": 0.5545324087142944,
+      "flicker_boundary_mean": 0.0464853011071682,
+      "flow_mag_boundary_mean": 0.3631729781627655,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0260.npz",
+      "flow_valid_boundary_mean": 0.052869297564029694,
+      "frame_idx": 260,
+      "image_name": "cam00_0260",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07589895278215408,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0260.png",
+      "mean_score": 0.9766393899917603,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6666024923324585
+    },
+    {
+      "area": 80,
+      "bbox_xyxy": [
+        96,
+        384,
+        160,
+        448
+      ],
+      "component_id": "cut_roasted_beef_boundary_027_cam00_0049",
+      "component_score": 0.98100004196167,
+      "dynamic_boundary_mean": 0.5430335998535156,
+      "flicker_boundary_mean": 0.032780714333057404,
+      "flow_mag_boundary_mean": 0.5003501176834106,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0049.npz",
+      "flow_valid_boundary_mean": 0.04071986302733421,
+      "frame_idx": 49,
+      "image_name": "cam00_0049",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.058185406029224396,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0049.png",
+      "mean_score": 0.9762500524520874,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6561803221702576
+    },
+    {
+      "area": 242,
+      "bbox_xyxy": [
+        288,
+        224,
+        352,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_028_cam00_0185",
+      "component_score": 0.9809917449951173,
+      "dynamic_boundary_mean": 0.5522011518478394,
+      "flicker_boundary_mean": 0.0392901748418808,
+      "flow_mag_boundary_mean": 0.2161543071269989,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0185.npz",
+      "flow_valid_boundary_mean": 0.05463452637195587,
+      "frame_idx": 185,
+      "image_name": "cam00_0185",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.07090087980031967,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0185.png",
+      "mean_score": 0.9762396812438965,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6676674485206604
+    },
+    {
+      "area": 71,
+      "bbox_xyxy": [
+        416,
+        224,
+        480,
+        288
+      ],
+      "component_id": "cut_roasted_beef_boundary_029_cam00_0252",
+      "component_score": 0.9808451175689699,
+      "dynamic_boundary_mean": 0.552533745765686,
+      "flicker_boundary_mean": 0.04511396586894989,
+      "flow_mag_boundary_mean": 0.216215580701828,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0252.npz",
+      "flow_valid_boundary_mean": 0.04514022544026375,
+      "frame_idx": 252,
+      "image_name": "cam00_0252",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0677584782242775,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0252.png",
+      "mean_score": 0.9760563969612122,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6658759713172913
+    },
+    {
+      "area": 236,
+      "bbox_xyxy": [
+        416,
+        256,
+        480,
+        320
+      ],
+      "component_id": "cut_roasted_beef_boundary_030_cam00_0160",
+      "component_score": 0.9806779384613038,
+      "dynamic_boundary_mean": 0.5510894656181335,
+      "flicker_boundary_mean": 0.044679224491119385,
+      "flow_mag_boundary_mean": 0.30958592891693115,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0160.npz",
+      "flow_valid_boundary_mean": 0.05310271680355072,
+      "frame_idx": 160,
+      "image_name": "cam00_0160",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.07838486135005951,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0160.png",
+      "mean_score": 0.9758474230766296,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6712474822998047
+    },
+    {
+      "area": 150,
+      "bbox_xyxy": [
+        416,
+        288,
+        480,
+        352
+      ],
+      "component_id": "cut_roasted_beef_boundary_031_cam00_0185",
+      "component_score": 0.9805333614349365,
+      "dynamic_boundary_mean": 0.5522011518478394,
+      "flicker_boundary_mean": 0.0392901748418808,
+      "flow_mag_boundary_mean": 0.2161543071269989,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0185.npz",
+      "flow_valid_boundary_mean": 0.05463452637195587,
+      "frame_idx": 185,
+      "image_name": "cam00_0185",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.07090087980031967,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0185.png",
+      "mean_score": 0.9756667017936707,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6676674485206604
+    },
+    {
+      "area": 412,
+      "bbox_xyxy": [
+        256,
+        256,
+        320,
+        320
+      ],
+      "component_id": "cut_roasted_beef_boundary_032_cam00_0185",
+      "component_score": 0.9804854393005371,
+      "dynamic_boundary_mean": 0.5522011518478394,
+      "flicker_boundary_mean": 0.0392901748418808,
+      "flow_mag_boundary_mean": 0.2161543071269989,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0185.npz",
+      "flow_valid_boundary_mean": 0.05463452637195587,
+      "frame_idx": 185,
+      "image_name": "cam00_0185",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.07090087980031967,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0185.png",
+      "mean_score": 0.9756067991256714,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6676674485206604
+    },
+    {
+      "area": 65,
+      "bbox_xyxy": [
+        96,
+        320,
+        160,
+        384
+      ],
+      "component_id": "cut_roasted_beef_boundary_033_cam00_0048",
+      "component_score": 0.9803077220916749,
+      "dynamic_boundary_mean": 0.5426192879676819,
+      "flicker_boundary_mean": 0.03247435390949249,
+      "flow_mag_boundary_mean": 0.3898322880268097,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0048.npz",
+      "flow_valid_boundary_mean": 0.043903108686208725,
+      "frame_idx": 48,
+      "image_name": "cam00_0048",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05582495778799057,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0048.png",
+      "mean_score": 0.9753846526145935,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6558389663696289
+    },
+    {
+      "area": 430,
+      "bbox_xyxy": [
+        256,
+        256,
+        320,
+        320
+      ],
+      "component_id": "cut_roasted_beef_boundary_034_cam00_0251",
+      "component_score": 0.9796278953552247,
+      "dynamic_boundary_mean": 0.5531201958656311,
+      "flicker_boundary_mean": 0.045041024684906006,
+      "flow_mag_boundary_mean": 0.25184109807014465,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0251.npz",
+      "flow_valid_boundary_mean": 0.05052635818719864,
+      "frame_idx": 251,
+      "image_name": "cam00_0251",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.06621208041906357,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0251.png",
+      "mean_score": 0.9745348691940308,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6661648154258728
+    },
+    {
+      "area": 182,
+      "bbox_xyxy": [
+        416,
+        256,
+        480,
+        320
+      ],
+      "component_id": "cut_roasted_beef_boundary_035_cam00_0158",
+      "component_score": 0.9795603275299072,
+      "dynamic_boundary_mean": 0.5498815178871155,
+      "flicker_boundary_mean": 0.04621978849172592,
+      "flow_mag_boundary_mean": 0.30877187848091125,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0158.npz",
+      "flow_valid_boundary_mean": 0.05231492966413498,
+      "frame_idx": 158,
+      "image_name": "cam00_0158",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.07888087630271912,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0158.png",
+      "mean_score": 0.974450409412384,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6730564832687378
+    },
+    {
+      "area": 703,
+      "bbox_xyxy": [
+        288,
+        256,
+        352,
+        320
+      ],
+      "component_id": "cut_roasted_beef_boundary_036_cam00_0185",
+      "component_score": 0.9794594764709472,
+      "dynamic_boundary_mean": 0.5522011518478394,
+      "flicker_boundary_mean": 0.0392901748418808,
+      "flow_mag_boundary_mean": 0.2161543071269989,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow/cam00_0185.npz",
+      "flow_valid_boundary_mean": 0.05463452637195587,
+      "frame_idx": 185,
+      "image_name": "cam00_0185",
+      "local_component_rank": 3,
+      "mask_boundary_mean": 0.07090087980031967,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks/cam00_0185.png",
+      "mean_score": 0.9743243455886841,
+      "peak_score": 1.0,
+      "scene": "cut_roasted_beef",
+      "static_delta_boundary_mean": 0.6676674485206604
+    },
+    {
+      "area": 49,
+      "bbox_xyxy": [
+        96,
+        352,
+        160,
+        416
+      ],
+      "component_id": "flame_steak_boundary_001_cam00_0078",
+      "component_score": 0.9730611801147462,
+      "dynamic_boundary_mean": 0.5721583962440491,
+      "flicker_boundary_mean": 0.03379608690738678,
+      "flow_mag_boundary_mean": 0.5100253224372864,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0078.npz",
+      "flow_valid_boundary_mean": 0.03048737719655037,
+      "frame_idx": 78,
+      "image_name": "cam00_0078",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04518399387598038,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0078.png",
+      "mean_score": 0.9663264751434326,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6185386776924133
+    },
+    {
+      "area": 464,
+      "bbox_xyxy": [
+        352,
+        288,
+        416,
+        352
+      ],
+      "component_id": "flame_steak_boundary_002_cam00_0219",
+      "component_score": 0.9696551799774171,
+      "dynamic_boundary_mean": 0.5498290061950684,
+      "flicker_boundary_mean": 0.03619154170155525,
+      "flow_mag_boundary_mean": 0.6234959363937378,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0219.npz",
+      "flow_valid_boundary_mean": 0.04283813759684563,
+      "frame_idx": 219,
+      "image_name": "cam00_0219",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05312605947256088,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0219.png",
+      "mean_score": 0.9620689749717712,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6499013900756836
+    },
+    {
+      "area": 396,
+      "bbox_xyxy": [
+        352,
+        160,
+        416,
+        224
+      ],
+      "component_id": "flame_steak_boundary_003_cam00_0077",
+      "component_score": 0.9682827949523927,
+      "dynamic_boundary_mean": 0.5730658173561096,
+      "flicker_boundary_mean": 0.03308124095201492,
+      "flow_mag_boundary_mean": 0.19067667424678802,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0077.npz",
+      "flow_valid_boundary_mean": 0.03519367799162865,
+      "frame_idx": 77,
+      "image_name": "cam00_0077",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04227501526474953,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0077.png",
+      "mean_score": 0.9603534936904907,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6174620389938354
+    },
+    {
+      "area": 309,
+      "bbox_xyxy": [
+        352,
+        160,
+        416,
+        224
+      ],
+      "component_id": "flame_steak_boundary_004_cam00_0188",
+      "component_score": 0.9645307064056396,
+      "dynamic_boundary_mean": 0.5562421679496765,
+      "flicker_boundary_mean": 0.041612688452005386,
+      "flow_mag_boundary_mean": 0.5477223992347717,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0188.npz",
+      "flow_valid_boundary_mean": 0.04425615444779396,
+      "frame_idx": 188,
+      "image_name": "cam00_0188",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06462191790342331,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0188.png",
+      "mean_score": 0.9556633830070496,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6401124000549316
+    },
+    {
+      "area": 331,
+      "bbox_xyxy": [
+        352,
+        160,
+        416,
+        224
+      ],
+      "component_id": "flame_steak_boundary_005_cam00_0187",
+      "component_score": 0.9644712924957275,
+      "dynamic_boundary_mean": 0.5554981827735901,
+      "flicker_boundary_mean": 0.04315325245261192,
+      "flow_mag_boundary_mean": 0.4894086420536041,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0187.npz",
+      "flow_valid_boundary_mean": 0.05654563754796982,
+      "frame_idx": 187,
+      "image_name": "cam00_0187",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06511793285608292,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0187.png",
+      "mean_score": 0.9555891156196594,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6401765942573547
+    },
+    {
+      "area": 381,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "flame_steak_boundary_006_cam00_0178",
+      "component_score": 0.9637795448303224,
+      "dynamic_boundary_mean": 0.5574268102645874,
+      "flicker_boundary_mean": 0.039824120700359344,
+      "flow_mag_boundary_mean": 0.33787915110588074,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0178.npz",
+      "flow_valid_boundary_mean": 0.0529276505112648,
+      "frame_idx": 178,
+      "image_name": "cam00_0178",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06048749387264252,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0178.png",
+      "mean_score": 0.9547244310379028,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6395201086997986
+    },
+    {
+      "area": 323,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "flame_steak_boundary_007_cam00_0176",
+      "component_score": 0.9612383365631103,
+      "dynamic_boundary_mean": 0.5569278597831726,
+      "flicker_boundary_mean": 0.03564009070396423,
+      "flow_mag_boundary_mean": 0.318088173866272,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0176.npz",
+      "flow_valid_boundary_mean": 0.04722932353615761,
+      "frame_idx": 176,
+      "image_name": "cam00_0176",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06051083654165268,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0176.png",
+      "mean_score": 0.9515479207038879,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6401590704917908
+    },
+    {
+      "area": 265,
+      "bbox_xyxy": [
+        352,
+        160,
+        416,
+        224
+      ],
+      "component_id": "flame_steak_boundary_008_cam00_0208",
+      "component_score": 0.9586414813995361,
+      "dynamic_boundary_mean": 0.55253666639328,
+      "flicker_boundary_mean": 0.03388361632823944,
+      "flow_mag_boundary_mean": 0.7136508822441101,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0208.npz",
+      "flow_valid_boundary_mean": 0.03324755281209946,
+      "frame_idx": 208,
+      "image_name": "cam00_0208",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0489245243370533,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0208.png",
+      "mean_score": 0.9483018517494202,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6479990482330322
+    },
+    {
+      "area": 219,
+      "bbox_xyxy": [
+        416,
+        288,
+        480,
+        352
+      ],
+      "component_id": "flame_steak_boundary_009_cam00_0217",
+      "component_score": 0.9583561897277832,
+      "dynamic_boundary_mean": 0.5500945448875427,
+      "flicker_boundary_mean": 0.036007724702358246,
+      "flow_mag_boundary_mean": 0.35920485854148865,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0217.npz",
+      "flow_valid_boundary_mean": 0.03823103755712509,
+      "frame_idx": 217,
+      "image_name": "cam00_0217",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05710000917315483,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0217.png",
+      "mean_score": 0.947945237159729,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.649539589881897
+    },
+    {
+      "area": 1187,
+      "bbox_xyxy": [
+        384,
+        256,
+        448,
+        320
+      ],
+      "component_id": "flame_steak_boundary_010_cam00_0181",
+      "component_score": 0.957304048538208,
+      "dynamic_boundary_mean": 0.5563763976097107,
+      "flicker_boundary_mean": 0.039999183267354965,
+      "flow_mag_boundary_mean": 0.4618360698223114,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0181.npz",
+      "flow_valid_boundary_mean": 0.04345085844397545,
+      "frame_idx": 181,
+      "image_name": "cam00_0181",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06477072834968567,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0181.png",
+      "mean_score": 0.94663006067276,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6395696997642517
+    },
+    {
+      "area": 54,
+      "bbox_xyxy": [
+        96,
+        320,
+        160,
+        384
+      ],
+      "component_id": "flame_steak_boundary_011_cam00_0078",
+      "component_score": 0.9570370674133302,
+      "dynamic_boundary_mean": 0.5721583962440491,
+      "flicker_boundary_mean": 0.03379608690738678,
+      "flow_mag_boundary_mean": 0.5100253224372864,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0078.npz",
+      "flow_valid_boundary_mean": 0.03048737719655037,
+      "frame_idx": 78,
+      "image_name": "cam00_0078",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.04518399387598038,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0078.png",
+      "mean_score": 0.9462963342666626,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6185386776924133
+    },
+    {
+      "area": 881,
+      "bbox_xyxy": [
+        384,
+        256,
+        448,
+        320
+      ],
+      "component_id": "flame_steak_boundary_012_cam00_0193",
+      "component_score": 0.9567764282226563,
+      "dynamic_boundary_mean": 0.556545615196228,
+      "flicker_boundary_mean": 0.038140587508678436,
+      "flow_mag_boundary_mean": 0.35833829641342163,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0193.npz",
+      "flow_valid_boundary_mean": 0.03496025875210762,
+      "frame_idx": 193,
+      "image_name": "cam00_0193",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.056927863508462906,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0193.png",
+      "mean_score": 0.9459705352783203,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.644375205039978
+    },
+    {
+      "area": 1063,
+      "bbox_xyxy": [
+        320,
+        384,
+        384,
+        448
+      ],
+      "component_id": "flame_steak_boundary_013_cam00_0085",
+      "component_score": 0.9566510200500489,
+      "dynamic_boundary_mean": 0.5732000470161438,
+      "flicker_boundary_mean": 0.0380384661257267,
+      "flow_mag_boundary_mean": 0.5785394906997681,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0085.npz",
+      "flow_valid_boundary_mean": 0.036848034709692,
+      "frame_idx": 85,
+      "image_name": "cam00_0085",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0513024739921093,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0085.png",
+      "mean_score": 0.945813775062561,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6205752491950989
+    },
+    {
+      "area": 365,
+      "bbox_xyxy": [
+        384,
+        224,
+        448,
+        288
+      ],
+      "component_id": "flame_steak_boundary_014_cam00_0193",
+      "component_score": 0.9564931869506836,
+      "dynamic_boundary_mean": 0.556545615196228,
+      "flicker_boundary_mean": 0.038140587508678436,
+      "flow_mag_boundary_mean": 0.35833829641342163,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0193.npz",
+      "flow_valid_boundary_mean": 0.03496025875210762,
+      "frame_idx": 193,
+      "image_name": "cam00_0193",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.056927863508462906,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0193.png",
+      "mean_score": 0.9456164836883545,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.644375205039978
+    },
+    {
+      "area": 67,
+      "bbox_xyxy": [
+        96,
+        352,
+        160,
+        416
+      ],
+      "component_id": "flame_steak_boundary_015_cam00_0085",
+      "component_score": 0.9564179420471193,
+      "dynamic_boundary_mean": 0.5732000470161438,
+      "flicker_boundary_mean": 0.0380384661257267,
+      "flow_mag_boundary_mean": 0.5785394906997681,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0085.npz",
+      "flow_valid_boundary_mean": 0.036848034709692,
+      "frame_idx": 85,
+      "image_name": "cam00_0085",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.0513024739921093,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0085.png",
+      "mean_score": 0.9455224275588989,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6205752491950989
+    },
+    {
+      "area": 80,
+      "bbox_xyxy": [
+        0,
+        320,
+        64,
+        384
+      ],
+      "component_id": "flame_steak_boundary_016_cam00_0029",
+      "component_score": 0.9559998989105225,
+      "dynamic_boundary_mean": 0.575592577457428,
+      "flicker_boundary_mean": 0.03411703556776047,
+      "flow_mag_boundary_mean": 0.6283393502235413,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0029.npz",
+      "flow_valid_boundary_mean": 0.030857929959893227,
+      "frame_idx": 29,
+      "image_name": "cam00_0029",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04689086601138115,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0029.png",
+      "mean_score": 0.9449998736381531,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6035473942756653
+    },
+    {
+      "area": 80,
+      "bbox_xyxy": [
+        0,
+        352,
+        64,
+        416
+      ],
+      "component_id": "flame_steak_boundary_017_cam00_0029",
+      "component_score": 0.9559998989105225,
+      "dynamic_boundary_mean": 0.575592577457428,
+      "flicker_boundary_mean": 0.03411703556776047,
+      "flow_mag_boundary_mean": 0.6283393502235413,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0029.npz",
+      "flow_valid_boundary_mean": 0.030857929959893227,
+      "frame_idx": 29,
+      "image_name": "cam00_0029",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.04689086601138115,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0029.png",
+      "mean_score": 0.9449998736381531,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6035473942756653
+    },
+    {
+      "area": 177,
+      "bbox_xyxy": [
+        352,
+        416,
+        416,
+        480
+      ],
+      "component_id": "flame_steak_boundary_018_cam00_0178",
+      "component_score": 0.9557062625885011,
+      "dynamic_boundary_mean": 0.5574268102645874,
+      "flicker_boundary_mean": 0.039824120700359344,
+      "flow_mag_boundary_mean": 0.33787915110588074,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0178.npz",
+      "flow_valid_boundary_mean": 0.0529276505112648,
+      "frame_idx": 178,
+      "image_name": "cam00_0178",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.06048749387264252,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0178.png",
+      "mean_score": 0.9446328282356262,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6395201086997986
+    },
+    {
+      "area": 177,
+      "bbox_xyxy": [
+        384,
+        416,
+        448,
+        480
+      ],
+      "component_id": "flame_steak_boundary_019_cam00_0178",
+      "component_score": 0.9557062625885011,
+      "dynamic_boundary_mean": 0.5574268102645874,
+      "flicker_boundary_mean": 0.039824120700359344,
+      "flow_mag_boundary_mean": 0.33787915110588074,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0178.npz",
+      "flow_valid_boundary_mean": 0.0529276505112648,
+      "frame_idx": 178,
+      "image_name": "cam00_0178",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.06048749387264252,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0178.png",
+      "mean_score": 0.9446328282356262,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6395201086997986
+    },
+    {
+      "area": 466,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "flame_steak_boundary_020_cam00_0074",
+      "component_score": 0.9551930904388428,
+      "dynamic_boundary_mean": 0.574440062046051,
+      "flicker_boundary_mean": 0.031785767525434494,
+      "flow_mag_boundary_mean": 0.4901964068412781,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0074.npz",
+      "flow_valid_boundary_mean": 0.03205711767077446,
+      "frame_idx": 74,
+      "image_name": "cam00_0074",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03825729712843895,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0074.png",
+      "mean_score": 0.9439913630485535,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6164291501045227
+    },
+    {
+      "area": 512,
+      "bbox_xyxy": [
+        416,
+        256,
+        480,
+        320
+      ],
+      "component_id": "flame_steak_boundary_021_cam00_0181",
+      "component_score": 0.9545312881469727,
+      "dynamic_boundary_mean": 0.5563763976097107,
+      "flicker_boundary_mean": 0.039999183267354965,
+      "flow_mag_boundary_mean": 0.4618360698223114,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0181.npz",
+      "flow_valid_boundary_mean": 0.04345085844397545,
+      "frame_idx": 181,
+      "image_name": "cam00_0181",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.06477072834968567,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0181.png",
+      "mean_score": 0.9431641101837158,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6395696997642517
+    },
+    {
+      "area": 526,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "flame_steak_boundary_022_cam00_0182",
+      "component_score": 0.9542205810546875,
+      "dynamic_boundary_mean": 0.5566740036010742,
+      "flicker_boundary_mean": 0.04108458012342453,
+      "flow_mag_boundary_mean": 0.4620315730571747,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0182.npz",
+      "flow_valid_boundary_mean": 0.04630440101027489,
+      "frame_idx": 182,
+      "image_name": "cam00_0182",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06421927362680435,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0182.png",
+      "mean_score": 0.9427757263183594,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6394296288490295
+    },
+    {
+      "area": 68,
+      "bbox_xyxy": [
+        96,
+        320,
+        160,
+        384
+      ],
+      "component_id": "flame_steak_boundary_023_cam00_0085",
+      "component_score": 0.9541176319122315,
+      "dynamic_boundary_mean": 0.5732000470161438,
+      "flicker_boundary_mean": 0.0380384661257267,
+      "flow_mag_boundary_mean": 0.5785394906997681,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0085.npz",
+      "flow_valid_boundary_mean": 0.036848034709692,
+      "frame_idx": 85,
+      "image_name": "cam00_0085",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.0513024739921093,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0085.png",
+      "mean_score": 0.9426470398902893,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6205752491950989
+    },
+    {
+      "area": 648,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "flame_steak_boundary_024_cam00_0187",
+      "component_score": 0.9538271427154541,
+      "dynamic_boundary_mean": 0.5554981827735901,
+      "flicker_boundary_mean": 0.04315325245261192,
+      "flow_mag_boundary_mean": 0.4894086420536041,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0187.npz",
+      "flow_valid_boundary_mean": 0.05654563754796982,
+      "frame_idx": 187,
+      "image_name": "cam00_0187",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.06511793285608292,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0187.png",
+      "mean_score": 0.9422839283943176,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6401765942573547
+    },
+    {
+      "area": 626,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "flame_steak_boundary_025_cam00_0188",
+      "component_score": 0.9533546447753907,
+      "dynamic_boundary_mean": 0.5562421679496765,
+      "flicker_boundary_mean": 0.041612688452005386,
+      "flow_mag_boundary_mean": 0.5477223992347717,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0188.npz",
+      "flow_valid_boundary_mean": 0.04425615444779396,
+      "frame_idx": 188,
+      "image_name": "cam00_0188",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.06462191790342331,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0188.png",
+      "mean_score": 0.9416933059692383,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6401124000549316
+    },
+    {
+      "area": 208,
+      "bbox_xyxy": [
+        32,
+        384,
+        96,
+        448
+      ],
+      "component_id": "flame_steak_boundary_026_cam00_0033",
+      "component_score": 0.9532691478729249,
+      "dynamic_boundary_mean": 0.5764066576957703,
+      "flicker_boundary_mean": 0.03504195809364319,
+      "flow_mag_boundary_mean": 0.4696410000324249,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0033.npz",
+      "flow_valid_boundary_mean": 0.03746075555682182,
+      "frame_idx": 33,
+      "image_name": "cam00_0033",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05381464213132858,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0033.png",
+      "mean_score": 0.941586434841156,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6055985689163208
+    },
+    {
+      "area": 722,
+      "bbox_xyxy": [
+        384,
+        256,
+        448,
+        320
+      ],
+      "component_id": "flame_steak_boundary_027_cam00_0217",
+      "component_score": 0.9527977943420411,
+      "dynamic_boundary_mean": 0.5500945448875427,
+      "flicker_boundary_mean": 0.036007724702358246,
+      "flow_mag_boundary_mean": 0.35920485854148865,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0217.npz",
+      "flow_valid_boundary_mean": 0.03823103755712509,
+      "frame_idx": 217,
+      "image_name": "cam00_0217",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.05710000917315483,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0217.png",
+      "mean_score": 0.9409972429275513,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.649539589881897
+    },
+    {
+      "area": 860,
+      "bbox_xyxy": [
+        320,
+        384,
+        384,
+        448
+      ],
+      "component_id": "flame_steak_boundary_028_cam00_0082",
+      "component_score": 0.9525115966796875,
+      "dynamic_boundary_mean": 0.5730337500572205,
+      "flicker_boundary_mean": 0.03718648850917816,
+      "flow_mag_boundary_mean": 0.5706791281700134,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0082.npz",
+      "flow_valid_boundary_mean": 0.030014704912900925,
+      "frame_idx": 82,
+      "image_name": "cam00_0082",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04726725071668625,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0082.png",
+      "mean_score": 0.9406394958496094,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6185620427131653
+    },
+    {
+      "area": 102,
+      "bbox_xyxy": [
+        96,
+        352,
+        160,
+        416
+      ],
+      "component_id": "flame_steak_boundary_029_cam00_0086",
+      "component_score": 0.9521566390991212,
+      "dynamic_boundary_mean": 0.5722225904464722,
+      "flicker_boundary_mean": 0.037816718220710754,
+      "flow_mag_boundary_mean": 0.540404736995697,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0086.npz",
+      "flow_valid_boundary_mean": 0.04259888082742691,
+      "frame_idx": 86,
+      "image_name": "cam00_0086",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05239370837807655,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0086.png",
+      "mean_score": 0.9401957988739014,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6210333704948425
+    },
+    {
+      "area": 778,
+      "bbox_xyxy": [
+        320,
+        384,
+        384,
+        448
+      ],
+      "component_id": "flame_steak_boundary_030_cam00_0216",
+      "component_score": 0.9518251419067383,
+      "dynamic_boundary_mean": 0.5506460070610046,
+      "flicker_boundary_mean": 0.0366000272333622,
+      "flow_mag_boundary_mean": 0.3936457633972168,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0216.npz",
+      "flow_valid_boundary_mean": 0.03710479289293289,
+      "frame_idx": 216,
+      "image_name": "cam00_0216",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.05629179626703262,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0216.png",
+      "mean_score": 0.9397814273834229,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6489852070808411
+    },
+    {
+      "area": 529,
+      "bbox_xyxy": [
+        416,
+        256,
+        480,
+        320
+      ],
+      "component_id": "flame_steak_boundary_031_cam00_0182",
+      "component_score": 0.9517580509185792,
+      "dynamic_boundary_mean": 0.5566740036010742,
+      "flicker_boundary_mean": 0.04108458012342453,
+      "flow_mag_boundary_mean": 0.4620315730571747,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0182.npz",
+      "flow_valid_boundary_mean": 0.04630440101027489,
+      "frame_idx": 182,
+      "image_name": "cam00_0182",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.06421927362680435,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0182.png",
+      "mean_score": 0.9396975636482239,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6394296288490295
+    },
+    {
+      "area": 513,
+      "bbox_xyxy": [
+        384,
+        192,
+        448,
+        256
+      ],
+      "component_id": "flame_steak_boundary_032_cam00_0077",
+      "component_score": 0.9514229774475098,
+      "dynamic_boundary_mean": 0.5730658173561096,
+      "flicker_boundary_mean": 0.03308124095201492,
+      "flow_mag_boundary_mean": 0.19067667424678802,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0077.npz",
+      "flow_valid_boundary_mean": 0.03519367799162865,
+      "frame_idx": 77,
+      "image_name": "cam00_0077",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.04227501526474953,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0077.png",
+      "mean_score": 0.9392787218093872,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6174620389938354
+    },
+    {
+      "area": 1180,
+      "bbox_xyxy": [
+        384,
+        256,
+        448,
+        320
+      ],
+      "component_id": "flame_steak_boundary_033_cam00_0182",
+      "component_score": 0.9513898849487306,
+      "dynamic_boundary_mean": 0.5566740036010742,
+      "flicker_boundary_mean": 0.04108458012342453,
+      "flow_mag_boundary_mean": 0.4620315730571747,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0182.npz",
+      "flow_valid_boundary_mean": 0.04630440101027489,
+      "frame_idx": 182,
+      "image_name": "cam00_0182",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.06421927362680435,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0182.png",
+      "mean_score": 0.9392373561859131,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6394296288490295
+    },
+    {
+      "area": 369,
+      "bbox_xyxy": [
+        416,
+        352,
+        480,
+        416
+      ],
+      "component_id": "flame_steak_boundary_034_cam00_0185",
+      "component_score": 0.95132794380188,
+      "dynamic_boundary_mean": 0.555944561958313,
+      "flicker_boundary_mean": 0.041332587599754333,
+      "flow_mag_boundary_mean": 0.32949650287628174,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0185.npz",
+      "flow_valid_boundary_mean": 0.05346451327204704,
+      "frame_idx": 185,
+      "image_name": "cam00_0185",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.06488160043954849,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0185.png",
+      "mean_score": 0.9391599297523499,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6390153169631958
+    },
+    {
+      "area": 729,
+      "bbox_xyxy": [
+        352,
+        256,
+        416,
+        320
+      ],
+      "component_id": "flame_steak_boundary_035_cam00_0182",
+      "component_score": 0.9512756824493409,
+      "dynamic_boundary_mean": 0.5566740036010742,
+      "flicker_boundary_mean": 0.04108458012342453,
+      "flow_mag_boundary_mean": 0.4620315730571747,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0182.npz",
+      "flow_valid_boundary_mean": 0.04630440101027489,
+      "frame_idx": 182,
+      "image_name": "cam00_0182",
+      "local_component_rank": 3,
+      "mask_boundary_mean": 0.06421927362680435,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0182.png",
+      "mean_score": 0.939094603061676,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6394296288490295
+    },
+    {
+      "area": 573,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "flame_steak_boundary_036_cam00_0207",
+      "component_score": 0.951204252243042,
+      "dynamic_boundary_mean": 0.5523120164871216,
+      "flicker_boundary_mean": 0.03419581428170204,
+      "flow_mag_boundary_mean": 0.6669642925262451,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow/cam00_0207.npz",
+      "flow_valid_boundary_mean": 0.028301997110247612,
+      "frame_idx": 207,
+      "image_name": "cam00_0207",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.048446014523506165,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks/cam00_0207.png",
+      "mean_score": 0.9390053153038025,
+      "peak_score": 1.0,
+      "scene": "flame_steak",
+      "static_delta_boundary_mean": 0.6488685011863708
+    },
+    {
+      "area": 509,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "sear_steak_boundary_001_cam00_0091",
+      "component_score": 0.9519056797027587,
+      "dynamic_boundary_mean": 0.5819153189659119,
+      "flicker_boundary_mean": 0.031972505152225494,
+      "flow_mag_boundary_mean": 0.6486934423446655,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0091.npz",
+      "flow_valid_boundary_mean": 0.037697091698646545,
+      "frame_idx": 91,
+      "image_name": "cam00_0091",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.041563086211681366,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0091.png",
+      "mean_score": 0.9398820996284485,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6633287668228149
+    },
+    {
+      "area": 160,
+      "bbox_xyxy": [
+        32,
+        384,
+        96,
+        448
+      ],
+      "component_id": "sear_steak_boundary_002_cam00_0086",
+      "component_score": 0.9442500114440919,
+      "dynamic_boundary_mean": 0.5800508856773376,
+      "flicker_boundary_mean": 0.03029189072549343,
+      "flow_mag_boundary_mean": 0.5617567300796509,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0086.npz",
+      "flow_valid_boundary_mean": 0.028080249205231667,
+      "frame_idx": 86,
+      "image_name": "cam00_0086",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03730028122663498,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0086.png",
+      "mean_score": 0.9303125143051147,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.661038339138031
+    },
+    {
+      "area": 477,
+      "bbox_xyxy": [
+        352,
+        160,
+        416,
+        224
+      ],
+      "component_id": "sear_steak_boundary_003_cam00_0091",
+      "component_score": 0.9402096748352051,
+      "dynamic_boundary_mean": 0.5819153189659119,
+      "flicker_boundary_mean": 0.031972505152225494,
+      "flow_mag_boundary_mean": 0.6486934423446655,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0091.npz",
+      "flow_valid_boundary_mean": 0.037697091698646545,
+      "frame_idx": 91,
+      "image_name": "cam00_0091",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.041563086211681366,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0091.png",
+      "mean_score": 0.9252620935440063,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6633287668228149
+    },
+    {
+      "area": 81,
+      "bbox_xyxy": [
+        256,
+        443,
+        320,
+        507
+      ],
+      "component_id": "sear_steak_boundary_004_cam00_0171",
+      "component_score": 0.9391357421875,
+      "dynamic_boundary_mean": 0.5832516551017761,
+      "flicker_boundary_mean": 0.03124307096004486,
+      "flow_mag_boundary_mean": 0.6763681173324585,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0171.npz",
+      "flow_valid_boundary_mean": 0.03565467894077301,
+      "frame_idx": 171,
+      "image_name": "cam00_0171",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04384475201368332,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0171.png",
+      "mean_score": 0.936419665813446,
+      "peak_score": 0.9500000476837158,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6699257493019104
+    },
+    {
+      "area": 590,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_005_cam00_0171",
+      "component_score": 0.938779640197754,
+      "dynamic_boundary_mean": 0.5832516551017761,
+      "flicker_boundary_mean": 0.03124307096004486,
+      "flow_mag_boundary_mean": 0.6763681173324585,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0171.npz",
+      "flow_valid_boundary_mean": 0.03565467894077301,
+      "frame_idx": 171,
+      "image_name": "cam00_0171",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.04384475201368332,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0171.png",
+      "mean_score": 0.9234745502471924,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6699257493019104
+    },
+    {
+      "area": 526,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "sear_steak_boundary_006_cam00_0092",
+      "component_score": 0.9359695434570312,
+      "dynamic_boundary_mean": 0.5812588334083557,
+      "flicker_boundary_mean": 0.030385257676243782,
+      "flow_mag_boundary_mean": 0.6862242221832275,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0092.npz",
+      "flow_valid_boundary_mean": 0.029107291251420975,
+      "frame_idx": 92,
+      "image_name": "cam00_0092",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04719722643494606,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0092.png",
+      "mean_score": 0.9199619293212891,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6632762551307678
+    },
+    {
+      "area": 318,
+      "bbox_xyxy": [
+        288,
+        443,
+        352,
+        507
+      ],
+      "component_id": "sear_steak_boundary_007_cam00_0102",
+      "component_score": 0.9358490467071534,
+      "dynamic_boundary_mean": 0.5835580229759216,
+      "flicker_boundary_mean": 0.026297515258193016,
+      "flow_mag_boundary_mean": 0.3834424614906311,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0102.npz",
+      "flow_valid_boundary_mean": 0.03658251836895943,
+      "frame_idx": 102,
+      "image_name": "cam00_0102",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03419873118400574,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0102.png",
+      "mean_score": 0.9198113083839417,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6642361879348755
+    },
+    {
+      "area": 318,
+      "bbox_xyxy": [
+        320,
+        443,
+        384,
+        507
+      ],
+      "component_id": "sear_steak_boundary_008_cam00_0102",
+      "component_score": 0.9358490467071534,
+      "dynamic_boundary_mean": 0.5835580229759216,
+      "flicker_boundary_mean": 0.026297515258193016,
+      "flow_mag_boundary_mean": 0.3834424614906311,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0102.npz",
+      "flow_valid_boundary_mean": 0.03658251836895943,
+      "frame_idx": 102,
+      "image_name": "cam00_0102",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.03419873118400574,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0102.png",
+      "mean_score": 0.9198113083839417,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6642361879348755
+    },
+    {
+      "area": 498,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "sear_steak_boundary_009_cam00_0088",
+      "component_score": 0.9354217052459717,
+      "dynamic_boundary_mean": 0.5802580714225769,
+      "flicker_boundary_mean": 0.030691619962453842,
+      "flow_mag_boundary_mean": 0.49508070945739746,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0088.npz",
+      "flow_valid_boundary_mean": 0.03184995800256729,
+      "frame_idx": 88,
+      "image_name": "cam00_0088",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04094744473695755,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0088.png",
+      "mean_score": 0.9192771315574646,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6607787013053894
+    },
+    {
+      "area": 216,
+      "bbox_xyxy": [
+        224,
+        288,
+        288,
+        352
+      ],
+      "component_id": "sear_steak_boundary_010_cam00_0095",
+      "component_score": 0.9338888645172119,
+      "dynamic_boundary_mean": 0.5812267065048218,
+      "flicker_boundary_mean": 0.030003033578395844,
+      "flow_mag_boundary_mean": 0.6879311203956604,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0095.npz",
+      "flow_valid_boundary_mean": 0.03567218780517578,
+      "frame_idx": 95,
+      "image_name": "cam00_0095",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.04076654464006424,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0095.png",
+      "mean_score": 0.9173610806465149,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6631507873535156
+    },
+    {
+      "area": 18,
+      "bbox_xyxy": [
+        64,
+        288,
+        128,
+        352
+      ],
+      "component_id": "sear_steak_boundary_011_cam00_0099",
+      "component_score": 0.9322222709655763,
+      "dynamic_boundary_mean": 0.5831640958786011,
+      "flicker_boundary_mean": 0.024832813069224358,
+      "flow_mag_boundary_mean": 0.5162488222122192,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0099.npz",
+      "flow_valid_boundary_mean": 0.04313282668590546,
+      "frame_idx": 99,
+      "image_name": "cam00_0099",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.034645143896341324,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0099.png",
+      "mean_score": 0.9277778267860413,
+      "peak_score": 0.9500000476837158,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6655520796775818
+    },
+    {
+      "area": 280,
+      "bbox_xyxy": [
+        224,
+        288,
+        288,
+        352
+      ],
+      "component_id": "sear_steak_boundary_012_cam00_0096",
+      "component_score": 0.9312857627868654,
+      "dynamic_boundary_mean": 0.5820699334144592,
+      "flicker_boundary_mean": 0.027438348159193993,
+      "flow_mag_boundary_mean": 0.7236703634262085,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0096.npz",
+      "flow_valid_boundary_mean": 0.03407618775963783,
+      "frame_idx": 96,
+      "image_name": "cam00_0096",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0357247069478035,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0096.png",
+      "mean_score": 0.9141072034835815,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.663947343826294
+    },
+    {
+      "area": 914,
+      "bbox_xyxy": [
+        288,
+        320,
+        352,
+        384
+      ],
+      "component_id": "sear_steak_boundary_013_cam00_0171",
+      "component_score": 0.931028413772583,
+      "dynamic_boundary_mean": 0.5832516551017761,
+      "flicker_boundary_mean": 0.03124307096004486,
+      "flow_mag_boundary_mean": 0.6763681173324585,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0171.npz",
+      "flow_valid_boundary_mean": 0.03565467894077301,
+      "frame_idx": 171,
+      "image_name": "cam00_0171",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.04384475201368332,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0171.png",
+      "mean_score": 0.9137855172157288,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6699257493019104
+    },
+    {
+      "area": 529,
+      "bbox_xyxy": [
+        320,
+        160,
+        384,
+        224
+      ],
+      "component_id": "sear_steak_boundary_014_cam00_0090",
+      "component_score": 0.9307372570037842,
+      "dynamic_boundary_mean": 0.5812996625900269,
+      "flicker_boundary_mean": 0.029261929914355278,
+      "flow_mag_boundary_mean": 0.5709154605865479,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0090.npz",
+      "flow_valid_boundary_mean": 0.03264358267188072,
+      "frame_idx": 90,
+      "image_name": "cam00_0090",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.0398503802716732,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0090.png",
+      "mean_score": 0.9134215712547302,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6632295846939087
+    },
+    {
+      "area": 890,
+      "bbox_xyxy": [
+        256,
+        384,
+        320,
+        448
+      ],
+      "component_id": "sear_steak_boundary_015_cam00_0093",
+      "component_score": 0.9304718971252441,
+      "dynamic_boundary_mean": 0.5817461013793945,
+      "flicker_boundary_mean": 0.03007305972278118,
+      "flow_mag_boundary_mean": 0.6064125895500183,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0093.npz",
+      "flow_valid_boundary_mean": 0.03867453336715698,
+      "frame_idx": 93,
+      "image_name": "cam00_0093",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.046231456100940704,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0093.png",
+      "mean_score": 0.9130898714065552,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6636351346969604
+    },
+    {
+      "area": 214,
+      "bbox_xyxy": [
+        224,
+        320,
+        288,
+        384
+      ],
+      "component_id": "sear_steak_boundary_016_cam00_0095",
+      "component_score": 0.9304672718048097,
+      "dynamic_boundary_mean": 0.5812267065048218,
+      "flicker_boundary_mean": 0.030003033578395844,
+      "flow_mag_boundary_mean": 0.6879311203956604,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0095.npz",
+      "flow_valid_boundary_mean": 0.03567218780517578,
+      "frame_idx": 95,
+      "image_name": "cam00_0095",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.04076654464006424,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0095.png",
+      "mean_score": 0.913084089756012,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6631507873535156
+    },
+    {
+      "area": 246,
+      "bbox_xyxy": [
+        0,
+        384,
+        64,
+        448
+      ],
+      "component_id": "sear_steak_boundary_017_cam00_0086",
+      "component_score": 0.9304064273834229,
+      "dynamic_boundary_mean": 0.5800508856773376,
+      "flicker_boundary_mean": 0.03029189072549343,
+      "flow_mag_boundary_mean": 0.5617567300796509,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0086.npz",
+      "flow_valid_boundary_mean": 0.028080249205231667,
+      "frame_idx": 86,
+      "image_name": "cam00_0086",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.03730028122663498,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0086.png",
+      "mean_score": 0.9130080342292786,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.661038339138031
+    },
+    {
+      "area": 494,
+      "bbox_xyxy": [
+        352,
+        160,
+        416,
+        224
+      ],
+      "component_id": "sear_steak_boundary_018_cam00_0088",
+      "component_score": 0.9303643226623535,
+      "dynamic_boundary_mean": 0.5802580714225769,
+      "flicker_boundary_mean": 0.030691619962453842,
+      "flow_mag_boundary_mean": 0.49508070945739746,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0088.npz",
+      "flow_valid_boundary_mean": 0.03184995800256729,
+      "frame_idx": 88,
+      "image_name": "cam00_0088",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.04094744473695755,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0088.png",
+      "mean_score": 0.9129554033279419,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6607787013053894
+    },
+    {
+      "area": 974,
+      "bbox_xyxy": [
+        320,
+        416,
+        384,
+        480
+      ],
+      "component_id": "sear_steak_boundary_019_cam00_0102",
+      "component_score": 0.9297330856323243,
+      "dynamic_boundary_mean": 0.5835580229759216,
+      "flicker_boundary_mean": 0.026297515258193016,
+      "flow_mag_boundary_mean": 0.3834424614906311,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0102.npz",
+      "flow_valid_boundary_mean": 0.03658251836895943,
+      "frame_idx": 102,
+      "image_name": "cam00_0102",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.03419873118400574,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0102.png",
+      "mean_score": 0.9121663570404053,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6642361879348755
+    },
+    {
+      "area": 204,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_020_cam00_0138",
+      "component_score": 0.9294116973876954,
+      "dynamic_boundary_mean": 0.5834792256355286,
+      "flicker_boundary_mean": 0.014973798766732216,
+      "flow_mag_boundary_mean": 0.6405616998672485,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0138.npz",
+      "flow_valid_boundary_mean": 0.025358006358146667,
+      "frame_idx": 138,
+      "image_name": "cam00_0138",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.016683589667081833,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0138.png",
+      "mean_score": 0.9117646217346191,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6724350452423096
+    },
+    {
+      "area": 225,
+      "bbox_xyxy": [
+        288,
+        160,
+        352,
+        224
+      ],
+      "component_id": "sear_steak_boundary_021_cam00_0093",
+      "component_score": 0.928177785873413,
+      "dynamic_boundary_mean": 0.5817461013793945,
+      "flicker_boundary_mean": 0.03007305972278118,
+      "flow_mag_boundary_mean": 0.6064125895500183,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0093.npz",
+      "flow_valid_boundary_mean": 0.03867453336715698,
+      "frame_idx": 93,
+      "image_name": "cam00_0093",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.046231456100940704,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0093.png",
+      "mean_score": 0.9102222323417664,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6636351346969604
+    },
+    {
+      "area": 211,
+      "bbox_xyxy": [
+        288,
+        160,
+        352,
+        224
+      ],
+      "component_id": "sear_steak_boundary_022_cam00_0092",
+      "component_score": 0.9277725696563721,
+      "dynamic_boundary_mean": 0.5812588334083557,
+      "flicker_boundary_mean": 0.030385257676243782,
+      "flow_mag_boundary_mean": 0.6862242221832275,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0092.npz",
+      "flow_valid_boundary_mean": 0.029107291251420975,
+      "frame_idx": 92,
+      "image_name": "cam00_0092",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.04719722643494606,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0092.png",
+      "mean_score": 0.9097157120704651,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6632762551307678
+    },
+    {
+      "area": 868,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_023_cam00_0173",
+      "component_score": 0.9276497840881348,
+      "dynamic_boundary_mean": 0.5835609436035156,
+      "flicker_boundary_mean": 0.029918421059846878,
+      "flow_mag_boundary_mean": 0.5003501176834106,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0173.npz",
+      "flow_valid_boundary_mean": 0.03761247918009758,
+      "frame_idx": 173,
+      "image_name": "cam00_0173",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03715147823095322,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0173.png",
+      "mean_score": 0.9095622301101685,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6699753999710083
+    },
+    {
+      "area": 746,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_024_cam00_0172",
+      "component_score": 0.9269169330596925,
+      "dynamic_boundary_mean": 0.5841561555862427,
+      "flicker_boundary_mean": 0.0315319262444973,
+      "flow_mag_boundary_mean": 0.6030484437942505,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0172.npz",
+      "flow_valid_boundary_mean": 0.028395364060997963,
+      "frame_idx": 172,
+      "image_name": "cam00_0172",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.040010854601860046,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0172.png",
+      "mean_score": 0.9086461663246155,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6697361469268799
+    },
+    {
+      "area": 577,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_025_cam00_0203",
+      "component_score": 0.9256845474243165,
+      "dynamic_boundary_mean": 0.5874502658843994,
+      "flicker_boundary_mean": 0.0273391455411911,
+      "flow_mag_boundary_mean": 0.5840539932250977,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0203.npz",
+      "flow_valid_boundary_mean": 0.03111177310347557,
+      "frame_idx": 203,
+      "image_name": "cam00_0203",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03327672928571701,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0203.png",
+      "mean_score": 0.9071056842803955,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6543917655944824
+    },
+    {
+      "area": 81,
+      "bbox_xyxy": [
+        64,
+        416,
+        128,
+        480
+      ],
+      "component_id": "sear_steak_boundary_026_cam00_0035",
+      "component_score": 0.9249382972717286,
+      "dynamic_boundary_mean": 0.5798875093460083,
+      "flicker_boundary_mean": 0.0321563221514225,
+      "flow_mag_boundary_mean": 0.38921666145324707,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0035.npz",
+      "flow_valid_boundary_mean": 0.028179451823234558,
+      "frame_idx": 35,
+      "image_name": "cam00_0035",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03053697943687439,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0035.png",
+      "mean_score": 0.9061728715896606,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6456415057182312
+    },
+    {
+      "area": 355,
+      "bbox_xyxy": [
+        320,
+        443,
+        384,
+        507
+      ],
+      "component_id": "sear_steak_boundary_027_cam00_0204",
+      "component_score": 0.9237183570861818,
+      "dynamic_boundary_mean": 0.586595356464386,
+      "flicker_boundary_mean": 0.028564592823386192,
+      "flow_mag_boundary_mean": 0.532290518283844,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0204.npz",
+      "flow_valid_boundary_mean": 0.03165155276656151,
+      "frame_idx": 204,
+      "image_name": "cam00_0204",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03419581428170204,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0204.png",
+      "mean_score": 0.904647946357727,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6541087627410889
+    },
+    {
+      "area": 222,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_028_cam00_0093",
+      "component_score": 0.9236936092376709,
+      "dynamic_boundary_mean": 0.5817461013793945,
+      "flicker_boundary_mean": 0.03007305972278118,
+      "flow_mag_boundary_mean": 0.6064125895500183,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0093.npz",
+      "flow_valid_boundary_mean": 0.03867453336715698,
+      "frame_idx": 93,
+      "image_name": "cam00_0093",
+      "local_component_rank": 2,
+      "mask_boundary_mean": 0.046231456100940704,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0093.png",
+      "mean_score": 0.9171169996261597,
+      "peak_score": 0.9500000476837158,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6636351346969604
+    },
+    {
+      "area": 425,
+      "bbox_xyxy": [
+        384,
+        443,
+        448,
+        507
+      ],
+      "component_id": "sear_steak_boundary_029_cam00_0031",
+      "component_score": 0.9233881950378418,
+      "dynamic_boundary_mean": 0.5797620415687561,
+      "flicker_boundary_mean": 0.03624114394187927,
+      "flow_mag_boundary_mean": 0.45497938990592957,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0031.npz",
+      "flow_valid_boundary_mean": 0.03681010380387306,
+      "frame_idx": 31,
+      "image_name": "cam00_0031",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03923473879694939,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0031.png",
+      "mean_score": 0.9042352437973022,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6442643404006958
+    },
+    {
+      "area": 37,
+      "bbox_xyxy": [
+        64,
+        416,
+        128,
+        480
+      ],
+      "component_id": "sear_steak_boundary_030_cam00_0040",
+      "component_score": 0.923243236541748,
+      "dynamic_boundary_mean": 0.579613208770752,
+      "flicker_boundary_mean": 0.024520616978406906,
+      "flow_mag_boundary_mean": 0.4631578028202057,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0040.npz",
+      "flow_valid_boundary_mean": 0.028369104489684105,
+      "frame_idx": 40,
+      "image_name": "cam00_0040",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.015157615765929222,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0040.png",
+      "mean_score": 0.9040540456771851,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6498313546180725
+    },
+    {
+      "area": 642,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_031_cam00_0202",
+      "component_score": 0.9231153488159181,
+      "dynamic_boundary_mean": 0.5868462920188904,
+      "flicker_boundary_mean": 0.027867255732417107,
+      "flow_mag_boundary_mean": 0.6088985204696655,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0202.npz",
+      "flow_valid_boundary_mean": 0.03637535870075226,
+      "frame_idx": 202,
+      "image_name": "cam00_0202",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03179452195763588,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0202.png",
+      "mean_score": 0.9038941860198975,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6555763483047485
+    },
+    {
+      "area": 171,
+      "bbox_xyxy": [
+        64,
+        416,
+        128,
+        480
+      ],
+      "component_id": "sear_steak_boundary_032_cam00_0007",
+      "component_score": 0.9225730895996094,
+      "dynamic_boundary_mean": 0.5809466242790222,
+      "flicker_boundary_mean": 0.029156891629099846,
+      "flow_mag_boundary_mean": 0.7197518944740295,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0007.npz",
+      "flow_valid_boundary_mean": 0.025617683306336403,
+      "frame_idx": 7,
+      "image_name": "cam00_0007",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03187038376927376,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0007.png",
+      "mean_score": 0.9032163619995117,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6370429396629333
+    },
+    {
+      "area": 496,
+      "bbox_xyxy": [
+        320,
+        443,
+        384,
+        507
+      ],
+      "component_id": "sear_steak_boundary_033_cam00_0173",
+      "component_score": 0.9223386764526367,
+      "dynamic_boundary_mean": 0.5835609436035156,
+      "flicker_boundary_mean": 0.029918421059846878,
+      "flow_mag_boundary_mean": 0.5003501176834106,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0173.npz",
+      "flow_valid_boundary_mean": 0.03761247918009758,
+      "frame_idx": 173,
+      "image_name": "cam00_0173",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.03715147823095322,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0173.png",
+      "mean_score": 0.9029233455657959,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6699753999710083
+    },
+    {
+      "area": 286,
+      "bbox_xyxy": [
+        384,
+        384,
+        448,
+        448
+      ],
+      "component_id": "sear_steak_boundary_034_cam00_0011",
+      "component_score": 0.9218181610107423,
+      "dynamic_boundary_mean": 0.5794206261634827,
+      "flicker_boundary_mean": 0.031009651720523834,
+      "flow_mag_boundary_mean": 0.6736487746238708,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0011.npz",
+      "flow_valid_boundary_mean": 0.033737730234861374,
+      "frame_idx": 11,
+      "image_name": "cam00_0011",
+      "local_component_rank": 0,
+      "mask_boundary_mean": 0.03708728775382042,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0011.png",
+      "mean_score": 0.9022727012634277,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6392487287521362
+    },
+    {
+      "area": 205,
+      "bbox_xyxy": [
+        256,
+        416,
+        320,
+        480
+      ],
+      "component_id": "sear_steak_boundary_035_cam00_0099",
+      "component_score": 0.92175612449646,
+      "dynamic_boundary_mean": 0.5831640958786011,
+      "flicker_boundary_mean": 0.024832813069224358,
+      "flow_mag_boundary_mean": 0.5162488222122192,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0099.npz",
+      "flow_valid_boundary_mean": 0.04313282668590546,
+      "frame_idx": 99,
+      "image_name": "cam00_0099",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.034645143896341324,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0099.png",
+      "mean_score": 0.902195155620575,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6655520796775818
+    },
+    {
+      "area": 450,
+      "bbox_xyxy": [
+        288,
+        443,
+        352,
+        507
+      ],
+      "component_id": "sear_steak_boundary_036_cam00_0204",
+      "component_score": 0.9215110778808595,
+      "dynamic_boundary_mean": 0.586595356464386,
+      "flicker_boundary_mean": 0.028564592823386192,
+      "flow_mag_boundary_mean": 0.532290518283844,
+      "flow_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow/cam00_0204.npz",
+      "flow_valid_boundary_mean": 0.03165155276656151,
+      "frame_idx": 204,
+      "image_name": "cam00_0204",
+      "local_component_rank": 1,
+      "mask_boundary_mean": 0.03419581428170204,
+      "mask_source": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks/cam00_0204.png",
+      "mean_score": 0.9018888473510742,
+      "peak_score": 1.0,
+      "scene": "sear_steak",
+      "static_delta_boundary_mean": 0.6541087627410889
+    }
+  ],
+  "description": "M2 non-oracle occlusion-boundary support masks for event-local micro-densification.",
+  "frames_are_inclusive": true,
+  "generated_at_utc": "2026-07-07T21:46:05+00:00",
+  "generated_by": "event-boundary-support",
+  "route0_system": "route0",
+  "scene_reports": [
+    {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow",
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks",
+      "n_flow_sidecars_indexed": 5980,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_nonempty_frame_masks": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 23,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "cut_roasted_beef",
+      "target_hw": [
+        507,
+        676
+      ]
+    },
+    {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow",
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks",
+      "n_flow_sidecars_indexed": 6279,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_nonempty_frame_masks": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 21,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "flame_steak",
+      "target_hw": [
+        507,
+        676
+      ]
+    },
+    {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow",
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks",
+      "n_flow_sidecars_indexed": 6279,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_nonempty_frame_masks": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 22,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "sear_steak",
+      "target_hw": [
+        507,
+        676
+      ]
+    }
+  ],
+  "selection_parameters": {
+    "boundary_dilate": 6,
+    "max_components_per_scene": 36,
+    "max_pixel_fraction": 0.03,
+    "min_component_area": 16,
+    "min_score": 0.05,
+    "score_weights": {
+      "dynamic_mask_boundary": 0.5,
+      "flow_magnitude_boundary": 0.1,
+      "flow_valid_boundary": 0.2,
+      "route0_dynamic_render_boundary": 0.1,
+      "route0_render_flicker_boundary": 0.05,
+      "route0_static_delta_boundary": 0.05
+    },
+    "use_flow": true
+  },
+  "source_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_real_windows.json",
+  "source_manifest_usage": "scene_sources_only_for_paths_and_frame_ranges",
+  "support_frames": [
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_033_cam00_0048"
+      ],
+      "frame_idx": 48,
+      "image_name": "cam00_0048",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0048.png",
+      "support_pixel_count": 65,
+      "support_pixel_fraction": 0.00018965255651646185
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_027_cam00_0049"
+      ],
+      "frame_idx": 49,
+      "image_name": "cam00_0049",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0049.png",
+      "support_pixel_count": 80,
+      "support_pixel_fraction": 0.0002334185310971838
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_011_cam00_0088"
+      ],
+      "frame_idx": 88,
+      "image_name": "cam00_0088",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0088.png",
+      "support_pixel_count": 137,
+      "support_pixel_fraction": 0.00039972923450392727
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_002_cam00_0090"
+      ],
+      "frame_idx": 90,
+      "image_name": "cam00_0090",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0090.png",
+      "support_pixel_count": 41,
+      "support_pixel_fraction": 0.0001196269971873067
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_001_cam00_0091"
+      ],
+      "frame_idx": 91,
+      "image_name": "cam00_0091",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0091.png",
+      "support_pixel_count": 47,
+      "support_pixel_fraction": 0.0001371333870195955
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_014_cam00_0119"
+      ],
+      "frame_idx": 119,
+      "image_name": "cam00_0119",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0119.png",
+      "support_pixel_count": 114,
+      "support_pixel_fraction": 0.00033262140681348694
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_020_cam00_0157"
+      ],
+      "frame_idx": 157,
+      "image_name": "cam00_0157",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0157.png",
+      "support_pixel_count": 146,
+      "support_pixel_fraction": 0.0004259888192523604
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_006_cam00_0158",
+        "cut_roasted_beef_boundary_035_cam00_0158"
+      ],
+      "frame_idx": 158,
+      "image_name": "cam00_0158",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0158.png",
+      "support_pixel_count": 182,
+      "support_pixel_fraction": 0.0005310271582460932
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_009_cam00_0159"
+      ],
+      "frame_idx": 159,
+      "image_name": "cam00_0159",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0159.png",
+      "support_pixel_count": 46,
+      "support_pixel_fraction": 0.0001342156553808807
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_003_cam00_0160",
+        "cut_roasted_beef_boundary_030_cam00_0160"
+      ],
+      "frame_idx": 160,
+      "image_name": "cam00_0160",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0160.png",
+      "support_pixel_count": 250,
+      "support_pixel_fraction": 0.0007294329096786994
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_028_cam00_0185",
+        "cut_roasted_beef_boundary_031_cam00_0185",
+        "cut_roasted_beef_boundary_032_cam00_0185",
+        "cut_roasted_beef_boundary_036_cam00_0185"
+      ],
+      "frame_idx": 185,
+      "image_name": "cam00_0185",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0185.png",
+      "support_pixel_count": 853,
+      "support_pixel_fraction": 0.0024888250878237223
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_010_cam00_0186",
+        "cut_roasted_beef_boundary_012_cam00_0186",
+        "cut_roasted_beef_boundary_017_cam00_0186",
+        "cut_roasted_beef_boundary_019_cam00_0186"
+      ],
+      "frame_idx": 186,
+      "image_name": "cam00_0186",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0186.png",
+      "support_pixel_count": 946,
+      "support_pixel_fraction": 0.0027601741302241984
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_013_cam00_0187",
+        "cut_roasted_beef_boundary_025_cam00_0187"
+      ],
+      "frame_idx": 187,
+      "image_name": "cam00_0187",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0187.png",
+      "support_pixel_count": 923,
+      "support_pixel_fraction": 0.002693066302533758
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_007_cam00_0249"
+      ],
+      "frame_idx": 249,
+      "image_name": "cam00_0249",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0249.png",
+      "support_pixel_count": 26,
+      "support_pixel_fraction": 7.586102260658473e-05
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_004_cam00_0251",
+        "cut_roasted_beef_boundary_034_cam00_0251"
+      ],
+      "frame_idx": 251,
+      "image_name": "cam00_0251",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0251.png",
+      "support_pixel_count": 430,
+      "support_pixel_fraction": 0.001254624604647363
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_029_cam00_0252"
+      ],
+      "frame_idx": 252,
+      "image_name": "cam00_0252",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0252.png",
+      "support_pixel_count": 71,
+      "support_pixel_fraction": 0.00020715894634875062
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_015_cam00_0257",
+        "cut_roasted_beef_boundary_021_cam00_0257",
+        "cut_roasted_beef_boundary_022_cam00_0257"
+      ],
+      "frame_idx": 257,
+      "image_name": "cam00_0257",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0257.png",
+      "support_pixel_count": 443,
+      "support_pixel_fraction": 0.0012925551159506552
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_023_cam00_0258"
+      ],
+      "frame_idx": 258,
+      "image_name": "cam00_0258",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0258.png",
+      "support_pixel_count": 239,
+      "support_pixel_fraction": 0.0006973378616528367
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_026_cam00_0260"
+      ],
+      "frame_idx": 260,
+      "image_name": "cam00_0260",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0260.png",
+      "support_pixel_count": 366,
+      "support_pixel_fraction": 0.0010678897797696159
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_018_cam00_0261"
+      ],
+      "frame_idx": 261,
+      "image_name": "cam00_0261",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0261.png",
+      "support_pixel_count": 374,
+      "support_pixel_fraction": 0.0010912316328793342
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_005_cam00_0263",
+        "cut_roasted_beef_boundary_016_cam00_0263"
+      ],
+      "frame_idx": 263,
+      "image_name": "cam00_0263",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0263.png",
+      "support_pixel_count": 260,
+      "support_pixel_fraction": 0.0007586102260658474
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_008_cam00_0264"
+      ],
+      "frame_idx": 264,
+      "image_name": "cam00_0264",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0264.png",
+      "support_pixel_count": 106,
+      "support_pixel_fraction": 0.0003092795537037685
+    },
+    {
+      "component_ids": [
+        "cut_roasted_beef_boundary_024_cam00_0265"
+      ],
+      "frame_idx": 265,
+      "image_name": "cam00_0265",
+      "scene": "cut_roasted_beef",
+      "support_mask_path": "support_masks/cut_roasted_beef/cam00_0265.png",
+      "support_pixel_count": 87,
+      "support_pixel_fraction": 0.00025384265256818737
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_016_cam00_0029",
+        "flame_steak_boundary_017_cam00_0029"
+      ],
+      "frame_idx": 29,
+      "image_name": "cam00_0029",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0029.png",
+      "support_pixel_count": 80,
+      "support_pixel_fraction": 0.0002334185310971838
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_026_cam00_0033"
+      ],
+      "frame_idx": 33,
+      "image_name": "cam00_0033",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0033.png",
+      "support_pixel_count": 208,
+      "support_pixel_fraction": 0.0006068881808526779
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_020_cam00_0074"
+      ],
+      "frame_idx": 74,
+      "image_name": "cam00_0074",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0074.png",
+      "support_pixel_count": 466,
+      "support_pixel_fraction": 0.0013596629436410956
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_003_cam00_0077",
+        "flame_steak_boundary_032_cam00_0077"
+      ],
+      "frame_idx": 77,
+      "image_name": "cam00_0077",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0077.png",
+      "support_pixel_count": 833,
+      "support_pixel_fraction": 0.002430470455049426
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_001_cam00_0078",
+        "flame_steak_boundary_011_cam00_0078"
+      ],
+      "frame_idx": 78,
+      "image_name": "cam00_0078",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0078.png",
+      "support_pixel_count": 54,
+      "support_pixel_fraction": 0.00015755750849059906
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_028_cam00_0082"
+      ],
+      "frame_idx": 82,
+      "image_name": "cam00_0082",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0082.png",
+      "support_pixel_count": 860,
+      "support_pixel_fraction": 0.002509249209294726
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_013_cam00_0085",
+        "flame_steak_boundary_015_cam00_0085",
+        "flame_steak_boundary_023_cam00_0085"
+      ],
+      "frame_idx": 85,
+      "image_name": "cam00_0085",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0085.png",
+      "support_pixel_count": 1131,
+      "support_pixel_fraction": 0.0032999544833864363
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_029_cam00_0086"
+      ],
+      "frame_idx": 86,
+      "image_name": "cam00_0086",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0086.png",
+      "support_pixel_count": 102,
+      "support_pixel_fraction": 0.00029760862714890934
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_007_cam00_0176"
+      ],
+      "frame_idx": 176,
+      "image_name": "cam00_0176",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0176.png",
+      "support_pixel_count": 323,
+      "support_pixel_fraction": 0.0009424273193048797
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_006_cam00_0178",
+        "flame_steak_boundary_018_cam00_0178",
+        "flame_steak_boundary_019_cam00_0178"
+      ],
+      "frame_idx": 178,
+      "image_name": "cam00_0178",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0178.png",
+      "support_pixel_count": 558,
+      "support_pixel_fraction": 0.0016280942544028571
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_010_cam00_0181",
+        "flame_steak_boundary_021_cam00_0181"
+      ],
+      "frame_idx": 181,
+      "image_name": "cam00_0181",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0181.png",
+      "support_pixel_count": 1187,
+      "support_pixel_fraction": 0.0034633474551544648
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_022_cam00_0182",
+        "flame_steak_boundary_031_cam00_0182",
+        "flame_steak_boundary_033_cam00_0182",
+        "flame_steak_boundary_035_cam00_0182"
+      ],
+      "frame_idx": 182,
+      "image_name": "cam00_0182",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0182.png",
+      "support_pixel_count": 1784,
+      "support_pixel_fraction": 0.005205233243467199
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_034_cam00_0185"
+      ],
+      "frame_idx": 185,
+      "image_name": "cam00_0185",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0185.png",
+      "support_pixel_count": 369,
+      "support_pixel_fraction": 0.0010766429746857603
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_005_cam00_0187",
+        "flame_steak_boundary_024_cam00_0187"
+      ],
+      "frame_idx": 187,
+      "image_name": "cam00_0187",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0187.png",
+      "support_pixel_count": 651,
+      "support_pixel_fraction": 0.0018994432968033332
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_004_cam00_0188",
+        "flame_steak_boundary_025_cam00_0188"
+      ],
+      "frame_idx": 188,
+      "image_name": "cam00_0188",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0188.png",
+      "support_pixel_count": 626,
+      "support_pixel_fraction": 0.0018265000058354632
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_012_cam00_0193",
+        "flame_steak_boundary_014_cam00_0193"
+      ],
+      "frame_idx": 193,
+      "image_name": "cam00_0193",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0193.png",
+      "support_pixel_count": 881,
+      "support_pixel_fraction": 0.002570521573707737
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_036_cam00_0207"
+      ],
+      "frame_idx": 207,
+      "image_name": "cam00_0207",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0207.png",
+      "support_pixel_count": 573,
+      "support_pixel_fraction": 0.001671860228983579
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_008_cam00_0208"
+      ],
+      "frame_idx": 208,
+      "image_name": "cam00_0208",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0208.png",
+      "support_pixel_count": 265,
+      "support_pixel_fraction": 0.0007731988842594213
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_030_cam00_0216"
+      ],
+      "frame_idx": 216,
+      "image_name": "cam00_0216",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0216.png",
+      "support_pixel_count": 778,
+      "support_pixel_fraction": 0.0022699952149201124
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_009_cam00_0217",
+        "flame_steak_boundary_027_cam00_0217"
+      ],
+      "frame_idx": 217,
+      "image_name": "cam00_0217",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0217.png",
+      "support_pixel_count": 914,
+      "support_pixel_fraction": 0.002666806717785325
+    },
+    {
+      "component_ids": [
+        "flame_steak_boundary_002_cam00_0219"
+      ],
+      "frame_idx": 219,
+      "image_name": "cam00_0219",
+      "scene": "flame_steak",
+      "support_mask_path": "support_masks/flame_steak/cam00_0219.png",
+      "support_pixel_count": 464,
+      "support_pixel_fraction": 0.001353827480363666
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_032_cam00_0007"
+      ],
+      "frame_idx": 7,
+      "image_name": "cam00_0007",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0007.png",
+      "support_pixel_count": 171,
+      "support_pixel_fraction": 0.0004989321102202304
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_034_cam00_0011"
+      ],
+      "frame_idx": 11,
+      "image_name": "cam00_0011",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0011.png",
+      "support_pixel_count": 286,
+      "support_pixel_fraction": 0.0008344712486724321
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_029_cam00_0031"
+      ],
+      "frame_idx": 31,
+      "image_name": "cam00_0031",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0031.png",
+      "support_pixel_count": 425,
+      "support_pixel_fraction": 0.001240035946453789
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_026_cam00_0035"
+      ],
+      "frame_idx": 35,
+      "image_name": "cam00_0035",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0035.png",
+      "support_pixel_count": 81,
+      "support_pixel_fraction": 0.0002363362627358986
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_030_cam00_0040"
+      ],
+      "frame_idx": 40,
+      "image_name": "cam00_0040",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0040.png",
+      "support_pixel_count": 37,
+      "support_pixel_fraction": 0.0001079560706324475
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_002_cam00_0086",
+        "sear_steak_boundary_017_cam00_0086"
+      ],
+      "frame_idx": 86,
+      "image_name": "cam00_0086",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0086.png",
+      "support_pixel_count": 246,
+      "support_pixel_fraction": 0.0007177619831238402
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_009_cam00_0088",
+        "sear_steak_boundary_018_cam00_0088"
+      ],
+      "frame_idx": 88,
+      "image_name": "cam00_0088",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0088.png",
+      "support_pixel_count": 643,
+      "support_pixel_fraction": 0.0018761014436936149
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_014_cam00_0090"
+      ],
+      "frame_idx": 90,
+      "image_name": "cam00_0090",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0090.png",
+      "support_pixel_count": 529,
+      "support_pixel_fraction": 0.001543480036880128
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_001_cam00_0091",
+        "sear_steak_boundary_003_cam00_0091"
+      ],
+      "frame_idx": 91,
+      "image_name": "cam00_0091",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0091.png",
+      "support_pixel_count": 639,
+      "support_pixel_fraction": 0.0018644305171387557
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_006_cam00_0092",
+        "sear_steak_boundary_022_cam00_0092"
+      ],
+      "frame_idx": 92,
+      "image_name": "cam00_0092",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0092.png",
+      "support_pixel_count": 526,
+      "support_pixel_fraction": 0.0015347268419639835
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_015_cam00_0093",
+        "sear_steak_boundary_021_cam00_0093",
+        "sear_steak_boundary_028_cam00_0093"
+      ],
+      "frame_idx": 93,
+      "image_name": "cam00_0093",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0093.png",
+      "support_pixel_count": 1115,
+      "support_pixel_fraction": 0.003253270777166999
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_010_cam00_0095",
+        "sear_steak_boundary_016_cam00_0095"
+      ],
+      "frame_idx": 95,
+      "image_name": "cam00_0095",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0095.png",
+      "support_pixel_count": 233,
+      "support_pixel_fraction": 0.0006798314718205478
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_012_cam00_0096"
+      ],
+      "frame_idx": 96,
+      "image_name": "cam00_0096",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0096.png",
+      "support_pixel_count": 280,
+      "support_pixel_fraction": 0.0008169648588401433
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_011_cam00_0099",
+        "sear_steak_boundary_035_cam00_0099"
+      ],
+      "frame_idx": 99,
+      "image_name": "cam00_0099",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0099.png",
+      "support_pixel_count": 223,
+      "support_pixel_fraction": 0.0006506541554333998
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_007_cam00_0102",
+        "sear_steak_boundary_008_cam00_0102",
+        "sear_steak_boundary_019_cam00_0102"
+      ],
+      "frame_idx": 102,
+      "image_name": "cam00_0102",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0102.png",
+      "support_pixel_count": 974,
+      "support_pixel_fraction": 0.002841870616108213
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_020_cam00_0138"
+      ],
+      "frame_idx": 138,
+      "image_name": "cam00_0138",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0138.png",
+      "support_pixel_count": 204,
+      "support_pixel_fraction": 0.0005952172542978187
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_004_cam00_0171",
+        "sear_steak_boundary_005_cam00_0171",
+        "sear_steak_boundary_013_cam00_0171"
+      ],
+      "frame_idx": 171,
+      "image_name": "cam00_0171",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0171.png",
+      "support_pixel_count": 1504,
+      "support_pixel_fraction": 0.004388268384627056
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_024_cam00_0172"
+      ],
+      "frame_idx": 172,
+      "image_name": "cam00_0172",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0172.png",
+      "support_pixel_count": 746,
+      "support_pixel_fraction": 0.002176627802481239
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_023_cam00_0173",
+        "sear_steak_boundary_033_cam00_0173"
+      ],
+      "frame_idx": 173,
+      "image_name": "cam00_0173",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0173.png",
+      "support_pixel_count": 1364,
+      "support_pixel_fraction": 0.003979785955206984
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_031_cam00_0202"
+      ],
+      "frame_idx": 202,
+      "image_name": "cam00_0202",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0202.png",
+      "support_pixel_count": 642,
+      "support_pixel_fraction": 0.0018731837120549001
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_025_cam00_0203"
+      ],
+      "frame_idx": 203,
+      "image_name": "cam00_0203",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0203.png",
+      "support_pixel_count": 577,
+      "support_pixel_fraction": 0.0016835311555384383
+    },
+    {
+      "component_ids": [
+        "sear_steak_boundary_027_cam00_0204",
+        "sear_steak_boundary_036_cam00_0204"
+      ],
+      "frame_idx": 204,
+      "image_name": "cam00_0204",
+      "scene": "sear_steak",
+      "support_mask_path": "support_masks/sear_steak/cam00_0204.png",
+      "support_pixel_count": 450,
+      "support_pixel_fraction": 0.0013129792374216589
+    }
+  ],
+  "uses_frozen_window_labels": false,
+  "uses_gt_crop_pixels": false,
+  "uses_gt_residual": false
+}

@@ -1,0 +1,92 @@
+timestamp: 2026-07-07T23:37:59+02:00
+stage: event-boundary-support
+out_dir: refine-logs/hide_reveal_poc/r026_m2_boundary_support
+manifest: refine-logs/hide_reveal_real_windows.json
+route0_eval: none
+residual_manifest: none
+matched_manifest: none
+eval_out_dir: /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/real
+nonoracle_window_length: 16
+nonoracle_temporal_stride: 4
+nonoracle_tile_size: 160
+nonoracle_tile_stride: 80
+nonoracle_top_k_per_scene: 8
+boundary_max_components_per_scene: 36
+boundary_max_pixel_fraction: 0.03
+boundary_dilate: 6
+boundary_min_component_area: 16
+boundary_min_score: 0.05
+boundary_use_flow: 1
+repo_root: /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags
+project_root: /leonardo_work/EUHPC_D21_034/proj_adags
+env_script: /leonardo_work/EUHPC_D21_034/proj_adags/exp_index/leonardo_env.sh
+env_loaded: true
+host: lrdn1861.leonardo.local
+slurm_job_id: 48872653
+slurm_job_gpus: 3
+slurm_gpus: unset
+cuda_visible_devices: 0
+torch_cuda_arch_list: 8.0
+torch_extensions_dir: /leonardo_work/EUHPC_D21_034/proj_adags/build/torch_extensions_jobs/48872653
+max_jobs: 8
+nvidia_smi: GPU 0: NVIDIA A100-SXM-64GB (UUID: GPU-184d42f2-1bb9-3947-38f7-5724973edceb)
+python: /leonardo_work/EUHPC_D21_034/proj_adags/envs/adags/bin/python
+python_bin: python
+git_branch: codex/hide-reveal-poc-implementation
+git_commit: efca178e7fd5fef49aa84c762350dfa8cbdd36d8
+git_dirty: true
+git_status: ?? configs/n3v/bootstrap.yaml
+git_status: ?? configs/n3v/distill.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_600k.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_lowroi_600k.yaml
+git_status: ?? configs/n3v/fixed_budget_lora_route0_filemask_residual_600k.yaml
+git_status: ?? configs/panopticsports/
+git_status: ?? diff-gaussian-rasterization/diff_gaussian_rasterization/
+git_status: ?? eval_all_runs.sh
+git_status: ?? follow-up.md
+git_status: ?? logs/hide_reveal_actual-real-renders_48758979.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48758979.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759225.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759225.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759305.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759305.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759561.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759561.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48759691.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48759691.out
+git_status: ?? logs/hide_reveal_actual-real-renders_48760029.err
+git_status: ?? logs/hide_reveal_actual-real-renders_48760029.out
+git_status: ?? logs/hide_reveal_derive-real-renders_48644898.err
+git_status: ?? logs/hide_reveal_derive-real-renders_48644898.out
+git_status: ?? logs/hide_reveal_derive-real-renders_48646250.err
+git_status: ?? logs/hide_reveal_derive-real-renders_48646250.out
+git_status: ?? logs/hide_reveal_derive-real-renders_48654171.err
+git_status: ?? logs/hide_reveal_derive-real-renders_48654171.out
+git_status: ?? logs/hide_reveal_event-boundary-support_48872013.err
+git_status: ?? logs/hide_reveal_event-boundary-support_48872013.out
+git_status: ?? logs/hide_reveal_event-boundary-support_48872653.err
+git_status: ?? logs/hide_reveal_event-boundary-support_48872653.out
+git_status: ?? logs/hide_reveal_real_48653179.err
+git_status: ?? logs/hide_reveal_real_48653179.out
+git_status: ?? logs/hide_reveal_real_48653948.err
+git_status: ?? logs/hide_reveal_real_48653948.out
+git_status: ?? logs/hide_reveal_real_48760448.err
+git_status: ?? logs/hide_reveal_real_48760448.out
+git_status: ?? logs/hide_reveal_synthetic_48239816.err
+git_status: ?? logs/hide_reveal_synthetic_48239816.out
+git_status: ?? logs/hide_reveal_synthetic_48241130.err
+git_status: ?? logs/hide_reveal_synthetic_48241130.out
+git_status: ?? logs/hide_reveal_synthetic_48241746.err
+git_status: ?? logs/hide_reveal_synthetic_48241746.out
+git_status: ?? logs/pre_pull_untracked_backup_20260707_1148/
+git_status: ?? logs/pre_pull_untracked_backup_20260707_232249_m2/
+git_status: ?? scripts/analyze_wandb_adags.py
+git_status: ?? scripts/export_results.py
+git_status: ?? scripts/extract_results.py
+git_status: ?? scripts/make_downscaled_n3v.py
+git_status: ?? scripts/submit_lora_mask_mechanism_screen.sh
+git_status: ?? scripts/sync_wandb_runs.sh
+git_status: ?? scripts/test_wandb_online_compute.sh
+git_status: ?? simple-knn/simple_knn/__init__.py
+git_status: ?? submit_results.sh
+---

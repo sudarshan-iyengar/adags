@@ -1,0 +1,64 @@
+{
+  "limitations": [
+    "This support artifact is not a rendered Gaussian method result.",
+    "Support uses dynamic-mask boundaries, flow sidecars when matched, and route0 render diagnostics, not frozen crop labels.",
+    "Final PASS/FAIL requires checkpoint-backed M2 renders scored on the frozen R009 windows."
+  ],
+  "n_components": 108,
+  "n_support_frames": 66,
+  "scene_reports": [
+    {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow",
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks",
+      "n_flow_sidecars_indexed": 5980,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_nonempty_frame_masks": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 23,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "cut_roasted_beef",
+      "target_hw": [
+        507,
+        676
+      ]
+    },
+    {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow",
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks",
+      "n_flow_sidecars_indexed": 6279,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_nonempty_frame_masks": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 21,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "flame_steak",
+      "target_hw": [
+        507,
+        676
+      ]
+    },
+    {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow",
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks",
+      "n_flow_sidecars_indexed": 6279,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_nonempty_frame_masks": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 22,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "sear_steak",
+      "target_hw": [
+        507,
+        676
+      ]
+    }
+  ],
+  "source_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_real_windows.json",
+  "support_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r026_m2_boundary_support/event_boundary_support_manifest.json"
+}

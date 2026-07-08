@@ -2,16 +2,16 @@
 
 ## Recovery Snapshot
 
-- Current objective phase: event-crop non-oracle M2 in progress
-- Current run ID: R027 event-boundary micro-densification train submitted
-- Current method candidate: M2 occlusion-boundary gated micro-densification; R026 support artifact validated, R027 train jobs pending/running
+- Current objective phase: event-crop non-oracle M2 decision recorded
+- Current run ID: R027 event-boundary micro-densification frozen-window scoring completed
+- Current method candidate: M2 occlusion-boundary gated micro-densification; closed as FAIL on frozen-window scoring
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
 - Last pushed milestone commit: `efca178e7fd5fef49aa84c762350dfa8cbdd36d8`
-- Last HPC job ID: `48873219`, `48873220`, `48873221`
-- Latest success/failure: R026b support generation completed with `ExitCode=0:0`, validation `ok=true`, and guardrails `uses_gt_residual=false`, `uses_gt_crop_pixels=false`, `uses_frozen_window_labels=false`; this is support-only evidence, not a method PASS. R027 train jobs are submitted against route0 `chkpnt6000.pth` with target `chkpnt6400.pth`.
-- Next command to run: monitor R027 train jobs `48873219`, `48873220`, `48873221`; if they complete, submit eval using `refine-logs/event_boundary_micro_densify_train_jobs_20260707_234937.tsv`, then augment the frozen-window manifest and score system `event_boundary_micro_densify`.
+- Last HPC job ID: `48874592`
+- Latest success/failure: R027 scoring completed with `ExitCode=0:0`, but M2 failed the predeclared scientific gate. `event_boundary_micro_densify` mean PSNR was `30.5591` vs route0 `30.5021`, mean L1 was `0.0147412` vs route0 `0.0148316`, strict all-baseline PSNR+L1 wins were `2/5`, mean PSNR/L1 gains were far below thresholds, and oracle recovery was below 1%.
+- Next command to run: no active Slurm job. Do not expand M2 to paper-scale validation or positive ablations as a successful method. If continuing, start a new predeclared diagnostic/decomposition method that explains why support and micro-densification do not recover the oracle gap.
 - Open blockers: none known yet
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -290,6 +290,19 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - Submitted R027 train jobs from route0 `chkpnt6000.pth` to target `chkpnt6400.pth` using `configs/n3v/event_boundary_micro_densify_6400.yaml`: `48873219` cut_roasted_beef, `48873220` flame_steak, `48873221` sear_steak.
 - R027 train manifest: `refine-logs/event_boundary_micro_densify_train_jobs_20260707_234937.tsv`.
 - Current next action: monitor R027 train completion, then submit eval and frozen-window scoring. Do not declare M2 PASS/FAIL until checkpoint-backed `test/ours_6400` renders have been scored on the frozen R009 windows.
+
+### 2026-07-08T00:30:00+02:00 - R027 completed; M2 claim rejected
+
+- R027 train jobs `48873219`, `48873220`, and `48873221` completed with `ExitCode=0:0`; all three wrote `chkpnt6400.pth` and `point_cloud/iteration_6400/point_cloud.ply`.
+- R027 eval jobs `48874148`, `48874152`, and `48874155` completed with `ExitCode=0:0`; all three eval folders contain 300 `renders`, 300 `gt`, 300 `static`, and 300 `dynamic` frames under `test/ours_6400`.
+- Built and validated `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_manifest.json` with required systems `route0`, `event_boundary_micro_densify`, `residual_uncertainty`, and `matched_lifespan`; validation had `windows=5`, `errors=0`, `warnings=0`.
+- R027 frozen-window scoring job `48874592` completed with `ExitCode=0:0`, elapsed `00:01:06`, and wrote `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_real_eval/`.
+- R027 result: FAIL. Mean PSNR `30.5591` vs route0 `30.5021` (`+0.0569 dB`), mean L1/proxy-LPIPS `0.0147412` vs route0 `0.0148316` (`-0.0000903`), mean flicker slightly worsened by `+0.0000195`, and mean static ghost improved by `-0.001698`.
+- Gate counts: strict all-baseline PSNR+L1 wins `2/5`, route0 PSNR+L1 wins `3/5`, static no-worse `3/5`.
+- Oracle recovery fractions: PSNR `0.00508`, L1 `0.00743`, far below the required `0.25`.
+- Independent result-to-claim reviewer verdict: `claim_supported: no`, confidence `high`.
+- Durable outputs: `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_decision_memo.md`, `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_summary/gate_decision.json`, crop strips under `r027_event_boundary_micro_densify_summary/crop_strips/`, and trace `.aris/traces/result-to-claim/2026-07-08_run01/`.
+- Current next action: preserve the negative result as durable knowledge. Do not run paper-scale validation or claim-supporting ablations for M2.
 
 ### 2026-07-07T02:18:00+02:00 - R017 completed
 

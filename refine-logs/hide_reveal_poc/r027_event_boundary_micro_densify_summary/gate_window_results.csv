@@ -1,0 +1,6 @@
+window_id,scene,strict_all_baselines_psnr_l1,route0_psnr_l1,static_no_worse_route0,delta_psnr_vs_route0,delta_l1_vs_route0,delta_flicker_vs_route0,delta_static_ghost_vs_route0
+cut_roasted_beef_hand_tongs_meat_095_110,cut_roasted_beef,True,True,False,0.132177546139566,-1.0906718671321869e-05,2.8574373573064804e-05,0.0015164017677307129
+cut_roasted_beef_hand_knife_meat_140_155,cut_roasted_beef,False,True,False,0.045628552182606086,-0.0002845395356416702,2.447003498673439e-05,0.00106000155210495
+flame_steak_torch_pan_155_170,flame_steak,True,True,True,0.28260069274549693,-0.00035877525806427,-7.97417014837265e-05,-0.004807204008102417
+flame_steak_torch_sweep_195_210,flame_steak,False,False,True,-0.0835734367696439,0.0005119340494275093,0.00010134605690836906,-0.0035547763109207153
+sear_steak_spoon_pan_220_235,sear_steak,False,False,True,-0.09217318773048433,-0.00030943844467401505,2.2890977561473846e-05,-0.002706572413444519
