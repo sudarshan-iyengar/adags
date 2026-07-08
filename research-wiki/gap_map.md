@@ -147,7 +147,7 @@ Priority: high
 Literature pressure: [[papers/wang2026_multi4d]], [[papers/wu2026_rigs]], [[papers/liao2026_sharptimegs]], [[papers/zhao2026_ground4d]]
 Related ideas: [[ideas/event-causal-visibility-gaussians]]
 
-Negative evidence: R017 actual opacity gating, R025 non-oracle candidate-local refinement, and R027 non-oracle boundary-gated micro-densification all failed the frozen R009 event-crop gate. R027 produced only small directional gains over route0 (`+0.0569 dB` PSNR, `-0.0000903` L1) and recovered less than 1% of the oracle crop upper bound. R028 posthoc audit found the R026 boundary support essentially missed the frozen crops, so R027 is strongest as a rejection of that concrete support+training recipe, not of all good-support visibility-event mechanisms. R025 remains stronger evidence that current posthoc local refinement can damage even with partially overlapping support.
+Negative evidence: R017 actual opacity gating, R025 non-oracle candidate-local refinement, and R027 non-oracle boundary-gated micro-densification all failed the frozen R009 event-crop gate. R027 produced only small directional gains over route0 (`+0.0569 dB` PSNR, `-0.0000903` L1) and recovered less than 1% of the oracle crop upper bound. R028 posthoc audit found the R026 boundary support essentially missed the frozen crops. R029 route0 continuation worsened route0, so R027's tiny positive movement was not generic continuation. R030 oracle-support micro-densification also failed with mean PSNR `29.9021`, mean L1 `0.0158770`, and `0/5` route0 PSNR+L1 wins. This preserves the visibility-event gap but rejects support-only continuation of the current posthoc micro-densification recipe.
 
 ## G14 - Detail Needs Identity-Conserving Promotion Rules
 

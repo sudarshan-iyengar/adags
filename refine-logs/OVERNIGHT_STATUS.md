@@ -3,16 +3,16 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop result interpretation and disambiguation wave
-- Current run ID: R029/R030 compact disambiguation wave training on Leonardo
-- Current method candidate: M2 is failed as tested; next wave separates support failure, continuation noise, and posthoc Gaussian optimization limits
+- Current run ID: R029/R030 compact disambiguation wave complete
+- Current method candidate: current posthoc micro-densification/refinement family failed; next meaningful work should change the optimization/training mechanism rather than only support selection
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
 - Last pushed milestone commit: `8ebb53d`
-- Last HPC job ID: valid train wave jobs `48935431`, `48935450`, `48935478`, `48935580`, `48935581`, `48935583`; duplicate cut job `48935682` cancelled and duplicate cut job `48935560` excluded/cancel requested successfully.
-- Latest success/failure: R028 diagnostic PASS; R029/R030 training completed with `ExitCode=0:0`, but eval/scoring is BLOCKED by Slurm account/partition submission rejection/hangs. No metric verdict exists yet.
-- Next command to run: retry eval submission after Slurm/account state recovers. First try `sbatch --test-only -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod -N 1 --ntasks=1 --cpus-per-task=1 --gres=gpu:1 -t 00:10:00 --wrap=hostname`; if accepted, submit R029/R030 eval jobs using the train manifests.
-- Open blockers: Slurm eval submission acceptance. Evidence: default eval submit returned invalid account/partition, env-loaded retry returned the same, QoS/partition probes rejected or hung, while `saldo -b` shows the allocation active through 2026-07-30 with 44.1% consumed.
+- Last HPC job ID: scoring job `48969825`
+- Latest success/failure: R029/R030 scoring completed. R029 route0 continuation worsened route0, so generic continuation is not the source of R027's tiny gain. R030 oracle-support micro-densification failed with mean PSNR `29.9021`, mean L1 `0.0158770`, route0 PSNR+L1 wins `0/5`, and negative oracle recovery.
+- Next command to run: no more support-only posthoc micro-densification runs without a changed mechanism. If continuing, design a tightly scoped training-loop integration or optimization-mechanism diagnostic.
+- Open blockers: none.
 
 ## Dirty State At 2026-07-07 Recovery Start
 
@@ -568,3 +568,18 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
   - R029 eval with `QOS=boost_usr_prod`: BLOCKED, command timed out before writing job IDs; header-only manifest remained.
 - Budget check: `saldo -b` reports account `EUHPC_D21_034` active `20260130` to `20260730`, total `144000` local h, consumed `63571` local h (`44.1%`). This does not look like project exhaustion.
 - Current scientific status: no R029/R030 metric verdict. The next scientific step remains eval rendering and frozen-window scoring once Slurm accepts new jobs.
+
+### 2026-07-09T00:35:00+02:00 - R029/R030 eval and scoring complete
+
+- Retried eval with a lightweight login wrapper (`python` shim for manifest parsing; compute jobs still source `exp_index/leonardo_env.sh`).
+- R029 eval jobs completed with `ExitCode=0:0`: `48969017`, `48969019`, `48969021`.
+- R030 eval jobs completed with `ExitCode=0:0`: `48969090`, `48969092`, `48969093`.
+- Validated all six eval folders: each has 300 `renders`, 300 `gt`, 300 `static`, and 300 `dynamic` frames under `test/ours_6400`.
+- Built and validated combined manifest `refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json`.
+- Scoring job `48969825` completed and wrote:
+  - `refine-logs/hide_reveal_poc/r029_r030_disambiguation_real_eval/`
+  - `refine-logs/hide_reveal_poc/r029_r030_disambiguation_summary/`
+  - `refine-logs/hide_reveal_poc/r029_r030_disambiguation_decision_memo.md`
+- R029 route0 continuation result: mean PSNR `30.3532`, mean L1 `0.0150603`, route0 PSNR+L1 wins `1/5`, static no-worse `1/5`, oracle recovery negative. Verdict: CONTROL COMPLETE; generic continuation does not explain R027's tiny positive movement.
+- R030 oracle-support diagnostic result: mean PSNR `29.9021`, mean L1 `0.0158770`, route0 PSNR+L1 wins `0/5`, strict all-baseline wins `0/5`, static no-worse `4/5`, oracle recovery negative. Verdict: FAIL.
+- Scientific conclusion: oracle-aligned support alone does not rescue the current posthoc Gaussian micro-densification recipe; the likely bottleneck is the posthoc optimization/capacity mechanism.

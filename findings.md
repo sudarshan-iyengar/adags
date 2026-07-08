@@ -23,3 +23,9 @@ Conclusion: R027 is weak directional evidence that boundary support does not cat
 R028 audited support overlap after the fact, using the frozen R009 crops only for diagnosis. R020 candidate boxes had meaningful crop overlap on four of five windows, but R026 boundary masks used by M2 had mean support-frame fraction `0.0250` and mean crop coverage `0.000000`.
 
 Conclusion: R027 remains a FAIL for the tested R026/R027 recipe, and the non-oracle recovery claim remains unsupported. But R027 is not a clean rejection of event-local micro-densification with good support, because its support artifact largely missed the evaluated failures. The next decisive checks are a matched route0 continuation control and an oracle-support Gaussian-only diagnostic.
+## 2026-07-09 - R029/R030 disambiguation closes support-only M2 path
+
+- Evidence: `refine-logs/hide_reveal_poc/r029_r030_disambiguation_real_eval/real_event_window_summary.json`, `refine-logs/hide_reveal_poc/r029_r030_disambiguation_summary/gate_decision.json`.
+- R029 matched continuation worsened route0: mean PSNR `30.3532` vs `30.5021`, mean L1 `0.0150603` vs `0.0148316`, route0 PSNR+L1 wins `1/5`.
+- R030 oracle-support micro-densification worsened route0: mean PSNR `29.9021`, mean L1 `0.0158770`, route0 PSNR+L1 wins `0/5`, strict all-baseline wins `0/5`.
+- Conclusion: R027's tiny positive movement is not generic continuation, but oracle-aligned support still does not rescue the current posthoc micro-densification mechanism. Future work should change the optimization/training mechanism rather than only support selection.

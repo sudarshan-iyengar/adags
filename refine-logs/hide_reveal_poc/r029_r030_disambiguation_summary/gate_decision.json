@@ -1,0 +1,54 @@
+{
+  "verdict": "FAIL",
+  "date": "2026-07-09",
+  "scoring_job_id": "48969825",
+  "systems": {
+    "route0_continue_6400": {
+      "role": "matched continuation control",
+      "verdict": "CONTROL COMPLETE",
+      "mean_psnr": 30.353246,
+      "mean_l1": 0.015060306,
+      "mean_flicker": 0.008105177,
+      "mean_static_ghost_score": 0.128242378,
+      "strict_all_baseline_psnr_l1_wins": 1,
+      "route0_psnr_l1_wins": 1,
+      "static_no_worse_vs_route0": 1,
+      "mean_psnr_delta_vs_route0": -0.148873,
+      "mean_l1_delta_vs_route0": 0.000228745,
+      "psnr_oracle_recovery_fraction": -0.013277,
+      "l1_oracle_recovery_fraction": -0.018802
+    },
+    "oracle_crop_support_micro_densify": {
+      "role": "oracle-support Gaussian-only diagnostic",
+      "verdict": "FAIL",
+      "mean_psnr": 29.902108,
+      "mean_l1": 0.015877018,
+      "mean_flicker": 0.008393233,
+      "mean_static_ghost_score": 0.123819034,
+      "strict_all_baseline_psnr_l1_wins": 0,
+      "route0_psnr_l1_wins": 0,
+      "static_no_worse_vs_route0": 4,
+      "mean_psnr_delta_vs_route0": -0.600011,
+      "mean_l1_delta_vs_route0": 0.001045458,
+      "psnr_oracle_recovery_fraction": -0.053511,
+      "l1_oracle_recovery_fraction": -0.085931
+    },
+    "route0": {
+      "mean_psnr": 30.502119,
+      "mean_l1": 0.014831561,
+      "mean_flicker": 0.007990826,
+      "mean_static_ghost_score": 0.127332738
+    },
+    "hide_reveal_oracle_upper_bound": {
+      "mean_psnr": 41.714904,
+      "mean_l1": 0.002665355,
+      "mean_flicker": 0.001685856,
+      "mean_static_ghost_score": 0.127332738
+    }
+  },
+  "interpretation": [
+    "R029 rules out generic 400-iteration continuation as the explanation for R027's tiny positive mean PSNR/L1 movement; the matched continuation control worsened route0 on mean PSNR and L1.",
+    "R030 shows that frozen-window oracle support alone is not enough for the current posthoc Gaussian micro-densification recipe; it worsened mean PSNR and L1 and passed 0/5 route0 PSNR+L1 windows.",
+    "This does not prove every event/reveal method impossible, but it is strong evidence against continuing support-only variants of the current posthoc micro-densification approach without changing the optimization/training mechanism."
+  ]
+}

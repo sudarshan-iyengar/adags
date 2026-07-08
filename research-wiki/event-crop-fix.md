@@ -81,7 +81,7 @@ R027 trained and evaluated checkpoint-backed `event_boundary_micro_densify` rend
 
 R028 posthoc support-overlap audit changed the interpretation: R026 boundary masks had mean support-frame fraction `0.0250` and mean crop coverage `0.000000` on the frozen windows. Thus R027 remains a FAIL for the tested M2 recipe, but is not decisive against an event-local densification method with genuinely aligned support. R020 M1 candidate boxes had much better support overlap (`0.6375` mean support-frame fraction, `0.491371` mean crop coverage), so R025 is stronger negative evidence against the current posthoc local-refinement machinery.
 
-Next compact diagnostics are R029 route0 continuation control and R030 oracle-support Gaussian-only refinement. Training completed for both diagnostics on 2026-07-08, but eval/scoring is blocked by Slurm account/partition submission acceptance. R030 is explicitly diagnostic and cannot support a non-oracle claim because it uses the frozen crop windows as support.
+R029/R030 compact diagnostics are now complete. R029 route0 continuation worsened route0, so R027's tiny positive movement was not generic extra training. R030 oracle-support Gaussian-only refinement also worsened route0 and passed `0/5` route0 PSNR+L1 windows, so frozen-window oracle support alone does not rescue the current posthoc micro-densification recipe. R030 is diagnostic only and cannot support a non-oracle claim because it uses the frozen crop windows as support.
 
 ## Wiki Links
 

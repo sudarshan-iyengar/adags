@@ -59,11 +59,11 @@ Results:
 - R020 candidates: mean support-frame fraction `0.6375`, mean crop coverage `0.491371`, but `cut_roasted_beef_hand_tongs_meat_095_110` had zero support.
 - R026 boundary support: mean support-frame fraction `0.0250`, mean crop coverage `0.000000`.
 
-Interpretation: M2 failure is partly a support-selection failure. M1 failure remains more concerning for local refinement because R020 covered 4/5 windows substantially.
+Interpretation: R028 showed M2 failure was partly confounded by support selection, but R030 now shows oracle crop support alone does not rescue the current posthoc micro-densification mechanism. M1 failure remains concerning for local refinement because R020 covered 4/5 windows substantially.
 
 ### R029 - Matched Route0 6400 Continuation Control
 
-Status: TRAIN COMPLETE / EVAL BLOCKED.
+Status: COMPLETE.
 
 Question resolved: is R027's tiny gain caused by event-boundary micro-densification or by 400 extra training iterations?
 
@@ -74,12 +74,12 @@ Design:
 - Eval and score on the frozen R009 windows as system `route0_continue_6400`.
 
 Decision:
-- If route0 continuation matches or exceeds R027, then R027's small gain is not evidence for M2.
-- If route0 continuation is worse than R027, M2 may have a small real effect, but still below recovery thresholds.
+- Outcome: route0 continuation was worse than route0 and worse than R027. Mean PSNR `30.353246` versus route0 `30.502119`; mean L1 `0.015060306` versus route0 `0.014831561`; route0 PSNR+L1 wins `1/5`; static no-worse `1/5`.
+- Interpretation: R027's tiny positive movement is not explained by generic 400-iteration continuation, but R027 still remains far below the predeclared recovery thresholds.
 
 ### R030 - Oracle-Support Gaussian-Only Diagnostic
 
-Status: TRAIN COMPLETE / EVAL BLOCKED.
+Status: FAIL.
 
 Question resolved: if support localization were perfect, could the current posthoc Gaussian refinement/densification machinery recover a meaningful fraction of the oracle crop upper bound without GT compositing?
 
@@ -91,8 +91,8 @@ Design:
 - Score as system `oracle_crop_support_micro_densify`.
 
 Decision:
-- If R030 still fails badly, posthoc local Gaussian refinement/densification is likely the bottleneck, and longer non-oracle support work is low priority.
-- If R030 recovers a meaningful fraction of the oracle bound, support discovery is the main bottleneck, and depth/track/identity support generation becomes justified.
+- Outcome: R030 failed despite oracle crop support. Mean PSNR `29.902108` versus route0 `30.502119`; mean L1 `0.015877018` versus route0 `0.014831561`; route0 PSNR+L1 wins `0/5`; strict all-baseline wins `0/5`; static no-worse `4/5`; oracle recovery negative on both PSNR and L1.
+- Interpretation: support alignment alone is not enough for the current posthoc Gaussian micro-densification recipe. The bottleneck is likely the posthoc optimization/capacity mechanism, not only support discovery.
 
 Execution update 2026-07-08T15:45+02:00:
 - R029 train jobs submitted and running: `48935431`, `48935450`, `48935478`; manifest `refine-logs/route0_continue_6400_train_jobs_20260708_152429.tsv`.
@@ -104,6 +104,13 @@ Execution update 2026-07-08T16:10+02:00:
 - Eval submission is BLOCKED by Slurm account/partition acceptance. Evidence: `boost_usr_prod/euhpc_d21_034/boost_qos_lprod` returned invalid account/partition for eval submission, an environment-loaded retry returned the same, `sbatch --test-only` probes rejected the available QoS/partitions or reported expired budget on non-boost partitions, and a `QOS=boost_usr_prod` retry hung before producing job IDs.
 - `saldo -b` shows the project allocation itself is active through 2026-07-30 with 44.1% consumed, so this appears to be scheduler/account routing rather than experiment code failure.
 - No R029/R030 metric verdict exists until eval renders and frozen-window scoring complete.
+
+Execution update 2026-07-09T00:35+02:00:
+- Eval retry succeeded. R029 eval jobs `48969017`, `48969019`, `48969021` and R030 eval jobs `48969090`, `48969092`, `48969093` completed with `ExitCode=0:0`.
+- Frozen-window scoring job `48969825` wrote `refine-logs/hide_reveal_poc/r029_r030_disambiguation_real_eval/` and summary artifacts under `refine-logs/hide_reveal_poc/r029_r030_disambiguation_summary/`.
+- R029 result: control complete, worse than route0 on mean PSNR/L1.
+- R030 result: FAIL, worse than route0 on mean PSNR/L1 despite oracle crop support.
+- Scientific consequence: further support-only variants of this posthoc micro-densification recipe are low priority. Meaningful next tests need a changed optimization mechanism, training-loop integration, or a tightly scoped hyperparameter/iteration sensitivity diagnosis.
 
 ### Depth-Informed Support Proposal
 
@@ -134,10 +141,10 @@ Test plan:
 
 ## 6. Why Not Immediately Run A Large Sweep
 
-The evidence does not yet say which axis is responsible. A broad sweep over LR, loss weights, crop size, threshold, iterations, seeds, and training-from-scratch would be hard to interpret. The compact wave above resolves the highest-value uncertainties first:
+The evidence now says support discovery alone is not the only axis responsible. A broad sweep over LR, loss weights, crop size, threshold, iterations, seeds, and training-from-scratch would still be hard to interpret. The compact wave resolved the highest-value uncertainties first:
 
 - R028: support localization.
 - R029: continuation/iteration confound.
 - R030: support discovery versus local Gaussian optimization.
 
-Only after those should we decide whether to run seeds, hyperparameter sweeps, depth support generation, or training-loop integration.
+After R030, the strongest next direction is not another support detector by itself. Depth support remains plausible as an input cue, but it should be paired with a changed training/optimization mechanism or tested first only as an overlap diagnostic.

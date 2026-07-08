@@ -1,0 +1,6 @@
+window_id,route0_continue_psnr_delta,route0_continue_l1_delta,route0_continue_static_delta,oracle_support_psnr_delta,oracle_support_l1_delta,oracle_support_static_delta
+cut_roasted_beef_hand_knife_meat_140_155,-0.245230,0.000411132,0.001873612,-0.973370,0.001244226,-0.000631407
+cut_roasted_beef_hand_tongs_meat_095_110,-0.240380,0.000757473,0.002589814,-0.358451,0.001292426,0.001252554
+flame_steak_torch_pan_155_170,0.309683,-0.000281109,-0.001654133,-0.197247,0.001114869,-0.007639706
+flame_steak_torch_sweep_195_210,-0.167775,0.000501379,0.001403376,-1.047930,0.001940417,-0.006197453
+sear_steak_spoon_pan_220_235,-0.400665,-0.000245152,0.000335529,-0.423059,-0.000364650,-0.004352510

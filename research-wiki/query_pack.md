@@ -30,7 +30,7 @@ Updated stance:
 
 New field-level gaps: G13 visibility events, G14 identity-conserving detail promotion, G15 counterfactual prior usefulness.
 
-Event-crop memory: R013/R015 remain oracle upper-bound evidence only. R017 actual opacity gating, R025 non-oracle candidate refinement, and R027 non-oracle boundary-gated micro-densification all failed the frozen R009 real-window gate. R027 was closest directionally but still only had 2/5 strict all-baseline PSNR+L1 wins and less than 1% oracle recovery. R028 posthoc support audit found R026 boundary support had essentially zero frozen-crop coverage, so R027 mainly falsifies that support+training recipe; R025 is stronger evidence against current posthoc local refinement because R020 candidate support overlapped 4/5 windows.
+Event-crop memory: R013/R015 remain oracle upper-bound evidence only. R017 actual opacity gating, R025 non-oracle candidate refinement, and R027 non-oracle boundary-gated micro-densification all failed the frozen R009 real-window gate. R027 was closest directionally but still only had 2/5 strict all-baseline PSNR+L1 wins and less than 1% oracle recovery. R028 posthoc support audit found R026 boundary support had essentially zero frozen-crop coverage. R029 route0 continuation worsened route0, so R027's tiny gain was not generic continuation. R030 oracle-support micro-densification also worsened route0 with 0/5 route0 PSNR+L1 wins, so support-only continuation of the current posthoc micro-densification recipe should be deprioritized.
 
 Important new literature memory: [[papers/zhao2026_ground4d]] adds geometry-consistency pressure and supports the idea that photometric dynamic GS needs stronger geometry/prior routing.
 

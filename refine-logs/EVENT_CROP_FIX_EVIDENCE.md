@@ -115,6 +115,11 @@ Local metrics and reports:
 - R027 M2 gate summary: `D:\adags\refine-logs\hide_reveal_poc\r027_event_boundary_micro_densify_summary\gate_decision.json`
 - R027 M2 decision memo: `D:\adags\refine-logs\hide_reveal_poc\r027_event_boundary_micro_densify_decision_memo.md`
 - R027 M2 crop strips: `D:\adags\refine-logs\hide_reveal_poc\r027_event_boundary_micro_densify_summary\crop_strips\`
+- R029/R030 disambiguation metrics: `D:\adags\refine-logs\hide_reveal_poc\r029_r030_disambiguation_real_eval\real_event_window_summary.json`
+- R029/R030 disambiguation report: `D:\adags\refine-logs\hide_reveal_poc\r029_r030_disambiguation_real_eval\real_event_window_report.md`
+- R029/R030 gate summary: `D:\adags\refine-logs\hide_reveal_poc\r029_r030_disambiguation_summary\gate_decision.json`
+- R029/R030 decision memo: `D:\adags\refine-logs\hide_reveal_poc\r029_r030_disambiguation_decision_memo.md`
+- R029/R030 crop strips: `D:\adags\refine-logs\hide_reveal_poc\r029_r030_disambiguation_summary\crop_strips\`
 
 Local Slurm submission manifests:
 - R010: `D:\adags\refine-logs\hide_reveal_poc_real_jobs_20260706_022851.tsv`
@@ -125,6 +130,9 @@ Local Slurm submission manifests:
 - R027 M2 train: `D:\adags\refine-logs\event_boundary_micro_densify_train_jobs_20260707_234937.tsv`
 - R027 M2 eval: `D:\adags\refine-logs\event_boundary_micro_densify_eval_jobs_20260708_001303.tsv`
 - R027 M2 scoring: `D:\adags\refine-logs\hide_reveal_poc_real_jobs_20260708_002250.tsv`
+- R029 route0 continuation eval: `D:\adags\refine-logs\route0_continue_6400_eval_jobs_20260709_001939.tsv`
+- R030 oracle-support micro-densify eval: `D:\adags\refine-logs\oracle_crop_support_micro_densify_eval_jobs_20260709_001956.tsv`
+- R029/R030 scoring: `D:\adags\refine-logs\hide_reveal_poc_real_jobs_20260709_003108.tsv`
 
 Remote logs:
 - R010 stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48653179.out`, `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48653179.err`
@@ -137,6 +145,9 @@ Remote logs:
 - R027 train stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/event_boundary_micro_densify_train_*_488732*.{out,err}`
 - R027 eval stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/event_boundary_micro_densify_eval_*_488741*.{out,err}`
 - R027 scoring stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48874592.out`, `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48874592.err`
+- R029 eval stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/route0_continue_6400_eval_*_489690*.{out,err}`
+- R030 eval stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/oracle_crop_support_micro_densify_eval_*_489690*.{out,err}`
+- R029/R030 scoring stdout/stderr: `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48969825.out`, `/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/logs/hide_reveal_real_48969825.err`
 
 Remote render folders:
 - Route0 source renders for `cut_roasted_beef`: `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders`
@@ -154,4 +165,14 @@ HPC roots:
 
 ## Next Decision
 
-M2 is complete and failed the predeclared gate. R026b produced a validated non-oracle boundary-support artifact and R027 produced checkpoint-backed Gaussian renders, but frozen-window scoring recovered less than 1% of the oracle upper bound and passed only 2/5 strict all-baseline PSNR+L1 windows. The frozen R009 crops remain evaluation-only. Preserve M2 as negative knowledge rather than expanding it to paper-scale validation or positive ablations.
+M2 is complete and the current posthoc event-crop-fix family failed. R026b produced a validated non-oracle boundary-support artifact and R027 produced checkpoint-backed Gaussian renders, but frozen-window scoring recovered less than 1% of the oracle upper bound and passed only 2/5 strict all-baseline PSNR+L1 windows. R029 showed that matched extra route0 continuation worsened route0, so R027's tiny positive movement is not explained by generic 400-iteration continuation alone. R030 showed that using oracle crop support inside the same posthoc micro-densification/refinement recipe still worsened route0. The frozen R009 crops remain evaluation-only. Preserve M2 as negative knowledge and move any future work to mechanism-changing tests, not support-only expansions of the same recipe.
+
+## 2026-07-09 R029/R030 Evidence
+
+Scheduler evidence: R029 eval jobs `48969017`, `48969019`, and `48969021`; R030 eval jobs `48969090`, `48969092`, and `48969093`; combined scoring job `48969825`. All completed with `ExitCode=0:0`.
+
+Gate evidence:
+- R029 `route0_continue_6400`: strict all-baseline wins `1/5`, route0 PSNR+L1 wins `1/5`, static no-worse `1/5`, mean delta versus route0 `PSNR -0.148873`, `L1 +0.000228745`.
+- R030 `oracle_crop_support_micro_densify`: strict all-baseline wins `0/5`, route0 PSNR+L1 wins `0/5`, static no-worse `4/5`, mean delta versus route0 `PSNR -0.600011`, `L1 +0.001045458`.
+
+Interpretation: support discovery is not the only bottleneck. If the posthoc micro-densification/refinement mechanism cannot exploit even oracle crop support, further non-oracle crop-selection tweaks are unlikely to disambiguate the core hypothesis. Remaining plausible paths require changing the optimization/capacity mechanism, such as training-loop integration, promotion/reinitialization of new Gaussians, or a tightly scoped iteration/loss-weight diagnosis.
