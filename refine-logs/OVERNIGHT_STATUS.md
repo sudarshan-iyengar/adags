@@ -9,10 +9,10 @@
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
 - Last pushed milestone commit: `8ebb53d`
-- Last HPC job ID: valid wave jobs `48935431`, `48935450`, `48935478`, `48935580`, `48935581`, `48935583`; duplicate cut job `48935682` cancelled and duplicate cut job `48935560` excluded/cancel requested successfully.
-- Latest success/failure: R028 diagnostic PASS; R029/R030 train jobs are RUNNING. No eval/scoring verdict exists yet.
-- Next command to run: monitor valid train jobs with `scontrol show job 48935431`, `48935450`, `48935478`, `48935580`, `48935581`, `48935583`; after all write `chkpnt6400.pth`, submit eval jobs for R029 and R030 using the two train manifests.
-- Open blockers: none. Note: `squeue` and some `scp` attempts were intermittently slow or timed out; `scontrol`, logs, and manifest reads worked.
+- Last HPC job ID: valid train wave jobs `48935431`, `48935450`, `48935478`, `48935580`, `48935581`, `48935583`; duplicate cut job `48935682` cancelled and duplicate cut job `48935560` excluded/cancel requested successfully.
+- Latest success/failure: R028 diagnostic PASS; R029/R030 training completed with `ExitCode=0:0`, but eval/scoring is BLOCKED by Slurm account/partition submission rejection/hangs. No metric verdict exists yet.
+- Next command to run: retry eval submission after Slurm/account state recovers. First try `sbatch --test-only -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod -N 1 --ntasks=1 --cpus-per-task=1 --gres=gpu:1 -t 00:10:00 --wrap=hostname`; if accepted, submit R029/R030 eval jobs using the train manifests.
+- Open blockers: Slurm eval submission acceptance. Evidence: default eval submit returned invalid account/partition, env-loaded retry returned the same, QoS/partition probes rejected or hung, while `saldo -b` shows the allocation active through 2026-07-30 with 44.1% consumed.
 
 ## Dirty State At 2026-07-07 Recovery Start
 
@@ -552,3 +552,19 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
   - `48935560` excluded from manifest; `scancel 48935560` returned success.
   - `48935682` excluded from manifest; observed `JobState=CANCELLED`.
 - Early logs showed both configs launching and compiling per-job CUDA extensions. No R029/R030 checkpoint/eval/scoring verdict yet.
+
+### 2026-07-08T16:10:00+02:00 - R029/R030 train complete; eval blocked
+
+- Valid train jobs completed with `ExitCode=0:0`:
+  - R029 `48935431`, `48935450`, `48935478`
+  - R030 `48935580`, `48935581`, `48935583`
+- Checkpoints observed:
+  - `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_*_route0_continue_6400_control/chkpnt6400.pth`
+  - `/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_*_oracle_crop_support_micro_densify_6400/chkpnt6400.pth`
+- Eval submission attempts:
+  - R029 eval with default `boost_usr_prod`, account `euhpc_d21_034`, QoS `boost_qos_lprod`: BLOCKED, Slurm returned invalid account/partition.
+  - R029 eval after loading project environment: BLOCKED, same error.
+  - `sbatch --test-only` probes over `boost_usr_prod`, `dcgp_usr_prod`, and `dcgp_cmcc_prod` with available QoS values: BLOCKED, invalid account/partition or expired budget on non-boost partitions.
+  - R029 eval with `QOS=boost_usr_prod`: BLOCKED, command timed out before writing job IDs; header-only manifest remained.
+- Budget check: `saldo -b` reports account `EUHPC_D21_034` active `20260130` to `20260730`, total `144000` local h, consumed `63571` local h (`44.1%`). This does not look like project exhaustion.
+- Current scientific status: no R029/R030 metric verdict. The next scientific step remains eval rendering and frozen-window scoring once Slurm accepts new jobs.

@@ -63,7 +63,7 @@ Interpretation: M2 failure is partly a support-selection failure. M1 failure rem
 
 ### R029 - Matched Route0 6400 Continuation Control
 
-Status: TRAIN RUNNING.
+Status: TRAIN COMPLETE / EVAL BLOCKED.
 
 Question resolved: is R027's tiny gain caused by event-boundary micro-densification or by 400 extra training iterations?
 
@@ -79,7 +79,7 @@ Decision:
 
 ### R030 - Oracle-Support Gaussian-Only Diagnostic
 
-Status: TRAIN RUNNING.
+Status: TRAIN COMPLETE / EVAL BLOCKED.
 
 Question resolved: if support localization were perfect, could the current posthoc Gaussian refinement/densification machinery recover a meaningful fraction of the oracle crop upper bound without GT compositing?
 
@@ -98,6 +98,12 @@ Execution update 2026-07-08T15:45+02:00:
 - R029 train jobs submitted and running: `48935431`, `48935450`, `48935478`; manifest `refine-logs/route0_continue_6400_train_jobs_20260708_152429.tsv`.
 - R030 train jobs submitted and running: `48935580`, `48935581`, `48935583`; manifest `refine-logs/oracle_crop_support_micro_densify_train_jobs_20260708_153750_manual.tsv`.
 - Duplicate oracle cut attempts from SSH timeouts are excluded from the valid manifest. This is still a training wave only; no scientific verdict should be inferred until eval/scoring completes.
+
+Execution update 2026-07-08T16:10+02:00:
+- R029 and R030 train jobs all completed with `ExitCode=0:0` and wrote the expected `chkpnt6400.pth` checkpoints.
+- Eval submission is BLOCKED by Slurm account/partition acceptance. Evidence: `boost_usr_prod/euhpc_d21_034/boost_qos_lprod` returned invalid account/partition for eval submission, an environment-loaded retry returned the same, `sbatch --test-only` probes rejected the available QoS/partitions or reported expired budget on non-boost partitions, and a `QOS=boost_usr_prod` retry hung before producing job IDs.
+- `saldo -b` shows the project allocation itself is active through 2026-07-30 with 44.1% consumed, so this appears to be scheduler/account routing rather than experiment code failure.
+- No R029/R030 metric verdict exists until eval renders and frozen-window scoring complete.
 
 ### Depth-Informed Support Proposal
 
