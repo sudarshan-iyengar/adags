@@ -63,7 +63,7 @@ Interpretation: M2 failure is partly a support-selection failure. M1 failure rem
 
 ### R029 - Matched Route0 6400 Continuation Control
 
-Status: TODO once SSH/HPC is available.
+Status: TRAIN RUNNING.
 
 Question resolved: is R027's tiny gain caused by event-boundary micro-densification or by 400 extra training iterations?
 
@@ -79,7 +79,7 @@ Decision:
 
 ### R030 - Oracle-Support Gaussian-Only Diagnostic
 
-Status: TODO once SSH/HPC is available.
+Status: TRAIN RUNNING.
 
 Question resolved: if support localization were perfect, could the current posthoc Gaussian refinement/densification machinery recover a meaningful fraction of the oracle crop upper bound without GT compositing?
 
@@ -93,6 +93,11 @@ Design:
 Decision:
 - If R030 still fails badly, posthoc local Gaussian refinement/densification is likely the bottleneck, and longer non-oracle support work is low priority.
 - If R030 recovers a meaningful fraction of the oracle bound, support discovery is the main bottleneck, and depth/track/identity support generation becomes justified.
+
+Execution update 2026-07-08T15:45+02:00:
+- R029 train jobs submitted and running: `48935431`, `48935450`, `48935478`; manifest `refine-logs/route0_continue_6400_train_jobs_20260708_152429.tsv`.
+- R030 train jobs submitted and running: `48935580`, `48935581`, `48935583`; manifest `refine-logs/oracle_crop_support_micro_densify_train_jobs_20260708_153750_manual.tsv`.
+- Duplicate oracle cut attempts from SSH timeouts are excluded from the valid manifest. This is still a training wave only; no scientific verdict should be inferred until eval/scoring completes.
 
 ### Depth-Informed Support Proposal
 

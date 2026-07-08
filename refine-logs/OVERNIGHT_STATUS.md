@@ -3,16 +3,16 @@
 ## Recovery Snapshot
 
 - Current objective phase: event-crop result interpretation and disambiguation wave
-- Current run ID: R028 support-overlap diagnostic completed locally; R029/R030 predeclared for HPC
+- Current run ID: R029/R030 compact disambiguation wave training on Leonardo
 - Current method candidate: M2 is failed as tested; next wave separates support failure, continuation noise, and posthoc Gaussian optimization limits
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
-- Last pushed milestone commit: `efca178e7fd5fef49aa84c762350dfa8cbdd36d8`
-- Last HPC job ID: `48874592`
-- Latest success/failure: R027 scoring completed with `ExitCode=0:0`, but M2 failed the predeclared scientific gate. `event_boundary_micro_densify` mean PSNR was `30.5591` vs route0 `30.5021`, mean L1 was `0.0147412` vs route0 `0.0148316`, strict all-baseline PSNR+L1 wins were `2/5`, mean PSNR/L1 gains were far below thresholds, and oracle recovery was below 1%.
-- Next command to run: retry SSH to `siyengar@login.leonardo.cineca.it`; when available, push/pull latest commits on HPC, submit R029 route0 continuation control and R030 oracle-support Gaussian-only diagnostic in a compact wave.
-- Open blockers: Leonardo SSH timed out on 2026-07-08 during initial retry attempts.
+- Last pushed milestone commit: `8ebb53d`
+- Last HPC job ID: valid wave jobs `48935431`, `48935450`, `48935478`, `48935580`, `48935581`, `48935583`; duplicate cut job `48935682` cancelled and duplicate cut job `48935560` excluded/cancel requested successfully.
+- Latest success/failure: R028 diagnostic PASS; R029/R030 train jobs are RUNNING. No eval/scoring verdict exists yet.
+- Next command to run: monitor valid train jobs with `scontrol show job 48935431`, `48935450`, `48935478`, `48935580`, `48935581`, `48935583`; after all write `chkpnt6400.pth`, submit eval jobs for R029 and R030 using the two train manifests.
+- Open blockers: none. Note: `squeue` and some `scp` attempts were intermittently slow or timed out; `scontrol`, logs, and manifest reads worked.
 
 ## Dirty State At 2026-07-07 Recovery Start
 
@@ -532,3 +532,23 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - Predeclared next compact wave:
   - R029 route0 `6000 -> 6400` continuation control, config `configs/n3v/route0_continue_6400_control.yaml`.
   - R030 oracle-support Gaussian-only diagnostic, config `configs/n3v/oracle_crop_support_micro_densify_6400.yaml`.
+
+### 2026-07-08T15:45:00+02:00 - R029/R030 train wave submitted
+
+- Pushed interpretation/diagnostic milestone commit `8ebb53d`.
+- HPC checkout fast-forwarded to `8ebb53d`.
+- Dry-run validation passed for both train configs using the route0 `chkpnt6000.pth` starts.
+- R029 route0 continuation train jobs submitted:
+  - `48935431` cut_roasted_beef
+  - `48935450` flame_steak
+  - `48935478` sear_steak
+  - Manifest: `refine-logs/route0_continue_6400_train_jobs_20260708_152429.tsv`
+- R030 oracle-support diagnostic train jobs submitted:
+  - `48935580` cut_roasted_beef
+  - `48935581` flame_steak
+  - `48935583` sear_steak
+  - Manifest: `refine-logs/oracle_crop_support_micro_densify_train_jobs_20260708_153750_manual.tsv`
+- Duplicate cut submissions from timed-out submission attempts:
+  - `48935560` excluded from manifest; `scancel 48935560` returned success.
+  - `48935682` excluded from manifest; observed `JobState=CANCELLED`.
+- Early logs showed both configs launching and compiling per-job CUDA extensions. No R029/R030 checkpoint/eval/scoring verdict yet.
