@@ -339,6 +339,7 @@ def build_depth_occlusion_support(
     tile_size: int,
     tile_stride: int,
     use_flow: bool,
+    fill_component_tiles: bool,
 ) -> Dict[str, object]:
     source_payload = load_json(source_manifest)
     depth_payload = load_json(depth_manifest_path)
@@ -523,8 +524,14 @@ def build_depth_occlusion_support(
             support_mask = np.zeros(target_hw, dtype=bool)
             score_mask = np.zeros(target_hw, dtype=np.float32)
             for component in components:
-                ys = component["_ys"]
-                xs = component["_xs"]
+                if fill_component_tiles:
+                    x0, y0, x1, y1 = [int(v) for v in component["bbox_xyxy"]]
+                    tile_mask = np.zeros(target_hw, dtype=bool)
+                    tile_mask[max(0, y0) : min(target_hw[0], y1), max(0, x0) : min(target_hw[1], x1)] = True
+                    ys, xs = np.nonzero(tile_mask)
+                else:
+                    ys = component["_ys"]
+                    xs = component["_xs"]
                 support_mask[ys, xs] = True
                 score_mask[ys, xs] = np.maximum(score_mask[ys, xs], float(component["component_score"]))
             max_pixels = max(1, int(float(max_pixel_fraction) * support_mask.size))
@@ -589,6 +596,7 @@ def build_depth_occlusion_support(
             "tile_size": int(tile_size),
             "tile_stride": int(tile_stride),
             "use_flow": bool(use_flow),
+            "fill_component_tiles": bool(fill_component_tiles),
             "score_weights": {
                 "depth_edge": 0.55,
                 "temporal_depth_change": 0.20,
@@ -750,6 +758,11 @@ def parse_args() -> argparse.Namespace:
     support.add_argument("--tile-size", type=int, default=64)
     support.add_argument("--tile-stride", type=int, default=32)
     support.add_argument("--no-flow", action="store_true")
+    support.add_argument(
+        "--fill-component-tiles",
+        action="store_true",
+        help="Write selected component tile footprints instead of only the thresholded score pixels.",
+    )
     return parser.parse_args()
 
 
@@ -800,6 +813,7 @@ def main() -> int:
             tile_size=args.tile_size,
             tile_stride=args.tile_stride,
             use_flow=not args.no_flow,
+            fill_component_tiles=args.fill_component_tiles,
         )
         print(f"wrote_support_manifest={Path(args.out_dir).resolve() / 'depth_occlusion_support_manifest.json'}")
         print(f"validation_ok={result['validation']['ok']}")

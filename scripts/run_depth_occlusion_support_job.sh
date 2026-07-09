@@ -38,6 +38,7 @@ SUPPORT_MIN_SCORE="${DEPTH_SUPPORT_MIN_SCORE:-0.08}"
 SUPPORT_TILE_SIZE="${DEPTH_SUPPORT_TILE_SIZE:-64}"
 SUPPORT_TILE_STRIDE="${DEPTH_SUPPORT_TILE_STRIDE:-32}"
 SUPPORT_USE_FLOW="${DEPTH_SUPPORT_USE_FLOW:-1}"
+SUPPORT_FILL_COMPONENT_TILES="${DEPTH_SUPPORT_FILL_COMPONENT_TILES:-0}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 DA3_PYTHON="${DA3_PYTHON:-}"
 ENV_SCRIPT="${ADAGS_ENV_SCRIPT:-$PROJECT_ROOT/exp_index/leonardo_env.sh}"
@@ -102,6 +103,7 @@ mkdir -p "$OUT_DIR"
   echo "da3_batch_size: $DA3_BATCH_SIZE"
   echo "da3_process_res: $DA3_PROCESS_RES"
   echo "da3_process_res_method: $DA3_PROCESS_RES_METHOD"
+  echo "support_fill_component_tiles: $SUPPORT_FILL_COMPONENT_TILES"
   echo "repo_root: $REPO_ROOT"
   echo "project_root: $PROJECT_ROOT"
   echo "env_script: $ENV_SCRIPT"
@@ -172,6 +174,9 @@ elif [[ "$MODE" == "support" ]]; then
   )
   if [[ "$SUPPORT_USE_FLOW" != "1" ]]; then
     CMD+=(--no-flow)
+  fi
+  if [[ "$SUPPORT_FILL_COMPONENT_TILES" == "1" ]]; then
+    CMD+=(--fill-component-tiles)
   fi
 fi
 
