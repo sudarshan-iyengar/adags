@@ -94,3 +94,40 @@ BLOCKED:
 - R031c: run DA3 inference for the three R009 source scenes.
 - R031d: build non-oracle depth support.
 - R031e: posthoc support overlap audit and qualitative strips if support passes validation.
+
+## Execution Result
+
+Status as of 2026-07-09T22:40+02:00: pipeline PASS, support usefulness WEAK/FAIL for the tested formulations.
+
+R031a setup:
+- PASS. DA3 cloned to `$WORK/proj_adags/repo/depth-anything-3`.
+- DA3 commit: `41736238f5bced4debf3f2a12375d2466874866d`.
+- Model snapshot: `$WORK/proj_adags/models/depth-anything/DA3NESTED-GIANT-LARGE-1.1`.
+- Environment repaired after an initial missing-`addict` smoke failure; final runtime uses DA3 venv packages plus ADAGS Torch/Torchvision.
+
+R031b/R031c depth sidecars:
+- PASS. Prepare job `49030039` wrote 900 non-oracle `cam00` frame records.
+- PASS. Inference job `49030185` wrote 900/900 DA3 depth sidecars with `skipped_existing=0`.
+- Evidence: `refine-logs/depth_occlusion_support/r031_da3_frame_manifest.json` and `refine-logs/depth_occlusion_support/r031_da3_depth_full/da3_depth_manifest.json`.
+
+R031d/R031e sparse support:
+- PASS structural validation, WEAK support diagnostic.
+- Support job `49030546`: 83 support frames, validation OK, guardrail flags false.
+- Posthoc frozen-window overlap: mean support-frame fraction `0.0625`; mean crop coverage `0.000030`.
+
+R032 high-recall sparse sensitivity:
+- PASS structural validation, WEAK support diagnostic.
+- Support job `49031389`: 355 support frames, validation OK, guardrail flags false.
+- Posthoc frozen-window overlap: mean support-frame fraction `0.4125`; mean crop coverage `0.002846`.
+
+R033 high-recall tile-fill sensitivity:
+- PASS structural validation, WEAK support diagnostic.
+- Commit `dac940a` added `--fill-component-tiles`.
+- Support job `49032424`: 408 support frames, validation OK, guardrail flags false.
+- Posthoc frozen-window overlap: mean support-frame fraction `0.3750`; mean crop coverage `0.001253`.
+
+Interpretation:
+- The setup and sidecar pipeline are reusable.
+- The current DA3 support-fusion recipe is not a strong event-crop support mechanism. It improves over R026's zero crop coverage only marginally and remains far below R020 high-recall box coverage (`0.491371` mean crop coverage).
+- Do not run the current posthoc micro-densification recipe with R031/R032/R033 as a claimed method. R030 already showed oracle crop support fails under that recipe.
+- The next meaningful rendered-method milestone should be training-loop integration or a changed capacity/optimization mechanism. DA3 sidecars may be reused there, but this support-selection formulation is not enough by itself.

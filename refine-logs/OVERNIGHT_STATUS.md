@@ -592,3 +592,34 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - Primary depth model: `depth-anything/DA3NESTED-GIANT-LARGE-1.1`, with DA3 repo to live under `$WORK/proj_adags/repo/depth-anything-3`.
 - R031 is a support-only diagnostic. It may PASS as a support artifact if valid compact masks improve posthoc frozen-window overlap versus R026, but it cannot claim event-crop repair without a later checkpoint-backed/training-loop rendered method.
 - Guardrails: no GT residual, no GT crop pixels, no frozen R009 crop labels as support; frozen windows are posthoc diagnostic only.
+
+### 2026-07-09T22:40:00+02:00 - R031-R033 DA3 depth support wave complete
+
+- Commit state:
+  - `14f3c83` added DA3 support tooling and predeclaration docs.
+  - `dac940a` added `--fill-component-tiles` for the R033 sensitivity test.
+- DA3 setup PASS:
+  - Repo: `$WORK/proj_adags/repo/depth-anything-3`.
+  - DA3 repo commit: `41736238f5bced4debf3f2a12375d2466874866d`.
+  - Model snapshot: `$WORK/proj_adags/models/depth-anything/DA3NESTED-GIANT-LARGE-1.1`.
+  - Environment repaired after first smoke failure: use local DA3 venv with local `numpy==1.26.4`, ADAGS `torch==2.5.1+cu121` / `torchvision==0.20.1+cu121`, and `xformers==0.0.28.post3`.
+- Smoke PASS after repair:
+  - Prepare job `49029452`: 6 frames, non-oracle flags false.
+  - First infer job `49029467`: FAIL due missing undeclared `addict`.
+  - Retry infer job `49029847`: PASS, wrote 6 depth sidecars.
+  - Support job `49029955`: PASS, wrote 6 support masks, validation OK.
+- R031 full PASS for depth sidecars, WEAK for support:
+  - Prepare job `49030039`: 900 frames.
+  - Inference job `49030185`: 900/900 depth sidecars, elapsed `00:05:09`, MaxRSS about `7047772K`.
+  - Support job `49030546`: validation OK, 83 support frames.
+  - Posthoc overlap: mean support-frame fraction `0.0625`, mean crop coverage `0.000030`.
+- R032 high-recall sparse sensitivity:
+  - Support job `49031389`: validation OK, 355 support frames.
+  - Posthoc overlap: mean support-frame fraction `0.4125`, mean crop coverage `0.002846`.
+- R033 high-recall tile-fill sensitivity:
+  - Support job `49032424`: validation OK, 408 support frames, `fill_component_tiles=true`.
+  - Posthoc overlap: mean support-frame fraction `0.3750`, mean crop coverage `0.001253`.
+- Scientific interpretation:
+  - PASS: DA3 setup/inference/support-generation pipeline is operational and durable.
+  - FAIL/WEAK: current DA3 support-fusion variants do not produce strong frozen-window event-crop coverage. They are much weaker than R020 high-recall boxes (`0.491371` mean crop coverage) and should not be promoted into a positive rendered-method claim.
+  - Next meaningful rendered-method direction remains training-loop integration or a changed capacity/optimization mechanism. Do not spend more runs on this exact posthoc support-only family unless there is a new, predeclared depth formulation.

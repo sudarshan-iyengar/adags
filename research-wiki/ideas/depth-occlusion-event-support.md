@@ -71,3 +71,21 @@ Predeclared support gate lives in `refine-logs/DEPTH_OCCLUSION_EVENT_SUPPORT_PLA
 - R031c: run DA3 inference through Slurm and write resumable depth sidecars.
 - R031d: build `depth_occlusion_support_manifest.json` with the existing `support_frames` schema.
 - R031e: run posthoc frozen-window overlap audit as a diagnostic only.
+
+## Result Update 2026-07-09
+
+Status: active but not validated as a strong support mechanism.
+
+What passed:
+- DA3 setup on Leonardo completed.
+- `DA3NESTED-GIANT-LARGE-1.1` weights were cached locally.
+- Full `cam00` inference wrote 900/900 depth sidecars.
+- Support manifests for R031, R032, and R033 were structurally valid and recorded `uses_gt_residual=false`, `uses_gt_crop_pixels=false`, `uses_frozen_window_labels=false`.
+
+What failed or remained weak:
+- R031 default sparse support: mean crop coverage `0.000030`.
+- R032 high-recall sparse support: mean crop coverage `0.002846`.
+- R033 high-recall tile-fill support: mean crop coverage `0.001253`.
+- These improve over R026 boundary support's zero crop coverage only weakly and remain far below R020 high-recall boxes (`0.491371`).
+
+Conclusion: DA3 sidecars are reusable, but the current support-fusion recipe should not be used as the main support input for a positive rendered-method claim. Future depth use should either change the formulation substantially, use multiview/temporal DA3 outputs more directly, or be embedded into training-loop integration as a soft reliability cue rather than as a standalone crop-support detector.

@@ -12,6 +12,8 @@ The current evidence does not support the claim that the tested non-oracle Gauss
 
 Do not declare the broad scientific idea impossible. R027 was a valid non-oracle checkpoint-backed run, but the posthoc support audit shows its boundary support barely touched the frozen event crops. Therefore M2 mainly falsifies the specific R026 support generator plus 400-iteration micro-densification recipe, not every possible event-local densification/reveal mechanism.
 
+Update after R031-R033: Depth Anything 3 setup and inference are now operational on Leonardo, and the DA3 support artifacts are valid non-oracle artifacts. However, the current DA3 support formulations do not provide strong frozen-window crop coverage. R031 sparse support barely improves over R026, R032 high-recall sparse support improves temporal hit rate but covers only `0.002846` mean crop area, and R033 tile-fill support does not rescue coverage. This is evidence against the current DA3 support-fusion recipe as a training-loop support candidate, not against all possible depth/geometry use.
+
 ## 1. What The Evidence Supports
 
 - PASS: The frozen R009 crops are meaningful error regions. R013/R015 oracle GT crop compositing improves route0 from PSNR `30.5021` / L1 `0.0148316` to PSNR `41.7149` / L1 `0.00266536`.
@@ -37,6 +39,7 @@ Do not declare the broad scientific idea impossible. R027 was a valid non-oracle
 - INCONCLUSIVE: Whether training-from-scratch or integration into the original training loop is required. Current runs are posthoc checkpoint refinements.
 - INCONCLUSIVE: Whether five frozen windows are representative. They are enough for this diagnostic gate, not for broad generalization claims.
 - INCONCLUSIVE: Whether a depth-informed support signal can localize occlusion/reveal better than masks/flow/render boundaries. No depth sidecar method has been tested yet.
+- PARTIAL/WEAK after R031-R033: DA3 can produce valid depth sidecars and non-oracle support manifests, but the tested fusion variants do not localize enough frozen crop area to justify a positive support claim.
 
 ## 4. Most Likely Failure Modes
 
@@ -138,6 +141,16 @@ Expected failure modes:
 Test plan:
 - First run only a depth-support diagnostic on the frozen source scenes, then posthoc overlap audit.
 - Proceed to Gaussian training only if the depth support covers more frozen crop/frame mass than R026 while staying within support pixel caps and without obvious full-frame leakage.
+
+Execution update 2026-07-09:
+- PASS setup: cloned `ByteDance-Seed/depth-anything-3` to `$WORK/proj_adags/repo/depth-anything-3` at commit `41736238f5bced4debf3f2a12375d2466874866d`; cached `depth-anything/DA3NESTED-GIANT-LARGE-1.1` locally under `$WORK/proj_adags/models/depth-anything/DA3NESTED-GIANT-LARGE-1.1`.
+- PASS environment after repair: DA3 venv imports DA3 with ADAGS `torch==2.5.1+cu121`, `torchvision==0.20.1+cu121`, local `numpy==1.26.4`, and `xformers==0.0.28.post3`. Initial smoke failed on undeclared `addict`; repair logs remain on HPC under `logs/da3_env_repair_*`.
+- PASS R031 frame/depth wave: Slurm prepare job `49030039` wrote 900 `cam00` frames with `uses_gt_residual=false`, `uses_gt_crop_pixels=false`, `uses_frozen_window_labels=false`; inference job `49030185` wrote 900 DA3 depth sidecars in `00:05:09`.
+- PASS artifact validity, WEAK support: R031 support job `49030546` produced 83 support frames, validation OK, mean support-frame fraction `0.0625`, mean crop coverage `0.000030`.
+- PASS sensitivity artifact, WEAK support: R032 high-recall sparse job `49031389` produced 355 support frames, validation OK, mean support-frame fraction `0.4125`, mean crop coverage `0.002846`.
+- PASS tile-fill artifact, WEAK support: R033 high-recall tile-fill job `49032424` produced 408 support frames, validation OK, mean support-frame fraction `0.3750`, mean crop coverage `0.001253`.
+- Comparison: R026 boundary support had mean crop coverage `0.000000`; R020 high-recall candidate boxes had mean crop coverage `0.491371`. The DA3 variants improve over R026 only marginally and remain far below the earlier high-recall non-oracle box pool.
+- Conclusion: do not promote current DA3 support into a rendered training-loop experiment as the main next milestone. Keep DA3 sidecars as reusable evidence, but the next scientifically meaningful rendered method remains training-loop integration with a stronger support/capacity mechanism.
 
 ## 6. Why Not Immediately Run A Large Sweep
 

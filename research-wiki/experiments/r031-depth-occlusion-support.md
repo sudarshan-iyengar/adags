@@ -1,7 +1,7 @@
 ---
 type: experiment
 node_id: exp:r031-depth-occlusion-support
-status: planned
+status: complete
 created: 2026-07-09
 idea: idea:depth-occlusion-event-support
 ---
@@ -33,4 +33,44 @@ Support PASS requires a valid compact support artifact and better posthoc frozen
 
 ## Status
 
-PLANNED as of 2026-07-09. See `refine-logs/DEPTH_OCCLUSION_EVENT_SUPPORT_PLAN.md`.
+COMPLETE as a support-only diagnostic as of 2026-07-09.
+
+## Results
+
+Setup and sidecar generation passed:
+- DA3 repo: `$WORK/proj_adags/repo/depth-anything-3`.
+- DA3 commit: `41736238f5bced4debf3f2a12375d2466874866d`.
+- Model: `depth-anything/DA3NESTED-GIANT-LARGE-1.1`.
+- Full frame manifest: 900 `cam00` frames across `cut_roasted_beef`, `flame_steak`, and `sear_steak`.
+- Inference job `49030185`: wrote 900/900 depth sidecars.
+
+Support diagnostics:
+
+| Run | Variant | Support Frames | Mean Support-Frame Fraction | Mean Crop Coverage | Verdict |
+| --- | --- | ---: | ---: | ---: | --- |
+| R031 | sparse default | 83 | 0.0625 | 0.000030 | weak |
+| R032 | high-recall sparse | 355 | 0.4125 | 0.002846 | weak |
+| R033 | high-recall tile-fill | 408 | 0.3750 | 0.001253 | weak |
+
+Comparison points:
+- R026 boundary support: mean crop coverage `0.000000`.
+- R020 high-recall non-oracle boxes: mean crop coverage `0.491371`.
+
+## Interpretation
+
+PASS: the DA3 setup, weight caching, Slurm inference, and non-oracle support-manifest pipeline are operational.
+
+FAIL/WEAK: the current DA3 support-fusion formulations do not localize the frozen event crops strongly enough to justify a positive support claim. High-recall expansion improved temporal hit rate, but spatial crop coverage stayed extremely low. Tile-fill did not rescue the signal.
+
+This does not rule out depth as a useful cue. It does rule out this specific DA3 depth-edge/confidence/flow/mask fusion as an immediately compelling support artifact for the next rendered method. Given R030, the next rendered milestone should prioritize training-loop integration or a changed capacity/optimization mechanism rather than another posthoc support-only run.
+
+## Evidence
+
+- `refine-logs/depth_occlusion_support/r031_da3_frame_manifest.json`
+- `refine-logs/depth_occlusion_support/r031_da3_depth_full/da3_depth_manifest.json`
+- `refine-logs/depth_occlusion_support/r031_depth_support_full/`
+- `refine-logs/depth_occlusion_support/r031_support_overlap_full/support_overlap_summary.json`
+- `refine-logs/depth_occlusion_support/r032_depth_support_highrecall/`
+- `refine-logs/depth_occlusion_support/r032_support_overlap_highrecall/support_overlap_summary.json`
+- `refine-logs/depth_occlusion_support/r033_depth_support_highrecall_tilefill/`
+- `refine-logs/depth_occlusion_support/r033_support_overlap_tilefill/support_overlap_summary.json`

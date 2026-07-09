@@ -1,0 +1,62 @@
+{
+  "depth_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/depth_occlusion_support/r031_da3_depth_full/da3_depth_manifest.json",
+  "limitations": [
+    "This support artifact is not a rendered Gaussian method result.",
+    "Frozen R009 windows are not used to generate support; they may only be used in posthoc overlap diagnostics.",
+    "R030 showed oracle support does not rescue the current posthoc micro-densification recipe, so support success should feed training-loop integration rather than support-only posthoc expansion."
+  ],
+  "n_components": 108,
+  "n_support_frames": 83,
+  "scene_reports": [
+    {
+      "max_support_pixel_fraction": 0.00039972923450392727,
+      "n_depth_frames_loaded": 300,
+      "n_flow_sidecars_indexed": 5980,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 23,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "cut_roasted_beef",
+      "target_hw": [
+        507,
+        676
+      ]
+    },
+    {
+      "max_support_pixel_fraction": 0.00045224840400079363,
+      "n_depth_frames_loaded": 300,
+      "n_flow_sidecars_indexed": 6279,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 29,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "flame_steak",
+      "target_hw": [
+        507,
+        676
+      ]
+    },
+    {
+      "max_support_pixel_fraction": 0.000548533548078382,
+      "n_depth_frames_loaded": 300,
+      "n_flow_sidecars_indexed": 6279,
+      "n_flow_sidecars_used": 299,
+      "n_masks_indexed": 300,
+      "n_raw_components": 1200,
+      "n_selected_components": 36,
+      "n_support_frames": 31,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "scene": "sear_steak",
+      "target_hw": [
+        507,
+        676
+      ]
+    }
+  ],
+  "source_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_real_windows.json",
+  "support_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/depth_occlusion_support/r031_depth_support_full/depth_occlusion_support_manifest.json"
+}
