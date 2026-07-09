@@ -38,6 +38,7 @@ skills-lock.json
 analysis/
 refine-logs/
 research-wiki/
+logs/
 
 # Operating System files
 .DS_Store
