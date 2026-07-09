@@ -2,16 +2,16 @@
 
 ## Recovery Snapshot
 
-- Current objective phase: event-crop result interpretation and disambiguation wave
-- Current run ID: R029/R030 compact disambiguation wave complete
-- Current method candidate: current posthoc micro-densification/refinement family failed; next meaningful work should change the optimization/training mechanism rather than only support selection
+- Current objective phase: depth-occlusion support setup in parallel with training-loop integration planning
+- Current run ID: R031 depth-occlusion event support
+- Current method candidate: DA3-based non-oracle depth support artifact; not a rendered-method success unless later training-loop/checkpoint-backed evidence passes
 - Current branch: `codex/hide-reveal-poc-implementation`
 - Current local commit at 2026-07-07 recovery start: `f5d43539aee500051f2a4c5eeca5420293b636f1`
 - Current local commit at 2026-07-07T12:25:00+02:00: `1a747fae7079f7352c3103f51d735912fcedf10a`
-- Last pushed milestone commit: `8ebb53d`
+- Last pushed milestone commit: `2a27ef0`
 - Last HPC job ID: scoring job `48969825`
 - Latest success/failure: R029/R030 scoring completed. R029 route0 continuation worsened route0, so generic continuation is not the source of R027's tiny gain. R030 oracle-support micro-densification failed with mean PSNR `29.9021`, mean L1 `0.0158770`, route0 PSNR+L1 wins `0/5`, and negative oracle recovery.
-- Next command to run: no more support-only posthoc micro-densification runs without a changed mechanism. If continuing, design a tightly scoped training-loop integration or optimization-mechanism diagnostic.
+- Next command to run: implement resumable R031 DA3 frame/depth/support tooling, commit, push, pull on HPC, clone/setup DA3 under `$WORK/proj_adags/repo/depth-anything-3`, then launch the first Slurm inference/support wave.
 - Open blockers: none.
 
 ## Dirty State At 2026-07-07 Recovery Start
@@ -583,3 +583,12 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - R029 route0 continuation result: mean PSNR `30.3532`, mean L1 `0.0150603`, route0 PSNR+L1 wins `1/5`, static no-worse `1/5`, oracle recovery negative. Verdict: CONTROL COMPLETE; generic continuation does not explain R027's tiny positive movement.
 - R030 oracle-support diagnostic result: mean PSNR `29.9021`, mean L1 `0.0158770`, route0 PSNR+L1 wins `0/5`, strict all-baseline wins `0/5`, static no-worse `4/5`, oracle recovery negative. Verdict: FAIL.
 - Scientific conclusion: oracle-aligned support alone does not rescue the current posthoc Gaussian micro-densification recipe; the likely bottleneck is the posthoc optimization/capacity mechanism.
+
+### 2026-07-09 - R031 depth-occlusion support predeclaration
+
+- User selected training-loop integration as the next scientifically meaningful rendered-method direction and asked to add/refine depth occlusion support in parallel.
+- Refined `research-wiki/ideas/depth-occlusion-event-support.md` to use Depth Anything 3.
+- Predeclared R031 in `refine-logs/DEPTH_OCCLUSION_EVENT_SUPPORT_PLAN.md`.
+- Primary depth model: `depth-anything/DA3NESTED-GIANT-LARGE-1.1`, with DA3 repo to live under `$WORK/proj_adags/repo/depth-anything-3`.
+- R031 is a support-only diagnostic. It may PASS as a support artifact if valid compact masks improve posthoc frozen-window overlap versus R026, but it cannot claim event-crop repair without a later checkpoint-backed/training-loop rendered method.
+- Guardrails: no GT residual, no GT crop pixels, no frozen R009 crop labels as support; frozen windows are posthoc diagnostic only.

@@ -4,9 +4,11 @@ Generated: 2026-07-07
 
 ## Current Phase
 
-Phase 5: R017/R025/R027 interpretation and compact disambiguation.
+Phase 6: depth-occlusion support setup in parallel with training-loop integration planning.
 
 The R017 runtime opacity gate is closed as a failed actual-method check. M1 non-oracle residual-component local refinement is closed as a failed checkpoint-backed Gaussian method check. M2 boundary micro-densification is failed as tested. R028 showed the R026 support missed the frozen crop regions, but R030 then showed that even oracle crop support does not rescue the current posthoc micro-densification mechanism. Future deployable methods must not use the frozen R009 event crops as test-time support; oracle-support runs are diagnostic only.
+
+Next support-only line: R031 depth-occlusion event support. This uses Depth Anything 3 to generate non-oracle depth sidecars and support masks, then audits support overlap posthoc. R031 is not allowed to claim rendered event-crop repair; any positive support result must feed a later training-loop-integrated or checkpoint-backed rendered method.
 
 ## Source Metrics
 
@@ -21,6 +23,7 @@ The R017 runtime opacity gate is closed as a failed actual-method check. M1 non-
 | failed non-oracle | R027 event_boundary_micro_densify | 30.5591 | 0.0147412 | 0.00801033 | 0.125634 | `refine-logs/hide_reveal_poc/r027_event_boundary_micro_densify_real_eval/real_event_window_summary.json` |
 | control | R029 route0_continue_6400 | 30.3532 | 0.0150603 | 0.00810518 | 0.128242 | `refine-logs/hide_reveal_poc/r029_r030_disambiguation_real_eval/real_event_window_summary.json` |
 | failed diagnostic | R030 oracle_crop_support_micro_densify | 29.9021 | 0.0158770 | 0.00839323 | 0.123819 | `refine-logs/hide_reveal_poc/r029_r030_disambiguation_real_eval/real_event_window_summary.json` |
+| planned support | R031 DA3 depth_occlusion_support | TBD | TBD | TBD | TBD | `refine-logs/DEPTH_OCCLUSION_EVENT_SUPPORT_PLAN.md` |
 
 Interpretation update:
 - R028 posthoc overlap audit found R020 candidate boxes had mean support-frame fraction `0.6375` and mean crop coverage `0.491371`, but missed one frozen window entirely.
@@ -182,3 +185,4 @@ FAIL/SKIP/BLOCKED gates:
 | R028 support audit | Posthoc frozen-window support overlap | n/a | local | `refine-logs/hide_reveal_poc/r028_support_overlap_diagnostics/`, `scripts/audit_event_support_overlap.py` | DIAGNOSTIC PASS | R020 candidate boxes covered most of 4/5 frozen windows but missed one; R026 boundary support almost entirely missed the crops with mean support-frame fraction `0.0250` and mean crop coverage `0.000000`. This makes R027 inconclusive about good-support micro-densification while preserving FAIL for the tested R026/R027 recipe. |
 | R029 eval+scoring | Matched 6000-to-6400 continuation control | `8ebb53d` | train `48935431`,`48935450`,`48935478`; eval `48969017`,`48969019`,`48969021`; scoring `48969825` | `refine-logs/hide_reveal_poc/r029_r030_disambiguation_real_eval/`, `refine-logs/hide_reveal_poc/r029_r030_disambiguation_summary/` | CONTROL COMPLETE | R029 worsened route0: mean PSNR `30.3532` vs `30.5021`, mean L1 `0.0150603` vs `0.0148316`, route0 PSNR+L1 wins `1/5`, static no-worse `1/5`, oracle recovery negative. This rules out generic 400-iteration continuation as the explanation for R027's small improvement. |
 | R030 eval+scoring | Frozen-crop support, Gaussian-only micro-densification | `8ebb53d` | train `48935580`,`48935581`,`48935583`; eval `48969090`,`48969092`,`48969093`; scoring `48969825` | `refine-logs/hide_reveal_poc/r029_r030_disambiguation_real_eval/`, `refine-logs/hide_reveal_poc/r029_r030_disambiguation_summary/` | FAIL | Diagnostic only; uses frozen R009 crops as support but no GT compositing. R030 worsened route0: mean PSNR `29.9021`, mean L1 `0.0158770`, route0 PSNR+L1 wins `0/5`, strict all-baseline wins `0/5`, static no-worse `4/5`, oracle recovery negative. This points to the posthoc Gaussian optimization/capacity mechanism as a bottleneck, not only support discovery. |
+| R031 predeclare | DA3 depth-occlusion support | TBD | n/a | `refine-logs/DEPTH_OCCLUSION_EVENT_SUPPORT_PLAN.md`, `research-wiki/ideas/depth-occlusion-event-support.md` | PLANNED | Support-only diagnostic using `depth-anything/DA3NESTED-GIANT-LARGE-1.1`; frozen R009 crops remain posthoc audit only. PASS requires valid compact support and better overlap than R026, not rendered-method success. |
