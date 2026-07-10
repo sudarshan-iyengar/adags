@@ -12,6 +12,7 @@
 import math
 import os
 import random
+import json
 import socket
 import subprocess
 import sys
@@ -21,6 +22,7 @@ from torch import nn
 import numpy as np
 from tqdm import tqdm
 from argparse import ArgumentParser, Namespace
+from pathlib import Path
 from omegaconf import OmegaConf
 from omegaconf.dictconfig import DictConfig
 from torch.utils.data import DataLoader
@@ -541,6 +543,10 @@ def collect_decomposition_diagnostics(gaussians, opt=None):
     add_scalar_metric(metrics, "points/hard_dynamic", dynamic_points)
     add_scalar_metric(metrics, "points/hard_static_fraction", static_points / total_points if total_points > 0 else 0.0)
 
+    visibility_events = getattr(gaussians, "visibility_event_runtime_events", None) or []
+    add_scalar_metric(metrics, "visibility_events/count", len(visibility_events))
+    add_scalar_metric(metrics, "visibility_events/training_scale", getattr(gaussians, "visibility_event_training_scale", 1.0))
+
     route_logit = getattr(gaussians, "get_route_logit", None)
     if torch.is_tensor(route_logit) and route_logit.numel() > 0:
         p_dyn = gaussians.get_dynamic_probability.detach().clamp(1e-6, 1.0 - 1e-6)
@@ -589,6 +595,70 @@ def collect_decomposition_diagnostics(gaussians, opt=None):
                 add_scalar_metric(metrics, "static_conversion/frac_converted", gaussians.num_converted_last / max(1, num_candidates))
 
     return metrics
+
+
+def configure_visibility_events_from_opt(gaussians, opt, source_path):
+    manifest = str(getattr(opt, "visibility_event_manifest", "") or "")
+    gaussians.visibility_event_runtime_events = []
+    gaussians.visibility_event_training_scale = 1.0
+    gaussians.visibility_event_manifest_path = manifest
+    if not manifest:
+        return []
+
+    manifest_path = Path(manifest)
+    if not manifest_path.is_absolute():
+        manifest_path = Path.cwd() / manifest_path
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"visibility_event_manifest not found: {manifest_path}")
+
+    scene_name = str(getattr(opt, "visibility_event_scene", "") or Path(source_path).name)
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    events = []
+    for window in payload.get("windows", []):
+        if str(window.get("scene", "")) != scene_name:
+            continue
+        if "accepted" in window and not bool(window.get("accepted")):
+            continue
+        crop = [int(value) for value in window.get("crop_xyxy", [])]
+        if len(crop) != 4:
+            continue
+        events.append(
+            {
+                "window_id": str(window.get("window_id", f"visibility_event_{len(events):03d}")),
+                "scene": scene_name,
+                "frame_start": int(window["frame_start"]),
+                "frame_end": int(window["frame_end"]),
+                "crop_xyxy": crop,
+                "opacity_attenuation": float(
+                    window.get(
+                        "opacity_attenuation",
+                        getattr(opt, "visibility_event_opacity_attenuation", 0.85),
+                    )
+                ),
+                "dynamic_probability_min": float(
+                    window.get(
+                        "dynamic_probability_min",
+                        getattr(opt, "visibility_event_dynamic_probability_min", 0.55),
+                    )
+                ),
+                "event_beta": float(window.get("event_beta", getattr(opt, "visibility_event_beta", 1.0))),
+            }
+        )
+    gaussians.visibility_event_runtime_events = events
+    print(f"Loaded {len(events)} visibility events for scene {scene_name} from {manifest_path}")
+    return events
+
+
+def visibility_event_training_scale(opt, iteration):
+    if not str(getattr(opt, "visibility_event_manifest", "") or ""):
+        return 0.0
+    start_iter = int(getattr(opt, "visibility_event_start_iter", 0))
+    warmup_iters = int(getattr(opt, "visibility_event_warmup_iters", 0))
+    if iteration < start_iter:
+        return 0.0
+    if warmup_iters <= 0:
+        return 1.0
+    return max(0.0, min(1.0, float(iteration - start_iter + 1) / float(warmup_iters)))
 
 
 def summary_alias_name(metric_name):
@@ -672,6 +742,7 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     train_dir = os.path.join(dataset.model_path, 'train', f"ours_{first_iter}")
     test_dir = os.path.join(dataset.model_path, 'test', f"ours_{first_iter}")
     gaussians.restore(model_params, None)
+    configure_visibility_events_from_opt(gaussians, opt, dataset.source_path)
     gaussExtractor = GaussianExtractor(gaussians, render, pipe, bg_color=bg_color)
 
     print("export rendered testing images ...")
@@ -730,6 +801,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
         gaussians.restore(model_params, opt)
+    configure_visibility_events_from_opt(gaussians, opt, dataset.source_path)
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -794,6 +866,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 break
 
             iter_start.record()
+            gaussians.visibility_event_training_scale = visibility_event_training_scale(opt, iteration)
             gaussians.update_learning_rate(iteration)
 
             if iteration % opt.sh_increase_interval == 0:
@@ -819,6 +892,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             Ltrack_flow = torch.tensor(0.0, device=device)
             Lscaffold_smooth = torch.tensor(0.0, device=device)
             Lscaffold_reg = torch.tensor(0.0, device=device)
+            visibility_event_gate_calls = 0
+            visibility_event_selected_gaussians = 0
+            visibility_event_scale_sum = 0.0
 
             static = False
 
@@ -836,6 +912,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 visibility_filter_static = render_pkg["visibility_filter_static"]
                 radii_static = render_pkg["radii_static"]
                 has_hard_static = render_pkg.get("hard_static_count", 0) > 0
+                for gate_stat in render_pkg.get("visibility_event_gate_stats", []):
+                    visibility_event_gate_calls += 1
+                    visibility_event_selected_gaussians += int(gate_stat.get("selected_gaussians", 0))
+                    visibility_event_scale_sum += float(gate_stat.get("opacity_scale", 1.0))
 
                 if opt.blur_until_iter > 0 and iteration < opt.blur_until_iter:
                     progress = iteration / float(opt.blur_until_iter)
@@ -1056,6 +1136,17 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             with torch.no_grad():
                 psnr_for_log = psnr(image, gt_image).mean().double()
                 log_wandb_metrics(wandb_run, {"train/psnr": psnr_for_log}, iteration)
+                if visibility_event_gate_calls > 0:
+                    log_wandb_metrics(
+                        wandb_run,
+                        {
+                            "visibility_events/train_gate_calls": visibility_event_gate_calls,
+                            "visibility_events/train_selected_gaussians": visibility_event_selected_gaussians,
+                            "visibility_events/train_mean_opacity_scale": visibility_event_scale_sum / max(visibility_event_gate_calls, 1),
+                            "visibility_events/train_global_scale": getattr(gaussians, "visibility_event_training_scale", 1.0),
+                        },
+                        iteration,
+                    )
 
                 ema_loss_for_log = 0.4 * total_loss + 0.6 * ema_loss_for_log
                 ema_l1loss_for_log = 0.4 * Ll1.item() + 0.6 * ema_l1loss_for_log
@@ -1174,6 +1265,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         ),
         "model_path": scene.model_path,
         "start_checkpoint": checkpoint,
+        "visibility_event_manifest": getattr(opt, "visibility_event_manifest", ""),
+        "visibility_event_count": len(getattr(scene.gaussians, "visibility_event_runtime_events", []) or []),
     }
     if best_val_metrics is not None:
         summary_updates.update(prefixed_summary_metrics("best_val", best_val_metrics))

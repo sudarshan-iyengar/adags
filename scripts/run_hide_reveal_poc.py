@@ -9,6 +9,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from utils.hide_reveal_poc import (
     FrozenHideRevealParams,
+    admit_visibility_events,
     augment_real_manifest_system,
     create_real_manifest_from_eval,
     derive_real_poc_render_folders,
@@ -170,6 +171,22 @@ def parse_args():
     boundary.add_argument("--min-component-area", type=int, default=16)
     boundary.add_argument("--min-score", type=float, default=0.05)
     boundary.add_argument("--no-flow", action="store_true", help="Do not use flow sidecars even if present.")
+
+    admit = subparsers.add_parser(
+        "admit-visibility-events",
+        help="Freeze accepted non-oracle visibility-event supports using training-time photometric/temporal scores.",
+    )
+    admit.add_argument("--candidate-manifest", required=True)
+    admit.add_argument("--out-dir", default="refine-logs/hide_reveal_poc/r035_visibility_event_admission")
+    admit.add_argument("--route0-system", default="route0")
+    admit.add_argument("--min-candidate-score", type=float, default=0.0)
+    admit.add_argument("--admission-margin", type=float, default=0.0005)
+    admit.add_argument("--lambda-temporal", type=float, default=0.25)
+    admit.add_argument("--lambda-static", type=float, default=0.0)
+    admit.add_argument("--lambda-budget", type=float, default=0.0001)
+    admit.add_argument("--opacity-attenuation", type=float, default=0.85)
+    admit.add_argument("--dynamic-probability-min", type=float, default=0.55)
+    admit.add_argument("--event-beta", type=float, default=1.0)
 
     return parser.parse_args()
 
@@ -383,6 +400,29 @@ def main():
         print(f"validation_ok={result['validation']['ok']}")
         print(f"validation_errors={len(result['validation']['errors'])}")
         print(f"support_frames={len(result['manifest']['support_frames'])}")
+        if result["validation"]["errors"]:
+            for error in result["validation"]["errors"][:8]:
+                print(f"ERROR: {error}", file=sys.stderr)
+            return 2
+    elif args.command == "admit-visibility-events":
+        result = admit_visibility_events(
+            candidate_manifest_path=Path(args.candidate_manifest),
+            out_dir=Path(args.out_dir),
+            route0_system=args.route0_system,
+            min_candidate_score=args.min_candidate_score,
+            admission_margin=args.admission_margin,
+            lambda_temporal=args.lambda_temporal,
+            lambda_static=args.lambda_static,
+            lambda_budget=args.lambda_budget,
+            opacity_attenuation=args.opacity_attenuation,
+            dynamic_probability_min=args.dynamic_probability_min,
+            event_beta=args.event_beta,
+        )
+        print(f"Wrote visibility-event admission outputs to {Path(args.out_dir).resolve()}")
+        print(f"event_manifest={Path(result['manifest_path']).resolve()}")
+        print(f"validation_ok={result['validation']['ok']}")
+        print(f"validation_errors={len(result['validation']['errors'])}")
+        print(f"accepted={result['summary']['n_accepted']}")
         if result["validation"]["errors"]:
             for error in result["validation"]["errors"][:8]:
                 print(f"ERROR: {error}", file=sys.stderr)

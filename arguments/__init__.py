@@ -146,6 +146,13 @@ class OptimizationParams(ParamGroup):
         self.event_boundary_dilate = 0
         self.event_boundary_replace_dynamic_mask = False
         self.event_boundary_frame_fallback = False
+        self.visibility_event_manifest = ""
+        self.visibility_event_scene = ""
+        self.visibility_event_opacity_attenuation = 0.85
+        self.visibility_event_dynamic_probability_min = 0.55
+        self.visibility_event_beta = 1.0
+        self.visibility_event_start_iter = 0
+        self.visibility_event_warmup_iters = 0
         self.lambda_dynamic_roi = 0.0
         self.lambda_static_exclusion = 0.0
         self.lambda_track_flow = 0.0

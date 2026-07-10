@@ -12,6 +12,7 @@
 import torch
 from torch.nn import functional as F
 import math
+import re
 from .diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh, eval_shfs_4d
@@ -28,6 +29,20 @@ def _event_window_weight(frame_idx, frame_start, frame_end, beta):
     value = _sigmoid_scalar((float(frame_idx) - float(frame_start)) / beta)
     value -= _sigmoid_scalar((float(frame_idx) - float(frame_end)) / beta)
     return max(0.0, min(1.0, value))
+
+
+def _frame_index_from_camera(viewpoint_camera):
+    for attr_name in ("visibility_event_frame_idx", "hide_reveal_frame_idx"):
+        value = getattr(viewpoint_camera, attr_name, None)
+        if value is not None:
+            return int(value)
+    for attr_name in ("image_name", "image_path"):
+        value = getattr(viewpoint_camera, attr_name, "")
+        stem = str(value).rsplit("/", 1)[-1].rsplit("\\", 1)[-1].rsplit(".", 1)[0]
+        matches = re.findall(r"\d+", stem)
+        if matches:
+            return int(matches[-1])
+    return None
 
 
 def _apply_runtime_hide_reveal_gate(opacity, means3D, dynamic_probability, viewpoint_camera, pc):
@@ -77,6 +92,64 @@ def _apply_runtime_hide_reveal_gate(opacity, means3D, dynamic_probability, viewp
                 "selected_gaussians": int(support.sum().detach().cpu()),
                 "temporal_weight": float(temporal_weight),
                 "opacity_scale": float(scale_value),
+            }
+        )
+    return opacity * gate_scale, stats
+
+
+def _apply_visibility_event_gate(opacity, means3D, dynamic_probability, viewpoint_camera, pc):
+    events = getattr(pc, "visibility_event_runtime_events", None)
+    if not events or opacity is None or means3D.numel() == 0:
+        return opacity, []
+    global_scale = float(getattr(pc, "visibility_event_training_scale", 1.0))
+    if global_scale <= 0.0:
+        return opacity, []
+    frame_idx = _frame_index_from_camera(viewpoint_camera)
+    if frame_idx is None:
+        return opacity, []
+
+    screen_xy, valid = project_points_to_screen(means3D.detach(), viewpoint_camera)
+    valid = valid.squeeze(-1)
+    gate_scale = torch.ones_like(opacity)
+    stats = []
+    for event in events:
+        frame_start = int(event["frame_start"])
+        frame_end = int(event["frame_end"])
+        if int(frame_idx) < frame_start or int(frame_idx) > frame_end:
+            continue
+
+        x0, y0, x1, y1 = [float(v) for v in event["crop_xyxy"]]
+        support = (
+            valid
+            & (screen_xy[:, 0] >= x0)
+            & (screen_xy[:, 0] < x1)
+            & (screen_xy[:, 1] >= y0)
+            & (screen_xy[:, 1] < y1)
+        )
+        min_dynamic_probability = event.get("dynamic_probability_min", None)
+        if min_dynamic_probability is not None and dynamic_probability.numel() == opacity.numel():
+            support = support & (dynamic_probability.reshape(-1) >= float(min_dynamic_probability))
+
+        temporal_weight = _event_window_weight(
+            frame_idx,
+            frame_start,
+            frame_end,
+            event.get("event_beta", 1.0),
+        )
+        strength = max(0.0, min(1.0, float(event.get("opacity_attenuation", 0.85))))
+        scale_value = max(0.0, min(1.0, 1.0 - global_scale * strength * temporal_weight))
+        if support.any():
+            event_scale = torch.full_like(gate_scale, scale_value)
+            gate_scale = torch.where(support[:, None], torch.minimum(gate_scale, event_scale), gate_scale)
+
+        stats.append(
+            {
+                "window_id": str(event.get("window_id", "")),
+                "frame_idx": int(frame_idx),
+                "selected_gaussians": int(support.sum().detach().cpu()),
+                "temporal_weight": float(temporal_weight),
+                "opacity_scale": float(scale_value),
+                "training_scale": float(global_scale),
             }
         )
     return opacity * gate_scale, stats
@@ -166,6 +239,13 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             opacity = opacity * marginal_t
 
     opacity, runtime_hide_reveal_stats = _apply_runtime_hide_reveal_gate(
+        opacity,
+        means3D,
+        dynamic_probability,
+        viewpoint_camera,
+        pc,
+    )
+    opacity, visibility_event_gate_stats = _apply_visibility_event_gate(
         opacity,
         means3D,
         dynamic_probability,
@@ -318,4 +398,5 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             "soft_routing": use_soft_routing,
             "hard_static_count": hard_static_count,
             "hide_reveal_gate_stats": runtime_hide_reveal_stats,
+            "visibility_event_gate_stats": visibility_event_gate_stats,
             }

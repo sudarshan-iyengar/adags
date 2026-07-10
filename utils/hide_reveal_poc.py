@@ -2403,6 +2403,318 @@ def write_nonoracle_candidate_report(
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def visibility_event_window_weight(
+    frames: np.ndarray,
+    frame_start: int,
+    frame_end: int,
+    beta: float,
+) -> np.ndarray:
+    beta = max(float(beta), 1e-6)
+    weight = sigmoid((frames.astype(np.float32) - float(frame_start)) / beta)
+    weight -= sigmoid((frames.astype(np.float32) - float(frame_end)) / beta)
+    return np.clip(weight, 0.0, 1.0).astype(np.float32)
+
+
+def admit_visibility_events(
+    candidate_manifest_path: Path,
+    out_dir: Path,
+    route0_system: str = "route0",
+    min_candidate_score: float = 0.0,
+    admission_margin: float = 0.0005,
+    lambda_temporal: float = 0.25,
+    lambda_static: float = 0.0,
+    lambda_budget: float = 0.0001,
+    opacity_attenuation: float = 0.85,
+    dynamic_probability_min: float = 0.55,
+    event_beta: float = 1.0,
+) -> Dict[str, object]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    candidate_manifest_path = candidate_manifest_path.resolve()
+    candidate_manifest = json.loads(candidate_manifest_path.read_text(encoding="utf-8"))
+    base_dir = candidate_manifest_path.parent
+
+    rows: List[Dict[str, object]] = []
+    accepted_windows: List[Dict[str, object]] = []
+    skipped = 0
+    for window in candidate_manifest.get("windows", []):
+        row, accepted_window = score_visibility_event_candidate(
+            window=window,
+            base_dir=base_dir,
+            route0_system=route0_system,
+            min_candidate_score=min_candidate_score,
+            admission_margin=admission_margin,
+            lambda_temporal=lambda_temporal,
+            lambda_static=lambda_static,
+            lambda_budget=lambda_budget,
+            opacity_attenuation=opacity_attenuation,
+            dynamic_probability_min=dynamic_probability_min,
+            event_beta=event_beta,
+        )
+        rows.append(row)
+        if row.get("status") == "skipped":
+            skipped += 1
+        if accepted_window is not None:
+            accepted_windows.append(accepted_window)
+
+    scenes = sorted({str(window.get("scene", "")) for window in candidate_manifest.get("windows", [])})
+    accepted_by_scene = {
+        scene: len([window for window in accepted_windows if str(window.get("scene", "")) == scene])
+        for scene in scenes
+    }
+    summary = {
+        "candidate_manifest": str(candidate_manifest_path),
+        "n_candidates": len(candidate_manifest.get("windows", [])),
+        "n_scored": len(rows) - skipped,
+        "n_skipped": skipped,
+        "n_accepted": len(accepted_windows),
+        "accepted_by_scene": accepted_by_scene,
+        "mean_delta_score": mean_or_none(
+            float(row["delta_score"]) for row in rows if row.get("delta_score") is not None
+        ),
+        "mean_smooth_score": mean_or_none(
+            float(row["smooth_score"]) for row in rows if row.get("smooth_score") is not None
+        ),
+        "mean_event_score": mean_or_none(
+            float(row["event_score"]) for row in rows if row.get("event_score") is not None
+        ),
+        "guardrails": {
+            "uses_frozen_window_labels": False,
+            "uses_gt_crop_pixels": False,
+            "uses_gt_residual": False,
+            "uses_training_gt_photometric_score": True,
+            "frozen_window_overlap_tuning": False,
+        },
+        "admission_parameters": {
+            "route0_system": route0_system,
+            "min_candidate_score": float(min_candidate_score),
+            "admission_margin": float(admission_margin),
+            "lambda_temporal": float(lambda_temporal),
+            "lambda_static": float(lambda_static),
+            "lambda_budget": float(lambda_budget),
+            "opacity_attenuation": float(opacity_attenuation),
+            "dynamic_probability_min": float(dynamic_probability_min),
+            "event_beta": float(event_beta),
+        },
+    }
+    event_manifest = {
+        "description": "R035 accepted non-oracle visibility-event supports for train-time persistent opacity gating.",
+        "frames_are_inclusive": True,
+        "generated_by": "admit-visibility-events",
+        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "source_candidate_manifest": str(candidate_manifest_path),
+        "uses_frozen_window_labels": False,
+        "uses_gt_crop_pixels": False,
+        "uses_gt_residual": False,
+        "uses_training_gt_photometric_score": True,
+        "admission_parameters": summary["admission_parameters"],
+        "windows": accepted_windows,
+    }
+    validation = validate_visibility_event_manifest(event_manifest)
+
+    write_csv(out_dir / "visibility_event_admission_rows.csv", rows)
+    write_json(out_dir / "visibility_event_admission_summary.json", summary)
+    write_json(out_dir / "visibility_event_manifest.json", event_manifest)
+    write_json(out_dir / "visibility_event_manifest_validation.json", validation)
+    write_visibility_event_admission_report(out_dir / "visibility_event_admission_report.md", summary, validation)
+    return {
+        "rows": rows,
+        "summary": summary,
+        "manifest": event_manifest,
+        "validation": validation,
+        "manifest_path": str(out_dir / "visibility_event_manifest.json"),
+        "summary_path": str(out_dir / "visibility_event_admission_summary.json"),
+    }
+
+
+def score_visibility_event_candidate(
+    window: Dict[str, object],
+    base_dir: Path,
+    route0_system: str,
+    min_candidate_score: float,
+    admission_margin: float,
+    lambda_temporal: float,
+    lambda_static: float,
+    lambda_budget: float,
+    opacity_attenuation: float,
+    dynamic_probability_min: float,
+    event_beta: float,
+) -> Tuple[Dict[str, object], Optional[Dict[str, object]]]:
+    window_id = str(window.get("window_id", ""))
+    scene = str(window.get("scene", ""))
+    frame_start = int(window["frame_start"])
+    frame_end = int(window["frame_end"])
+    crop = tuple(int(value) for value in window.get("crop_xyxy", []))
+    candidate_score_value = float(window.get("candidate_score", 0.0))
+    base_row: Dict[str, object] = {
+        "window_id": window_id,
+        "scene": scene,
+        "frame_start": frame_start,
+        "frame_end": frame_end,
+        "crop_xyxy": list(crop),
+        "candidate_score": candidate_score_value,
+    }
+    try:
+        systems = window.get("systems", {})
+        route0 = systems[route0_system]
+        render_dir = resolve_path(base_dir, route0.get("render_dir"))
+        gt_dir = resolve_path(base_dir, route0.get("gt_dir"))
+        dynamic_dir = resolve_path(base_dir, route0.get("dynamic_dir")) if route0.get("dynamic_dir") else None
+        static_dir = resolve_path(base_dir, route0.get("static_dir")) if route0.get("static_dir") else None
+        if dynamic_dir is None:
+            raise ValueError("candidate has no dynamic_dir for event proxy scoring")
+        render_frames = load_frame_window(render_dir, frame_start, frame_end, crop)
+        gt_frames = load_frame_window(gt_dir, frame_start, frame_end, crop)
+        dynamic_frames = load_frame_window(dynamic_dir, frame_start, frame_end, crop)
+        static_ghost = 0.0
+        if static_dir is not None and static_dir.exists():
+            static_ghost = float(np.mean(np.abs(load_frame_window(static_dir, frame_start, frame_end, crop))))
+    except Exception as exc:
+        row = dict(base_row)
+        row.update(
+            {
+                "status": "skipped",
+                "skip_reason": repr(exc),
+                "smooth_score": None,
+                "event_score": None,
+                "delta_score": None,
+                "accepted": False,
+            }
+        )
+        return row, None
+
+    frame_ids = np.arange(frame_start, frame_end + 1, dtype=np.float32)
+    event_weight = visibility_event_window_weight(frame_ids, frame_start, frame_end, event_beta)
+    event_proxy = np.clip(
+        render_frames - float(opacity_attenuation) * event_weight[:, None, None, None] * dynamic_frames,
+        0.0,
+        1.0,
+    ).astype(np.float32)
+
+    smooth_metrics = image_window_metrics(render_frames, gt_frames)
+    event_metrics = image_window_metrics(event_proxy, gt_frames)
+    smooth_score = (
+        smooth_metrics["l1"]
+        + float(lambda_temporal) * smooth_metrics["flicker"]
+        + float(lambda_static) * static_ghost
+    )
+    event_budget = float(np.mean(event_weight))
+    event_score = (
+        event_metrics["l1"]
+        + float(lambda_temporal) * event_metrics["flicker"]
+        + float(lambda_static) * static_ghost
+        + float(lambda_budget) * event_budget
+    )
+    delta = event_score - smooth_score
+    accepted = candidate_score_value >= float(min_candidate_score) and delta <= -float(admission_margin)
+    row = dict(base_row)
+    row.update(
+        {
+            "status": "scored",
+            "smooth_l1": smooth_metrics["l1"],
+            "event_l1": event_metrics["l1"],
+            "smooth_flicker": smooth_metrics["flicker"],
+            "event_flicker": event_metrics["flicker"],
+            "static_ghost": static_ghost,
+            "event_budget": event_budget,
+            "smooth_score": float(smooth_score),
+            "event_score": float(event_score),
+            "delta_score": float(delta),
+            "accepted": bool(accepted),
+        }
+    )
+    if not accepted:
+        return row, None
+
+    accepted_window = {
+        "window_id": window_id,
+        "scene": scene,
+        "frame_start": frame_start,
+        "frame_end": frame_end,
+        "crop_xyxy": list(crop),
+        "occluder": "NONORACLE_VISIBILITY_EVENT",
+        "accepted": True,
+        "candidate_score": candidate_score_value,
+        "smooth_score": float(smooth_score),
+        "event_score": float(event_score),
+        "delta_score": float(delta),
+        "opacity_attenuation": float(opacity_attenuation),
+        "dynamic_probability_min": float(dynamic_probability_min),
+        "event_beta": float(event_beta),
+        "notes": (
+            "Accepted by frozen R035 training-time photometric/temporal score on non-oracle candidate support; "
+            "does not use frozen R009 crop labels or GT crop compositing."
+        ),
+        "systems": window.get("systems", {}),
+    }
+    return row, accepted_window
+
+
+def validate_visibility_event_manifest(manifest: Dict[str, object]) -> Dict[str, object]:
+    errors: List[str] = []
+    warnings: List[str] = []
+    if manifest.get("uses_frozen_window_labels") is not False:
+        errors.append("uses_frozen_window_labels must be false")
+    if manifest.get("uses_gt_crop_pixels") is not False:
+        errors.append("uses_gt_crop_pixels must be false")
+    if manifest.get("uses_gt_residual") is not False:
+        errors.append("uses_gt_residual must be false")
+    for idx, window in enumerate(manifest.get("windows", [])):
+        for key in ("window_id", "scene", "frame_start", "frame_end", "crop_xyxy"):
+            if key not in window:
+                errors.append(f"window[{idx}] missing {key}")
+        try:
+            crop = parse_crop_xyxy(window.get("crop_xyxy", []))
+            if crop[2] - crop[0] <= 0 or crop[3] - crop[1] <= 0:
+                errors.append(f"window[{idx}] has empty crop")
+        except Exception as exc:
+            errors.append(f"window[{idx}] invalid crop: {exc}")
+        if int(window.get("frame_end", -1)) < int(window.get("frame_start", 0)):
+            errors.append(f"window[{idx}] frame_end before frame_start")
+    if len(manifest.get("windows", [])) == 0:
+        warnings.append("No visibility events were accepted")
+    return {
+        "ok": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "n_windows": len(manifest.get("windows", [])),
+    }
+
+
+def write_visibility_event_admission_report(
+    path: Path,
+    summary: Dict[str, object],
+    validation: Dict[str, object],
+) -> None:
+    lines = [
+        "# Visibility-Event Admission Report",
+        "",
+        "## Summary",
+        "",
+        f"- Candidates: `{summary['n_candidates']}`",
+        f"- Scored: `{summary['n_scored']}`",
+        f"- Skipped: `{summary['n_skipped']}`",
+        f"- Accepted: `{summary['n_accepted']}`",
+        f"- Mean delta score: `{format_metric(summary.get('mean_delta_score'))}`",
+        "",
+        "## Accepted By Scene",
+        "",
+    ]
+    for scene, count in summary.get("accepted_by_scene", {}).items():
+        lines.append(f"- `{scene}`: `{count}`")
+    lines.extend(["", "## Guardrails", ""])
+    for key, value in summary.get("guardrails", {}).items():
+        lines.append(f"- `{key}`: `{value}`")
+    lines.extend(["", "## Validation", ""])
+    lines.append(f"- `ok`: `{validation['ok']}`")
+    lines.append(f"- `errors`: `{len(validation['errors'])}`")
+    lines.append(f"- `warnings`: `{len(validation['warnings'])}`")
+    for warning in validation.get("warnings", []):
+        lines.append(f"- WARNING: {warning}")
+    for error in validation.get("errors", []):
+        lines.append(f"- ERROR: {error}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def discover_event_boundary_support(
     manifest_path: Path,
     out_dir: Path,
