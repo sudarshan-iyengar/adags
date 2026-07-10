@@ -183,3 +183,14 @@ When SSH access is renewed, R037 event eval must be submitted before any frozen-
 - prior controls `event_boundary_micro_densify`, `oracle_crop_support_micro_densify`, and `route0_continue_6400`
 
 Do not score from `hide_reveal_real_windows.json` alone, since that would only include `route0` and would weaken the predeclared gate.
+
+## Blocked Audit
+
+As of `2026-07-10T06:18:12+02:00`, the same Leonardo SSH credential blocker has repeated across three consecutive goal turns. The event-gated method has not received a PASS or FAIL verdict because R037 eval and frozen-window scoring require renewed HPC access.
+
+Blocked items:
+
+- Check whether R036 smooth eval jobs `49045923`, `49045924`, `49045925` completed.
+- Submit R037 event eval from `refine-logs/visibility_event_train_train_jobs_20260710_024651.tsv`.
+- Build and validate `r036_r037_visibility_event_manifest.json`.
+- Run final frozen-window scoring and R038 result-to-claim / experiment-audit.

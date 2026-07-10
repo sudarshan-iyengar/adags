@@ -773,3 +773,25 @@ python scripts/run_hide_reveal_poc.py real-eval \
 ```
 
 Do not score R036/R037 against `hide_reveal_real_windows.json` alone; that would omit the residual and matched-lifespan baselines needed for the strict gate.
+
+### 2026-07-10T06:18:12+02:00 - blocked audit threshold reached
+
+- Third consecutive goal-turn access check still fails:
+  - command: `ssh -o BatchMode=yes -o ConnectTimeout=15 siyengar@login.leonardo.cineca.it "hostname"`
+  - result: `Permission denied (publickey,gssapi-keyex,gssapi-with-mic)`.
+- Loaded certificate remains unchanged and expired:
+  - key ID: `sudarshan.iyengar@kuleuven.be`
+  - principal: `siyengar`
+  - valid: `2026-07-09T18:08:38` to `2026-07-10T06:08:38`.
+- This blocks:
+  - checking R036 smooth eval jobs `49045923`, `49045924`, `49045925`;
+  - submitting R037 event eval;
+  - fetching eval logs/renders;
+  - running final frozen-window scoring and R038 audit.
+- Scientific state remains unresolved, not failed:
+  - R034 synthetic PASS.
+  - R035 proxy admission FAIL.
+  - R036/R037 full trainings COMPLETE.
+  - R036 eval SUBMITTED.
+  - R037 eval NOT SUBMITTED due external credential expiry.
+- Resume condition: renew the Leonardo SSH certificate, then run the post-renewal commands in the previous status section.
