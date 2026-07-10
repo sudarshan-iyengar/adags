@@ -90,9 +90,33 @@ When both eval variants complete:
 
 1. Verify each eval folder has `test/ours_6000/renders`, `gt`, `static`, and `dynamic`.
 2. Build one frozen-window manifest that includes route0, residual/uncertainty, matched-lifespan, R036 smooth, and R037 event outputs.
+   Use `refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json` as the strict baseline carrier; do not start from `hide_reveal_real_windows.json` alone.
 3. Run `scripts/run_hide_reveal_poc.py real-eval` once on that manifest.
 4. Run the result-to-claim / experiment-audit review before making any positive claim.
 5. Commit, push, and record all job IDs, output folders, metrics, and commit hashes.
+
+Exact scoring commands:
+
+```bash
+cd /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags
+
+python scripts/run_hide_reveal_poc.py augment-real-manifest-system \
+  --manifest refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json \
+  --eval-root /leonardo_work/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000 \
+  --system-name visibility_event_smooth_control \
+  --out refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest_smooth.json
+
+python scripts/run_hide_reveal_poc.py augment-real-manifest-system \
+  --manifest refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json \
+  --merge-manifest refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest_smooth.json \
+  --eval-root /leonardo_work/EUHPC_D21_034/proj_adags/runs/visibility_event_train_6000 \
+  --system-name visibility_event_train \
+  --out refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.json
+
+python scripts/run_hide_reveal_poc.py real-eval \
+  --manifest refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.json \
+  --out-dir refine-logs/hide_reveal_poc/r036_r037_visibility_event_real_eval
+```
 
 ## HPC Facts
 

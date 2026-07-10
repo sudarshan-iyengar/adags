@@ -735,3 +735,41 @@ ssh siyengar@login.leonardo.cineca.it 'cd /leonardo_work/EUHPC_D21_034/proj_adag
 ```
 
 After both R036 and R037 eval renders complete, build the combined frozen-window scoring manifest, score once, then run R038 result-to-claim / experiment-audit before declaring PASS or FAIL.
+
+### 2026-07-10T06:12+02:00 continuation - SSH still blocked; scoring path pinned
+
+- Fresh access check again failed:
+  - command: `ssh -o BatchMode=yes -o ConnectTimeout=15 siyengar@login.leonardo.cineca.it "hostname"`
+  - result: `Permission denied (publickey,gssapi-keyex,gssapi-with-mic)`.
+- The only loaded cert is still the expired Leonardo user cert:
+  - principal: `siyengar`
+  - valid: `2026-07-09T18:08:38` to `2026-07-10T06:08:38`.
+- Local SSH config contains only host/proxy definitions for `login.leonardo.cineca.it`, `leonardo-gw`, and `leonardo-login02`; no non-interactive renewal hook was found in local config/scripts.
+- Best strict baseline manifest for R036/R037 scoring is:
+  - `refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json`
+  - It already contains the five frozen windows with `route0`, `residual_uncertainty`, `matched_lifespan`, `hide_reveal` oracle upper bound, `event_boundary_micro_densify`, `oracle_crop_support_micro_densify`, and `route0_continue_6400`.
+
+Exact post-renewal scoring sequence after R036/R037 eval folders exist:
+
+```bash
+cd /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags
+
+python scripts/run_hide_reveal_poc.py augment-real-manifest-system \
+  --manifest refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json \
+  --eval-root /leonardo_work/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000 \
+  --system-name visibility_event_smooth_control \
+  --out refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest_smooth.json
+
+python scripts/run_hide_reveal_poc.py augment-real-manifest-system \
+  --manifest refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json \
+  --merge-manifest refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest_smooth.json \
+  --eval-root /leonardo_work/EUHPC_D21_034/proj_adags/runs/visibility_event_train_6000 \
+  --system-name visibility_event_train \
+  --out refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.json
+
+python scripts/run_hide_reveal_poc.py real-eval \
+  --manifest refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.json \
+  --out-dir refine-logs/hide_reveal_poc/r036_r037_visibility_event_real_eval
+```
+
+Do not score R036/R037 against `hide_reveal_real_windows.json` alone; that would omit the residual and matched-lifespan baselines needed for the strict gate.

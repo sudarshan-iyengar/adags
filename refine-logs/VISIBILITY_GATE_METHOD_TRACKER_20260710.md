@@ -171,3 +171,15 @@ This is an infrastructure BLOCKED state, not a PASS/FAIL result. The method verd
 4. R038 result-to-claim / experiment-audit review.
 
 No frozen-window metrics have been inspected for R036/R037 yet, and no threshold has been changed after training.
+
+## Resume / Scoring Guardrail
+
+When SSH access is renewed, R037 event eval must be submitted before any frozen-window verdict is made. The final R036/R037 scoring manifest must be built by adding `visibility_event_smooth_control` and `visibility_event_train` to `refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json`, because that manifest already contains the strict comparison systems:
+
+- `route0`
+- `residual_uncertainty`
+- `matched_lifespan`
+- `hide_reveal` oracle upper bound
+- prior controls `event_boundary_micro_densify`, `oracle_crop_support_micro_densify`, and `route0_continue_6400`
+
+Do not score from `hide_reveal_real_windows.json` alone, since that would only include `route0` and would weaken the predeclared gate.
