@@ -678,3 +678,21 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
   - `H_smooth` receives the same R020 field for ROI/capacity pressure but no visibility gate.
   - `H_event` receives the same R020 field plus the opacity visibility gate during the original 6000-iteration training loop.
   - no thresholds are tuned on frozen R009 crop overlap or frozen-window metrics.
+
+### 2026-07-10T02:49:00+02:00 - R036/R037 train submission state
+
+- Submitter executable-bit commit pushed: `0fa08ddf70e48ec93baf821a8a54e06f61f27280`.
+- First train wave used the default `TIME=02:30:00` and was cancelled early because observed progress projected too close to the walltime:
+  - R036 smooth jobs: `49042345`, `49042346`, `49042347`, cancelled after about 8 minutes.
+  - R037 event jobs: `49042385`, `49042386`, `49042389`, cancelled after about 7 minutes.
+  - Engineering interpretation: config/method launch was valid; event logs loaded 24 R020 visibility events per scene. The cancellation was only to avoid a predictable timeout.
+- Replacement train wave submitted with `TIME=04:30:00`:
+  - R036 smooth manifest: `refine-logs/visibility_event_smooth_train_jobs_20260710_024626.tsv`
+  - R036 jobs: `49042444` cut_roasted_beef, `49042445` flame_steak, `49042446` sear_steak
+  - R037 event manifest: `refine-logs/visibility_event_train_train_jobs_20260710_024651.tsv`
+  - R037 jobs: `49042510` cut_roasted_beef, `49042512` flame_steak, `49042514` sear_steak
+- Next command:
+
+```bash
+ssh siyengar@login.leonardo.cineca.it 'sacct -j 49042444,49042445,49042446,49042510,49042512,49042514 --format=JobID,State,Elapsed,Timelimit,ExitCode -P'
+```
