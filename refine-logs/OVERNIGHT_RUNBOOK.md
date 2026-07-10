@@ -51,6 +51,19 @@ The next hide/reveal milestone must change the mechanism rather than only changi
 
 R034+ kill rule: if synthetic identity/reconnection or admission separation fails, do not launch the real pilot. If the real pilot is valid but fails the frozen-window gate, record a scientific FAIL and iterate to the next predeclared mechanism candidate rather than tuning on the five crops.
 
+## 2026-07-10 R035 Failure Branch
+
+R035 proxy admission rejected all R020 candidates: `0/72` accepted, validation `ok=true`, mean delta score `+0.200982`. Do not change the frozen R035 admission margin to create accepted events.
+
+Proceed with the revised full-training branch:
+
+1. Use configs `configs/n3v/visibility_event_smooth_control_6000.yaml` and `configs/n3v/visibility_event_train_6000.yaml`.
+2. Both configs use the fixed R020 high-recall candidate manifest: `refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json`.
+3. Submit R036 smooth-control full trainings.
+4. Submit R037 event-gated full trainings.
+5. After both eval render folders exist, build a combined frozen-window manifest and score once.
+6. Treat the result as PASS/FAIL by the predeclared gate in `EVENT_CROP_METHOD_TRACKER.md`; do not tune candidate thresholds on the frozen windows.
+
 ## HPC Facts
 
 - SSH: `ssh siyengar@login.leonardo.cineca.it`

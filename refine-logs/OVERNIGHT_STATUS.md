@@ -652,4 +652,29 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 - Scientific interpretation:
   - PASS: DA3 setup/inference/support-generation pipeline is operational and durable.
   - FAIL/WEAK: current DA3 support-fusion variants do not produce strong frozen-window event-crop coverage. They are much weaker than R020 high-recall boxes (`0.491371` mean crop coverage) and should not be promoted into a positive rendered-method claim.
-  - Next meaningful rendered-method direction remains training-loop integration or a changed capacity/optimization mechanism. Do not spend more runs on this exact posthoc support-only family unless there is a new, predeclared depth formulation.
+- Next meaningful rendered-method direction remains training-loop integration or a changed capacity/optimization mechanism. Do not spend more runs on this exact posthoc support-only family unless there is a new, predeclared depth formulation.
+
+### 2026-07-10T02:32:14+02:00 - R034/R035 visibility-gate state
+
+- Local branch at start of this wave: `codex/hide-reveal-poc-implementation`.
+- Pre-edit HEAD: `f10071f4f676cdf60b9989d7ea0bfe7af7df6ae7`.
+- Pre-edit dirty/untracked state was recorded before file changes; unrelated dirty files were preserved:
+  - modified: `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md`
+  - modified: `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md`
+  - untracked workspace/personal files including `.codex/`, `.obsidian/`, `AGENTS.md`, `Untitled.canvas`, `configs/n3v/bootstrap.yaml`, `det_con.yaml`, `follow-up.md`, `idea-stage/`, `requirements.txt`, and verification images.
+- Protocol/predeclaration commit pushed: `1a34b4d528f59d1bd887753dd9e5c736c02b3ef4`.
+- Visibility-event implementation commit pushed: `e2c8cc08966a1b88f54bad75dfc999ab8b62b452`.
+- Leonardo checkout fast-forwarded to `e2c8cc08966a1b88f54bad75dfc999ab8b62b452`; remote bash syntax and Python compile checks passed.
+- R034 synthetic fixture PASS:
+  - output: `refine-logs/hide_reveal_poc/r034_visibility_gate_synthetic/`
+  - held-out candidate recall `1.0`, accepted precision/recall `1.0/1.0`, false event rate `0.0`, margin AUC `1.0`, identity reconnection `1.0`, `proceed_to_real_windows=true`.
+- R035 proxy admission FAIL:
+  - output: `refine-logs/hide_reveal_poc/r035_visibility_event_admission/`
+  - candidates scored `72`, accepted `0`, validation `ok=true`.
+  - mean delta score `+0.200982`; minimum delta score `+0.118458`, so no near-threshold acceptance case exists.
+  - scientific interpretation: the simple image-space dynamic-attenuation proxy is worse than smooth on all scored training-observation candidates. Do not weaken the margin to create accepted events.
+- Revised next step before frozen real scoring:
+  - run R036/R037 as a full matched-budget training comparison on the fixed R020 high-recall candidate field directly.
+  - `H_smooth` receives the same R020 field for ROI/capacity pressure but no visibility gate.
+  - `H_event` receives the same R020 field plus the opacity visibility gate during the original 6000-iteration training loop.
+  - no thresholds are tuned on frozen R009 crop overlap or frozen-window metrics.

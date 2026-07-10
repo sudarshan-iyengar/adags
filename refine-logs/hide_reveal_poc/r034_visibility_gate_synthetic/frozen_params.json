@@ -1,0 +1,13 @@
+{
+  "a_frame": 10,
+  "b_frame": 18,
+  "beta": 1.0,
+  "c_min": 0.55,
+  "lambda_budget": 0.05,
+  "lambda_id": 1.0,
+  "lambda_static": 0.5,
+  "m_event": 0.02,
+  "m_pass": 4096,
+  "static_margin": 2.0,
+  "support_radius": 5.5
+}

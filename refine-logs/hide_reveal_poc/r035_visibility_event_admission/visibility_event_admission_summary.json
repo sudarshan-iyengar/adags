@@ -1,0 +1,33 @@
+{
+  "accepted_by_scene": {
+    "cut_roasted_beef": 0,
+    "flame_steak": 0,
+    "sear_steak": 0
+  },
+  "admission_parameters": {
+    "admission_margin": 0.0005,
+    "dynamic_probability_min": 0.55,
+    "event_beta": 1.0,
+    "lambda_budget": 0.0001,
+    "lambda_static": 0.0,
+    "lambda_temporal": 0.25,
+    "min_candidate_score": 0.0,
+    "opacity_attenuation": 0.85,
+    "route0_system": "route0"
+  },
+  "candidate_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json",
+  "guardrails": {
+    "frozen_window_overlap_tuning": false,
+    "uses_frozen_window_labels": false,
+    "uses_gt_crop_pixels": false,
+    "uses_gt_residual": false,
+    "uses_training_gt_photometric_score": true
+  },
+  "mean_delta_score": 0.20098239142247473,
+  "mean_event_score": 0.2193725185244396,
+  "mean_smooth_score": 0.018390127101964835,
+  "n_accepted": 0,
+  "n_candidates": 72,
+  "n_scored": 72,
+  "n_skipped": 0
+}

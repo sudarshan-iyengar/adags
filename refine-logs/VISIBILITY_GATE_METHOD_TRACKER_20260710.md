@@ -81,3 +81,55 @@ PASS requires a non-oracle Gaussian-rendered method that improves the frozen win
 FAIL is acceptable and scientifically useful if R034/R037 are valid and do not improve over baselines. In that case, preserve the logs, summarize the failure, and start a new method tracker for the next predeclared mechanism.
 
 BLOCKED only applies after three serious attempts at the same implementation or infrastructure blocker.
+
+## 2026-07-10T02:32+02:00 Update
+
+### R034 synthetic fixture: PASS
+
+Local run:
+
+```bash
+python scripts/run_hide_reveal_poc.py synthetic --out-dir refine-logs/hide_reveal_poc/r034_visibility_gate_synthetic --seeds 0 1 2 3 4 5 --clips-per-type 8
+```
+
+Held-out metrics in `refine-logs/hide_reveal_poc/r034_visibility_gate_synthetic/synthetic_summary.json`:
+
+- candidate recall: `1.0`
+- accepted precision / recall: `1.0` / `1.0`
+- false event rate on normal controls: `0.0`
+- margin AUC: `1.0`
+- identity reconnection accuracy: `1.0`
+- `proceed_to_real_windows=true`
+
+Interpretation: the synthetic fixture is not a real-result claim, but it passes the predeclared sanity gate for trying one real matched pilot.
+
+### R035 proxy admission: FAIL
+
+HPC command:
+
+```bash
+python scripts/run_hide_reveal_poc.py admit-visibility-events --candidate-manifest refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json --out-dir refine-logs/hide_reveal_poc/r035_visibility_event_admission --admission-margin 0.0005 --lambda-temporal 0.25 --lambda-budget 0.0001 --opacity-attenuation 0.85 --dynamic-probability-min 0.55 --event-beta 1.0
+```
+
+Output summary:
+
+- candidates scored: `72`
+- accepted: `0`
+- validation: `ok=true`
+- mean smooth score: `0.0183901`
+- mean event-proxy score: `0.219373`
+- mean delta score: `+0.200982`
+- minimum delta score: `+0.118458`
+
+Interpretation: the cheap image-space hypothesis "attenuate the dynamic contribution now and score the crop" is not defensible on the real training observations. This failure should not be rescued by weakening the frozen margin.
+
+### R036/R037 revised real pilot
+
+Because R035 rejected every candidate, the full pilot is revised before any R036/R037 frozen-window scoring:
+
+- `H_smooth`: use the same fixed R020 high-recall candidate field for local ROI/capacity pressure, but no event opacity gate.
+- `H_event`: use the same fixed R020 high-recall candidate field plus the visibility-event opacity gate during the original 6000-iteration training loop.
+- No frozen crop labels or frozen-window metrics are used to select the R020 field or tune thresholds.
+- PASS/FAIL remains the predeclared frozen-window gate against route0, residual, matched-lifespan, and oracle-gap recovery.
+
+This is a new method attempt, not a relaxation of R035.

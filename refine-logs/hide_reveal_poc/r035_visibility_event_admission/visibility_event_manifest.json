@@ -1,0 +1,23 @@
+{
+  "admission_parameters": {
+    "admission_margin": 0.0005,
+    "dynamic_probability_min": 0.55,
+    "event_beta": 1.0,
+    "lambda_budget": 0.0001,
+    "lambda_static": 0.0,
+    "lambda_temporal": 0.25,
+    "min_candidate_score": 0.0,
+    "opacity_attenuation": 0.85,
+    "route0_system": "route0"
+  },
+  "description": "R035 accepted non-oracle visibility-event supports for train-time persistent opacity gating.",
+  "frames_are_inclusive": true,
+  "generated_at_utc": "2026-07-10T00:30:14+00:00",
+  "generated_by": "admit-visibility-events",
+  "source_candidate_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json",
+  "uses_frozen_window_labels": false,
+  "uses_gt_crop_pixels": false,
+  "uses_gt_residual": false,
+  "uses_training_gt_photometric_score": true,
+  "windows": []
+}

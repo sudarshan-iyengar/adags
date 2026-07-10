@@ -1,5 +1,5 @@
-# R037 visibility-event pilot.
-# Identical to R036 smooth control except that accepted R035 events multiply
+# R037 visibility-event pilot for the frozen R020 high-recall event field.
+# Identical to R036 smooth control except that R020 candidate windows multiply
 # dynamic opacity before rasterization with a warmup during training.
 gaussian_dim: 4
 time_duration: [0.0, 10.0]
@@ -79,7 +79,7 @@ OptimizationParams:
   dynamic_mask_from_residual: true
   dynamic_mask_residual_quantile: 0.85
   dynamic_mask_dilate: 2
-  event_candidate_manifest: "refine-logs/hide_reveal_poc/r035_visibility_event_admission/visibility_event_manifest.json"
+  event_candidate_manifest: "refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json"
   event_candidate_scene: ""
   event_candidate_dilate: 4
   event_boundary_support_manifest: ""
@@ -87,7 +87,7 @@ OptimizationParams:
   event_boundary_dilate: 0
   event_boundary_replace_dynamic_mask: false
   event_boundary_frame_fallback: false
-  visibility_event_manifest: "refine-logs/hide_reveal_poc/r035_visibility_event_admission/visibility_event_manifest.json"
+  visibility_event_manifest: "refine-logs/hide_reveal_poc/r020_high_recall_motion_supported_nonoracle_candidates/nonoracle_candidate_manifest.json"
   visibility_event_scene: ""
   visibility_event_opacity_attenuation: 0.85
   visibility_event_dynamic_probability_min: 0.55
