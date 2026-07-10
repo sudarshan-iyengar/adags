@@ -194,3 +194,43 @@ Blocked items:
 - Submit R037 event eval from `refine-logs/visibility_event_train_train_jobs_20260710_024651.tsv`.
 - Build and validate `r036_r037_visibility_event_manifest.json`.
 - Run final frozen-window scoring and R038 result-to-claim / experiment-audit.
+
+## 2026-07-10T07:55+02:00 Final Verdict
+
+SSH access was renewed and the blocked items above were completed.
+
+R036 smooth eval:
+
+- jobs: `49045923`, `49045924`, `49045925`
+- status: all `COMPLETED`, exit `0:0`
+- eval folders: complete, 300 frames each under `test/ours_6000/{renders,gt,static,dynamic}`
+
+R037 event eval:
+
+- jobs: `49051779`, `49051782`, `49051783`
+- status: all `COMPLETED`, exit `0:0`
+- eval folders: complete, 300 frames each under `test/ours_6000/{renders,gt,static,dynamic}`
+
+Final strict scoring artifacts:
+
+- manifest: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.json`
+- validation: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.validation.json`, `ok=true`
+- metrics: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_real_eval/`
+- logs: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_logs/`
+- crop strips: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_summary/crop_strips/`
+- decision memo: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_decision_memo.md`
+- result-to-claim: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_summary/result_to_claim.md`
+- integrity audit: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_summary/experiment_audit.md`
+
+Gate result for R037 `visibility_event_train`:
+
+- mean PSNR `30.1089` versus route0 `30.5021`
+- mean L1/proxy-LPIPS `0.0157600` versus route0 `0.0148316`
+- route0 PSNR+L1 wins `0/5`
+- strict all-baseline PSNR+L1 wins `0/5`
+- static no-worse versus route0 `1/5`
+- mean oracle PSNR-gap recovery `-0.0391`
+
+Final verdict: FAIL. The current fixed non-oracle training-loop opacity-gate mechanism does not improve frozen hide/reveal windows and does not recover the oracle event-crop upper bound.
+
+R038 independent reviewer verdict: `claim_supported=no`, `confidence=high`, `integrity_status=warn`. The warnings are missing learned LPIPS, missing identity/gate statistics, and limited five-window scope; no fake GT, self-normalized scoring, or phantom results were found.

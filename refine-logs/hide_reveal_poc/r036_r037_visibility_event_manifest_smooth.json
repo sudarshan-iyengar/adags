@@ -1,0 +1,446 @@
+{
+  "augmented_system": "visibility_event_smooth_control",
+  "description": "Frozen R009 real occlusion/reveal windows for hide/reveal PoC scoring.",
+  "eval_roots": [
+    "/leonardo_work/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000"
+  ],
+  "frames_are_inclusive": true,
+  "frozen_at_utc": "2026-07-06T00:20:08Z",
+  "generated_at_utc": "2026-07-10T05:49:53+00:00",
+  "generated_by": "augment-real-manifest-system",
+  "matched_eval_runs": {
+    "cut_roasted_beef": {
+      "eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000",
+      "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/gt",
+      "n_common_frames": 300,
+      "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/renders",
+      "scene": "20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000",
+      "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/static"
+    },
+    "flame_steak": {
+      "eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000",
+      "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/gt",
+      "n_common_frames": 300,
+      "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/renders",
+      "scene": "20260710_024626_flame_steak_visibility_event_smooth_control_6000",
+      "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/static"
+    },
+    "sear_steak": {
+      "eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_sear_steak_visibility_event_smooth_control_6000/test/ours_6000",
+      "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_sear_steak_visibility_event_smooth_control_6000/test/ours_6000/gt",
+      "n_common_frames": 300,
+      "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_sear_steak_visibility_event_smooth_control_6000/test/ours_6000/renders",
+      "scene": "20260710_024626_sear_steak_visibility_event_smooth_control_6000",
+      "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_sear_steak_visibility_event_smooth_control_6000/test/ours_6000/static"
+    }
+  },
+  "merge_manifests": [],
+  "scene_sources": {
+    "cut_roasted_beef": {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/flow",
+      "flow_npz_keys": [
+        "flow.npy",
+        "mask.npy"
+      ],
+      "flow_shape_hwc": [
+        1014,
+        1352,
+        2
+      ],
+      "frame_range": [
+        0,
+        299
+      ],
+      "image_size_xy": [
+        676,
+        507
+      ],
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/motion_priors/masks",
+      "mask_image_size_xy": [
+        1352,
+        1014
+      ],
+      "n_dynamic_frames": 300,
+      "n_flow_npz": 5980,
+      "n_gt_frames": 300,
+      "n_mask_frames": 300,
+      "n_render_frames": 300,
+      "n_static_frames": 300,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000",
+      "track_confidence": "not_found in route0 eval or data sidecars during R009 discovery"
+    },
+    "flame_steak": {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/flow",
+      "flow_npz_keys": [
+        "flow.npy",
+        "mask.npy"
+      ],
+      "flow_shape_hwc": [
+        1014,
+        1352,
+        2
+      ],
+      "frame_range": [
+        0,
+        299
+      ],
+      "image_size_xy": [
+        676,
+        507
+      ],
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/motion_priors/masks",
+      "mask_image_size_xy": [
+        1352,
+        1014
+      ],
+      "n_dynamic_frames": 300,
+      "n_flow_npz": 6279,
+      "n_gt_frames": 300,
+      "n_mask_frames": 300,
+      "n_render_frames": 300,
+      "n_static_frames": 300,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "track_confidence": "not_found in route0 eval or data sidecars during R009 discovery"
+    },
+    "sear_steak": {
+      "flow_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/flow",
+      "flow_npz_keys": [
+        "flow.npy",
+        "mask.npy"
+      ],
+      "flow_shape_hwc": [
+        1014,
+        1352,
+        2
+      ],
+      "frame_range": [
+        0,
+        299
+      ],
+      "image_size_xy": [
+        676,
+        507
+      ],
+      "mask_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/motion_priors/masks",
+      "mask_image_size_xy": [
+        1352,
+        1014
+      ],
+      "n_dynamic_frames": 300,
+      "n_flow_npz": 6279,
+      "n_gt_frames": 300,
+      "n_mask_frames": 300,
+      "n_render_frames": 300,
+      "n_static_frames": 300,
+      "route0_eval_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000",
+      "track_confidence": "not_found in route0 eval or data sidecars during R009 discovery"
+    }
+  },
+  "selection_policy": {
+    "candidate_sheets": [
+      "refine-logs/hide_reveal_poc/r009_visual_audit/contact_sheets/cut_roasted_beef_gt_render_contact.jpg",
+      "refine-logs/hide_reveal_poc/r009_visual_audit/contact_sheets/flame_steak_gt_render_contact.jpg",
+      "refine-logs/hide_reveal_poc/r009_visual_audit/contact_sheets/sear_steak_gt_render_contact.jpg",
+      "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/cut_roasted_beef_w01.jpg",
+      "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/cut_roasted_beef_w02.jpg",
+      "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/flame_steak_w01.jpg",
+      "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/flame_steak_w02.jpg",
+      "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/sear_steak_w01.jpg"
+    ],
+    "method": "Sparse visual audit of GT and route0 renders only; no real-window metric scoring was used to choose windows.",
+    "pre_scoring": true
+  },
+  "source_manifest": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r029_r030_disambiguation_manifest.json",
+  "windows": [
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "frame_end": 110,
+      "frame_start": 95,
+      "notes": "Lower-center meat/cutting-board crop; tongs and knife repeatedly occlude and reveal textured meat before scoring.",
+      "occluder": "hands, tongs, and knife over sliced meat",
+      "scene": "cut_roasted_beef",
+      "selection_evidence": "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/cut_roasted_beef_w01.jpg",
+      "systems": {
+        "event_boundary_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_cut_roasted_beef_event_boundary_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_cut_roasted_beef_event_boundary_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_cut_roasted_beef_event_boundary_micro_densify_6400/test/ours_6400/static"
+        },
+        "hide_reveal": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/hide_reveal/cut_roasted_beef_60f7e1a5/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "matched_lifespan": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/matched_lifespan/cut_roasted_beef_60f7e1a5/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "oracle_crop_support_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_cut_roasted_beef_oracle_crop_support_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_cut_roasted_beef_oracle_crop_support_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_cut_roasted_beef_oracle_crop_support_micro_densify_6400/test/ours_6400/static"
+        },
+        "residual_uncertainty": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/static"
+        },
+        "route0": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "route0_continue_6400": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_cut_roasted_beef_route0_continue_6400_control/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_cut_roasted_beef_route0_continue_6400_control/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_cut_roasted_beef_route0_continue_6400_control/test/ours_6400/static"
+        },
+        "visibility_event_smooth_control": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_hand_tongs_meat_095_110"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        315,
+        455,
+        470
+      ],
+      "frame_end": 155,
+      "frame_start": 140,
+      "notes": "Lower-center meat/cutting-board crop; hand and knife sweep across the sliced meat and expose it again.",
+      "occluder": "hand and knife over sliced meat",
+      "scene": "cut_roasted_beef",
+      "selection_evidence": "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/cut_roasted_beef_w02.jpg",
+      "systems": {
+        "event_boundary_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_cut_roasted_beef_event_boundary_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_cut_roasted_beef_event_boundary_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_cut_roasted_beef_event_boundary_micro_densify_6400/test/ours_6400/static"
+        },
+        "hide_reveal": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/hide_reveal/cut_roasted_beef_60f7e1a5/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "matched_lifespan": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/matched_lifespan/cut_roasted_beef_60f7e1a5/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "oracle_crop_support_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_cut_roasted_beef_oracle_crop_support_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_cut_roasted_beef_oracle_crop_support_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_cut_roasted_beef_oracle_crop_support_micro_densify_6400/test/ours_6400/static"
+        },
+        "residual_uncertainty": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_cut_roasted_beef_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/static"
+        },
+        "route0": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "route0_continue_6400": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_cut_roasted_beef_route0_continue_6400_control/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_cut_roasted_beef_route0_continue_6400_control/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_cut_roasted_beef_route0_continue_6400_control/test/ours_6400/static"
+        },
+        "visibility_event_smooth_control": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_cut_roasted_beef_visibility_event_smooth_control_6000/test/ours_6000/static"
+        }
+      },
+      "window_id": "cut_roasted_beef_hand_knife_meat_140_155"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "frame_end": 170,
+      "frame_start": 155,
+      "notes": "Lower-center pan crop; torch jet and flame cover the steak surface and surrounding pan before reveal.",
+      "occluder": "torch flame over steak and pan",
+      "scene": "flame_steak",
+      "selection_evidence": "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/flame_steak_w01.jpg",
+      "systems": {
+        "event_boundary_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_flame_steak_event_boundary_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_flame_steak_event_boundary_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_flame_steak_event_boundary_micro_densify_6400/test/ours_6400/static"
+        },
+        "hide_reveal": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/hide_reveal/flame_steak_66dc34aa/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "matched_lifespan": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/matched_lifespan/flame_steak_66dc34aa/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "oracle_crop_support_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_flame_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_flame_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_flame_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/static"
+        },
+        "residual_uncertainty": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/static"
+        },
+        "route0": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "route0_continue_6400": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_flame_steak_route0_continue_6400_control/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_flame_steak_route0_continue_6400_control/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_flame_steak_route0_continue_6400_control/test/ours_6400/static"
+        },
+        "visibility_event_smooth_control": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_torch_pan_155_170"
+    },
+    {
+      "crop_xyxy": [
+        250,
+        300,
+        445,
+        460
+      ],
+      "frame_end": 210,
+      "frame_start": 195,
+      "notes": "Lower-center pan crop; flame moves across and then reveals the steak/pan region.",
+      "occluder": "torch flame sweep over steak",
+      "scene": "flame_steak",
+      "selection_evidence": "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/flame_steak_w02.jpg",
+      "systems": {
+        "event_boundary_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_flame_steak_event_boundary_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_flame_steak_event_boundary_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_flame_steak_event_boundary_micro_densify_6400/test/ours_6400/static"
+        },
+        "hide_reveal": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/hide_reveal/flame_steak_66dc34aa/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "matched_lifespan": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/matched_lifespan/flame_steak_66dc34aa/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "oracle_crop_support_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_flame_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_flame_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_flame_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/static"
+        },
+        "residual_uncertainty": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_flame_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/static"
+        },
+        "route0": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012711_flame_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "route0_continue_6400": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_flame_steak_route0_continue_6400_control/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_flame_steak_route0_continue_6400_control/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_flame_steak_route0_continue_6400_control/test/ours_6400/static"
+        },
+        "visibility_event_smooth_control": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_flame_steak_visibility_event_smooth_control_6000/test/ours_6000/static"
+        }
+      },
+      "window_id": "flame_steak_torch_sweep_195_210"
+    },
+    {
+      "crop_xyxy": [
+        245,
+        320,
+        450,
+        470
+      ],
+      "frame_end": 235,
+      "frame_start": 220,
+      "notes": "Lower-center pan crop; spoon crosses the steak surface, then moves enough to expose texture again.",
+      "occluder": "spoon and hand over steak",
+      "scene": "sear_steak",
+      "selection_evidence": "refine-logs/hide_reveal_poc/r009_visual_audit/candidate_crop_sheets/sear_steak_w01.jpg",
+      "systems": {
+        "event_boundary_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_sear_steak_event_boundary_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_sear_steak_event_boundary_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/event_boundary_micro_densify_6400/20260707_234937_sear_steak_event_boundary_micro_densify_6400/test/ours_6400/static"
+        },
+        "hide_reveal": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/hide_reveal/sear_steak_233d4c92/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "matched_lifespan": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/refine-logs/hide_reveal_poc/r012_r013_derived_real_renders/derived_renders/matched_lifespan/sear_steak_233d4c92/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "oracle_crop_support_micro_densify": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_sear_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_sear_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/oracle_crop_support_micro_densify_6400/20260708_153750_sear_steak_oracle_crop_support_micro_densify_6400/test/ours_6400/static"
+        },
+        "residual_uncertainty": {
+          "dynamic_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_sear_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/dynamic",
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_sear_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_sear_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_filemask_residual_600k/20260619_184247_sear_steak_fixed_budget_lora_route0_filemask_residual_600k/test/ours_6000/static"
+        },
+        "route0": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012714_sear_steak_fixed_budget_lora_route0_600k/test/ours_6000/static"
+        },
+        "route0_continue_6400": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_sear_steak_route0_continue_6400_control/test/ours_6400/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_sear_steak_route0_continue_6400_control/test/ours_6400/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/route0_continue_6400_control/20260708_152429_sear_steak_route0_continue_6400_control/test/ours_6400/static"
+        },
+        "visibility_event_smooth_control": {
+          "gt_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_sear_steak_visibility_event_smooth_control_6000/test/ours_6000/gt",
+          "render_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_sear_steak_visibility_event_smooth_control_6000/test/ours_6000/renders",
+          "static_dir": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_sear_steak_visibility_event_smooth_control_6000/test/ours_6000/static"
+        }
+      },
+      "window_id": "sear_steak_spoon_pan_220_235"
+    }
+  ]
+}

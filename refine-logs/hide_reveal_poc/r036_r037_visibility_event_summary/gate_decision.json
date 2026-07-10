@@ -1,0 +1,51 @@
+{
+  "run_ids": ["R036", "R037"],
+  "date": "2026-07-10",
+  "manifest": "refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.json",
+  "metrics_csv": "refine-logs/hide_reveal_poc/r036_r037_visibility_event_real_eval/real_event_window_metrics.csv",
+  "summary_json": "refine-logs/hide_reveal_poc/r036_r037_visibility_event_real_eval/real_event_window_summary.json",
+  "predeclared_gate": {
+    "strict_all_baseline_psnr_l1_wins_min": 3,
+    "static_no_worse_vs_route0_min": 3,
+    "mean_psnr_gain_vs_route0_min_db": 0.5,
+    "mean_l1_improvement_vs_route0_min": 0.001,
+    "oracle_gap_recovery_min_fraction": 0.25
+  },
+  "systems": {
+    "route0": {
+      "mean_psnr": 30.5021,
+      "mean_l1": 0.0148316,
+      "mean_flicker": 0.00799083,
+      "mean_static_ghost_score": 0.127333
+    },
+    "hide_reveal_oracle_upper_bound": {
+      "mean_psnr": 41.7149,
+      "mean_l1": 0.00266536,
+      "mean_flicker": 0.00168586,
+      "mean_static_ghost_score": 0.127333,
+      "is_trained_model_output": false
+    },
+    "visibility_event_smooth_control": {
+      "mean_psnr": 30.293627877359874,
+      "mean_l1": 0.0144447797909379,
+      "mean_flicker": 0.00805326,
+      "mean_static_ghost_score": 0.116426,
+      "route0_psnr_l1_wins": 2,
+      "strict_all_baseline_psnr_l1_wins": 2,
+      "static_no_worse_vs_route0": 3,
+      "mean_oracle_psnr_gap_recovery": -0.018254618979500297
+    },
+    "visibility_event_train": {
+      "mean_psnr": 30.108903365170573,
+      "mean_l1": 0.015760033391416073,
+      "mean_flicker": 0.0084133,
+      "mean_static_ghost_score": 0.165836,
+      "route0_psnr_l1_wins": 0,
+      "strict_all_baseline_psnr_l1_wins": 0,
+      "static_no_worse_vs_route0": 1,
+      "mean_oracle_psnr_gap_recovery": -0.039128594412661
+    }
+  },
+  "verdict": "FAIL",
+  "reason": "The event-gated visibility method fails the strict frozen-window gate: 0/5 route0 PSNR+L1 wins, 0/5 strict all-baseline PSNR+L1 wins, 1/5 static no-worse, negative mean PSNR oracle-gap recovery, and worse mean PSNR/L1/flicker/static ghost than route0."
+}

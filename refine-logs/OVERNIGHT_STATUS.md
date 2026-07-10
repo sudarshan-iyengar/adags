@@ -795,3 +795,39 @@ Do not score R036/R037 against `hide_reveal_real_windows.json` alone; that would
   - R036 eval SUBMITTED.
   - R037 eval NOT SUBMITTED due external credential expiry.
 - Resume condition: renew the Leonardo SSH certificate, then run the post-renewal commands in the previous status section.
+
+### 2026-07-10T07:55+02:00 - resumed after SSH renewal; R036/R037 final FAIL
+
+- SSH certificate was renewed and access recovered at `2026-07-10T07:36:50+02:00`:
+  - `ssh siyengar@login.leonardo.cineca.it "hostname"` returned `login02.leonardo.local`.
+  - renewed cert valid `2026-07-10T07:34:27` to `2026-07-10T19:34:27`.
+- Remote repo fast-forwarded to pushed branch state before completing eval/scoring.
+- R036 smooth eval jobs completed:
+  - `49045923`, `49045924`, `49045925`: all `COMPLETED`, exit `0:0`.
+- R037 event eval submitted and completed:
+  - manifest: `refine-logs/visibility_event_train_eval_jobs_20260710_073836.tsv`
+  - jobs: `49051779`, `49051782`, `49051783`: all `COMPLETED`, exit `0:0`.
+- Verified R036 and R037 eval folders:
+  - each of six scene/variant eval folders contains 300 `renders`, 300 `gt`, 300 `static`, and 300 `dynamic` PNG frames under `test/ours_6000`.
+- Built final strict manifest:
+  - `refine-logs/hide_reveal_poc/r036_r037_visibility_event_manifest.json`
+  - validation `ok=true`, zero errors, zero warnings.
+- Ran frozen-window scoring:
+  - output: `refine-logs/hide_reveal_poc/r036_r037_visibility_event_real_eval/`
+  - systems: `event_boundary_micro_densify`, `hide_reveal`, `matched_lifespan`, `oracle_crop_support_micro_densify`, `residual_uncertainty`, `route0`, `route0_continue_6400`, `visibility_event_smooth_control`, `visibility_event_train`.
+- Fetched train/eval Slurm logs into:
+  - `refine-logs/hide_reveal_poc/r036_r037_visibility_event_logs/`
+  - scan for hard error markers (`Traceback`, `ERROR`, `FAILED`, `CANCELLED`, etc.) returned no matches.
+- Final R037 gate result:
+  - mean PSNR `30.1089` versus route0 `30.5021`
+  - mean L1/proxy-LPIPS `0.0157600` versus route0 `0.0148316`
+  - route0 PSNR+L1 wins `0/5`
+  - strict all-baseline PSNR+L1 wins `0/5`
+  - static no-worse versus route0 `1/5`
+  - mean oracle PSNR-gap recovery `-0.0391`
+- R038 independent review:
+  - claim_supported `no`
+  - confidence `high`
+  - integrity_status `warn`
+  - no evidence of fake GT, self-normalized scores, or phantom metrics; warnings are limited LPIPS/identity/gate-stat evidence and five-window scope.
+- Completion state: FAIL. This is a valid negative method result, not blocked.

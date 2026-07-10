@@ -1,0 +1,8 @@
+{
+  "claim_supported": "no",
+  "confidence": "high",
+  "integrity_status": "warn",
+  "routing_action": "record_failed_method_and_do_not_tune_on_frozen_windows",
+  "supported_claim": "The fixed non-oracle opacity-gate training-loop variant failed the strict frozen-window gate.",
+  "unsupported_claim": "The visibility-event method improves frozen hide/reveal windows or recovers a meaningful oracle-gap fraction."
+}

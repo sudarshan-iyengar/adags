@@ -118,6 +118,8 @@ python scripts/run_hide_reveal_poc.py real-eval \
   --out-dir refine-logs/hide_reveal_poc/r036_r037_visibility_event_real_eval
 ```
 
+Final state: the resume path was executed after SSH renewal. R037 completed and failed the strict frozen-window gate. See `refine-logs/hide_reveal_poc/r036_r037_visibility_event_decision_memo.md` for the final verdict.
+
 ## HPC Facts
 
 - SSH: `ssh siyengar@login.leonardo.cineca.it`

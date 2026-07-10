@@ -1,0 +1,42 @@
+{
+  "date": "2026-07-10",
+  "auditor": "independent-codex-subagent",
+  "overall_verdict": "warn",
+  "integrity_status": "warn",
+  "checks": {
+    "gt_provenance": {
+      "status": "pass_with_caveat",
+      "details": "Actual smooth/event metrics use dataset gt_dir crops. The hide_reveal row is a GT-crop composite but is explicitly labeled as an oracle upper bound."
+    },
+    "score_normalization": {
+      "status": "pass",
+      "details": "PSNR/L1/flicker/static ghost are computed directly from render-reference comparisons; no self-normalization by prediction statistics was found."
+    },
+    "result_existence": {
+      "status": "pass",
+      "details": "Manifest validation ok=true with n_windows=5 and zero errors/warnings; report, summary, and metrics files exist and agree."
+    },
+    "dead_code_or_uncalled_metrics": {
+      "status": "warn",
+      "details": "Core metrics were called and written, but learned LPIPS and identity-switch metrics were not computed."
+    },
+    "scope": {
+      "status": "warn",
+      "details": "Five frozen windows from three scenes and one run per condition support a pilot failure verdict, not a broad method-general claim."
+    },
+    "eval_type": {
+      "status": "warn",
+      "details": "Actual method/control rows are checkpoint-rendered real-GT evaluations; hide_reveal is an oracle GT-crop composite upper bound and must remain separated."
+    }
+  },
+  "claims": [
+    {
+      "id": "visibility_event_positive_repair",
+      "impact": "unsupported"
+    },
+    {
+      "id": "fixed_opacity_gate_variant_failed",
+      "impact": "supported"
+    }
+  ]
+}
