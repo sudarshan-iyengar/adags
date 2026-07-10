@@ -696,3 +696,42 @@ Recorded before collecting R024 logs and creating the R025 scoring manifest.
 ```bash
 ssh siyengar@login.leonardo.cineca.it 'sacct -j 49042444,49042445,49042446,49042510,49042512,49042514 --format=JobID,State,Elapsed,Timelimit,ExitCode -P'
 ```
+
+### 2026-07-10T06:12:18+02:00 - R036/R037 train complete; eval partially submitted, SSH blocked
+
+- Local branch: `codex/hide-reveal-poc-implementation`.
+- Local/remote branch state before this status update: `codex/hide-reveal-poc-implementation...origin/codex/hide-reveal-poc-implementation`.
+- Dirty/untracked state remains unrelated and preserved:
+  - modified: `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md`
+  - modified: `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md`
+  - untracked: `.codex/`, `.obsidian/`, `AGENTS.md`, `Untitled.canvas`, `configs/n3v/bootstrap.yaml`, `det_con.yaml`, `follow-up.md`, `idea-stage/`, `requirements.txt`, and verification images.
+- R036 smooth-control training completed successfully:
+  - `49042444` cut_roasted_beef: `COMPLETED`, elapsed `03:20:43`, exit `0:0`
+  - `49042445` flame_steak: `COMPLETED`, elapsed `03:17:53`, exit `0:0`
+  - `49042446` sear_steak: `COMPLETED`, elapsed `03:01:59`, exit `0:0`
+- R037 event-gated training completed successfully:
+  - `49042510` cut_roasted_beef: `COMPLETED`, elapsed `03:14:24`, exit `0:0`
+  - `49042512` flame_steak: `COMPLETED`, elapsed `03:15:55`, exit `0:0`
+  - `49042514` sear_steak: `COMPLETED`, elapsed `03:00:49`, exit `0:0`
+- All six `chkpnt6000.pth` checkpoints were observed under:
+  - `$WORK/proj_adags/runs/visibility_event_smooth_control_6000/20260710_024626_*_visibility_event_smooth_control_6000/`
+  - `$WORK/proj_adags/runs/visibility_event_train_6000/20260710_024651_*_visibility_event_train_6000/`
+- R036 smooth-control eval was submitted with `EVAL_TIME=01:30:00`:
+  - manifest: `refine-logs/visibility_event_smooth_eval_jobs_20260710_060900.tsv`
+  - jobs: `49045923` cut_roasted_beef, `49045924` flame_steak, `49045925` sear_steak
+- R037 event-gated eval has not been submitted. Two submit attempts failed with SSH permission denial.
+- Blocking diagnosis:
+  - `ssh-add -L | ssh-keygen -Lf -` shows the loaded Leonardo SSH certificate was valid only from `2026-07-09T18:08:38` to `2026-07-10T06:08:38`.
+  - A fresh `ssh -o BatchMode=yes -o ConnectTimeout=15 siyengar@login.leonardo.cineca.it "hostname"` at `2026-07-10T06:12:18+02:00` failed with `Permission denied (publickey,gssapi-keyex,gssapi-with-mic)`.
+  - Alternate host/proxy attempts also failed after the certificate expiry. No obvious non-interactive certificate-renewal command was found in local context.
+- Current status: infrastructure BLOCKED on Leonardo SSH credential renewal, not a scientific FAIL.
+
+Resume after SSH certificate renewal:
+
+```bash
+ssh siyengar@login.leonardo.cineca.it 'cd /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags && sacct -j 49045923,49045924,49045925 --format=JobID,State,Elapsed,Timelimit,ExitCode -P'
+
+ssh siyengar@login.leonardo.cineca.it 'cd /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags && EVAL_TIME=01:30:00 scripts/submit_visibility_event_pilot.sh --variant event --mode eval --run-manifest refine-logs/visibility_event_train_train_jobs_20260710_024651.tsv'
+```
+
+After both R036 and R037 eval renders complete, build the combined frozen-window scoring manifest, score once, then run R038 result-to-claim / experiment-audit before declaring PASS or FAIL.

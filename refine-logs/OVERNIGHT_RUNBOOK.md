@@ -64,6 +64,36 @@ Proceed with the revised full-training branch:
 5. After both eval render folders exist, build a combined frozen-window manifest and score once.
 6. Treat the result as PASS/FAIL by the predeclared gate in `EVENT_CROP_METHOD_TRACKER.md`; do not tune candidate thresholds on the frozen windows.
 
+## 2026-07-10 R036/R037 Resume State
+
+R036/R037 full trainings completed successfully with six `chkpnt6000.pth` checkpoints:
+
+- R036 smooth jobs: `49042444`, `49042445`, `49042446`.
+- R037 event jobs: `49042510`, `49042512`, `49042514`.
+
+R036 smooth eval was submitted:
+
+- Eval jobs: `49045923`, `49045924`, `49045925`.
+- Eval manifest: `refine-logs/visibility_event_smooth_eval_jobs_20260710_060900.tsv`.
+
+R037 event eval is not submitted yet because the Leonardo SSH certificate expired at `2026-07-10T06:08:38`. This is an infrastructure blocker, not a method verdict.
+
+After SSH renewal, resume with:
+
+```bash
+ssh siyengar@login.leonardo.cineca.it 'cd /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags && sacct -j 49045923,49045924,49045925 --format=JobID,State,Elapsed,Timelimit,ExitCode -P'
+
+ssh siyengar@login.leonardo.cineca.it 'cd /leonardo_work/EUHPC_D21_034/proj_adags/repo/adags && EVAL_TIME=01:30:00 scripts/submit_visibility_event_pilot.sh --variant event --mode eval --run-manifest refine-logs/visibility_event_train_train_jobs_20260710_024651.tsv'
+```
+
+When both eval variants complete:
+
+1. Verify each eval folder has `test/ours_6000/renders`, `gt`, `static`, and `dynamic`.
+2. Build one frozen-window manifest that includes route0, residual/uncertainty, matched-lifespan, R036 smooth, and R037 event outputs.
+3. Run `scripts/run_hide_reveal_poc.py real-eval` once on that manifest.
+4. Run the result-to-claim / experiment-audit review before making any positive claim.
+5. Commit, push, and record all job IDs, output folders, metrics, and commit hashes.
+
 ## HPC Facts
 
 - SSH: `ssh siyengar@login.leonardo.cineca.it`

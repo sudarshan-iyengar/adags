@@ -133,3 +133,41 @@ Because R035 rejected every candidate, the full pilot is revised before any R036
 - PASS/FAIL remains the predeclared frozen-window gate against route0, residual, matched-lifespan, and oracle-gap recovery.
 
 This is a new method attempt, not a relaxation of R035.
+
+## 2026-07-10T06:12+02:00 Update
+
+### R036/R037 training: COMPLETE
+
+The matched full-training pilot ran through the original 6000-iteration loop rather than a 200/400-step posthoc patch.
+
+R036 `H_smooth`:
+
+- manifest: `refine-logs/visibility_event_smooth_train_jobs_20260710_024626.tsv`
+- jobs: `49042444`, `49042445`, `49042446`
+- status: all `COMPLETED`, exit `0:0`
+- checkpoints: all three `chkpnt6000.pth` observed under `$WORK/proj_adags/runs/visibility_event_smooth_control_6000/`
+
+R037 `H_event`:
+
+- manifest: `refine-logs/visibility_event_train_train_jobs_20260710_024651.tsv`
+- jobs: `49042510`, `49042512`, `49042514`
+- status: all `COMPLETED`, exit `0:0`
+- checkpoints: all three `chkpnt6000.pth` observed under `$WORK/proj_adags/runs/visibility_event_train_6000/`
+
+### Eval state
+
+R036 smooth eval was submitted with `EVAL_TIME=01:30:00`:
+
+- jobs: `49045923`, `49045924`, `49045925`
+- manifest: `refine-logs/visibility_event_smooth_eval_jobs_20260710_060900.tsv`
+
+R037 event eval has not been submitted. SSH to Leonardo now fails because the loaded certificate expired at `2026-07-10T06:08:38`.
+
+This is an infrastructure BLOCKED state, not a PASS/FAIL result. The method verdict must wait for:
+
+1. R036 eval completion check.
+2. R037 eval submission and completion.
+3. One frozen-window scoring run against route0, residual/uncertainty, matched-lifespan, R036, and R037.
+4. R038 result-to-claim / experiment-audit review.
+
+No frozen-window metrics have been inspected for R036/R037 yet, and no threshold has been changed after training.
