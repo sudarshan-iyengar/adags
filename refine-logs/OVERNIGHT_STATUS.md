@@ -1,5 +1,35 @@
 # Overnight Status
 
+## Fresh Snapshot - 2026-07-10T02:07:43+02:00
+
+- Current objective phase: R034+ training-loop visibility-state method planning and implementation.
+- Current run ID: R034 synthetic matched-hypothesis visibility fixture, then R035/R036 real pilot only if R034 passes.
+- Current method candidate: non-oracle event-candidate field plus matched-budget `H_smooth` versus `H_event`, where `H_event` keeps persistent Gaussian state and learns/applies a time-dependent opacity visibility gate before rasterization.
+- Current branch: `codex/hide-reveal-poc-implementation`
+- Current local commit: `f10071f4f676cdf60b9989d7ea0bfe7af7df6ae7`
+- Current local status command: `git status --short --branch`
+- Current dirty/untracked state before this 2026-07-10 orchestration edit:
+  - tracked dirty:
+    - `refine-logs/hide_reveal_poc/r015_poc_summary/poc_table.md`
+    - `refine-logs/hide_reveal_poc/r016_go_no_go_memo.md`
+  - untracked:
+    - `.codex/`
+    - `.obsidian/`
+    - `AGENTS.md`
+    - `Untitled.canvas`
+    - `configs/n3v/bootstrap.yaml`
+    - `det_con.yaml`
+    - `follow-up.md`
+    - `idea-stage/`
+    - `requirements.txt`
+    - `verify_mask.jpg`
+    - `verify_masked_flow.jpg`
+    - `verify_raw_flow.jpg`
+- Preservation rule: these pre-existing tracked/untracked changes are not part of the R034+ method unless explicitly staged later after review.
+- Latest inherited evidence: R031-R033 DA3 support pipeline is operational but weak as a hard support detector; R030 showed oracle crop support does not rescue the current posthoc micro-densification mechanism.
+- Next command: inspect route0 training/rasterization code paths and implement the smallest synthetic `H_smooth`/`H_event` matched-budget visibility-gate fixture before touching real-scene training.
+- Open blockers: none yet.
+
 ## Recovery Snapshot
 
 - Current objective phase: depth-occlusion support setup in parallel with training-loop integration planning
