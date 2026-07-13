@@ -1,0 +1,16 @@
+ipython
+numpy
+scipy
+PyYAML
+omegaconf
+opencv-python
+matplotlib
+pillow
+tqdm
+tabulate
+torch
+torchvision
+torchaudio
+kornia
+torchmetrics
+wandb
