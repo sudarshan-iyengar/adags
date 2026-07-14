@@ -1,45 +1,74 @@
-# JetBrains IDE folder
-.idea/
+# Editors and operating-system metadata
+/.idea/
+/.vscode/
+/.codex/
+/.obsidian/
+.DS_Store
+Thumbs.db
 
+# Local datasets, run outputs, and generated analysis
+/data/
+/output/
+/runs/
+/analysis/
+/refine-logs/
 
-# Data folder (adjust if your data folder has a different name or path)
-data/
+# Scheduler logs stay local; the policy file remains tracked.
+/logs/*
+!/logs/README.md
+*.out
+*.err
+*.log
 
-# Output folder (adjust if your output folder has a different name or path)
-output/
-test/
+# Checkpoints, tensors, binary arrays, and serialized runtime state
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.dump
+snapshot_*
 
-*.run
-
-# Python cache files
+# Python caches and environments
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.env
+*.env
+venv/
+env/
 
-# Build artifacts
+# Build and compiled products
 build/
 dist/
 *.egg-info/
 *.so
 *.dylib
+*.dll
+*.a
+*.o
+*.obj
 
-# Environment files
-.env
-venv/
-env/
-*.env
+# Experiment service payloads
+wandb/
+**/wandb/
+*.run
 
-# Local agent tooling
-.agents/
-skills-lock.json
+# Agent-local installations and state
+/.agents/
+/skills-lock.json
 
-# Generated analysis outputs
-analysis/
-refine-logs/
-research-wiki/
-logs/
+# Durable research-wiki pages and referenced figures are tracked normally.
+# Unmanaged Obsidian attachments stay ignored; intentionally place durable
+# referenced figures under research-wiki/assets/ or another tracked path.
+/research-wiki/.obsidian/
+/research-wiki/.trash/
+/research-wiki/attachments/
 
-# Operating System files
-.DS_Store
-Thumbs.db
+# Temporary root-level verification images
+/verify_*.jpg
+/verify_*.png
+/*_verify.png
