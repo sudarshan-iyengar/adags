@@ -19,9 +19,13 @@ DATASET_ROOT="${DATASET_ROOT:-$WORK/proj_adags/data/panopticsports}"
 WANDB_PROJECT="${WANDB_PROJECT:-adags}"
 WANDB_ENTITY="${WANDB_ENTITY:-}"
 WANDB_GROUP="${WANDB_GROUP:-panopticsports}"
+REPO_ROOT="${WORK}/proj_adags/repo/adags"
+LOG_ROOT="${REPO_ROOT}/logs"
+
+mkdir -p "$LOG_ROOT"
 
 if [[ "$SMOKE" == "1" ]]; then
-  CONFIG="${CONFIG:-$WORK/proj_adags/repo/adags/configs/panopticsports/smoke.yaml}"
+  CONFIG="${CONFIG:-$REPO_ROOT/configs/panopticsports/smoke.yaml}"
   RUN_LABEL="${RUN_LABEL:-panopticsports_smoke}"
   RUN_TAG="${RUN_TAG:-panoptic_smoke}"
   TRAIN_TIME="${TRAIN_TIME:-00:20:00}"
@@ -30,9 +34,14 @@ if [[ "$SMOKE" == "1" ]]; then
   WANDB_MODE="${WANDB_MODE:-offline}"
   EVAL_AFTER="${EVAL_AFTER:-0}"
 else
-  CONFIG="${CONFIG:-$WORK/proj_adags/repo/adags/configs/panopticsports/scaffold_lora_route0_dyn_densify_ptbudget.yaml}"
-  RUN_LABEL="${RUN_LABEL:-panopticsports_scaffold_lora_route0_dyn_densify_ptbudget}"
-  RUN_TAG="${RUN_TAG:-panoptic_scaffold_lora_route0_dyn_densify_ptbudget}"
+  if [[ -z "${CONFIG:-}" ]]; then
+    echo "CONFIG must be set explicitly when SMOKE is not 1." >&2
+    exit 2
+  fi
+  CONFIG_BASENAME="$(basename -- "$CONFIG")"
+  CONFIG_STEM="${CONFIG_BASENAME%.*}"
+  RUN_LABEL="${RUN_LABEL:-panopticsports_${CONFIG_STEM}}"
+  RUN_TAG="${RUN_TAG:-panoptic_${CONFIG_STEM}}"
   TRAIN_TIME="${TRAIN_TIME:-15:00:00}"
   CPUS_PER_TASK="${CPUS_PER_TASK:-16}"
   CKPT_ITER="${CKPT_ITER:-6000}"
@@ -49,8 +58,8 @@ for SCENE in "${SCENES[@]}"; do
       -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
       -N 1 --ntasks=1 --cpus-per-task="$CPUS_PER_TASK" --gres=gpu:1 \
       -t "$TRAIN_TIME" \
-      -o "$WORK/proj_adags/exp_index/panopticsports_${SCENE}_%j.out" \
-      -e "$WORK/proj_adags/exp_index/panopticsports_${SCENE}_%j.err" \
+      -o "$LOG_ROOT/panopticsports_${SCENE}_%j.out" \
+      -e "$LOG_ROOT/panopticsports_${SCENE}_%j.err" \
       --export=ALL,SCENE="$SCENE",RUN_TAG="$RUN_TAG",RUN_ID="$RUN_ID",RUN_LABEL="$RUN_LABEL",DATASET_ROOT="$DATASET_ROOT",CONFIG="$CONFIG",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE" \
       "$WORK/proj_adags/repo/adags/scripts/run_leonardo.sh" train
   )
@@ -65,8 +74,8 @@ for SCENE in "${SCENES[@]}"; do
         -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
         -N 1 --ntasks=1 --cpus-per-task=8 --gres=gpu:1 \
         -t 00:50:00 \
-        -o "$WORK/proj_adags/exp_index/panopticsports_${SCENE}_eval_%j.out" \
-        -e "$WORK/proj_adags/exp_index/panopticsports_${SCENE}_eval_%j.err" \
+        -o "$LOG_ROOT/panopticsports_${SCENE}_eval_%j.out" \
+        -e "$LOG_ROOT/panopticsports_${SCENE}_eval_%j.err" \
         --export=ALL,SCENE="$SCENE",RUN_TAG="$RUN_TAG",RUN_ID="$RUN_ID",RUN_LABEL="$RUN_LABEL",DATASET_ROOT="$DATASET_ROOT",CKPT_ITER="$CKPT_ITER",CONFIG="$CONFIG",WANDB_PROJECT="$WANDB_PROJECT",WANDB_ENTITY="$WANDB_ENTITY",WANDB_GROUP="$WANDB_GROUP",WANDB_MODE="$WANDB_MODE" \
         "$WORK/proj_adags/repo/adags/scripts/run_leonardo.sh" eval
     )

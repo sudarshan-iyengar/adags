@@ -1,1 +1,58 @@
+* text=auto
+
+# Cross-platform source and metadata files.
 *.sh text eol=lf
+*.bash text eol=lf
+*.py text eol=lf
+*.c text eol=lf
+*.cc text eol=lf
+*.cpp text eol=lf
+*.cu text eol=lf
+*.cuh text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.cmake text eol=lf
+CMakeLists.txt text eol=lf
+Makefile text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.csv text eol=lf
+*.tsv text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+
+# Native Windows launchers retain Windows line endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary and generated research artifacts must never be newline-normalized.
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.pdf -text
+*.npy -text
+*.npz -text
+*.pt -text
+*.pth -text
+*.ckpt -text
+*.pkl -text
+*.pickle -text
+*.so -text
+*.dylib -text
+*.dll -text
+*.a -text
+*.o -text
+*.obj -text
+*.zip -text
+*.tar -text
+*.gz -text
+*.bz2 -text
+*.xz -text
