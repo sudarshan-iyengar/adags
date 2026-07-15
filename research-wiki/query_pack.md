@@ -1,131 +1,142 @@
 # Query Pack
 
-Compressed project memory for ideation. Updated 2026-06-30 after latest-literature mapping and high-rigor idea tournament.
+Compressed project memory for ideation. Updated 2026-07-15 after canonicalizing
+[[objectives/depth-visibility-capacity-v1]].
 
-## Project Direction
+## Project direction
 
-ADAGS studies dynamic Gaussian Splatting for N3V cooking scenes. Current direction: keep reversible LoRA route0 as the stable base, then target fast-motion blur and static/dynamic ghosting using dynamic masks, reliable flow/track priors, scaffold or part/expert residual motion, and motion-aware densification. The 2026 literature narrows the claim: ADAGS needs to justify its route0/residual split against rigid-aware methods, its sharpness story against frequency-aware/Gabor representations, and its speed story against feedforward 4D reconstruction.
+ADAGS studies dynamic Gaussian reconstruction on calibrated N3V cooking scenes.
+The approved objective has two independent parts:
 
-## Selected Direction After Tournament
+1. infer foreground/background order and occluded, hidden, and newly revealed
+   surface state from calibrated multiview-temporal depth, appearance, camera
+   geometry, and correspondence, with uncertainty and abstention; and
+2. couple Gate-A-passing evidence to budget-neutral preservation plus
+   reassignment/reinitialization of Gaussian capacity so intermittently visible
+   content is learned while visible and reconstructed after reveal without
+   static harm.
 
-Primary direction: [[ideas/self-calibrated-prior-reliability-field]].
+Route 1, a deterministic/frozen geometry-first visibility ledger plus one
+capacity component, is approved as lead. Route 3, explicit layered surface
+memory, is fallback. Route 2, a learned visibility field, is permitted only if
+deterministic Gate A passes but remains incomplete.
 
-Paper package:
-- [[ideas/boundary-aware-static-anchor-negative-space]] is the deterministic baseline and static-leakage safeguard.
-- [[ideas/rendered-flow-gated-supervision]] is the first rendered/track-flow instantiation.
-- [[ideas/adags-failure-atlas-mechanism-screen]] is the diagnostic protocol and backup direction.
+## Approved experimental discipline
 
-Hard gate: reliability must beat LoRA route0 on dynamic-region quality while preserving static quality and matched realized budget. Kill the direction if reliability selects mostly easy pixels, suppresses hard boundaries, degrades static background, or cannot improve dynamic metrics over route0/render-gate.
+- Development: `cut_roasted_beef` only.
+- Locked transfer: `flame_steak` and `sear_steak`.
+- New human reference: at least 24 event tracks, target 30-36, at least 20%
+  independently double annotated.
+- R009 is historical continuity only, never an unbiased holdout or tuning set.
+- Gate A has separate engineering-admission and claim-grade transfer tiers.
+- Gate B practical targets: event PSNR `+0.20 dB` and LPIPS `-5%`; R009 `3/5`
+  and oracle-gap recovery are secondary diagnostics.
+- Conditional one-scene envelope: capacity-only and oracle-capacity first; only
+  after oracle admission, visibility-only, coupled, and shuffled evidence.
+  Maximum five lanes, 6000 iterations, 600k points, 15 hours per lane, about 80
+  GPU-hours total.
+- Cross-dataset evaluation is deferred until N3V Gate B admission.
+- No implementation or compute is authorized while state is
+  `objective_approved_awaiting_method_refinement`.
 
-## Problem-First Redo Addendum
+## Corrected prior evidence
 
-Generated 2026-06-30 after the user explicitly rejected over-constraining ideation around ADAGS. The redo treats ADAGS as an experimental sandbox rather than the final method boundary.
+R031-R033 did **not** test calibrated multiview-temporal depth. They used only
+`cam00`, omitted known cameras, ran independent adjacent two-frame DA3 calls,
+normalized depth per frame, compared time at the same pixel without warping,
+and inferred edges/change rather than surface order. Their overlap auditor then
+scored `cam00` support directly in historical `cam10` crop coordinates without
+reprojection. The qualitative audit found coherent coarse depth but brittle
+R032 contours, blocky R033 tile expansion, and clear cam00/cam10 viewpoint
+differences. Treat the negative as specific to that heuristic and evaluator.
 
-Updated stance:
+R030 rejects a 400-step, unwarped rectangle-weighted clone/split continuation
+on the existing bank. R037 used R020 boxes, not DA3, and rejects fixed opacity
+attenuation. Neither tested verified visibility plus hidden-surface capacity.
 
-- High-upside lead remains [[ideas/event-causal-visibility-gaussians]], but current concrete forms R017, R025, and R027 are negative.
-- Other SOTA-track seeds: [[ideas/identity-conserving-detail-carriers]], [[ideas/frequency-adaptive-temporal-support]], [[ideas/counterfactual-prior-usefulness-routing]].
-- Safe fallback remains [[ideas/self-calibrated-prior-reliability-field]] plus [[ideas/adags-failure-atlas-mechanism-screen]] and [[ideas/boundary-aware-static-anchor-negative-space]].
-- Do not pitch reliability-gated flow as the main intellectual bet unless the high-upside representation ideas fail feasibility or novelty checks.
+R013/R015 remain image-space oracle upper bounds. R017 opacity gating, R025
+candidate refinement, R027 boundary micro-densification, and R030 oracle-crop
+micro-densification failed checkpoint-backed event tests. Extra continuation
+alone also failed in R029.
 
-New field-level gaps: G13 visibility events, G14 identity-conserving detail promotion, G15 counterfactual prior usefulness.
+## Closest literature and novelty pressure
 
-Event-crop memory: R013/R015 remain oracle upper-bound evidence only. R017 actual opacity gating, R025 non-oracle candidate refinement, and R027 non-oracle boundary-gated micro-densification all failed the frozen R009 real-window gate. R027 was closest directionally but still only had 2/5 strict all-baseline PSNR+L1 wins and less than 1% oracle recovery. R028 posthoc support audit found R026 boundary support had essentially zero frozen-crop coverage. R029 route0 continuation worsened route0, so R027's tiny gain was not generic continuation. R030 oracle-support micro-densification also worsened route0 with 0/5 route0 PSNR+L1 wins, so support-only continuation of the current posthoc micro-densification recipe should be deprioritized.
+- [[papers/zhang2026_vad_gs]] is the closest capacity precedent: voxel
+  visibility and calibrated cross-frame MVS initialize missing Gaussian
+  geometry under urban LiDAR/box/rigidity assumptions.
+- [[papers/gao2026_proxy_gs]] uses proxy occlusion depth for culling and
+  surface-guided anchor densification. Visibility-guided capacity is not new in
+  general.
+- [[papers/zhou2026_4c4d]] applies different learned opacity-decay policies to
+  view/time-active and inactive 4D Gaussians. Visibility-conditioned dynamic
+  optimization is established.
+- [[papers/rai2026_packuv]] uses flow-guided keyframes, layered UV Gaussians,
+  projected dynamic labels, and static freezing for temporal consistency and
+  disocclusion.
+- [[papers/liu2025_occlugaussian]] uses static camera co-visibility for scene
+  partitioning and region culling.
+- Supporting geometry/representation context:
+  [[papers/lin2025_depth_anything_3]], [[papers/zhang2020_vis_mvsnet]],
+  [[papers/zhang2024_monst3r]], [[papers/li2021_neural_scene_flow_fields]],
+  [[papers/liu2021_neuray]], [[papers/lin2021_deep_3d_mask_volume]],
+  [[papers/luiten2023_dynamic_3d_gaussians]],
+  [[papers/li2023_spacetime_gaussians]], and [[papers/guo2026_usplat4d]].
 
-Important new literature memory: [[papers/zhao2026_ground4d]] adds geometry-consistency pressure and supports the idea that photometric dynamic GS needs stronger geometry/prior routing.
+Novelty is a working hypothesis, not a fact: calibrated uncertainty-bearing
+non-rigid surface order/reveal evidence plus budget-neutral preservation and
+reassignment may differ from opacity modulation, proxy-guided growth,
+keyframing, region partitioning, and VAD-GS new-geometry initialization. A full
+mechanism matrix remains required before any novelty claim.
 
-## Implemented Surface
+## Top gaps
 
-- Reversible soft routing, LoRA motion, older hard/static gate paths, W&B logging, Slurm launchers, and fixed-budget W&B analysis.
-- Current branch adds `MotionPriorCache`, dynamic ROI loss, static exclusion loss, optional rendered-flow/track-flow supervision, scaffold residual motion, motion-aware densification, and dynamic/static diagnostics.
-- Remote Codex branches add LoRA flow/mask variants: phase-2 LoRA, file-mask residual flow, core-mask ramp, render-gated flow, soft-border, boundary-ring, and static-anchor lanes.
+- G5: capacity allocation must be matched, budgeted, and dynamic-aware.
+- G7: event and static diagnostics are required; global PSNR is insufficient.
+- G9: uncertainty and occlusion confidence are missing from current priors.
+- G13: occlusion/disocclusion require causal visibility state rather than only
+  smooth deformation or lifespan effects.
+- G14: transient detail needs identity-preserving promotion/demotion.
+- G15: prior confidence must be separated from counterfactual usefulness.
 
-## Literature Map
+## Failed or weak ideas to preserve
 
-- Baselines: 4D-GS, Deformable 3DGS, SWinGS, Compact Dynamic 3DGS, Fully Explicit DGS, Grid4D.
-- Priors/tracks/scaffolds: MoSca, Shape of Motion, Prior-Enhanced GS.
-- Flow/motion guidance: MotionGS, SplatFlow, PaMoSplat.
-- Specialized motion/capacity: HiCoM, MAPo, SharpTimeGS, SpeeDe3DGS, SE(3) B-spline continuous motion, MoE-GS.
-- Latest omitted 4D cluster now ingested: RiGS, AdaGaR, D4RT, MotionScale, Hybrid 3D-4DGS, Disentangled4DGS, Mono4DGS-HDR, 4C4D, Flow4DGS-SLAM, and Multi4D.
-- Problem-first redo added Ground4D as geometry-consistency pressure.
-- Implication of latest cluster: "add scaffold/flow/capacity" is not enough; the defensible axis is reliable specialization with diagnostics: rigid/coherent base vs local residual, dynamic-frequency/detail preservation, fixed-budget allocation, and static leakage control.
-- Evaluation and reliability: MonoDyGauBench, USplat4D.
+- Single-camera normalized depth-edge/change support with component/tile caps.
+- Copying 2D crop coordinates across cameras without reprojection.
+- Another posthoc ROI, tile-fill, opacity-gate, or clone/split refinement as the
+  primary route.
+- Hard static/dynamic conversion, Gaussian blur curriculum, unanchored
+  scaffold residuals, broad flow supervision without reliability, and early
+  part-basis motion without strong initialization/priors.
+- Treating a passing Gate A as proof of Gate B, or blaming depth when an
+  oracle-capacity lane also fails.
 
-## Top Gaps
+## Implemented surface and fixed baseline
 
-- G1: dynamic-region sharpness needs direct objectives and metrics.
-- G3: long-range tracks/depth priors are now table stakes; ADAGS hook is inactive.
-- G4: scaffold residual motion is crowded by MoSca and Prior-Enhanced GS.
-- G6: single global motion models are a known weakness; specialize without losing route0 stability.
-- G7: claim needs dynamic diagnostics and qualitative panels, not only PSNR.
-- G8: flow supervision needs reliability gating, not broad application.
-- G9: uncertainty/occlusion confidence is missing from ADAGS masks and flow losses.
-- G11: representation frequency/detail is now a core sharpness axis.
-- G12: feedforward 4D reconstruction raises the baseline for speed/generalization claims.
-- G13: occlusion/disocclusion need visibility-event treatment rather than smooth deformation everywhere.
-- G14: high-frequency transient detail needs identity-conserving promotion/demotion rules.
-- G15: prior confidence must be separated from counterfactual prior usefulness.
+The base branch has reversible routing, LoRA motion, route0, MotionPriorCache,
+optional flow/mask supervision, route0/scaffold residual paths, ordinary
+clone/split densification, opacity/size pruning, and dynamic/static diagnostics.
+It does not have ordered surface visibility, hidden-surface protection, or
+visibility-driven budget-neutral reassignment. The fixed comparison is LoRA
+route0 at 6000 iterations and a 600k point ceiling.
 
-## W&B Evidence
+## Active chains
 
-Project: `models-ku-leuven/adags`.
+- R031-R033 camera-confounded edge support -> calibrated multiview-temporal
+  surface ledger -> Gate A.
+- R030/R037 existing-bank intervention failures -> oracle-capacity admission ->
+  preservation plus budget-neutral reassignment -> Gate B.
+- VAD-GS/Proxy-GS/4C4D/PackUV-GS novelty pressure -> mechanism-specific
+  ablations, conservative claims, and one dominant contribution.
 
-- 126 total runs; 126 finished; no active/crashed/failed/killed runs found.
-- Fixed-budget cohort: 36 finished runs. Mean PSNR: `lora_route0` 33.9558/34.4265/34.2963; `scaffold_lora_route0_noreg` 33.9639/33.8198/34.5127; `scaffold_lora_route0_dyn` 32.9705/34.0401/34.0693.
-- Mechanism screen: 15 finished 600k runs. Mean PSNR: `lora_route0` 34.2596, `lora_route0_dyn` 33.7631, `scaffold_lora_route0_noreg` 33.8535, `scaffold_lora_route0_reg` 33.9445, `scaffold_lora_route0_dyn` 33.1592.
-- Eval-6000 flow/phase-2 cohort: render-gated flow is stronger than naive flow lanes but needs controlled dynamic diagnostics.
-- No synced runs found with tag `diagnostics:dynamic_static`.
+## Open unknowns
 
-## Failed Or Weak Ideas To Preserve
-
-- Gaussian blur curriculum alone.
-- Hard static/dynamic conversion as main method.
-- Early part-basis motion without route0 initialization or strong priors.
-- Scaffold without active correspondence.
-- Naive broad flow supervision without reliability gating.
-- Unanchored scaffold residual motion as a paper lead.
-
-## Active Idea Seeds
-
-- [[ideas/self-calibrated-prior-reliability-field]]
-- [[ideas/boundary-aware-static-anchor-negative-space]]
-- [[ideas/adags-failure-atlas-mechanism-screen]]
-- [[ideas/dynamic-mask-static-exclusion]]
-- [[ideas/track-prior-scaffold-motion]]
-- [[ideas/rendered-flow-gated-supervision]]
-- [[ideas/motion-aware-densification-budget]]
-- [[ideas/part-aware-reversible-routing]]
-- [[ideas/dynamic-region-diagnostic-benchmark]]
-- [[ideas/route0-residual-specialist-motion]]
-- [[ideas/confidence-aware-prior-gating]]
-- [[ideas/dynamic-frequency-detail-budget]]
-- [[ideas/competitive-route0-residual-budget-allocator]]
-- [[ideas/reliable-temporal-detail-transport]]
-- [[ideas/adags-paper-direction-discovery-20260630]]
-- [[ideas/event-causal-visibility-gaussians]]
-- [[ideas/identity-conserving-detail-carriers]]
-- [[ideas/frequency-adaptive-temporal-support]]
-- [[ideas/counterfactual-prior-usefulness-routing]]
-
-## Latest Idea-Creator Ranking
-
-Generated 2026-06-30. Top recommendation: reliability-gated rendered flow plus dynamic-region diagnostics. Higher-novelty backup: route0-coherent plus residual-specialist motion, only if diagnostics show localized route0 failures. Conditional supports: confidence-aware prior gating and dynamic frequency/detail under fixed realized budgets. Do not pitch unanchored scaffold, naive broad flow, hard static conversion, blur curriculum, or early part-basis as lead methods.
-
-## Latest Tournament Ranking
-
-High-rigor tournament completed 2026-06-30 with three independent reviewer roles and rebuttal rulings. Result: C11/self-calibrated prior reliability field wins conditionally; C15/failure atlas is backup. I1/render-gated flow and C14/boundary-static-anchor are components, not standalone leads. I3/route0 residual specialization and C13/competitive budget allocation remain backup seeds only. I5/detail metrics, I2/diagnostics, and fixed-budget audits are required evidence axes, not standalone paper leads.
-
-## Open Unknowns
-
-- Are dynamic masks good enough, or are residual masks leaking too much background?
-- Does track-flow loss activate and produce sensible rendered flow when `enable_rendered_flow` is true?
-- Does scaffold coefficient/basis norm grow, or does the residual path stay unused?
-- Can ADAGS beat LoRA route0 on dynamic-region metrics while matching realized point budget?
-- Is the defensible novelty: training-only priors, flow reliability gating, reversible route0-specialized residuals, or dynamic-region diagnostics?
-- Can route0 be interpreted as coherent rigid-ish motion while residual/scaffold paths handle local non-rigid failures, or is that story unsupported by current metrics?
-- Do dynamic edge/detail metrics capture the high-frequency failures emphasized by AdaGaR and Multi4D?
-- What is the right baseline class for the final claim: per-scene monocular GS, sparse multi-view 4DGS, or feedforward 4D reconstruction?
-
-## Literature Watchlist
-
-Unresolved candidate names from the June 2026 search pass: SPIN-4DGS, FAGS/Frequency-Aware Dynamic Gaussian Splatting, and GP-4DGS. Do not ingest these until title, authors, venue, and a stable paper/project URL are verified.
+- Which independent depth alignment and correspondence stack is reliable on
+  non-rigid hands, food, utensils, flame, and specular surfaces?
+- How should event tracks encode occluder, hidden surface, ordering pairs,
+  boundaries, and uncertainty without leaking locked transfer evidence?
+- Can a correctly reprojected annotated oracle actually make the selected
+  budget-neutral capacity operator improve `cut_roasted_beef`?
+- Which slots can be retired safely, and how should reassignment be initialized
+  without adding a second contribution?
+- Does Route 1 remain novel after implementation-level comparison with VAD-GS,
+  Proxy-GS, 4C4D, PackUV-GS, OccluGaussian, and newer 2026 work?
