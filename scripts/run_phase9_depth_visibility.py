@@ -102,7 +102,6 @@ def action_static(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list
     suite = unittest.defaultTestLoader.discover(
         str(REPO_ROOT / "tests"),
         pattern="test_depth_visibility*.py",
-        top_level_dir=str(REPO_ROOT),
     )
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     if not result.wasSuccessful():

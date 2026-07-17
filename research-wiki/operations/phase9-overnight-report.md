@@ -1,6 +1,6 @@
 # Phase 9 overnight report: depth–visibility–capacity
 
-Status: Slice A implementation and A02/A03 execution path independently validated; checkpoint pending; no jobs submitted
+Status: Slice A checkpoint pushed; A00 engineering retry fix validated; no jobs submitted
 Started: 2026-07-15
 Branch: `codex/hpc-orchestrator-bootstrap`
 Phase 8B checkpoint: `94cd67df53cfc487989c71dc16a60fe853f53550`
@@ -229,12 +229,23 @@ Gate A/B outcome has been observed.
 - If the operator works, does inferred visibility add causal benefit beyond a
   rate-matched trigger?
 
+## Local authority execution
+
+`P9-A00-STATIC-S20260715` attempt 1 failed before running any test because the
+launcher passed `top_level_dir` to unittest discovery while `tests/` is
+intentionally not a Python package. The failed terminal is preserved in
+operational state with SHA-256
+`578d028fd7b5bd3d5b338adae7ea422df3eb54050af13d1b412a692277819e3a`.
+This is an engineering launcher failure, not scientific evidence. Removing that
+single discovery argument makes the exact registered discovery form pass 71/71
+twice; Python compilation and diff checks also pass. One retry is admitted
+after the narrow fix is committed and pushed.
+
 ## Exact next action
 
-Inspect and stage only the intended Phase 9 implementation/config/test/wiki
-paths, run the cached-diff checks, create and push one narrow implementation
-checkpoint, then execute registered local A00/A01 and I01. Only after their
-terminal manifests and hashes pass should A02 be submitted and monitored. A03
-runs only after successful A02 and must be analyzed before any A04, production
-inference, training, Gate B, or broad matrix execution. Genuine human fields
-remain empty unless external reviewers supply them.
+Commit and push the one-line A00 discovery correction with this failure record,
+then retry A00 once. If it passes, run A01 and I01 and verify all terminal and
+artifact hashes. Only then dry-run, submit, and monitor A02. A03 runs only after
+successful A02 and must be analyzed before any A04, production inference,
+training, Gate B, or broad matrix execution. Genuine human fields remain empty
+unless external reviewers supply them.
