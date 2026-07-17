@@ -42,7 +42,11 @@ from depth_visibility.da3_adapter import (
     run_two_group_conformance,
     verify_model_authority,
 )
-from depth_visibility.fast_pilot import evaluate_frame_geometry, temporal_bin_transitions
+from depth_visibility.fast_pilot import (
+    anchor_duplicate_diagnostic,
+    evaluate_frame_geometry,
+    temporal_bin_transitions,
+)
 from depth_visibility.evaluator import (
     artifact_reference,
     load_run_entry,
@@ -693,6 +697,250 @@ def action_fast_visibility_pilot(
     return [reference], payload
 
 
+def _require_completed_x01(execution: dict[str, Any] | None) -> Mapping[str, Any]:
+    if execution is None:
+        raise ProvenanceError("X02 requires a resolved execution manifest")
+    matches = [
+        item
+        for item in execution.get("input_artifacts", [])
+        if item.get("producer_run_id")
+        == "P9-V2-X01-CUT-FAST-VISIBILITY-S20260717"
+        and item.get("schema") == "phase9-terminal-manifest-v1"
+        and str(item.get("status", "")).startswith("resolved_exact")
+    ]
+    if len(matches) != 1:
+        raise ProvenanceError("X02 lacks one exact successful X01 terminal input")
+    terminal = _json(_expand(str(matches[0]["path"])))
+    if (
+        terminal.get("schema_version") != "phase9-terminal-manifest-v1"
+        or terminal.get("run_id")
+        != "P9-V2-X01-CUT-FAST-VISIBILITY-S20260717"
+        or terminal.get("action") != "fast-visibility-pilot"
+        or terminal.get("status") != "completed"
+        or terminal.get("exit_code") != 0
+        or terminal.get("scientific_payload", {}).get("geometry_admitted") is not False
+    ):
+        raise ProvenanceError("X01 terminal does not bind the expected negative result")
+    return terminal
+
+
+def action_anchor_abstention_pilot(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Apply the frozen per-pixel duplicate rejection and run real geometry."""
+
+    config = _json(DEFAULT_CONFIG)
+    expected_scene = config["data"]["development_scene"]
+    if args.scene != expected_scene or expected_scene != "cut_roasted_beef":
+        raise ProvenanceError(f"anchor abstention pilot scene must be {expected_scene}")
+    x01_terminal = _require_completed_x01(execution)
+    project_root = _expand("$WORK/proj_adags")
+    data_root = project_root / "data/n3v"
+    da3_checkout = Path(
+        os.environ.get("PHASE9_DA3_REPO", str(project_root / "repo/depth-anything-3"))
+    ).resolve()
+    model_dir = Path(
+        os.environ.get(
+            "PHASE9_DA3_MODEL_DIR",
+            str(project_root / "models/depth-anything/DA3NESTED-GIANT-LARGE-1.1"),
+        )
+    ).resolve()
+    index = load_scene_index(
+        data_root / expected_scene,
+        scene=expected_scene,
+        expose_test_images=False,
+        hash_train_images=False,
+        timestamp_tolerance_seconds=float(config["camera"]["timestamp_tolerance_seconds"]),
+    )
+    split_manifest = _json(REPO_ROOT / config["data"]["split_manifest"])
+    split_binding = {
+        key: dict(value)
+        for key, value in validate_split_binding(index, split_manifest).items()
+    }
+    authority_path, authority, a02_terminal_sha = _bound_a02_authority(
+        execution, Path(args.matrix).resolve()
+    )
+    model_authority = verify_model_authority(
+        model_dir,
+        expected_weight_sha256=authority["weight_sha256"],
+        hash_weights=True,
+    )
+    _seed_conformance(int(entry["seeds"]["training"]))
+    model = load_da3(da3_checkout, model_dir, device="cuda")
+
+    frames = (125, 126, 127)
+    test_records = index.by_camera_frame("test")
+    r_scene = compute_r_scene(index.split("train"))
+    frame_reports = []
+    frame_bin_sets: list[tuple[int, set[tuple[int, int]]]] = []
+    coordinate_admitted = True
+    relative_limit = float(config["fusion"]["duplicate_relative_mad_maximum"])
+    for frame in frames:
+        frame_records = [
+            record for record in index.split("train") if record.frame == frame
+        ]
+        anchor_camera_id, groups = _select_conformance_groups(
+            frame_records, r_scene, config
+        )
+        group_inputs = _build_real_group_inputs(frame_records, groups)
+        predictions = [
+            run_group(
+                model,
+                group["images"],
+                group["extrinsics_w2c"],
+                group["intrinsics"],
+            )
+            for group in group_inputs
+        ]
+        input_check = dict(
+            _geometry_input_check(
+                predictions,
+                group_inputs,
+                anchor_camera_id=anchor_camera_id,
+            )
+        )
+        anchor_indices = [
+            group["member_camera_ids"].index(anchor_camera_id)
+            for group in group_inputs
+        ]
+        first_index, second_index = anchor_indices
+        first_prediction, second_prediction = predictions
+        extrinsic_max_abs = float(
+            np.max(
+                np.abs(
+                    np.asarray(first_prediction["extrinsics"][first_index])
+                    - np.asarray(second_prediction["extrinsics"][second_index])
+                )
+            )
+        )
+        input_check["anchor_extrinsic_maximum_absolute_difference"] = extrinsic_max_abs
+        input_check["coordinate_admitted"] = (
+            input_check["processed_k_corner_error_maximum_pixels"] <= 0.5
+            and extrinsic_max_abs
+            <= float(config["da3"]["conformance_repeat_atol"])
+        )
+        if not input_check["coordinate_admitted"]:
+            coordinate_admitted = False
+            frame_reports.append(
+                {
+                    "frame": frame,
+                    "anchor_camera_id": anchor_camera_id,
+                    "groups": [list(group) for group in groups],
+                    "geometry_input_check": input_check,
+                    "geometry_executed": False,
+                }
+            )
+            break
+
+        duplicate_report, aggregate_depth, retained_mask = (
+            anchor_duplicate_diagnostic(
+                first_prediction["depth"][first_index],
+                second_prediction["depth"][second_index],
+                first_prediction["confidence"][first_index],
+                second_prediction["confidence"][second_index],
+                relative_limit=relative_limit,
+                calibration_stride=int(config["sampling"]["grid_stride_pixels"]),
+            )
+        )
+        target = test_records.get((config["data"]["test_camera"], frame))
+        if target is None or target.image_path is not None:
+            raise ProvenanceError("X02 requires calibration-only cam00 target access")
+        geometry, supported_bins = evaluate_frame_geometry(
+            predictions,
+            [item["member_camera_ids"] for item in group_inputs],
+            target_K=target.K,
+            target_w2c=target.w2c_opencv,
+            target_width=target.width,
+            target_height=target.height,
+            stride=int(config["sampling"]["grid_stride_pixels"]),
+            minimum_cameras=int(config["fusion"]["minimum_physical_cameras"]),
+            maximum_depth_sigma=float(config["fusion"]["maximum_depth_sigma"]),
+            target_bin_pixels=int(config["sampling"]["grid_stride_pixels"]),
+            camera_depth_overrides={anchor_camera_id: aggregate_depth},
+            camera_valid_masks={anchor_camera_id: retained_mask},
+        )
+        frame_reports.append(
+            {
+                "frame": frame,
+                "anchor_camera_id": anchor_camera_id,
+                "groups": [list(group) for group in groups],
+                "geometry_input_check": input_check,
+                "anchor_duplicate": duplicate_report,
+                "geometry_executed": True,
+                "geometry": geometry,
+            }
+        )
+        frame_bin_sets.append((frame, supported_bins))
+
+    report_path = _expected_path(entry, "phase9-anchor-abstention-pilot-v1")
+    report = {
+        "schema_version": "phase9-anchor-abstention-pilot-v1",
+        "run_id": entry["run_id"],
+        "scene": expected_scene,
+        "frames": list(frames),
+        "methodology_status": "exploratory_per_pixel_duplicate_abstention",
+        "x01_terminal_sha256": sha256_file(
+            _expand(
+                next(
+                    item["path"]
+                    for item in execution["input_artifacts"]
+                    if item.get("producer_run_id")
+                    == "P9-V2-X01-CUT-FAST-VISIBILITY-S20260717"
+                )
+            )
+        ),
+        "x01_geometry_admitted": x01_terminal["scientific_payload"][
+            "geometry_admitted"
+        ],
+        "coordinate_admitted": coordinate_admitted,
+        "frame_reports": frame_reports,
+        "temporal_bin_transitions": temporal_bin_transitions(frame_bin_sets),
+        "temporal_interpretation": "target-bin occupancy proxy, not surface-track reveal/hide evidence",
+        "duplicate_semantics": {
+            "global_x01_max_rule_preserved_as_negative_conformance": True,
+            "x02_rule": "per-pixel two-sample relative half-difference >0.05 abstains; retained pixels use confidence-weighted aggregate",
+            "threshold_changed": False,
+            "heldout_scale_diagnostic_applied_to_geometry": False,
+        },
+        "label_dependent_gate_a": "not_evaluable",
+        "cam00_rgb_opened": False,
+        "split_binding": split_binding,
+        "a02_authority_path": str(authority_path),
+        "a02_authority_sha256": sha256_file(authority_path),
+        "a02_terminal_sha256": a02_terminal_sha,
+        "model_authority": model_authority,
+    }
+    write_json_atomic(report_path, report)
+    reference = _scientific_file_ref(
+        report_path, "phase9-anchor-abstention-pilot-v1", entry["run_id"]
+    )
+    payload = {
+        "coordinate_admitted": coordinate_admitted,
+        "frame_report_count": len(
+            [item for item in frame_reports if item.get("geometry_executed")]
+        ),
+        "anchor_retained_fractions": [
+            item["anchor_duplicate"]["retained_fraction"]
+            for item in frame_reports
+            if item.get("geometry_executed")
+        ],
+        "supported_bin_counts": [
+            item["geometry"]["target_supported_bin_count"]
+            for item in frame_reports
+            if item.get("geometry_executed")
+        ],
+        "ordered_multilayer_bin_counts": [
+            item["geometry"]["target_ordered_multilayer_bin_count"]
+            for item in frame_reports
+            if item.get("geometry_executed")
+        ],
+        "label_dependent_gate_a": "not_evaluable",
+    }
+    return [reference], payload
+
+
 def action_annotation_packet(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     manifest = load_json(DEFAULT_WINDOWS)
     packet = build_empty_annotation_packet(
@@ -1021,6 +1269,7 @@ def main() -> int:
         "hash-da3": lambda: action_hash_da3(entry, args, execution),
         "da3-conformance": lambda: action_da3_conformance(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
+        "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "build-annotation-packet": lambda: action_annotation_packet(entry, args),
         "freeze-implementation": lambda: action_freeze_implementation(entry, args),
         "decide": lambda: action_decide(entry, args),

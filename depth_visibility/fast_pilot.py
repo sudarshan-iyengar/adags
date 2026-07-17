@@ -12,7 +12,7 @@ import numpy as np
 from .errors import ContractError
 
 
-_QUANTILES = (0.5, 0.9, 0.95, 0.99)
+_QUANTILES = (0.5, 0.9, 0.95, 0.99, 0.999)
 
 
 def _distribution(values: Sequence[float] | np.ndarray) -> Mapping[str, Any]:
@@ -34,8 +34,13 @@ def _sample_world(
     view_index: int,
     *,
     stride: int,
+    depth_override: np.ndarray | None = None,
+    valid_mask: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    depth = np.asarray(prediction["depth"][view_index], dtype=np.float64)
+    depth = np.asarray(
+        prediction["depth"][view_index] if depth_override is None else depth_override,
+        dtype=np.float64,
+    )
     K = np.asarray(prediction["intrinsics"][view_index], dtype=np.float64)
     w2c = np.asarray(prediction["extrinsics"][view_index], dtype=np.float64)
     if depth.ndim != 2 or K.shape != (3, 3) or w2c.shape != (4, 4):
@@ -48,6 +53,11 @@ def _sample_world(
     pixels = np.column_stack((grid_x.reshape(-1), grid_y.reshape(-1))).astype(np.float64)
     optical_z = depth[grid_y, grid_x].reshape(-1)
     valid = np.isfinite(optical_z) & (optical_z > 0.0)
+    if valid_mask is not None:
+        mask = np.asarray(valid_mask, dtype=bool)
+        if mask.shape != depth.shape:
+            raise ContractError("pilot source valid mask has wrong shape")
+        valid &= mask[grid_y, grid_x].reshape(-1)
     pixels = pixels[valid]
     optical_z = optical_z[valid]
     homogeneous = np.column_stack((pixels, np.ones(len(pixels), dtype=np.float64)))
@@ -137,6 +147,102 @@ def _cluster_depth_layers(
     return layers
 
 
+def anchor_duplicate_diagnostic(
+    first_depth: np.ndarray,
+    second_depth: np.ndarray,
+    first_confidence: np.ndarray,
+    second_confidence: np.ndarray,
+    *,
+    relative_limit: float = 0.05,
+    calibration_stride: int = 8,
+) -> tuple[Mapping[str, Any], np.ndarray, np.ndarray]:
+    """Aggregate a repeated physical camera and abstain on inconsistent pixels."""
+
+    first = np.asarray(first_depth, dtype=np.float64)
+    second = np.asarray(second_depth, dtype=np.float64)
+    confidence_first = np.asarray(first_confidence, dtype=np.float64)
+    confidence_second = np.asarray(second_confidence, dtype=np.float64)
+    if (
+        first.shape != second.shape
+        or first.shape != confidence_first.shape
+        or first.shape != confidence_second.shape
+        or first.ndim != 2
+    ):
+        raise ContractError("anchor duplicate arrays must be aligned 2D fields")
+    if (
+        not np.isfinite(first).all()
+        or not np.isfinite(second).all()
+        or not np.isfinite(confidence_first).all()
+        or not np.isfinite(confidence_second).all()
+        or np.any(first <= 0.0)
+        or np.any(second <= 0.0)
+        or np.any(confidence_first < 0.0)
+        or np.any(confidence_second < 0.0)
+    ):
+        raise ContractError("anchor duplicate arrays violate finite positive depth/confidence")
+    if not math.isfinite(relative_limit) or relative_limit <= 0.0:
+        raise ContractError("anchor duplicate limit must be finite and positive")
+    if calibration_stride <= 1:
+        raise ContractError("anchor calibration stride must exceed one")
+
+    denominator = np.maximum(first + second, np.finfo(np.float64).tiny)
+    relative_half_difference = np.abs(first - second) / denominator
+    retained = relative_half_difference <= relative_limit
+
+    lower_is_first = first <= second
+    lower_depth = np.where(lower_is_first, first, second)
+    upper_depth = np.where(lower_is_first, second, first)
+    lower_weight = np.where(lower_is_first, confidence_first, confidence_second)
+    upper_weight = np.where(lower_is_first, confidence_second, confidence_first)
+    total_weight = lower_weight + upper_weight
+    aggregate = np.where(
+        (total_weight == 0.0) | (lower_weight >= total_weight / 2.0),
+        lower_depth,
+        upper_depth,
+    )
+
+    yy, xx = np.indices(first.shape)
+    calibration = ((yy // calibration_stride + xx // calibration_stride) % 2) == 0
+    held_out = ~calibration
+    scale = float(np.median(first[calibration] / second[calibration]))
+    scaled_second = second * scale
+    raw_heldout = np.abs(first[held_out] - second[held_out]) / np.maximum(
+        first[held_out] + second[held_out], np.finfo(np.float64).tiny
+    )
+    scaled_heldout = np.abs(first[held_out] - scaled_second[held_out]) / np.maximum(
+        first[held_out] + scaled_second[held_out], np.finfo(np.float64).tiny
+    )
+
+    cell_y = yy // calibration_stride
+    cell_x = xx // calibration_stride
+    rejected = ~retained
+    total_cells = int((cell_y.max() + 1) * (cell_x.max() + 1))
+    rejected_cells = {
+        (int(y), int(x)) for y, x in zip(cell_y[rejected], cell_x[rejected], strict=True)
+    }
+    report = {
+        "relative_estimator": "two-sample half-difference over positive-depth sum",
+        "relative_limit": relative_limit,
+        "relative_disagreement": _distribution(relative_half_difference),
+        "retained_pixel_count": int(np.count_nonzero(retained)),
+        "rejected_pixel_count": int(np.count_nonzero(rejected)),
+        "retained_fraction": float(np.mean(retained)),
+        "rejected_cell_count": len(rejected_cells),
+        "rejected_cell_fraction": len(rejected_cells) / total_cells,
+        "aggregate_rule": "confidence-weighted lower depth crossing half total; all-zero uses lower depth",
+        "heldout_scale_diagnostic": {
+            "calibration_partition": "alternating 8x8 processed-image cells",
+            "scale_second_to_first": scale,
+            "raw_relative_disagreement": _distribution(raw_heldout),
+            "scaled_relative_disagreement": _distribution(scaled_heldout),
+            "raw_within_limit_fraction": float(np.mean(raw_heldout <= relative_limit)),
+            "scaled_within_limit_fraction": float(np.mean(scaled_heldout <= relative_limit)),
+            "applied_to_geometry": False,
+        },
+    }
+    return report, aggregate, retained
+
+
 def evaluate_frame_geometry(
     group_predictions: Sequence[Mapping[str, Any]],
     group_members: Sequence[Sequence[str]],
@@ -149,10 +255,16 @@ def evaluate_frame_geometry(
     minimum_cameras: int = 3,
     maximum_depth_sigma: float = 2.5,
     target_bin_pixels: int = 8,
+    camera_depth_overrides: Mapping[str, np.ndarray] | None = None,
+    camera_valid_masks: Mapping[str, np.ndarray] | None = None,
 ) -> tuple[Mapping[str, Any], set[tuple[int, int]]]:
     """Measure calibrated cross-view support and target-projected depth ordering."""
 
     cameras = _unique_camera_predictions(group_predictions, group_members)
+    depth_overrides = dict(camera_depth_overrides or {})
+    valid_masks = dict(camera_valid_masks or {})
+    if not set(depth_overrides).issubset(cameras) or not set(valid_masks).issubset(cameras):
+        raise ContractError("pilot depth/mask override names an unknown camera")
     pair_normalized_residuals: list[float] = []
     pair_pixel_residuals: list[float] = []
     total_pair_opportunities = 0
@@ -164,14 +276,25 @@ def evaluate_frame_geometry(
     supported_risk: list[float] = []
 
     for source_camera, (source_prediction, source_index) in sorted(cameras.items()):
-        world, _ = _sample_world(source_prediction, source_index, stride=stride)
+        world, _ = _sample_world(
+            source_prediction,
+            source_index,
+            stride=stride,
+            depth_override=depth_overrides.get(source_camera),
+            valid_mask=valid_masks.get(source_camera),
+        )
         total_pair_opportunities += len(world) * (len(cameras) - 1)
         support = np.ones(len(world), dtype=np.int64)
         residuals_by_point: list[list[float]] = [[] for _ in range(len(world))]
         for target_camera, (target_prediction, target_index) in sorted(cameras.items()):
             if target_camera == source_camera:
                 continue
-            target_depth = np.asarray(target_prediction["depth"][target_index], dtype=np.float64)
+            target_depth = np.asarray(
+                depth_overrides.get(
+                    target_camera, target_prediction["depth"][target_index]
+                ),
+                dtype=np.float64,
+            )
             pixels, projected_z, valid = _project_world(
                 world,
                 K=np.asarray(target_prediction["intrinsics"][target_index]),
@@ -187,6 +310,12 @@ def evaluate_frame_geometry(
             rounded_y = np.rint(pixels[valid_indices, 1]).astype(np.int64)
             observed_z = target_depth[rounded_y, rounded_x]
             finite_positive = np.isfinite(observed_z) & (observed_z > 0.0)
+            target_mask = valid_masks.get(target_camera)
+            if target_mask is not None:
+                mask = np.asarray(target_mask, dtype=bool)
+                if mask.shape != target_depth.shape:
+                    raise ContractError("pilot target valid mask has wrong shape")
+                finite_positive &= mask[rounded_y, rounded_x]
             selected = valid_indices[finite_positive]
             if len(selected) == 0:
                 continue
@@ -345,4 +474,4 @@ def temporal_bin_transitions(
     return transitions
 
 
-__all__ = ["evaluate_frame_geometry", "temporal_bin_transitions"]
+__all__ = ["anchor_duplicate_diagnostic", "evaluate_frame_geometry", "temporal_bin_transitions"]

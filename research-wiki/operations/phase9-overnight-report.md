@@ -249,3 +249,101 @@ artifact hashes. Only then dry-run, submit, and monitor A02. A03 runs only after
 successful A02 and must be analyzed before any A04, production inference,
 training, Gate B, or broad matrix execution. Genuine human fields remain empty
 unless external reviewers supply them.
+
+## 2026-07-17 execution update: A02, A03, and fail-fast X01
+
+This section supersedes the earlier zero-job/zero-outcome statements above.
+
+### Branch and checkpoints
+
+- Branch: `codex/hpc-orchestrator-bootstrap`.
+- Phase 9 scaffold commits: `719d451f` and `879bb850`.
+- Fail-fast pilot commit: `de768ad2b057c1451324e8cc6c828f3b50c93adf`,
+  `Add fail-fast visibility geometry pilot`.
+- The branch was clean, pushed, and equal to upstream before the cycle-v2
+  implementation freeze.
+- Cycle-v2 freeze bound 51 tracked sources and 2 exact commands. Terminal
+  SHA-256: `be79f2d43943ff417f69891208014ad387a3b27dcb0e56a34662810a1ea0e026`.
+
+### Completed run matrix
+
+| Run | Job | State | Elapsed / GPU-hours | Decisive result |
+| --- | ---: | --- | --- | --- |
+| A00 static | login | completed after one preserved launcher fix | 0 GPU | 71/71 then 76/76 after X01 code |
+| A01 synthetic | login | completed | 0 GPU | front visible and rear occluded |
+| A02 DA3 authority | 49621046 | COMPLETED 0:0 | 00:00:59 / 0 GPU | weight SHA `8ebe871a...` sealed |
+| A03 frame-0 conformance | 49621286 | FAILED 1:0 | 00:03:07 / 0.05194 | same-group depth missed registered 1e-5 allclose |
+| X01 frame-125 fail-fast | 49624624 | COMPLETED 0:0 | 00:03:20 / 0.05556 | raw two-group geometry blocked by 8.30% shared-anchor max relative MAD |
+
+Total measured A100 consumption through X01 is approximately 0.1075 GPU-hours.
+There were no W&B writes or training runs.
+
+### X01 repeatability result
+
+X01 preserves the A03 failure and measures its magnitude rather than changing
+the threshold. For two repeated frame-125 inferences of the same six-view
+group:
+
+- 99.999825% of depth values satisfy the registered 1e-5 tolerance;
+- median absolute delta is 0;
+- 90th percentile is (4.768\times10^{-7});
+- 99.9th percentile is (9.537\times10^{-7});
+- maximum absolute delta is 0.0328665;
+- maximum symmetric relative delta is 0.00269887;
+- maximum duplicate relative MAD is 0.00134944;
+- confidence arrays are exactly identical;
+- processed-K corner error is (1.330\times10^{-5}) pixels.
+
+Thus the strict allclose failure is caused by an extremely sparse depth
+outlier. It remains a valid negative conformance result, but broad same-group
+nondeterminism is not the material problem.
+
+### X01 cross-group result
+
+The same physical `cam01` anchor was then inferred in the second six-view
+group with five different companion cameras. Its maximum cross-group relative
+MAD was 0.0829967, exceeding the frozen 0.05 duplicate limit. Both groups'
+processed intrinsics remained correct to (1.330\times10^{-5}) pixels.
+
+The registered fail-fast rule therefore rejected raw group fusion before any
+cam00-projected geometry was evaluated:
+
+- geometry admitted: no;
+- frame ledgers produced: 0;
+- cam00 RGB opened: no;
+- label-dependent Gate A: not evaluable;
+- Gate B: not run.
+
+Terminal SHA-256:
+`5b718ab9d36735fb49762a20cd8ebb35bb242e5d5eafd30b4f447e832d9c78a5`.
+Report SHA-256:
+`7e611f78b1fbc9fce51c740a6e7f1baf1d6a890990a731ff7a8873a5588112b1`.
+
+### Gate status after X01
+
+| Gate item | Status | Evidence boundary |
+| --- | --- | --- |
+| Camera/K and target exclusion | pass | calibrated inputs; K error (1.33\times10^{-5}) px; cam00 RGB unopened |
+| Strict same-group 1e-5 repetition | fail | A03 and X01; threshold unchanged |
+| Same-group fusion-scale repeatability | pass diagnostically | max relative MAD 0.00135 < 0.05 |
+| Raw cross-group common gauge | fail | shared-anchor max relative MAD 0.082997 > 0.05 |
+| Cross-view visibility/support | not evaluated | correctly blocked before fusion |
+| Human Gate A | not evaluable | no fabricated labels |
+| Gate B representation benefit | not run | no visibility ledger admitted |
+
+### Failure attribution and next experiment
+
+The current failure is a support-discovery input/gauge problem, not evidence
+against depth and not yet a representation-capacity or optimization failure.
+`align_to_input_ext_scale=True` does not by itself make independently grouped
+DA3 depths directly fuseable under the global maximum rule.
+
+The next registered diagnostic should remain small: measure the full shared
+anchor cross-group error distribution, fraction within the existing 0.05
+limit, spatial concentration, and deterministic calibration/held-out gauge
+alignment. Prefer explicit uncertainty and abstention on inconsistent
+train-view anchor pixels. Only use a gauge correction if it improves held-out
+anchor pixels without cam00 or frozen event-crop tuning. If reliable coverage
+remains adequate, run one-frame geometry with rejected pixels excluded;
+otherwise change grouping or depth representation rather than relaxing the
+threshold.
