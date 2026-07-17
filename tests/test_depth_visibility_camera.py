@@ -14,6 +14,8 @@ from depth_visibility.camera import (
     validate_calibration,
 )
 from depth_visibility.da3_adapter import (
+    _evaluate_real_repetitions,
+    repetition_delta_report,
     run_analytic_conformance,
     run_two_group_conformance,
     validate_prediction,
@@ -121,6 +123,37 @@ class CameraTests(unittest.TestCase):
             incomplete.pop(missing)
             with self.subTest(missing=missing), self.assertRaises(ContractError):
                 validate_prediction(incomplete, 6)
+
+    def test_repeatability_diagnostic_preserves_strict_a03_failure(self):
+        depth = np.ones((6, 4, 5), dtype=np.float64)
+        first = {
+            "depth": depth,
+            "confidence": np.ones_like(depth),
+            "intrinsics": np.repeat(self.K[None, ...], 6, axis=0),
+            "extrinsics": np.repeat(np.eye(4)[None, ...], 6, axis=0),
+        }
+        second = {key: np.array(value, copy=True) for key, value in first.items()}
+        second["depth"][0, 0, 0] += 1e-3
+        report = repetition_delta_report(
+            first,
+            second,
+            expected_processed_intrinsics=first["intrinsics"],
+            repeat_atol=1e-5,
+            repeat_rtol=1e-5,
+        )
+        self.assertFalse(report["strict_repeatability_pass"])
+        self.assertAlmostEqual(report["depth_delta"]["absolute_maximum"], 1e-3)
+        self.assertLess(report["duplicate_relative_mad_maximum"], 0.05)
+        with self.assertRaisesRegex(
+            ContractError, "depth repetition exceeds numeric tolerance"
+        ):
+            _evaluate_real_repetitions(
+                first,
+                second,
+                expected_processed_intrinsics=first["intrinsics"],
+                repeat_atol=1e-5,
+                repeat_rtol=1e-5,
+            )
 
     def test_registered_analytic_conformance(self):
         report = run_analytic_conformance()

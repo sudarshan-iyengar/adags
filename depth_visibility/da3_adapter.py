@@ -255,6 +255,48 @@ def _relative_mad(depths: np.ndarray) -> float:
     return float(np.max(ratio))
 
 
+def _delta_statistics(first: np.ndarray, second: np.ndarray, *, atol: float, rtol: float) -> Mapping[str, Any]:
+    """Summarize deterministic-repeat deltas without deciding admission."""
+
+    left = np.asarray(first, dtype=np.float64)
+    right = np.asarray(second, dtype=np.float64)
+    if left.shape != right.shape or left.size == 0:
+        raise ContractError("repeatability arrays must have equal nonempty shapes")
+    if not np.isfinite(left).all() or not np.isfinite(right).all():
+        raise ContractError("repeatability arrays must be finite")
+    absolute = np.abs(left - right)
+    denominator = np.maximum(
+        (np.abs(left) + np.abs(right)) / 2.0, np.finfo(np.float64).tiny
+    )
+    relative = absolute / denominator
+    quantiles = (0.5, 0.9, 0.95, 0.99, 0.999)
+    tolerance = atol + rtol * np.abs(right)
+    return {
+        "absolute_mean": float(np.mean(absolute)),
+        "absolute_rmse": float(np.sqrt(np.mean(absolute * absolute))),
+        "absolute_maximum": float(np.max(absolute)),
+        "absolute_quantiles": {
+            str(value): float(np.quantile(absolute, value)) for value in quantiles
+        },
+        "symmetric_relative_mean": float(np.mean(relative)),
+        "symmetric_relative_maximum": float(np.max(relative)),
+        "symmetric_relative_quantiles": {
+            str(value): float(np.quantile(relative, value)) for value in quantiles
+        },
+        "within_registered_tolerance_fraction": float(np.mean(absolute <= tolerance)),
+        "allclose_pass": bool(np.allclose(left, right, atol=atol, rtol=rtol)),
+    }
+
+
+def relative_mad_maximum(depths: np.ndarray) -> float:
+    """Expose the frozen relative-MAD statistic for bounded diagnostics."""
+
+    array = np.asarray(depths, dtype=np.float64)
+    if array.ndim < 2 or array.shape[0] < 2 or not np.isfinite(array).all():
+        raise ContractError("relative MAD requires at least two finite aligned arrays")
+    return _relative_mad(array)
+
+
 def _processed_k_corner_error(
     expected: np.ndarray,
     returned: np.ndarray,
@@ -276,7 +318,18 @@ def _processed_k_corner_error(
     return maximum
 
 
-def _evaluate_real_repetitions(
+def processed_k_corner_error(
+    expected: np.ndarray,
+    returned: np.ndarray,
+    height: int,
+    width: int,
+) -> float:
+    """Expose the independent processed-K corner check for each fused group."""
+
+    return _processed_k_corner_error(expected, returned, height, width)
+
+
+def repetition_delta_report(
     first: Mapping[str, Any],
     second: Mapping[str, Any],
     *,
@@ -284,8 +337,12 @@ def _evaluate_real_repetitions(
     repeat_atol: float,
     repeat_rtol: float,
 ) -> Mapping[str, Any]:
-    """Evaluate two already-computed repetitions without retaining raw arrays."""
+    """Report real-repeat differences while preserving the registered gate."""
 
+    if not math.isfinite(repeat_atol) or not math.isfinite(repeat_rtol):
+        raise ContractError("repeatability tolerances must be finite")
+    if repeat_atol < 0.0 or repeat_rtol < 0.0:
+        raise ContractError("repeatability tolerances must be nonnegative")
     reports = []
     for index, prediction in enumerate((first, second)):
         depth = np.asarray(prediction["depth"])
@@ -313,30 +370,71 @@ def _evaluate_real_repetitions(
         )
         if finite_fraction < 0.99 or confidence_finite_fraction < 0.99 or positive_fraction < 0.95:
             raise ContractError("real DA3 conformance finite/positive rate failed")
-    if not np.allclose(first["depth"], second["depth"], atol=repeat_atol, rtol=repeat_rtol):
-        raise ContractError("real DA3 depth repetition exceeds numeric tolerance")
-    if not np.allclose(
-        first["confidence"], second["confidence"], atol=repeat_atol, rtol=repeat_rtol
-    ):
-        raise ContractError("real DA3 confidence repetition exceeds numeric tolerance")
-    duplicate_mad = _relative_mad(np.stack([first["depth"], second["depth"]]))
-    if duplicate_mad > 0.05:
-        raise ContractError("real DA3 duplicate relative MAD exceeds 0.05")
-    expected_k = np.asarray(expected_processed_intrinsics, dtype=np.float64)
-    corner_error = _processed_k_corner_error(
-        expected_k, first["intrinsics"], first["depth"].shape[1], first["depth"].shape[2]
+    depth_delta = _delta_statistics(
+        first["depth"], second["depth"], atol=repeat_atol, rtol=repeat_rtol
     )
-    if corner_error > 0.5:
-        raise ContractError("real DA3 processed-K corner error exceeds 0.5 pixels")
+    confidence_delta = _delta_statistics(
+        first["confidence"], second["confidence"], atol=repeat_atol, rtol=repeat_rtol
+    )
+    duplicate_mad = _relative_mad(np.stack([first["depth"], second["depth"]]))
+    expected_k = np.asarray(expected_processed_intrinsics, dtype=np.float64)
+    corner_errors = [
+        _processed_k_corner_error(
+            expected_k,
+            prediction["intrinsics"],
+            prediction["depth"].shape[1],
+            prediction["depth"].shape[2],
+        )
+        for prediction in (first, second)
+    ]
+    strict_pass = (
+        depth_delta["allclose_pass"]
+        and confidence_delta["allclose_pass"]
+        and duplicate_mad <= 0.05
+        and max(corner_errors) <= 0.5
+    )
     return {
         "repetitions": reports,
         "repeat_atol": repeat_atol,
         "repeat_rtol": repeat_rtol,
+        "depth_delta": depth_delta,
+        "confidence_delta": confidence_delta,
         "duplicate_relative_mad_maximum": duplicate_mad,
-        "processed_k_corner_error_maximum_pixels": corner_error,
-        "numerically_repeatable": True,
+        "processed_k_corner_error_maximum_pixels": max(corner_errors),
+        "strict_repeatability_pass": bool(strict_pass),
         "hash_equality_required": False,
     }
+
+
+def _evaluate_real_repetitions(
+    first: Mapping[str, Any],
+    second: Mapping[str, Any],
+    *,
+    expected_processed_intrinsics: Any,
+    repeat_atol: float,
+    repeat_rtol: float,
+) -> Mapping[str, Any]:
+    """Enforce A03 exactly while retaining the reusable diagnostic report."""
+
+    report = dict(
+        repetition_delta_report(
+            first,
+            second,
+            expected_processed_intrinsics=expected_processed_intrinsics,
+            repeat_atol=repeat_atol,
+            repeat_rtol=repeat_rtol,
+        )
+    )
+    if not report["depth_delta"]["allclose_pass"]:
+        raise ContractError("real DA3 depth repetition exceeds numeric tolerance")
+    if not report["confidence_delta"]["allclose_pass"]:
+        raise ContractError("real DA3 confidence repetition exceeds numeric tolerance")
+    if report["duplicate_relative_mad_maximum"] > 0.05:
+        raise ContractError("real DA3 duplicate relative MAD exceeds 0.05")
+    if report["processed_k_corner_error_maximum_pixels"] > 0.5:
+        raise ContractError("real DA3 processed-K corner error exceeds 0.5 pixels")
+    report["numerically_repeatable"] = True
+    return report
 
 
 def run_real_conformance(
@@ -507,7 +605,10 @@ __all__ = [
     "DA3_WEIGHT_EXPECTED_BYTES",
     "INFERENCE_ARGUMENTS",
     "load_da3",
+    "processed_k_corner_error",
     "produce_scene_sidecars",
+    "relative_mad_maximum",
+    "repetition_delta_report",
     "run_analytic_conformance",
     "run_group",
     "run_real_conformance",

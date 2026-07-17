@@ -1,4 +1,5 @@
 import importlib.util
+import inspect
 import hashlib
 import json
 from pathlib import Path
@@ -141,13 +142,9 @@ class ExecutionBindingTests(unittest.TestCase):
             terminal_path.write_text(json.dumps(terminal) + "\n", encoding="utf-8")
             terminal_sha = hashlib.sha256(terminal_path.read_bytes()).hexdigest()
             matrix_path = root / "matrix.json"
-            matrix_path.write_text(json.dumps({"runs": [{
-                "run_id": "P9-A02-DA3-WEIGHT-SHA",
-                "expected_outputs": [{
-                    "path": str(authority_path),
-                    "schema": "phase9-da3-authority-v1",
-                }],
-            }]}) + "\n", encoding="utf-8")
+            matrix_path.write_text(
+                json.dumps({"runs": []}) + "\n", encoding="utf-8"
+            )
             execution = {"input_artifacts": [{
                 "path": str(terminal_path),
                 "producer_run_id": "P9-A02-DA3-WEIGHT-SHA",
@@ -193,6 +190,46 @@ class ExecutionBindingTests(unittest.TestCase):
             MODULE._select_conformance_groups(
                 records + [SimpleNamespace(camera_id="cam00")], 1.0, config
             )
+    def test_geometry_input_check_rejects_cross_group_anchor_scale_drift(self):
+        K = np.repeat(np.eye(3)[None, ...], 6, axis=0)
+        first = {
+            "depth": np.ones((6, 4, 5), dtype=np.float64),
+            "intrinsics": K,
+        }
+        second = {
+            "depth": np.full((6, 4, 5), 2.0, dtype=np.float64),
+            "intrinsics": K,
+        }
+        groups = [
+            {
+                "member_camera_ids": [
+                    "cam01", "cam02", "cam03", "cam04", "cam05", "cam06"
+                ],
+                "expected_processed_intrinsics": K,
+            },
+            {
+                "member_camera_ids": [
+                    "cam01", "cam07", "cam08", "cam09", "cam10", "cam11"
+                ],
+                "expected_processed_intrinsics": K,
+            },
+        ]
+        report = MODULE._geometry_input_check(
+            [first, second], groups, anchor_camera_id="cam01"
+        )
+        self.assertGreater(
+            report["anchor_cross_group_relative_mad_maximum"], 0.05
+        )
+        self.assertEqual(
+            report["processed_k_corner_error_maximum_pixels"], 0.0
+        )
+
+    def test_freeze_uses_the_explicit_matrix_argument(self):
+        source = inspect.getsource(MODULE.action_freeze_implementation)
+        self.assertIn("Path(args.matrix).resolve()", source)
+        self.assertIn("_json(matrix_path)", source)
+        self.assertNotIn("_json(DEFAULT_MATRIX)", source)
+
     def test_job_wrapper_executes_resolved_argv_not_reconstructed_cli(self):
         wrapper = (REPO / "scripts/run_phase9_depth_visibility_job.sh").read_text(
             encoding="utf-8"

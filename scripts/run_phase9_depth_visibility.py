@@ -17,7 +17,7 @@ from pathlib import Path
 import subprocess
 import sys
 import traceback
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 
@@ -34,10 +34,15 @@ from depth_visibility.baselines import validate_baseline_registry
 from depth_visibility.canonical import sha256_file
 from depth_visibility.da3_adapter import (
     load_da3,
+    processed_k_corner_error,
+    relative_mad_maximum,
+    repetition_delta_report,
     run_analytic_conformance,
+    run_group,
     run_two_group_conformance,
     verify_model_authority,
 )
+from depth_visibility.fast_pilot import evaluate_frame_geometry, temporal_bin_transitions
 from depth_visibility.evaluator import (
     artifact_reference,
     load_run_entry,
@@ -269,17 +274,16 @@ def _bound_a02_authority(
         or terminal.get("exit_code") != 0
     ):
         raise ProvenanceError("A02 terminal is not a successful hash-da3 authority")
-    authority_path = _matrix_output_path(
-        matrix_path, "P9-A02-DA3-WEIGHT-SHA", "phase9-da3-authority-v1"
-    ).resolve()
     produced = [
         item for item in terminal.get("produced_artifacts", [])
         if item.get("schema") == "phase9-da3-authority-v1"
         and item.get("producer_run_id") == "P9-A02-DA3-WEIGHT-SHA"
-        and Path(str(item.get("path", ""))).resolve() == authority_path
     ]
-    if len(produced) != 1 or not authority_path.is_file():
+    if len(produced) != 1:
         raise ProvenanceError("A02 terminal does not bind exactly one DA3 authority artifact")
+    authority_path = _expand(str(produced[0].get("path", ""))).resolve()
+    if not authority_path.is_file():
+        raise ProvenanceError("A02 DA3 authority artifact is missing")
     authority_sha = sha256_file(authority_path)
     if produced[0].get("sha256") != authority_sha:
         raise ProvenanceError("DA3 authority bytes do not match the A02 terminal")
@@ -413,6 +417,280 @@ def action_da3_conformance(
         "cam00_rgb_opened": False,
     }
     return [], payload
+
+
+def _build_real_group_inputs(
+    frame_records: list[Any],
+    groups: tuple[tuple[str, ...], ...],
+) -> list[dict[str, Any]]:
+    records_by_camera = {record.camera_id: record for record in frame_records}
+    result = []
+    for group in groups:
+        records = [records_by_camera[camera_id] for camera_id in group]
+        if any(record.image_path is None or record.camera_id == "cam00" for record in records):
+            raise ProvenanceError("fast pilot group lacks training RGB or contains cam00")
+        expected_k = []
+        for record in records:
+            processed_width, processed_height = _processed_size(record.width, record.height)
+            expected_k.append(
+                _pinned_da3_processed_intrinsics(
+                    record.K,
+                    record.width,
+                    record.height,
+                    processed_width,
+                    processed_height,
+                )
+            )
+        result.append(
+            {
+                "member_camera_ids": list(group),
+                "images": [str(record.image_path) for record in records],
+                "extrinsics_w2c": np.stack([record.w2c_opencv for record in records]),
+                "intrinsics": np.stack([record.K for record in records]),
+                "expected_processed_intrinsics": np.stack(expected_k),
+            }
+        )
+    return result
+
+
+def _geometry_input_check(
+    predictions: list[Mapping[str, Any]],
+    group_inputs: list[dict[str, Any]],
+    *,
+    anchor_camera_id: str,
+) -> Mapping[str, Any]:
+    if len(predictions) != 2 or len(group_inputs) != 2:
+        raise ContractError("fast geometry input check requires exactly two groups")
+    anchor_depths = []
+    k_errors = []
+    for prediction, group in zip(predictions, group_inputs, strict=True):
+        members = list(group["member_camera_ids"])
+        if anchor_camera_id not in members:
+            raise ContractError("fast geometry group is missing the shared anchor")
+        anchor_depths.append(
+            np.asarray(prediction["depth"])[members.index(anchor_camera_id)]
+        )
+        k_errors.append(
+            processed_k_corner_error(
+                np.asarray(group["expected_processed_intrinsics"]),
+                np.asarray(prediction["intrinsics"]),
+                int(np.asarray(prediction["depth"]).shape[1]),
+                int(np.asarray(prediction["depth"]).shape[2]),
+            )
+        )
+    return {
+        "anchor_camera_id": anchor_camera_id,
+        "anchor_cross_group_relative_mad_maximum": relative_mad_maximum(
+            np.stack(anchor_depths)
+        ),
+        "processed_k_corner_error_maximum_pixels": max(k_errors),
+        "processed_k_corner_error_by_group_pixels": k_errors,
+    }
+
+
+def action_fast_visibility_pilot(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Quantify A03 drift and immediately exercise small real visibility geometry."""
+
+    config = _json(DEFAULT_CONFIG)
+    expected_scene = config["data"]["development_scene"]
+    if args.scene != expected_scene or expected_scene != "cut_roasted_beef":
+        raise ProvenanceError(f"fast pilot scene must be {expected_scene}")
+    project_root = _expand("$WORK/proj_adags")
+    data_root = project_root / "data/n3v"
+    da3_checkout = Path(
+        os.environ.get("PHASE9_DA3_REPO", str(project_root / "repo/depth-anything-3"))
+    ).resolve()
+    model_dir = Path(
+        os.environ.get(
+            "PHASE9_DA3_MODEL_DIR",
+            str(project_root / "models/depth-anything/DA3NESTED-GIANT-LARGE-1.1"),
+        )
+    ).resolve()
+    index = load_scene_index(
+        data_root / expected_scene,
+        scene=expected_scene,
+        expose_test_images=False,
+        hash_train_images=False,
+        timestamp_tolerance_seconds=float(config["camera"]["timestamp_tolerance_seconds"]),
+    )
+    split_manifest = _json(REPO_ROOT / config["data"]["split_manifest"])
+    split_binding = {
+        key: dict(value)
+        for key, value in validate_split_binding(index, split_manifest).items()
+    }
+    matrix_path = Path(args.matrix).resolve()
+    authority_path, authority, a02_terminal_sha = _bound_a02_authority(
+        execution, matrix_path
+    )
+    if (
+        authority.get("schema_version") != "phase9-da3-authority-v1"
+        or authority.get("run_id") != "P9-A02-DA3-WEIGHT-SHA"
+        or authority.get("model_id") != config["da3"]["model_id"]
+        or not isinstance(authority.get("weight_sha256"), str)
+    ):
+        raise ProvenanceError("A02 DA3 authority is missing or incompatible")
+    model_authority = verify_model_authority(
+        model_dir,
+        expected_weight_sha256=authority["weight_sha256"],
+        hash_weights=True,
+    )
+    _seed_conformance(int(entry["seeds"]["training"]))
+    model = load_da3(da3_checkout, model_dir, device="cuda")
+
+    frames = (125, 126, 127)
+    test_records = index.by_camera_frame("test")
+    frame_reports = []
+    frame_bin_sets: list[tuple[int, set[tuple[int, int]]]] = []
+    geometry_input_checks = []
+    repeatability = None
+    geometry_admitted = True
+    r_scene = compute_r_scene(index.split("train"))
+    duplicate_limit = float(config["fusion"]["duplicate_relative_mad_maximum"])
+    for frame in frames:
+        frame_records = [
+            record for record in index.split("train") if record.frame == frame
+        ]
+        anchor_camera_id, groups = _select_conformance_groups(
+            frame_records, r_scene, config
+        )
+        group_inputs = _build_real_group_inputs(frame_records, groups)
+        first_prediction = run_group(
+            model,
+            group_inputs[0]["images"],
+            group_inputs[0]["extrinsics_w2c"],
+            group_inputs[0]["intrinsics"],
+        )
+        if frame == frames[0]:
+            second_prediction = run_group(
+                model,
+                group_inputs[0]["images"],
+                group_inputs[0]["extrinsics_w2c"],
+                group_inputs[0]["intrinsics"],
+            )
+            repeatability = dict(
+                repetition_delta_report(
+                    first_prediction,
+                    second_prediction,
+                    expected_processed_intrinsics=group_inputs[0][
+                        "expected_processed_intrinsics"
+                    ],
+                    repeat_atol=float(config["da3"]["conformance_repeat_atol"]),
+                    repeat_rtol=float(config["da3"]["conformance_repeat_rtol"]),
+                )
+            )
+        second_group_prediction = run_group(
+            model,
+            group_inputs[1]["images"],
+            group_inputs[1]["extrinsics_w2c"],
+            group_inputs[1]["intrinsics"],
+        )
+        predictions = [first_prediction, second_group_prediction]
+        input_check = dict(
+            _geometry_input_check(
+                predictions,
+                group_inputs,
+                anchor_camera_id=anchor_camera_id,
+            )
+        )
+        input_check["frame"] = frame
+        geometry_input_checks.append(input_check)
+        frame_admitted = (
+            input_check["anchor_cross_group_relative_mad_maximum"]
+            <= duplicate_limit
+            and input_check["processed_k_corner_error_maximum_pixels"] <= 0.5
+            and (
+                frame != frames[0]
+                or (
+                    repeatability is not None
+                    and repeatability["duplicate_relative_mad_maximum"]
+                    <= duplicate_limit
+                )
+            )
+        )
+        input_check["admitted"] = frame_admitted
+        if not frame_admitted:
+            geometry_admitted = False
+            break
+
+        target = test_records.get((config["data"]["test_camera"], frame))
+        if target is None or target.image_path is not None:
+            raise ProvenanceError("fast pilot requires calibration-only cam00 target access")
+        geometry, supported_bins = evaluate_frame_geometry(
+            predictions,
+            [item["member_camera_ids"] for item in group_inputs],
+            target_K=target.K,
+            target_w2c=target.w2c_opencv,
+            target_width=target.width,
+            target_height=target.height,
+            stride=int(config["sampling"]["grid_stride_pixels"]),
+            minimum_cameras=int(config["fusion"]["minimum_physical_cameras"]),
+            maximum_depth_sigma=float(config["fusion"]["maximum_depth_sigma"]),
+            target_bin_pixels=int(config["sampling"]["grid_stride_pixels"]),
+        )
+        frame_reports.append(
+            {
+                "frame": frame,
+                "anchor_camera_id": anchor_camera_id,
+                "groups": [list(group) for group in groups],
+                "geometry_input_check": input_check,
+                "geometry": geometry,
+            }
+        )
+        frame_bin_sets.append((frame, supported_bins))
+
+    if repeatability is None:
+        raise ContractError("fast pilot did not execute its repeatability diagnostic")
+    report_path = _expected_path(entry, "phase9-fast-visibility-pilot-v1")
+    report = {
+        "schema_version": "phase9-fast-visibility-pilot-v1",
+        "run_id": entry["run_id"],
+        "scene": expected_scene,
+        "frames": list(frames),
+        "methodology_status": "exploratory_fail_fast_geometry_diagnostic",
+        "a03_registered_verdict": "failed_1e-5_repeatability_preserved",
+        "repeatability": repeatability,
+        "geometry_admission": {
+            "admitted": geometry_admitted,
+            "rule": "same-group and shared-anchor cross-group depth relative MAD <= frozen 0.05; every fused group processed-K corner error <= 0.5 pixels",
+            "does_not_override_a03": True,
+        },
+        "geometry_input_checks": geometry_input_checks,
+        "frame_reports": frame_reports,
+        "temporal_bin_transitions": temporal_bin_transitions(frame_bin_sets),
+        "temporal_interpretation": "calibration-only target-bin occupancy proxy; not surface-track reveal/hide evidence",
+        "label_dependent_gate_a": "not_evaluable",
+        "cam00_rgb_opened": False,
+        "split_binding": split_binding,
+        "a02_authority_path": str(authority_path),
+        "a02_authority_sha256": sha256_file(authority_path),
+        "a02_terminal_sha256": a02_terminal_sha,
+        "model_authority": model_authority,
+    }
+    write_json_atomic(report_path, report)
+    reference = _scientific_file_ref(
+        report_path, "phase9-fast-visibility-pilot-v1", entry["run_id"]
+    )
+    payload = {
+        "geometry_admitted": geometry_admitted,
+        "frame125_same_group_strict_repeatability_pass": repeatability["strict_repeatability_pass"],
+        "duplicate_relative_mad_maximum": repeatability[
+            "duplicate_relative_mad_maximum"
+        ],
+        "frame_report_count": len(frame_reports),
+        "supported_bin_counts": [
+            item["geometry"]["target_supported_bin_count"] for item in frame_reports
+        ],
+        "ordered_multilayer_bin_counts": [
+            item["geometry"]["target_ordered_multilayer_bin_count"]
+            for item in frame_reports
+        ],
+        "label_dependent_gate_a": "not_evaluable",
+    }
+    return [reference], payload
 
 
 def action_annotation_packet(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -606,7 +884,8 @@ def action_freeze_implementation(entry: dict[str, Any], args: argparse.Namespace
     if head != upstream:
         raise ProvenanceError("I01 requires HEAD to equal the current upstream")
     tracked = [{"path": str(path.relative_to(REPO_ROOT)), "sha256": sha256_file(path)} for path in _tracked_phase9_paths()]
-    matrix_sha = sha256_file(DEFAULT_MATRIX)
+    matrix_path = Path(args.matrix).resolve()
+    matrix_sha = sha256_file(matrix_path)
     config_sha = sha256_file(DEFAULT_CONFIG)
     schema_sha = sha256_file(DEFAULT_SCHEMA_BUNDLE)
     baseline_audit = validate_baseline_registry(_json(DEFAULT_BASELINES))
@@ -637,7 +916,7 @@ def action_freeze_implementation(entry: dict[str, Any], args: argparse.Namespace
     write_json_atomic(implementation_path, implementation)
     implementation_sha = sha256_file(implementation_path)
 
-    matrix = _json(DEFAULT_MATRIX)
+    matrix = _json(matrix_path)
     commands = []
     for registered in matrix["runs"]:
         argv = [_expand(value).as_posix() if "$" in value else value for value in registered["command"]["argv_template"]]
@@ -741,6 +1020,7 @@ def main() -> int:
         "synthetic": lambda: action_synthetic(entry, args),
         "hash-da3": lambda: action_hash_da3(entry, args, execution),
         "da3-conformance": lambda: action_da3_conformance(entry, args, execution),
+        "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "build-annotation-packet": lambda: action_annotation_packet(entry, args),
         "freeze-implementation": lambda: action_freeze_implementation(entry, args),
         "decide": lambda: action_decide(entry, args),

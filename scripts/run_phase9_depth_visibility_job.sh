@@ -10,7 +10,7 @@ ACTION="${PHASE9_ACTION:?PHASE9_ACTION must be set}"
 EXECUTION_MANIFEST="${PHASE9_EXECUTION_MANIFEST:?PHASE9_EXECUTION_MANIFEST must be set}"
 if [[ -n "${PHASE9_PYTHON:-}" ]]; then
   PYTHON_BIN="$PHASE9_PYTHON"
-elif [[ "$ACTION" == "da3-conformance" || "$ACTION" == "produce-da3" ]]; then
+elif [[ "$ACTION" == "da3-conformance" || "$ACTION" == "produce-da3" || "$ACTION" == "fast-visibility-pilot" ]]; then
   PYTHON_BIN="$PROJECT_ROOT/envs/da3/bin/python"
 else
   PYTHON_BIN="$PROJECT_ROOT/envs/adags/bin/python"
