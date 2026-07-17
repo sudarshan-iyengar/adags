@@ -1,0 +1,131 @@
+{
+  "schema_version": "phase9-r031-baselines-v1",
+  "frozen_before_phase9_outcomes": true,
+  "scientific_authority": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+  "repository_commit": "94cd67df53cfc487989c71dc16a60fe853f53550",
+  "source_code": {
+    "path": "scripts/run_depth_occlusion_support.py",
+    "sha256": "3e8e19bb7fadafef25df1b6df0f75fc3d5d2fd8d245c9f6616488137466db933"
+  },
+  "da3": {
+    "checkout_commit": "41736238f5bced4debf3f2a12375d2466874866d",
+    "model_id": "depth-anything/DA3NESTED-GIANT-LARGE-1.1",
+    "supplied_intrinsics_extrinsics": false,
+    "grouping": "adjacent_two_frame_calls_per_physical_camera",
+    "depth_processing": "per_frame_robust_normalization",
+    "metric_scale_preserved": false
+  },
+  "commands": {
+    "prepare": {
+      "path": "refine-logs/depth_occlusion_support/command_prepare.sh",
+      "sha256": "62c3e0b449a10430582c4920ef1d3c4a0bb22c56d2b92875afc0079cdb7425d4"
+    },
+    "infer": {
+      "path": "refine-logs/depth_occlusion_support/r031_da3_depth_full/command_infer.sh",
+      "sha256": "3f82fee7875ac623570b85545783413f01b9b11af5bfc82f2d46944bc7c64a2f"
+    },
+    "R031": {
+      "path": "refine-logs/depth_occlusion_support/r031_depth_support_full/command_support.sh",
+      "sha256": "a06d1c00c2c90a7bcab4fedf8827c31664b6f2593a065c3175963e6c9d622ed3"
+    },
+    "R032": {
+      "path": "refine-logs/depth_occlusion_support/r032_depth_support_highrecall/command_support.sh",
+      "sha256": "fcd502c23a73c0280a5b52c19ba505e4e920fdde74d5dec07f6ed5d2fb237195"
+    },
+    "R033": {
+      "path": "refine-logs/depth_occlusion_support/r033_depth_support_highrecall_tilefill/command_support.sh",
+      "sha256": "d556d84dbe3c94e6d5f20119c0c788782b6f704f1f420bfa02a49f34a0681643"
+    }
+  },
+  "historical_manifests": {
+    "frame": {
+      "path": "refine-logs/depth_occlusion_support/r031_da3_frame_manifest.json",
+      "sha256": "f4522dcf5ec18ea4212c1f19c08ec51f3e3e4cd881384f77a8481a006ab4d19e"
+    },
+    "depth": {
+      "path": "refine-logs/depth_occlusion_support/r031_da3_depth_full/da3_depth_manifest.json",
+      "sha256": "5a3437a5e78538f996e855c77fa1ffcf538fc2b7588022770aa7671bd06ccc63"
+    },
+    "R031": {
+      "path": "refine-logs/depth_occlusion_support/r031_depth_support_full/depth_occlusion_support_manifest.json",
+      "sha256": "613db3f49650eb88b329858ad2442cb1f0b0192893b4be7113b8827cb07f24b3"
+    },
+    "R032": {
+      "path": "refine-logs/depth_occlusion_support/r032_depth_support_highrecall/depth_occlusion_support_manifest.json",
+      "sha256": "9f4dedbf0d1a83ed98417fec871b6afac39053f831aaa433119244f9c04fbdec"
+    },
+    "R033": {
+      "path": "refine-logs/depth_occlusion_support/r033_depth_support_highrecall_tilefill/depth_occlusion_support_manifest.json",
+      "sha256": "bc7f33d5e396d0591d3ade9d2992912df88c6714821c51a886eb39000898c41e"
+    }
+  },
+  "population": {
+    "scenes": [
+      "cut_roasted_beef",
+      "flame_steak",
+      "sear_steak"
+    ],
+    "cameras": [
+      "cam00"
+    ],
+    "frame_start_inclusive": 0,
+    "frame_end_inclusive": 299,
+    "native_mask_resize": "nearest_neighbor"
+  },
+  "baselines": [
+    {
+      "baseline_id": "R031",
+      "max_components_per_scene": 36,
+      "max_pixel_fraction": 0.03,
+      "boundary_dilate": 6,
+      "min_component_area": 16,
+      "min_score": 0.08,
+      "tile_size": 64,
+      "tile_stride": 32,
+      "fill_component_tiles": false
+    },
+    {
+      "baseline_id": "R032",
+      "max_components_per_scene": 360,
+      "max_pixel_fraction": 0.01,
+      "boundary_dilate": 10,
+      "min_component_area": 8,
+      "min_score": 0.03,
+      "tile_size": 96,
+      "tile_stride": 16,
+      "fill_component_tiles": false
+    },
+    {
+      "baseline_id": "R033",
+      "max_components_per_scene": 360,
+      "max_pixel_fraction": 0.03,
+      "boundary_dilate": 10,
+      "min_component_area": 8,
+      "min_score": 0.03,
+      "tile_size": 96,
+      "tile_stride": 16,
+      "fill_component_tiles": true
+    }
+  ],
+  "threshold_policy": {
+    "selected_when": "score >= threshold",
+    "candidates": "sorted unique finite emitted support scores plus positive and negative infinity",
+    "selected_fraction_denominator": "all valid native cam00 pixels in cut calibration windows",
+    "tie_rule": "minimum absolute accepted-fraction difference, then higher threshold, then lower baseline ID",
+    "spatial_baseline_selection": "maximum 4-pixel boundary F1, then region IoU, then R031<R032<R033",
+    "freeze_before": [
+      "cut_roasted_beef development_test",
+      "flame_steak transfer_locked",
+      "sear_steak transfer_locked"
+    ]
+  },
+  "r031_mt": {
+    "baseline_id": "R031-MT-support-v1",
+    "algorithm": "exact R031 independently per annotated physical camera",
+    "threshold_population": "all valid pixels in every non-unknown cut-calibration state aperture",
+    "target_fraction": "CSVL accepted aperture pixels at risk <=0.75 over identical valid pixels",
+    "state_rule": "visible if selected fraction >=0.5 else occluded",
+    "emits_order": false,
+    "annotation_dependency": "threshold/evaluation only; support prediction is sealed pre-label"
+  }
+}

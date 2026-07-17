@@ -1,0 +1,102 @@
+{
+  "dataset_root_env": "$WORK/proj_adags/data/n3v",
+  "scenes": {
+    "coffee_martini": {
+      "test": {
+        "camera_ids": ["cam00"],
+        "record_count": 300,
+        "record_identity_sha256": "78c5261693f69b7e20f634cb83807b84ea529929c63882d8f2836f38db611075",
+        "source_path": "transforms_test.json",
+        "source_sha256": "74fe2ee63daef09594b10c7ff31fd3705b87c6939aa69e9a81c7658caa59f50d"
+      },
+      "train": {
+        "camera_ids": ["cam01", "cam02", "cam04", "cam05", "cam06", "cam07", "cam08", "cam09", "cam10", "cam11", "cam12", "cam13", "cam14", "cam16", "cam18", "cam19", "cam20"],
+        "record_count": 5100,
+        "record_identity_sha256": "03fc53f4f2c70601d52e930bcbc9748ff560dc4cd056176a6327bdade6cd073a",
+        "source_path": "transforms_train.json",
+        "source_sha256": "a588f5a89c4dc244d829d85f830b0317adf6477bb5f8afa5b31941bddbcf36be"
+      }
+    },
+    "cook_spinach": {
+      "test": {
+        "camera_ids": ["cam00"],
+        "record_count": 300,
+        "record_identity_sha256": "78c5261693f69b7e20f634cb83807b84ea529929c63882d8f2836f38db611075",
+        "source_path": "transforms_test.json",
+        "source_sha256": "961641a4d60d5f5a36d40ed18ea51c1b2810b0a0f5a6ee06d31e7c31dc8131ac"
+      },
+      "train": {
+        "camera_ids": ["cam01", "cam02", "cam03", "cam04", "cam05", "cam06", "cam07", "cam08", "cam09", "cam10", "cam11", "cam12", "cam13", "cam14", "cam15", "cam16", "cam17", "cam18", "cam19", "cam20"],
+        "record_count": 6000,
+        "record_identity_sha256": "3bb273cdb5770305117a7b010a7258976f1536e66ecb1e228fe26b8e64a635eb",
+        "source_path": "transforms_train.json",
+        "source_sha256": "b125b9d19c9c855c1396b3bfe754489fc54602d41b972940b97fbaa1a8c7b213"
+      }
+    },
+    "cut_roasted_beef": {
+      "test": {
+        "camera_ids": ["cam00"],
+        "record_count": 300,
+        "record_identity_sha256": "78c5261693f69b7e20f634cb83807b84ea529929c63882d8f2836f38db611075",
+        "source_path": "transforms_test.json",
+        "source_sha256": "1900f8b23ff91cde46a1a65f467b51e11ae877c7015f22bb3249303eceb7ab89"
+      },
+      "train": {
+        "camera_ids": ["cam01", "cam02", "cam03", "cam05", "cam06", "cam07", "cam08", "cam09", "cam10", "cam11", "cam12", "cam13", "cam14", "cam15", "cam16", "cam17", "cam18", "cam19", "cam20"],
+        "record_count": 5700,
+        "record_identity_sha256": "383e471f797154a9dc5b55fe9bb0dd01d39f1926e35931fca67135b04cdd4d18",
+        "source_path": "transforms_train.json",
+        "source_sha256": "5f45aa1b9aadbcb6d623ae6376a97d9f3c8188a86e934f406da450d7083bb679"
+      }
+    },
+    "flame_salmon_1": {
+      "test": {
+        "camera_ids": ["cam00"],
+        "record_count": 300,
+        "record_identity_sha256": "78c5261693f69b7e20f634cb83807b84ea529929c63882d8f2836f38db611075",
+        "source_path": "transforms_test.json",
+        "source_sha256": "61c84c590f81eddb7a3553f0563c7aff0d64ecae2154746c145134ab2afda126"
+      },
+      "train": {
+        "camera_ids": ["cam01", "cam02", "cam04", "cam05", "cam06", "cam07", "cam08", "cam09", "cam10", "cam11", "cam12", "cam13", "cam14", "cam15", "cam16", "cam18", "cam19", "cam20"],
+        "record_count": 5400,
+        "record_identity_sha256": "08732e2d8144d3e85c8b07d6960cbbbe178a8b1cf50004fed75282ddf91bc95c",
+        "source_path": "transforms_train.json",
+        "source_sha256": "e117199b66f66033d001c4f2003be58909e87fe13f3389e2e8ab98ed3adce21f"
+      }
+    },
+    "flame_steak": {
+      "test": {
+        "camera_ids": ["cam00"],
+        "record_count": 300,
+        "record_identity_sha256": "78c5261693f69b7e20f634cb83807b84ea529929c63882d8f2836f38db611075",
+        "source_path": "transforms_test.json",
+        "source_sha256": "55cd435032eaaaf96992f8a19a6434cb6875602e767572422a88d637b05ae750"
+      },
+      "train": {
+        "camera_ids": ["cam01", "cam02", "cam03", "cam04", "cam05", "cam06", "cam07", "cam08", "cam09", "cam10", "cam11", "cam12", "cam13", "cam14", "cam15", "cam16", "cam17", "cam18", "cam19", "cam20"],
+        "record_count": 6000,
+        "record_identity_sha256": "3bb273cdb5770305117a7b010a7258976f1536e66ecb1e228fe26b8e64a635eb",
+        "source_path": "transforms_train.json",
+        "source_sha256": "98a311208ec9e9f37643c2bff3a09d3258cf037f7f011bfed34dfb30c337b505"
+      }
+    },
+    "sear_steak": {
+      "test": {
+        "camera_ids": ["cam00"],
+        "record_count": 300,
+        "record_identity_sha256": "78c5261693f69b7e20f634cb83807b84ea529929c63882d8f2836f38db611075",
+        "source_path": "transforms_test.json",
+        "source_sha256": "059edb7f6ea7300ffaee5abcf82823ac9ebee14f865e15001218696cd80479e0"
+      },
+      "train": {
+        "camera_ids": ["cam01", "cam02", "cam03", "cam04", "cam05", "cam06", "cam07", "cam08", "cam09", "cam10", "cam11", "cam12", "cam13", "cam14", "cam15", "cam16", "cam17", "cam18", "cam19", "cam20"],
+        "record_count": 6000,
+        "record_identity_sha256": "3bb273cdb5770305117a7b010a7258976f1536e66ecb1e228fe26b8e64a635eb",
+        "source_path": "transforms_train.json",
+        "source_sha256": "aa8f8e8868792a69ba63db1d09b67d50e2b50eb1daf07c5e05b2a927440c96a3"
+      }
+    }
+  },
+  "schema_version": "n3v-split-v1"
+}

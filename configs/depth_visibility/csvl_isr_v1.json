@@ -1,0 +1,260 @@
+{
+  "annotation": {
+    "agreement_polygon_iou_minimum": 0.7,
+    "agreement_transition_tolerance_frames": 1,
+    "all_windows_double_assigned": true,
+    "discovery_match_source_iou_minimum": 0.3,
+    "discovery_match_target_iou_minimum": 0.3,
+    "discovery_roles": [
+      "annotator_a",
+      "annotator_b"
+    ],
+    "event_family_vocabulary": [
+      "reveal",
+      "hide"
+    ],
+    "human_fields_initially_empty": true,
+    "one_sided_value": "not_found",
+    "two_stage_discovery_union_roster": true
+  },
+  "camera": {
+    "distortion_policy": "nonzero_fails_closed",
+    "loader_adapter": "flip_camera_to_world_yz_columns_then_invert_once",
+    "matrix_convention": "column_vector_opencv_world_to_camera_positive_z",
+    "pixel_centers": "native_integer",
+    "resize_sampling": "bilinear_align_corners_false",
+    "timestamp_tolerance_seconds": 1e-06
+  },
+  "da3": {
+    "align_to_input_ext_scale": true,
+    "checkout_commit": "41736238f5bced4debf3f2a12375d2466874866d",
+    "conformance_repeat_atol": 1e-05,
+    "conformance_repeat_rtol": 1e-05,
+    "depth_semantics": "optical_axis_z",
+    "first_observed_sha_required": true,
+    "infer_gs": false,
+    "model_id": "DA3NESTED-GIANT-LARGE-1.1",
+    "per_frame_normalization": false,
+    "process_res": 504,
+    "process_res_method": "upper_bound_resize",
+    "production_sidecar_immutable": true,
+    "ref_view_strategy": "saddle_balanced",
+    "scale_shift_fit": false,
+    "use_ray_pose": false,
+    "weight_expected_bytes": 6759558100
+  },
+  "data": {
+    "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+    "development_scene": "cut_roasted_beef",
+    "final_scenes": [
+      "coffee_martini",
+      "cook_spinach",
+      "cut_roasted_beef",
+      "flame_salmon_1",
+      "flame_steak",
+      "sear_steak"
+    ],
+    "r009_use": "historical_posthoc_only",
+    "split_manifest": "configs/depth_visibility/n3v_split_v1.json",
+    "test_camera": "cam00",
+    "test_source": "transforms_test.json",
+    "train_source": "transforms_train.json",
+    "transfer_scenes": [
+      "flame_steak",
+      "sear_steak"
+    ]
+  },
+  "evaluation": {
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 20260715,
+    "boundary_primary_tolerance_pixels": 4,
+    "boundary_sensitivities_pixels": [
+      2,
+      8
+    ],
+    "color_space": "model_srgb_coded_0_1",
+    "cycle_validity_pixels": 1.5,
+    "empty_frame_mask": "exclude_and_count",
+    "event_horizon_offsets": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "event_macro_order": [
+      "frame_within_event",
+      "event_within_scene",
+      "scene"
+    ],
+    "exact_zero_mse_reported": true,
+    "flow_direction": "backward_t_to_t_minus_1",
+    "lpips_backbone": "alex",
+    "lpips_package": "lpipsPyTorch",
+    "lpips_version": "0.1",
+    "minimum_event_valid_frames": 1,
+    "psnr_data_range": 1,
+    "psnr_mse_floor": 1e-12,
+    "reveal_ghost_requires_all_offsets": true,
+    "sampling": "bilinear_align_corners_false",
+    "static_complement_erosion_pixels": 8,
+    "static_flicker_minimum_valid_pairs": 269,
+    "static_frame_population": "all_300_cam00_test_frames",
+    "static_ghost_name_retired": true,
+    "static_minimum_pixels_per_frame": 1024,
+    "static_minimum_valid_frames": 270,
+    "static_motion_dilation_pixels": 16,
+    "static_primary_metrics": [
+      "psnr",
+      "lpips",
+      "reconstruction_l1",
+      "flicker"
+    ],
+    "zero_denominator_error_improvement": "zero/zero=0; zero/positive=negative_infinity_fail",
+    "zero_denominator_error_regression": "zero/zero=0; zero/positive=positive_infinity_fail"
+  },
+  "frozen_before_phase9_outcomes": true,
+  "fusion": {
+    "covariance_inverse_clip": 1e-12,
+    "duplicate_relative_mad_maximum": 0.05,
+    "maximum_depth_sigma": 2.5,
+    "maximum_pair_cost": 1,
+    "maximum_projection_residual_pixels": 2,
+    "merge_radius_rscene": 0.002,
+    "minimum_patch_ncc": 0.6,
+    "minimum_physical_cameras": 3,
+    "robust_mahalanobis_maximum": 2.5
+  },
+  "gate_a": {
+    "claim_grade": {
+      "boundary_f1_delta_minimum": 0.1,
+      "cross_view_inconsistency_relative_reduction_minimum": 0.25,
+      "ece_maximum": 0.1,
+      "event_f1_minimum": 0.6,
+      "event_recall_minimum": 0.7,
+      "no_represented_event_family_missed": true,
+      "ordering_accuracy_minimum": 0.75,
+      "ordering_auroc_minimum": 0.8,
+      "ordering_coverage_minimum": 0.7,
+      "region_iou_delta_minimum": 0.1,
+      "temporal_inconsistency_relative_reduction_minimum": 0.25
+    },
+    "engineering": {
+      "boundary_f1_delta_minimum": 0.05,
+      "cross_view_inconsistency_relative_reduction_minimum": 0.15,
+      "ece_maximum": 0.15,
+      "evaluable_track_fraction_minimum": 0.8,
+      "event_f1_minimum": 0.45,
+      "event_recall_minimum": 0.6,
+      "ordering_accuracy_minimum": 0.7,
+      "ordering_auroc_minimum": 0.75,
+      "ordering_coverage_minimum": 0.6,
+      "region_iou_delta_minimum": 0.05,
+      "temporal_inconsistency_relative_reduction_minimum": 0.15
+    }
+  },
+  "gate_b": {
+    "event_lpips_relative_improvement_minimum": 0.05,
+    "event_psnr_delta_db_minimum": 0.2,
+    "event_strict_majority_both": true,
+    "flicker_relative_regression_maximum": 0.05,
+    "full_vs_single_event_fraction_minimum": 0.5,
+    "full_vs_single_lpips_relative_improvement_minimum": 0.02,
+    "full_vs_single_psnr_delta_db_minimum": 0.05,
+    "reveal_ghost_relative_regression_maximum": 0.05,
+    "shuffle_gain_fraction_maximum": 0.5,
+    "static_lpips_relative_regression_maximum": 0.02,
+    "static_psnr_delta_db_minimum": -0.05,
+    "static_reconstruction_l1_relative_regression_maximum": 0.02
+  },
+  "grouping": {
+    "maximum_cameras": 6,
+    "maximum_optical_axis_angle_degrees": 75,
+    "minimum_center_distance_rscene": 0.02,
+    "minimum_second_singular_value_rscene": 0.01,
+    "minimum_valid_groups_per_camera_time": 2,
+    "target_transitive_exclusion": true
+  },
+  "method_id": "csvl-isr-v1",
+  "representation": {
+    "association_protection_radius_frames": 5,
+    "bottom_opacity_fraction": 0.2,
+    "capacity_seed_authority": "training_seed",
+    "common_iteration": 5000,
+    "comparable_iteration": 6000,
+    "comparable_k": 2048,
+    "minimum_slot_age_iterations": 500,
+    "opacity_initial": 0.1,
+    "optimizer_policy_source": "P9-B02-CAPACITY-ADMISSION-DECISION",
+    "pilot_iteration": 5250,
+    "pilot_k": 256,
+    "pixel_confidence": "clip(1-state_risk,0,1) for accepted visible/reveal; overlap max then lower track_id tie",
+    "point_budget_relative_tolerance": 0.02,
+    "point_ceiling": 600000,
+    "rot_4d_required": false,
+    "route_logit_source": "configured_route_logit_init",
+    "scaffold_required": false,
+    "shuffle_algorithm": "sha256_domain_cyclic_offset_v1",
+    "shuffle_domain_separator_hex": "00",
+    "shuffle_map_domain_utf8": "csvl-isr-v1/shuffled-maps",
+    "shuffle_seed_offset": 17011,
+    "shuffle_target_domain_utf8": "csvl-isr-v1/shuffled-targets",
+    "shuffled_weighting": "receiver i gets source (i+offset) mod N over sorted complete map keys; offset=1+(uint64be(SHA256(domain||ASCII(seed))) mod (N-1))",
+    "staticness_score_initial": 0,
+    "transaction_iteration": 5001,
+    "visibility_weight_scale": 0.5
+  },
+  "risk": {
+    "accepted_maximum": 0.75,
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 20260715,
+    "calibration_bins": 15,
+    "region_quantile": 0.9,
+    "report_thresholds": [
+      0.25,
+      0.5,
+      0.75
+    ]
+  },
+  "sampling": {
+    "grid_stride_pixels": 8,
+    "minimum_sample_separation_pixels": 8,
+    "patch_radius_pixels": 2,
+    "salient_fraction_of_grid": 0.25,
+    "sobel_border": "opencv_reflect_101"
+  },
+  "schema_version": "csvl-isr-config-v1",
+  "scientific_authority": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+  "surfaces": {
+    "connection_distance_rscene": 0.01,
+    "lambda1_minimum_rscene_squared": 1e-06,
+    "lambda1_over_lambda2_minimum": 0.05,
+    "lambda_gap_over_lambda2_minimum": 0.05,
+    "linear_rgb_l2": 0.15,
+    "minimum_patch_points": 3,
+    "minimum_region_area_pixels": 16,
+    "minimum_shared_cameras": 2,
+    "normal_angle_degrees": 30,
+    "pca_minimum_neighbors": 6,
+    "pca_neighbor_count": 8,
+    "pca_radius_rscene": 0.02,
+    "raster_axis_max_pixels": 8,
+    "raster_axis_min_pixels": 2,
+    "voxel_size_rscene": 0.01
+  },
+  "temporal": {
+    "centroid_distance_rscene": 0.05,
+    "dormant_maximum_frames": 5,
+    "forward_backward_cycle_pixels": 1.5,
+    "minimum_cameras": 2,
+    "minimum_node_matches_per_camera": 3,
+    "nearest_node_pixels": 2,
+    "reid_endpoint_pixels": 2,
+    "reid_ncc_minimum": 0.6,
+    "reid_normal_angle_degrees": 30,
+    "reid_rgb_l2": 0.15,
+    "rgb_l2": 0.2,
+    "search_cost_maximum": 1,
+    "second_best_ratio_minimum": 1.2
+  }
+}

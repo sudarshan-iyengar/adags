@@ -1,0 +1,102 @@
+{
+  "authority": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+  "common_invariants": {
+    "capacity_seed": "training_seed",
+    "comparable_final_and_integrated_relative_tolerance": 0.02,
+    "dynamic_plus_hard_static_count_constant": true,
+    "hard_static_count_required": 0,
+    "optimizer_policy_required_for_stages": [
+      "B03",
+      "B04"
+    ],
+    "optimizer_policy_values": [
+      "zero",
+      "coordinatewise_lower_median_v1"
+    ],
+    "parameter_identity_preserved": true,
+    "point_ceiling": 600000,
+    "shuffle_algorithm": "sha256_domain_cyclic_offset_v1",
+    "shuffle_domain_separator_hex": "00",
+    "shuffle_map_domain_utf8": "csvl-isr-v1/shuffled-maps",
+    "shuffle_seed_offset": 17011,
+    "shuffle_target_domain_utf8": "csvl-isr-v1/shuffled-targets",
+    "survivor_values_and_moments_bitwise_unchanged_at_mutation": true,
+    "target_and_donor_shortfall": "abstain_without_partial_mutation",
+    "tensor_level_adam_step_preserved": true
+  },
+  "frozen_before_phase9_outcomes": true,
+  "modes": {
+    "capacity_only": {
+      "capacity_transaction": "reassign",
+      "moment_initialization": "selected_optimizer_policy_from_P9_B02_CAPACITY_ADMISSION",
+      "observation_weighting": "unchanged",
+      "protection": "none",
+      "target_sidecar": "generic_event_blind"
+    },
+    "capacity_only_medianmom": {
+      "capacity_transaction": "reassign",
+      "moment_initialization": "coordinatewise_lower_median_event_blind_non_donor_rows",
+      "observation_weighting": "unchanged",
+      "protection": "none",
+      "target_sidecar": "generic_event_blind"
+    },
+    "common": {
+      "capacity_transaction": "none_before_5001",
+      "moment_initialization": "unchanged",
+      "observation_weighting": "unchanged",
+      "protection": "none",
+      "target_sidecar": null
+    },
+    "full": {
+      "capacity_transaction": "reassign",
+      "moment_initialization": "selected_optimizer_policy_from_P9_B02_CAPACITY_ADMISSION",
+      "observation_weighting": "one_plus_0.5_confidence_on_accepted_visible_reveal",
+      "protection": "inferred_associations",
+      "target_sidecar": "inferred"
+    },
+    "null_reset": {
+      "capacity_transaction": "rewrite_selected_event_blind_donor_values_to_exact_originals",
+      "moment_initialization": "selected_optimizer_policy_from_P9_B02_CAPACITY_ADMISSION",
+      "observation_weighting": "unchanged",
+      "protection": "none",
+      "target_sidecar": "generic_event_blind"
+    },
+    "oracle_capacity": {
+      "capacity_transaction": "reassign",
+      "moment_initialization": "selected_optimizer_policy_from_P9_B02_CAPACITY_ADMISSION",
+      "observation_weighting": "unchanged",
+      "protection": "oracle_associations",
+      "target_sidecar": "human_oracle_training_views_only"
+    },
+    "oracle_capacity_medianmom": {
+      "capacity_transaction": "reassign",
+      "moment_initialization": "coordinatewise_lower_median_event_blind_non_donor_rows",
+      "observation_weighting": "unchanged",
+      "protection": "oracle_associations",
+      "target_sidecar": "human_oracle_training_views_only"
+    },
+    "route0": {
+      "capacity_transaction": "none",
+      "moment_initialization": "unchanged",
+      "observation_weighting": "unchanged",
+      "protection": "none",
+      "target_sidecar": null
+    },
+    "shuffled": {
+      "capacity_transaction": "reassign",
+      "moment_initialization": "selected_optimizer_policy_from_P9_B02_CAPACITY_ADMISSION",
+      "observation_weighting": "inferred_rate_with_permuted_identity",
+      "protection": "permuted_inferred_associations",
+      "target_sidecar": "shuffled_inferred"
+    },
+    "visibility_only": {
+      "capacity_transaction": "none",
+      "moment_initialization": "unchanged",
+      "observation_weighting": "one_plus_0.5_confidence_on_accepted_visible_reveal",
+      "protection": "none",
+      "target_sidecar": "inferred_weight"
+    }
+  },
+  "schema_version": "csvl-isr-training-modes-v1",
+  "transaction_iteration": 5001
+}

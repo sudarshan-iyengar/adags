@@ -437,7 +437,7 @@ confidence that does not predict errors.
   with the current L1/proxy retained only for continuity;
 - fraction of event windows improved on both fidelity metrics;
 - PSNR and perceptual oracle-gap recovery;
-- static-region PSNR/quality and static ghost;
+- static-region PSNR/quality and masked reconstruction L1 no-harm;
 - temporal flicker and reveal-transition ghost trails;
 - realized points, reassignments/reinitializations/preservations, and capacity
   by surface state; record births only if a later approved route introduces them;
@@ -521,7 +521,7 @@ seeds where feasible.
 ## 9. Static-region no-harm criteria
 
 - Mean static-region PSNR loss no worse than -0.05 dB versus route0.
-- Mean static perceptual error and static ghost no more than 2% worse.
+- Mean static perceptual error and masked static reconstruction L1 no more than 2% worse.
 - Every claim-grade scene satisfies each bound; aggregate success cannot hide a
   failed scene. Report R009 static continuity separately without using it as a
   pass/fail condition.
@@ -551,8 +551,10 @@ seeds where feasible.
 
 ### Datasets
 
-- Development: N3V `cut_roasted_beef` only, with `cam10` held out under the
-  current loader and development cameras/times frozen separately.
+- Development: N3V `cut_roasted_beef` only. Live transforms metadata establishes
+  that `cam00` is the held-out test camera in the active loader and `cam10` is a
+  training camera. The exact train/test record manifest and development
+  cameras/times must be frozen and hashed before Gate A execution.
 - Locked transfer: N3V `flame_steak` and `sear_steak`; the new claim-grade event
   annotations and rendered results remain sealed until method lock.
 - Cross-dataset evaluation is deferred until N3V Gate B admission. PanopticSports
@@ -561,29 +563,23 @@ seeds where feasible.
 - Synthetic fixture: small controlled occluder/reveal geometry for Gate A
   correctness, not a paper result by itself.
 
-## 11. Initial compute envelope
+## 11. Phase 9 compute policy
 
-No compute is authorized during this contract-finalization step. The envelope
-below is approved as a cap but becomes executable only after method refinement
-and explicit implementation and Slurm-job approval:
+The earlier Phase 8B one-scene/five-training/approximately 80-GPU-hour envelope
+was a pre-implementation planning cap. The user superseded it for Phase 9:
 
-The approved one-scene envelope is conditional and applies only to
-`cut_roasted_beef`:
+- there is no artificial GPU-hour ceiling, but every expensive execution must
+  have a preregistered purpose, exact configuration, compute estimate, success/
+  failure interpretation, and downstream decision;
+- plumbing, geometry, and numerical checks use the shortest adequate fidelity;
+- 6000 iterations are used only for converged, comparable representation runs;
+- after one-scene causal admission and configuration freeze, final admitted
+  comparisons cover all six N3V scenes;
+- subsequent compute prioritizes matched seeds, uncertainty, decisive causal
+  controls, and robustness rather than arbitrary sweeps.
 
-1. **Gate A:** non-training fixture and scoring work plus at most two approved
-   depth/geometry variants and three non-trainable baselines.
-2. **Gate B capacity admission:** two training lanes--capacity-only and
-   oracle-evidence-plus-capacity. Reuse route0. Stop if oracle-guided capacity
-   cannot improve audited events without static harm.
-3. **Gate B coupling admission after the oracle lane passes:** three additional
-   lanes--visibility-only, coupled, and shuffled/misaligned evidence.
-
-Each training lane is capped at 6000 iterations, 600k points, and 15 wall-clock
-hours. Five lanes therefore permit at most 75 lane GPU-hours; reserve roughly
-five GPU-hours for approved overhead, for an approximate total envelope of 80
-GPU-hours. The five-lane result is engineering admission only. Training on
-locked transfer scenes, multiple seeds, cross-dataset work, or any replacement
-lane requires a gate memo and new user approval.
+The 600k point ceiling, matched realized/integrated budgets, static no-harm, and
+Gate A/B separation remain unchanged. Cross-dataset work remains deferred.
 
 ## 12. Non-goals
 
@@ -634,26 +630,23 @@ previously failed family may be revisited only after documenting which prior
 assumption changed, why the new mechanism isolates it, and what result would
 falsify the revisit.
 
-## 15. Approval boundaries
+## 15. Phase 9 approval boundaries
 
-User approval is required before:
+The user explicitly authorized ordinary Phase 9 implementation, configuration,
+new depth/geometry sidecars, Slurm execution, creation of new W&B runs/metrics,
+narrow commits, and pushes on the tracked branch. These actions still require
+the method/plan reviews, preregistration, validation, job ledger, and gate rules
+in this contract.
 
-- implementing code or changing configs;
-- selecting the concrete reassignment/reinitialization parameterization;
-- generating new depth/geometry sidecars;
-- submitting any Slurm job;
-- writing or syncing W&B;
-- exceeding the conditional five one-scene lanes or any per-lane compute cap;
-- adding a cross-dataset experiment;
-- committing or pushing Phase 8 work.
-
-Within an approved implementation task, ordinary static inspections, tests, and
-repository-local documentation updates remain allowed under repository rules.
+Further user approval remains required for a material change to the two-part
+objective or route hierarchy, cross-dataset evaluation, destructive action,
+mutation of historical W&B runs, rewriting branch history, or an irreconcilable
+repository/credential decision. Human labels may never be fabricated.
 
 ## 16. Resumability/checkpoint protocol
 
-- Transient execution status lives in
-  `$WORK/proj_adags/agent-control/phase8-objective/STATE.json`.
+- Transient Phase 9 execution status lives in
+  `$WORK/proj_adags/agent-control/phase9-depth-visibility-capacity/STATE.json`.
 - After later implementation/job approval, each major Gate A/B stage gets an
   agent-control checkpoint containing inputs, exact commands, outputs, job IDs,
   and next action.
@@ -682,18 +675,22 @@ The nine decision groups are reconciled and approved:
    independently double annotated.
 5. **Scene split:** `cut_roasted_beef` is development-only;
    `flame_steak` and `sear_steak` are locked transfer scenes.
-6. **Compute:** conditional five-training, one-scene envelope capped at 6000
-   iterations, 600k points, 15 hours per lane, and approximately 80 GPU-hours.
+6. **Compute:** the Phase 8B conditional five-training, one-scene envelope
+   was the approved pre-implementation starting point. Phase 9 supersedes its
+   approximately 80-GPU-hour aggregate cap as specified in Section 11; the
+   6000-iteration comparable endpoint, 600k ceiling, and preregistered
+   per-execution resource bounds remain.
 7. **Cross-dataset:** deferred until N3V Gate B admission.
 8. **Initial capacity operation:** preservation plus budget-neutral
    reassignment/reinitialization.
 9. **Evaluation lock:** create a new claim-grade event set; R009 remains
    historical continuity only.
 
-Before implementation, method refinement must still specify the annotation
-manual and adjudication, surface-track representation, independent depth
-alignment/calibration, oracle-sidecar construction, exact reassignment trigger
-and retirement rule, and budget/compute instrumentation. These choices may
-change the concrete mechanism within the Research Freedom clause but may not
-weaken the approved data separation, gates, or resource caps without renewed
-user approval.
+Phase 9 method refinement must freeze the annotation/adjudication protocol,
+surface-track representation, independent depth alignment/calibration,
+oracle-sidecar construction, exact reassignment transaction, and budget
+instrumentation before the corresponding execution. The implementation-ready
+method and claim-driven matrix are versioned operational contracts under
+`research-wiki/operations/`; they may change concrete engineering within the
+Research Freedom clause but may not weaken approved data separation or gates.
+Every post-outcome revision requires a new experimental cycle.

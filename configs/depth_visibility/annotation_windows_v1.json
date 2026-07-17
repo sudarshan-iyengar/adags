@@ -1,0 +1,1468 @@
+{
+  "created_utc": "2026-07-15T00:00:00Z",
+  "cut_split_rule": "first seven listed windows calibration; remaining eleven development_test",
+  "double_annotation_protocol": {
+    "actual_annotator_ids_must_be_distinct_before_packet_open": true,
+    "assignment_tie_rule": "maximize exact binary64 weight sum, then lexicographically minimize sorted (window_id,A_track_id,B_track_id) edges without epsilon",
+    "blind_adjudicator_required_for_unresolved_disagreement": true,
+    "discovery_binding": "role-keyed discovery_a_sealed_manifest and discovery_b_sealed_manifest are both required before union roster",
+    "independent_discovery_then_union_roster": true,
+    "one_sided_discovery_value": "not_found",
+    "window_fraction_assigned_twice": 1.0
+  },
+  "event_family_vocabulary": [
+    "reveal",
+    "hide"
+  ],
+  "frames_are_inclusive": true,
+  "frozen_before_prediction_or_labels": true,
+  "human_fields_status": "empty",
+  "r009_exclusion": {
+    "all_candidates_verified_disjoint": true,
+    "historical_windows": [
+      {
+        "frame_end_inclusive": 110,
+        "frame_start_inclusive": 95,
+        "scene": "cut_roasted_beef"
+      },
+      {
+        "frame_end_inclusive": 155,
+        "frame_start_inclusive": 140,
+        "scene": "cut_roasted_beef"
+      },
+      {
+        "frame_end_inclusive": 170,
+        "frame_start_inclusive": 155,
+        "scene": "flame_steak"
+      },
+      {
+        "frame_end_inclusive": 210,
+        "frame_start_inclusive": 195,
+        "scene": "flame_steak"
+      },
+      {
+        "frame_end_inclusive": 235,
+        "frame_start_inclusive": 220,
+        "scene": "sear_steak"
+      }
+    ],
+    "margin_frames_each_side": 10,
+    "source_path_historical_ignored": "refine-logs/hide_reveal_real_windows.json",
+    "source_sha256": "bde1e799a587789d04ff37f10a802a1b97e9d488d151c6d62591150968107787"
+  },
+  "scene_order": [
+    "cut_roasted_beef",
+    "flame_steak",
+    "sear_steak"
+  ],
+  "schema_version": "depth-visibility-annotation-windows-v1",
+  "shared_boundary_rule": "a physical track and boundary-frame prediction belongs to the earlier listed window",
+  "transfer_rule": "flame_steak and sear_steak remain locked until cut method freeze",
+  "window_length_frames": 11,
+  "windows": [
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 10,
+      "frame_start_inclusive": 0,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "calibration",
+      "window_id": "cut_roasted_beef__w00__f000_010"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 20,
+      "frame_start_inclusive": 10,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "calibration",
+      "window_id": "cut_roasted_beef__w01__f010_020"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 30,
+      "frame_start_inclusive": 20,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "calibration",
+      "window_id": "cut_roasted_beef__w02__f020_030"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 40,
+      "frame_start_inclusive": 30,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "calibration",
+      "window_id": "cut_roasted_beef__w03__f030_040"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 50,
+      "frame_start_inclusive": 40,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "calibration",
+      "window_id": "cut_roasted_beef__w04__f040_050"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 70,
+      "frame_start_inclusive": 60,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "calibration",
+      "window_id": "cut_roasted_beef__w05__f060_070"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 80,
+      "frame_start_inclusive": 70,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "calibration",
+      "window_id": "cut_roasted_beef__w06__f070_080"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 180,
+      "frame_start_inclusive": 170,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w07__f170_180"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 190,
+      "frame_start_inclusive": 180,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w08__f180_190"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 200,
+      "frame_start_inclusive": 190,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w09__f190_200"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 210,
+      "frame_start_inclusive": 200,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w10__f200_210"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 220,
+      "frame_start_inclusive": 210,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w11__f210_220"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 230,
+      "frame_start_inclusive": 220,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w12__f220_230"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 250,
+      "frame_start_inclusive": 240,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w13__f240_250"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 260,
+      "frame_start_inclusive": 250,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w14__f250_260"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 270,
+      "frame_start_inclusive": 260,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w15__f260_270"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 280,
+      "frame_start_inclusive": 270,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w16__f270_280"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 290,
+      "frame_start_inclusive": 280,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "cut_roasted_beef",
+      "split": "development_test",
+      "window_id": "cut_roasted_beef__w17__f280_290"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 10,
+      "frame_start_inclusive": 0,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w00__f000_010"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 20,
+      "frame_start_inclusive": 10,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w01__f010_020"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 30,
+      "frame_start_inclusive": 20,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w02__f020_030"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 40,
+      "frame_start_inclusive": 30,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w03__f030_040"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 50,
+      "frame_start_inclusive": 40,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w04__f040_050"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 70,
+      "frame_start_inclusive": 60,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w05__f060_070"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 80,
+      "frame_start_inclusive": 70,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w06__f070_080"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 90,
+      "frame_start_inclusive": 80,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w07__f080_090"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 100,
+      "frame_start_inclusive": 90,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w08__f090_100"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 110,
+      "frame_start_inclusive": 100,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w09__f100_110"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 120,
+      "frame_start_inclusive": 110,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w10__f110_120"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 130,
+      "frame_start_inclusive": 120,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w11__f120_130"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 140,
+      "frame_start_inclusive": 130,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w12__f130_140"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 250,
+      "frame_start_inclusive": 240,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w13__f240_250"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 260,
+      "frame_start_inclusive": 250,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w14__f250_260"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 270,
+      "frame_start_inclusive": 260,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w15__f260_270"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 280,
+      "frame_start_inclusive": 270,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w16__f270_280"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 290,
+      "frame_start_inclusive": 280,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "flame_steak",
+      "split": "transfer",
+      "window_id": "flame_steak__w17__f280_290"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 10,
+      "frame_start_inclusive": 0,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w00__f000_010"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 20,
+      "frame_start_inclusive": 10,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w01__f010_020"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 40,
+      "frame_start_inclusive": 30,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w02__f030_040"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 50,
+      "frame_start_inclusive": 40,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w03__f040_050"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 60,
+      "frame_start_inclusive": 50,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w04__f050_060"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 80,
+      "frame_start_inclusive": 70,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w05__f070_080"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 90,
+      "frame_start_inclusive": 80,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w06__f080_090"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 100,
+      "frame_start_inclusive": 90,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w07__f090_100"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 120,
+      "frame_start_inclusive": 110,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w08__f110_120"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 130,
+      "frame_start_inclusive": 120,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w09__f120_130"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 150,
+      "frame_start_inclusive": 140,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w10__f140_150"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 160,
+      "frame_start_inclusive": 150,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w11__f150_160"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 170,
+      "frame_start_inclusive": 160,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w12__f160_170"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 190,
+      "frame_start_inclusive": 180,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w13__f180_190"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 200,
+      "frame_start_inclusive": 190,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w14__f190_200"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 260,
+      "frame_start_inclusive": 250,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w15__f250_260"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 280,
+      "frame_start_inclusive": 270,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w16__f270_280"
+    },
+    {
+      "assignment": [
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_a"
+        },
+        {
+          "actual_annotator_id": null,
+          "role": "annotator_b"
+        }
+      ],
+      "frame_end_inclusive": 290,
+      "frame_start_inclusive": 280,
+      "human_fields": {
+        "adjudication_manifest": null,
+        "discovery_a_sealed_manifest": null,
+        "discovery_b_sealed_manifest": null,
+        "roster_pass_a_manifest": null,
+        "roster_pass_b_manifest": null,
+        "union_roster_manifest": null
+      },
+      "r009_disjoint_with_margin": true,
+      "scene": "sear_steak",
+      "split": "transfer",
+      "window_id": "sear_steak__w17__f280_290"
+    }
+  ]
+}
