@@ -1,0 +1,252 @@
+{
+  "schema_version": "phase9-run-matrix-v2",
+  "cycle": "csvl-isr-da3-sidecar-v5",
+  "generated_after_x03": true,
+  "x03_terminal_sha256": "3ed30bcfbdc5a2a843d72261a51e5900ecdb7c118fcd202a8703b011a7eb7ce1",
+  "x03_report_sha256": "78be452f3a8cb19d7fe91a51fab7954701af0fba0f6844673bf9d8dcd4dd14c8",
+  "run_count": 2,
+  "registered_total_max_gpu_hours": 24.0,
+  "submission_ready": true,
+  "runs": [
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V5-I01-IMPLEMENTATION-FREEZE",
+      "stage": "I01-v5",
+      "action": "freeze-implementation",
+      "scope": "engineering",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": null,
+      "camera_time_population": "not_applicable",
+      "claim_or_uncertainty": "The v5 P01 DA3 sidecar implementation bytes are immutably bound.",
+      "necessity": "The full-cut sidecar run must execute exact committed and pushed bytes.",
+      "pre_observation_promotion_predicate": "Clean tracked branch equals upstream and cycle-v5 hashes resolve.",
+      "completion_rule": "Validated implementation freeze and command registry for all v5 entries.",
+      "failure_interpretation_and_action": "Repair once; do not submit P01 from unbound bytes.",
+      "prerequisites": [],
+      "input_artifacts": [],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V5-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": false,
+        "resolved_manifest_sha256": null,
+        "status": "not_applicable"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "1ca3dce1f630b4059fb7d46f9aaf804efbaee39e8e2cb856df2b6b862179216d",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "d9806cf2e012fceda19606b9470a4bc51e03a643d8d7c5e565e53cf501d6be2b",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "freeze-implementation",
+          "--run-id",
+          "P9-V5-I01-IMPLEMENTATION-FREEZE",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/executions/P9-V5-I01-IMPLEMENTATION-FREEZE/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_da3_sidecar_cycle_v5.json",
+          "--allow-unresolved-local"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/executions/P9-V5-I01-IMPLEMENTATION-FREEZE/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/authority/implementation-freeze.json",
+          "schema": "phase9-implementation-freeze-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/authority/commands.json",
+          "schema": "phase9-command-registry-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "none",
+        "site": "login",
+        "profile": "login",
+        "partition": null,
+        "account": null,
+        "qos": null,
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 1,
+        "host_memory_gib": 4,
+        "gpus_per_node": 0,
+        "gpu_type": null,
+        "gpu_memory_gib": null,
+        "wall_minutes": 15,
+        "dependency_mode": null,
+        "stdout": null,
+        "stderr": null
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/executions/P9-V5-I01-IMPLEMENTATION-FREEZE",
+        "retention_class": "durable_decision",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 1,
+        "maximum_temporary_gib": 1
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260721,
+        "shuffle": 20277732,
+        "training": 20260721
+      },
+      "training": null,
+      "max_gpu_hours": 0
+    },
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V5-P01-CUT-DA3-SIDECAR-S20260721",
+      "stage": "P01-v5",
+      "action": "produce-da3",
+      "scope": "engineering",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": "cut_roasted_beef",
+      "camera_time_population": "all_300_cut_train_times_projecting_to_cam00_calibration_only",
+      "claim_or_uncertainty": "Full-cut DA3 sidecars exist for later CSVL ledger construction without cam00 RGB or labels.",
+      "necessity": "X03 established nonzero ordered-layer opportunity but did not seal reusable full-scene DA3 arrays.",
+      "pre_observation_promotion_predicate": "Every train-frame DA3 group emits exact depth, confidence, K, w2c, processed-image, input-image-hash, and ancestry references.",
+      "completion_rule": "Slurm terminal state, exit 0, manifest plus array inventory sealed, cam00_rgb_opened=false, Gate A remains not evaluable.",
+      "failure_interpretation_and_action": "Classify as sidecar production failure; do not infer Gate A or submit B03/B04 from partial arrays.",
+      "prerequisites": [],
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v1/executions/P9-A02-DA3-WEIGHT-SHA/terminal.json",
+          "producer_run_id": "P9-A02-DA3-WEIGHT-SHA",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720/terminal.json",
+          "producer_run_id": "P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        }
+      ],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V5-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "1ca3dce1f630b4059fb7d46f9aaf804efbaee39e8e2cb856df2b6b862179216d",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "b05fea6a28de56dca851c9576e7db13ab05f5586a25ec33785fa16a6366b567f",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "produce-da3",
+          "--run-id",
+          "P9-V5-P01-CUT-DA3-SIDECAR-S20260721",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/executions/P9-V5-P01-CUT-DA3-SIDECAR-S20260721/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_da3_sidecar_cycle_v5.json",
+          "--scene",
+          "cut_roasted_beef"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/executions/P9-V5-P01-CUT-DA3-SIDECAR-S20260721/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/preprocess/cut_roasted_beef/da3/manifest.json",
+          "schema": "phase9-da3-sidecar-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/preprocess/cut_roasted_beef/da3/arrays.json",
+          "schema": "phase9-da3-array-inventory-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "profile": "gpu24",
+        "partition": "boost_usr_prod",
+        "account": "euhpc_d21_034",
+        "qos": "boost_qos_lprod",
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 8,
+        "host_memory_gib": 64,
+        "gpus_per_node": 1,
+        "gpu_type": "a100",
+        "gpu_memory_gib": 64,
+        "wall_minutes": 1440,
+        "dependency_mode": "afterok",
+        "stdout": "logs/P9-V5-P01-CUT-DA3-SIDECAR-S20260721_%j.out",
+        "stderr": "logs/P9-V5-P01-CUT-DA3-SIDECAR-S20260721_%j.err"
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/executions/P9-V5-P01-CUT-DA3-SIDECAR-S20260721",
+        "retention_class": "transient_generated",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 200,
+        "maximum_temporary_gib": 250
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260721,
+        "shuffle": 20277732,
+        "training": 20260721
+      },
+      "training": null,
+      "max_gpu_hours": 24.0
+    }
+  ]
+}

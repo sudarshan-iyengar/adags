@@ -190,6 +190,78 @@ class ExecutionBindingTests(unittest.TestCase):
             MODULE._select_conformance_groups(
                 records + [SimpleNamespace(camera_id="cam00")], 1.0, config
             )
+
+    def test_full_scene_group_rule_keeps_all_unique_groups_and_rejects_cam00(self):
+        records = [
+            SimpleNamespace(camera_id=f"cam{index:02d}")
+            for index in range(1, 9)
+        ]
+        groups = (
+            ("cam02", "cam03", "cam04", "cam05", "cam06", "cam07"),
+            ("cam01", "cam02", "cam03", "cam04", "cam05", "cam06"),
+            ("cam02", "cam03", "cam04", "cam05", "cam06", "cam07"),
+        )
+        config = {"grouping": {
+            "maximum_cameras": 6,
+            "maximum_optical_axis_angle_degrees": 75,
+            "minimum_center_distance_rscene": 0.02,
+            "minimum_second_singular_value_rscene": 0.01,
+        }}
+        with mock.patch.object(MODULE, "enumerate_anchor_groups", return_value=groups):
+            selected = MODULE._select_full_scene_groups(records, 1.0, config)
+        self.assertEqual(selected, tuple(sorted(set(groups))))
+        with self.assertRaises(MODULE.ProvenanceError):
+            MODULE._select_full_scene_groups(
+                records + [SimpleNamespace(camera_id="cam00")], 1.0, config
+            )
+
+    def test_da3_group_sidecar_writes_arrays_and_requires_train_hashes(self):
+        K = np.repeat(np.eye(3)[None, ...], 6, axis=0)
+        w2c = np.repeat(np.eye(4)[None, ...], 6, axis=0)
+        group_input = {
+            "member_camera_ids": [f"cam{index:02d}" for index in range(1, 7)],
+            "intrinsics": K,
+            "extrinsics_w2c": w2c,
+            "expected_processed_intrinsics": K,
+            "source_records": [
+                {
+                    "camera_id": f"cam{index:02d}",
+                    "image_path": f"/data/cam{index:02d}.png",
+                    "image_sha256": f"{index}" * 64,
+                    "file_stem": f"cam{index:02d}_000000",
+                    "time": 0.0,
+                }
+                for index in range(1, 7)
+            ],
+        }
+        prediction = {
+            "depth": np.ones((6, 4, 5), dtype=np.float64),
+            "confidence": np.ones((6, 4, 5), dtype=np.float64),
+            "intrinsics": K,
+            "extrinsics": w2c,
+            "processed_images": np.zeros((6, 4, 5, 3), dtype=np.float32),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            record = MODULE._write_da3_group_sidecar(
+                sidecar_root=Path(directory), scene="cut_roasted_beef", frame=125,
+                group_index=0, target_camera="cam00", group_input=group_input,
+                prediction=prediction,
+            )
+            self.assertEqual(record["physical_ancestry"], group_input["member_camera_ids"])
+            self.assertEqual(record["processed_depth_shape"], [6, 4, 5])
+            self.assertEqual(record["processed_k_corner_error_maximum_pixels"], 0.0)
+            depth_path = Path(directory) / record["array_refs"]["depth"]["path"]
+            self.assertTrue(depth_path.is_file())
+            np.testing.assert_array_equal(np.load(depth_path, allow_pickle=False), prediction["depth"])
+            bad = {**group_input, "source_records": [dict(group_input["source_records"][0])]}
+            bad["source_records"][0]["image_sha256"] = None
+            with self.assertRaises(MODULE.ProvenanceError):
+                MODULE._write_da3_group_sidecar(
+                    sidecar_root=Path(directory), scene="cut_roasted_beef", frame=125,
+                    group_index=1, target_camera="cam00", group_input=bad,
+                    prediction=prediction,
+                )
+
     def test_geometry_input_check_rejects_cross_group_anchor_scale_drift(self):
         K = np.repeat(np.eye(3)[None, ...], 6, axis=0)
         first = {

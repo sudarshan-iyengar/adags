@@ -31,9 +31,11 @@ from depth_visibility.annotation import (
     load_json,
     validate_empty_annotation_packet,
 )
+from depth_visibility.artifacts import build_inventory, write_canonical_array
 from depth_visibility.baselines import validate_baseline_registry
-from depth_visibility.canonical import sha256_file
+from depth_visibility.canonical import domain_id, sha256_file
 from depth_visibility.da3_adapter import (
+    INFERENCE_ARGUMENTS,
     load_da3,
     processed_k_corner_error,
     relative_mad_maximum,
@@ -398,6 +400,16 @@ def action_da3_conformance(
                 "extrinsics_w2c": np.stack([record.w2c_opencv for record in records]),
                 "intrinsics": np.stack([record.K for record in records]),
                 "expected_processed_intrinsics": np.stack(expected_k),
+                "source_records": [
+                    {
+                        "camera_id": record.camera_id,
+                        "image_path": str(record.image_path),
+                        "image_sha256": record.image_sha256,
+                        "file_stem": record.file_stem,
+                        "time": float(record.time),
+                    }
+                    for record in records
+                ],
             }
         )
     real = run_two_group_conformance(
@@ -453,6 +465,16 @@ def _build_real_group_inputs(
                 "extrinsics_w2c": np.stack([record.w2c_opencv for record in records]),
                 "intrinsics": np.stack([record.K for record in records]),
                 "expected_processed_intrinsics": np.stack(expected_k),
+                "source_records": [
+                    {
+                        "camera_id": record.camera_id,
+                        "image_path": str(record.image_path),
+                        "image_sha256": record.image_sha256,
+                        "file_stem": record.file_stem,
+                        "time": float(record.time),
+                    }
+                    for record in records
+                ],
             }
         )
     return result
@@ -490,6 +512,244 @@ def _geometry_input_check(
         ),
         "processed_k_corner_error_maximum_pixels": max(k_errors),
         "processed_k_corner_error_by_group_pixels": k_errors,
+    }
+
+
+def _select_full_scene_groups(
+    frame_records: list[Any], r_scene: float, config: dict[str, Any]
+) -> tuple[tuple[str, ...], ...]:
+    by_camera = {record.camera_id: record for record in frame_records}
+    if len(by_camera) != len(frame_records) or "cam00" in by_camera:
+        raise ProvenanceError("P01 requires one record per training camera and no cam00")
+    grouping = config["grouping"]
+    groups = enumerate_anchor_groups(
+        by_camera,
+        r_scene,
+        maximum_cameras=int(grouping["maximum_cameras"]),
+        maximum_optical_axis_angle_degrees=float(grouping["maximum_optical_axis_angle_degrees"]),
+        minimum_center_distance_rscene=float(grouping["minimum_center_distance_rscene"]),
+        minimum_second_singular_value_rscene=float(grouping["minimum_second_singular_value_rscene"]),
+    )
+    unique = tuple(sorted(set(groups)))
+    if not unique:
+        raise ProvenanceError("P01 found no complete train-camera DA3 groups")
+    return unique
+
+
+def _write_da3_group_sidecar(
+    *,
+    sidecar_root: Path,
+    scene: str,
+    frame: int,
+    group_index: int,
+    target_camera: str,
+    group_input: Mapping[str, Any],
+    prediction: Mapping[str, Any],
+) -> dict[str, Any]:
+    member_camera_ids = [str(value) for value in group_input["member_camera_ids"]]
+    source_records = [dict(item) for item in group_input.get("source_records", [])]
+    if len(source_records) != len(member_camera_ids):
+        raise ProvenanceError("P01 source-record provenance is incomplete")
+    if any(not item.get("image_sha256") for item in source_records):
+        raise ProvenanceError("P01 requires train-image SHA-256 bindings")
+    identity = {
+        "scene": str(scene),
+        "frame": int(frame),
+        "group_index": int(group_index),
+        "target_camera": str(target_camera),
+        "member_camera_ids": member_camera_ids,
+    }
+    group_id = domain_id("phase9-p01-da3-group-v1", identity)
+    arrays_dir = sidecar_root / "arrays" / f"frame_{int(frame):06d}" / f"group_{int(group_index):04d}"
+    arrays = {
+        "input_intrinsics": np.asarray(group_input["intrinsics"]),
+        "input_w2c": np.asarray(group_input["extrinsics_w2c"]),
+        "expected_processed_intrinsics": np.asarray(group_input["expected_processed_intrinsics"]),
+        "depth": np.asarray(prediction["depth"]),
+        "confidence": np.asarray(prediction["confidence"]),
+        "processed_intrinsics": np.asarray(prediction["intrinsics"]),
+        "aligned_w2c": np.asarray(prediction["extrinsics"]),
+        "processed_images": np.asarray(prediction["processed_images"]),
+    }
+    array_refs = {
+        name: write_canonical_array(
+            arrays_dir / f"{name}.npy",
+            array,
+            f"phase9-p01-da3-{name}",
+            relative_to=sidecar_root,
+        )
+        for name, array in arrays.items()
+    }
+    depth = arrays["depth"]
+    k_error = processed_k_corner_error(
+        arrays["expected_processed_intrinsics"],
+        arrays["processed_intrinsics"],
+        int(depth.shape[1]),
+        int(depth.shape[2]),
+    )
+    w2c_delta = float(np.max(np.abs(arrays["input_w2c"] - arrays["aligned_w2c"])))
+    return {
+        "group_id": group_id,
+        **identity,
+        "physical_ancestry": sorted(member_camera_ids),
+        "source_records": source_records,
+        "array_refs": array_refs,
+        "processed_depth_shape": [int(value) for value in depth.shape],
+        "processed_k_corner_error_maximum_pixels": float(k_error),
+        "aligned_w2c_input_maximum_absolute_difference": w2c_delta,
+    }
+
+
+def action_produce_da3(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Produce immutable full-cut DA3 sidecars without opening cam00 RGB."""
+
+    config = _json(DEFAULT_CONFIG)
+    expected_scene = config["data"]["development_scene"]
+    if entry.get("scene") != expected_scene or args.scene != expected_scene:
+        raise ProvenanceError(f"P01 sidecar production is admitted only for {expected_scene}")
+    if expected_scene != "cut_roasted_beef":
+        raise ProvenanceError("P01 v5 is development-cut only")
+    target_camera = str(config["data"]["test_camera"])
+    project_root = _expand("$WORK/proj_adags")
+    data_root = project_root / "data/n3v"
+    da3_checkout = Path(
+        os.environ.get("PHASE9_DA3_REPO", str(project_root / "repo/depth-anything-3"))
+    ).resolve()
+    model_dir = Path(
+        os.environ.get(
+            "PHASE9_DA3_MODEL_DIR",
+            str(project_root / "models/depth-anything/DA3NESTED-GIANT-LARGE-1.1"),
+        )
+    ).resolve()
+    index = load_scene_index(
+        data_root / expected_scene,
+        scene=expected_scene,
+        expose_test_images=False,
+        hash_train_images=True,
+        timestamp_tolerance_seconds=float(config["camera"]["timestamp_tolerance_seconds"]),
+    )
+    split_manifest = _json(REPO_ROOT / config["data"]["split_manifest"])
+    split_binding = {
+        key: dict(value)
+        for key, value in validate_split_binding(index, split_manifest).items()
+    }
+    test_records = index.by_camera_frame("test")
+    if any(record.image_path is not None for record in test_records.values()):
+        raise ProvenanceError("P01 attempted to expose held-out cam00 RGB")
+    matrix_path = Path(args.matrix).resolve()
+    authority_path, authority, a02_terminal_sha = _bound_a02_authority(
+        execution, matrix_path
+    )
+    if (
+        authority.get("schema_version") != "phase9-da3-authority-v1"
+        or authority.get("run_id") != "P9-A02-DA3-WEIGHT-SHA"
+        or authority.get("model_id") != config["da3"]["model_id"]
+        or not isinstance(authority.get("weight_sha256"), str)
+    ):
+        raise ProvenanceError("A02 DA3 authority is missing or incompatible")
+    model_authority = verify_model_authority(
+        model_dir,
+        expected_weight_sha256=authority["weight_sha256"],
+        hash_weights=True,
+    )
+    _seed_conformance(int(entry["seeds"]["training"]))
+    model = load_da3(da3_checkout, model_dir, device="cuda")
+
+    manifest_path = _expected_path(entry, "phase9-da3-sidecar-v1")
+    arrays_path = _expected_path(entry, "phase9-da3-array-inventory-v1")
+    sidecar_root = manifest_path.parent
+    train_records = index.split("train")
+    frames = sorted({record.frame for record in train_records})
+    r_scene = compute_r_scene(train_records)
+    group_records: list[dict[str, Any]] = []
+    frame_summaries: list[dict[str, Any]] = []
+    for frame in frames:
+        frame_records = [record for record in train_records if record.frame == frame]
+        groups = _select_full_scene_groups(list(frame_records), r_scene, config)
+        group_inputs = _build_real_group_inputs(list(frame_records), groups)
+        frame_group_ids: list[str] = []
+        k_errors: list[float] = []
+        w2c_errors: list[float] = []
+        for group_index, group_input in enumerate(group_inputs):
+            prediction = run_group(
+                model,
+                group_input["images"],
+                group_input["extrinsics_w2c"],
+                group_input["intrinsics"],
+            )
+            group_record = _write_da3_group_sidecar(
+                sidecar_root=sidecar_root,
+                scene=expected_scene,
+                frame=frame,
+                group_index=group_index,
+                target_camera=target_camera,
+                group_input=group_input,
+                prediction=prediction,
+            )
+            group_records.append(group_record)
+            frame_group_ids.append(group_record["group_id"])
+            k_errors.append(float(group_record["processed_k_corner_error_maximum_pixels"]))
+            w2c_errors.append(float(group_record["aligned_w2c_input_maximum_absolute_difference"]))
+        frame_summaries.append(
+            {
+                "frame": int(frame),
+                "target_camera": target_camera,
+                "target_calibration_only": True,
+                "group_count": len(frame_group_ids),
+                "group_ids": frame_group_ids,
+                "processed_k_corner_error_maximum_pixels": max(k_errors),
+                "aligned_w2c_input_maximum_absolute_difference": max(w2c_errors),
+            }
+        )
+
+    inventory = build_inventory(sidecar_root / "arrays")
+    arrays_payload = {
+        "schema_version": "phase9-da3-array-inventory-v1",
+        "run_id": entry["run_id"],
+        "scene": expected_scene,
+        "array_root": "arrays",
+        "file_count": len(inventory),
+        "total_file_bytes": sum(int(item["bytes"]) for item in inventory),
+        "files": inventory,
+    }
+    write_json_atomic(arrays_path, arrays_payload)
+    manifest = {
+        "schema_version": "phase9-da3-sidecar-v1",
+        "run_id": entry["run_id"],
+        "scene": expected_scene,
+        "target_camera": target_camera,
+        "cam00_rgb_opened": False,
+        "label_dependent_gate_a": "not_evaluable",
+        "methodology_status": "full_cut_da3_sidecar_production_no_csvl_scoring",
+        "frames": frame_summaries,
+        "groups": group_records,
+        "frame_count": len(frames),
+        "group_count": len(group_records),
+        "r_scene": float(r_scene),
+        "inference_arguments": dict(INFERENCE_ARGUMENTS),
+        "split_binding": split_binding,
+        "a02_authority_path": str(authority_path),
+        "a02_authority_sha256": sha256_file(authority_path),
+        "a02_terminal_sha256": a02_terminal_sha,
+        "model_authority": model_authority,
+        "array_inventory_sha256": sha256_file(arrays_path),
+    }
+    write_json_atomic(manifest_path, manifest)
+    refs = [
+        _scientific_file_ref(manifest_path, "phase9-da3-sidecar-v1", entry["run_id"]),
+        _scientific_file_ref(arrays_path, "phase9-da3-array-inventory-v1", entry["run_id"]),
+    ]
+    return refs, {
+        "frame_count": len(frames),
+        "group_count": len(group_records),
+        "array_file_count": arrays_payload["file_count"],
+        "total_array_bytes": arrays_payload["total_file_bytes"],
+        "cam00_rgb_opened": False,
+        "label_dependent_gate_a": "not_evaluable",
     }
 
 
@@ -1594,6 +1854,7 @@ def main() -> int:
         "synthetic": lambda: action_synthetic(entry, args),
         "hash-da3": lambda: action_hash_da3(entry, args, execution),
         "da3-conformance": lambda: action_da3_conformance(entry, args, execution),
+        "produce-da3": lambda: action_produce_da3(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),
