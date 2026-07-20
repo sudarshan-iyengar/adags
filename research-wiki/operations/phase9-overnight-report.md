@@ -401,3 +401,11 @@ Validation before any v4 submission:
 - Slurm shell syntax checks: PASS;
 - cycle-v4 matrix sanity check: PASS (4 runs);
 - `git diff --check`: PASS.
+
+### v4 publication and X03 submission
+
+After the local v4 checkpoint above, commit `00602a5731f0295bcd2471608bcba9b4a134f1df` was pushed to `origin/codex/hpc-orchestrator-bootstrap` and branch state was clean/synchronized. The v4 implementation freeze completed with terminal SHA-256 `9abb66d5c9e592fc3c166f3ae39b04655b6cb720bd4588e060f5f4465c494bab`; implementation freeze SHA-256 `f12e750030e910061378459dfe8a71fef5b2ba94508cc9f6310517b69f3fec63`; command registry SHA-256 `9d0a4766f829ce2457e255779e8b2585a4e93a5b1bb3dd9e961be8805777ab06`.
+
+The raw-RGB annotation packet producer completed with terminal SHA-256 `343f60f1c98aa400bba68da2464482cfb164a188649766cedb99307730fa0189`; packet SHA-256 `98e42669149b90116291569e4f33077050058b56fd83291a00953370a2a3ce6b`; R009 separation proof SHA-256 `6f9d52c2114c7438d5dc6a34e7cd6d852079eb5921ec5d1fcbdf01f4ac45a469`. The B00 operator-static producer completed with terminal SHA-256 `b0e9285cf26cecbe848f2a036ab88621678b54abcb70c3cb78501037479fe6c7` and 5/5 CPU Slice B fixture tests passing.
+
+`P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720` was submitted through Slurm as job `49909443` at `2026-07-20T18:28:03Z`; initial `squeue` state was `PENDING`. This submission is still only the production-facing opportunity-mining unblocker. It admits no Route 3 pivot, threshold change, B03/B04 training, or claim update until the terminal report is hashed and interpreted.
