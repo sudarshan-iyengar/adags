@@ -10,6 +10,7 @@ closed instead of emitting placeholder success.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import os
@@ -941,6 +942,302 @@ def action_anchor_abstention_pilot(
     return [reference], payload
 
 
+def _require_completed_x02(execution: dict[str, Any] | None) -> Mapping[str, Any]:
+    if execution is None:
+        raise ProvenanceError("opportunity mining requires a resolved execution manifest")
+    matches = [
+        item
+        for item in execution.get("input_artifacts", [])
+        if item.get("producer_run_id")
+        == "P9-V3-X02-CUT-ANCHOR-ABSTENTION-S20260717"
+        and item.get("schema") == "phase9-terminal-manifest-v1"
+        and str(item.get("status", "")).startswith("resolved_exact")
+    ]
+    if len(matches) != 1:
+        raise ProvenanceError("opportunity mining lacks one exact successful X02 terminal input")
+    terminal = _json(_expand(str(matches[0]["path"])))
+    payload = terminal.get("scientific_payload", {})
+    if (
+        terminal.get("schema_version") != "phase9-terminal-manifest-v1"
+        or terminal.get("run_id")
+        != "P9-V3-X02-CUT-ANCHOR-ABSTENTION-S20260717"
+        or terminal.get("action") != "anchor-abstention-pilot"
+        or terminal.get("status") != "completed"
+        or terminal.get("exit_code") != 0
+        or payload.get("coordinate_admitted") is not True
+        or payload.get("ordered_multilayer_bin_counts") != [0, 0, 0]
+    ):
+        raise ProvenanceError("X02 terminal does not bind the expected zero-layer result")
+    return terminal
+
+
+def _aggregate_layer_opportunities(
+    frame_reports: list[Mapping[str, Any]],
+) -> Mapping[str, Any]:
+    stage_counts: Counter[str] = Counter()
+    rejection_counts: Counter[str] = Counter()
+    bin_camera_histogram: Counter[str] = Counter()
+    raw_layer_histogram: Counter[str] = Counter()
+    accepted_layer_histogram: Counter[str] = Counter()
+    ordered_counts = []
+    supported_counts = []
+    geometry_frames = 0
+    coordinate_failed_frames = 0
+    for report in frame_reports:
+        if not report.get("geometry_executed"):
+            coordinate_failed_frames += 1
+            continue
+        geometry_frames += 1
+        geometry = report["geometry"]
+        ordered_counts.append(int(geometry["target_ordered_multilayer_bin_count"]))
+        supported_counts.append(int(geometry["target_supported_bin_count"]))
+        opportunity = geometry.get("target_layer_opportunity", {})
+        for item in opportunity.get("candidate_count_waterfall", []):
+            stage_counts[str(item["stage"])] += int(item["count"])
+        for key, value in opportunity.get("ordered_layer_rejection_counts", {}).items():
+            rejection_counts[str(key)] += int(value)
+        for key, value in opportunity.get("bin_camera_count_histogram", {}).items():
+            bin_camera_histogram[str(key)] += int(value)
+        for key, value in opportunity.get("raw_depth_layer_count_histogram", {}).items():
+            raw_layer_histogram[str(key)] += int(value)
+        for key, value in opportunity.get("accepted_depth_layer_count_histogram", {}).items():
+            accepted_layer_histogram[str(key)] += int(value)
+    return {
+        "frame_count": len(frame_reports),
+        "geometry_frame_count": geometry_frames,
+        "coordinate_failed_frame_count": coordinate_failed_frames,
+        "frames_with_ordered_layers": int(sum(1 for value in ordered_counts if value > 0)),
+        "frames_with_supported_bins": int(sum(1 for value in supported_counts if value > 0)),
+        "total_supported_bins": int(sum(supported_counts)),
+        "total_ordered_multilayer_bins": int(sum(ordered_counts)),
+        "maximum_supported_bins_per_frame": int(max(supported_counts) if supported_counts else 0),
+        "maximum_ordered_multilayer_bins_per_frame": int(max(ordered_counts) if ordered_counts else 0),
+        "candidate_count_waterfall": [
+            {"stage": key, "count": int(stage_counts[key])}
+            for key in (
+                "projected_target_bins",
+                "minimum_camera_bins",
+                "two_raw_depth_cluster_bins",
+                "two_min_camera_layer_bins",
+                "ordered_multilayer_bins",
+            )
+        ],
+        "ordered_layer_rejection_counts": {
+            key: int(value) for key, value in sorted(rejection_counts.items())
+        },
+        "bin_camera_count_histogram": {
+            key: int(value) for key, value in sorted(bin_camera_histogram.items())
+        },
+        "raw_depth_layer_count_histogram": {
+            key: int(value) for key, value in sorted(raw_layer_histogram.items())
+        },
+        "accepted_depth_layer_count_histogram": {
+            key: int(value) for key, value in sorted(accepted_layer_histogram.items())
+        },
+        "interpretation": "full-cut aggregate opportunity mining; labels and cam00 RGB are not consumed",
+    }
+
+
+def action_cut_opportunity_mining(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Run the X02 abstention rule across all cut frames and mine layer yield."""
+
+    config = _json(DEFAULT_CONFIG)
+    expected_scene = config["data"]["development_scene"]
+    if args.scene != expected_scene or expected_scene != "cut_roasted_beef":
+        raise ProvenanceError(f"cut opportunity mining scene must be {expected_scene}")
+    x02_terminal = _require_completed_x02(execution)
+    project_root = _expand("$WORK/proj_adags")
+    data_root = project_root / "data/n3v"
+    da3_checkout = Path(
+        os.environ.get("PHASE9_DA3_REPO", str(project_root / "repo/depth-anything-3"))
+    ).resolve()
+    model_dir = Path(
+        os.environ.get(
+            "PHASE9_DA3_MODEL_DIR",
+            str(project_root / "models/depth-anything/DA3NESTED-GIANT-LARGE-1.1"),
+        )
+    ).resolve()
+    index = load_scene_index(
+        data_root / expected_scene,
+        scene=expected_scene,
+        expose_test_images=False,
+        hash_train_images=False,
+        timestamp_tolerance_seconds=float(config["camera"]["timestamp_tolerance_seconds"]),
+    )
+    split_manifest = _json(REPO_ROOT / config["data"]["split_manifest"])
+    split_binding = {
+        key: dict(value)
+        for key, value in validate_split_binding(index, split_manifest).items()
+    }
+    authority_path, authority, a02_terminal_sha = _bound_a02_authority(
+        execution, Path(args.matrix).resolve()
+    )
+    model_authority = verify_model_authority(
+        model_dir,
+        expected_weight_sha256=authority["weight_sha256"],
+        hash_weights=True,
+    )
+    _seed_conformance(int(entry["seeds"]["training"]))
+    model = load_da3(da3_checkout, model_dir, device="cuda")
+
+    test_records = index.by_camera_frame("test")
+    train_records = index.split("train")
+    frames = sorted({record.frame for record in train_records})
+    r_scene = compute_r_scene(train_records)
+    frame_reports: list[dict[str, Any]] = []
+    frame_bin_sets: list[tuple[int, set[tuple[int, int]]]] = []
+    relative_limit = float(config["fusion"]["duplicate_relative_mad_maximum"])
+    for frame in frames:
+        frame_records = [record for record in train_records if record.frame == frame]
+        anchor_camera_id, groups = _select_conformance_groups(
+            frame_records, r_scene, config
+        )
+        group_inputs = _build_real_group_inputs(frame_records, groups)
+        predictions = [
+            run_group(
+                model,
+                group["images"],
+                group["extrinsics_w2c"],
+                group["intrinsics"],
+            )
+            for group in group_inputs
+        ]
+        input_check = dict(
+            _geometry_input_check(
+                predictions,
+                group_inputs,
+                anchor_camera_id=anchor_camera_id,
+            )
+        )
+        anchor_indices = [
+            group["member_camera_ids"].index(anchor_camera_id)
+            for group in group_inputs
+        ]
+        first_index, second_index = anchor_indices
+        first_prediction, second_prediction = predictions
+        extrinsic_max_abs = float(
+            np.max(
+                np.abs(
+                    np.asarray(first_prediction["extrinsics"][first_index])
+                    - np.asarray(second_prediction["extrinsics"][second_index])
+                )
+            )
+        )
+        input_check["anchor_extrinsic_maximum_absolute_difference"] = extrinsic_max_abs
+        coordinate_admitted = (
+            input_check["processed_k_corner_error_maximum_pixels"] <= 0.5
+            and extrinsic_max_abs
+            <= float(config["da3"]["conformance_repeat_atol"])
+        )
+        input_check["coordinate_admitted"] = coordinate_admitted
+        if not coordinate_admitted:
+            frame_reports.append(
+                {
+                    "frame": frame,
+                    "anchor_camera_id": anchor_camera_id,
+                    "groups": [list(group) for group in groups],
+                    "geometry_input_check": input_check,
+                    "geometry_executed": False,
+                    "blocked_reason": "coordinate_not_admitted",
+                }
+            )
+            continue
+
+        duplicate_report, aggregate_depth, retained_mask = anchor_duplicate_diagnostic(
+            first_prediction["depth"][first_index],
+            second_prediction["depth"][second_index],
+            first_prediction["confidence"][first_index],
+            second_prediction["confidence"][second_index],
+            relative_limit=relative_limit,
+            calibration_stride=int(config["sampling"]["grid_stride_pixels"]),
+        )
+        target = test_records.get((config["data"]["test_camera"], frame))
+        if target is None or target.image_path is not None:
+            raise ProvenanceError("opportunity mining requires calibration-only cam00 target access")
+        geometry, supported_bins = evaluate_frame_geometry(
+            predictions,
+            [item["member_camera_ids"] for item in group_inputs],
+            target_K=target.K,
+            target_w2c=target.w2c_opencv,
+            target_width=target.width,
+            target_height=target.height,
+            stride=int(config["sampling"]["grid_stride_pixels"]),
+            minimum_cameras=int(config["fusion"]["minimum_physical_cameras"]),
+            maximum_depth_sigma=float(config["fusion"]["maximum_depth_sigma"]),
+            target_bin_pixels=int(config["sampling"]["grid_stride_pixels"]),
+            camera_depth_overrides={anchor_camera_id: aggregate_depth},
+            camera_valid_masks={anchor_camera_id: retained_mask},
+        )
+        frame_reports.append(
+            {
+                "frame": frame,
+                "anchor_camera_id": anchor_camera_id,
+                "groups": [list(group) for group in groups],
+                "geometry_input_check": input_check,
+                "anchor_duplicate": duplicate_report,
+                "geometry_executed": True,
+                "geometry": geometry,
+            }
+        )
+        frame_bin_sets.append((frame, supported_bins))
+
+    aggregate = _aggregate_layer_opportunities(frame_reports)
+    report_path = _expected_path(entry, "phase9-cut-opportunity-mining-v1")
+    report = {
+        "schema_version": "phase9-cut-opportunity-mining-v1",
+        "run_id": entry["run_id"],
+        "scene": expected_scene,
+        "frames": frames,
+        "methodology_status": "full_cut_layer_opportunity_mining_after_x02",
+        "x02_terminal_sha256": sha256_file(
+            _expand(
+                next(
+                    item["path"]
+                    for item in execution["input_artifacts"]
+                    if item.get("producer_run_id")
+                    == "P9-V3-X02-CUT-ANCHOR-ABSTENTION-S20260717"
+                )
+            )
+        ),
+        "x02_scientific_payload": x02_terminal["scientific_payload"],
+        "frame_reports": frame_reports,
+        "aggregate_layer_opportunity": aggregate,
+        "temporal_bin_transitions": temporal_bin_transitions(frame_bin_sets),
+        "temporal_interpretation": "target-bin occupancy proxy, not surface-track reveal/hide evidence",
+        "duplicate_semantics": {
+            "x02_rule_reused": "per-pixel two-sample relative half-difference >0.05 abstains; retained pixels use confidence-weighted aggregate",
+            "threshold_changed": False,
+            "heldout_scale_diagnostic_applied_to_geometry": False,
+        },
+        "label_dependent_gate_a": "not_evaluable",
+        "cam00_rgb_opened": False,
+        "split_binding": split_binding,
+        "a02_authority_path": str(authority_path),
+        "a02_authority_sha256": sha256_file(authority_path),
+        "a02_terminal_sha256": a02_terminal_sha,
+        "model_authority": model_authority,
+    }
+    write_json_atomic(report_path, report)
+    reference = _scientific_file_ref(
+        report_path, "phase9-cut-opportunity-mining-v1", entry["run_id"]
+    )
+    payload = {
+        "frame_count": aggregate["frame_count"],
+        "geometry_frame_count": aggregate["geometry_frame_count"],
+        "frames_with_ordered_layers": aggregate["frames_with_ordered_layers"],
+        "total_supported_bins": aggregate["total_supported_bins"],
+        "total_ordered_multilayer_bins": aggregate["total_ordered_multilayer_bins"],
+        "candidate_count_waterfall": aggregate["candidate_count_waterfall"],
+        "ordered_layer_rejection_counts": aggregate["ordered_layer_rejection_counts"],
+        "label_dependent_gate_a": "not_evaluable",
+    }
+    return [reference], payload
+
+
 def action_annotation_packet(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     manifest = load_json(DEFAULT_WINDOWS)
     packet = build_empty_annotation_packet(
@@ -1201,6 +1498,35 @@ def action_freeze_implementation(entry: dict[str, Any], args: argparse.Namespace
     return refs, {"branch": branch, "commit": head, "resolved_command_count": len(commands), "resolved_execution_count": resolved_execution_count, "implementation_freeze_sha256": implementation_sha}
 
 
+def action_operator_static(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    import unittest
+
+    suite = unittest.defaultTestLoader.discover(
+        str(REPO_ROOT / "tests"),
+        pattern="test_depth_visibility_capacity.py",
+    )
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    if not result.wasSuccessful():
+        raise ContractError(
+            f"operator static suite failed: failures={len(result.failures)} errors={len(result.errors)}"
+        )
+    payload = {
+        "status": "pass",
+        "test_count": int(result.testsRun),
+        "covered_invariants": [
+            "dynamic_plus_hard_static_budget_accounting",
+            "optimizer_parameter_identity_preserved",
+            "donor_rows_rewritten_in_place",
+            "survivor_rows_bitwise_preserved",
+            "adam_moment_rows_zeroed",
+            "null_reset_value_noop_moment_surgery",
+            "event_blind_low_opacity_redundant_donor_selection",
+        ],
+        "slice_b_scope": "B00 CPU static operator fixture only; no trainer mutation or Gate B claim",
+    }
+    return [], payload
+
+
 def action_decide(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     decision_path = _expected_path(entry, "phase9-decision-v1")
     payload = {
@@ -1270,7 +1596,9 @@ def main() -> int:
         "da3-conformance": lambda: action_da3_conformance(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
+        "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),
         "build-annotation-packet": lambda: action_annotation_packet(entry, args),
+        "operator-static": lambda: action_operator_static(entry, args),
         "freeze-implementation": lambda: action_freeze_implementation(entry, args),
         "decide": lambda: action_decide(entry, args),
     }

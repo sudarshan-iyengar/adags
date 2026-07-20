@@ -347,3 +347,57 @@ anchor pixels without cam00 or frozen event-crop tuning. If reliable coverage
 remains adequate, run one-frame geometry with rejected pixels excluded;
 otherwise change grouping or depth representation rather than relaxing the
 threshold.
+
+## 2026-07-20 execution update: X02 reconciliation and compute-forward v4
+
+This section supersedes the X01 next-experiment recommendation above.
+
+### X02 terminal result
+
+- Run: `P9-V3-X02-CUT-ANCHOR-ABSTENTION-S20260717`.
+- Job: `49625472`, `COMPLETED/0:0`, elapsed `00:03:24`, one A100, 0.0567 measured GPU-hours.
+- Terminal SHA-256: `d99b188ca130b06a14a2541db271fdc3645f1768a046c56fc6cc6a83a731424b`.
+- Report SHA-256: `604e3ebae40845d162ac7e790281273082cca3487b29993ef1d6e76976c11323`.
+- Total measured Phase 9 A100 consumption through X02: approximately 0.1642 GPU-hours.
+
+X02 reused the frozen 0.05 per-pixel duplicate relative half-difference rule: inconsistent shared-anchor pixels abstain; retained pixels use the confidence-weighted aggregate. It did not apply a gauge correction, did not change thresholds, and did not open cam00 RGB.
+
+### X02 scientific result
+
+| Item | Result |
+| --- | --- |
+| Coordinate handling | admitted for frames 125-127 |
+| Anchor retained fractions | 0.999858, 0.999858, 0.999612 |
+| Supported target bins | 689, 692, 674 |
+| Ordered multilayer bins | 0, 0, 0 |
+| Label-dependent Gate A | `not_evaluable` |
+| Gate B | not run |
+
+Interpretation: per-pixel abstention reduced the X01 group-gauge blocker enough to execute calibrated target-projected geometry, but the ordered-layer opportunity chain has zero yield on the toy window. This is not evidence that depth or visibility is useless, and it is not an authorization for capacity training. It is a specific zero-yield failure of the current ordered-layer predicate/operator chain on the three-frame diagnostic.
+
+### Decision
+
+Stop tiny diagnostics. The next admitted evidence run is one production-facing full `cut_roasted_beef` opportunity-mining pass that records candidate-count waterfalls and ordered-layer rejection reasons from supported target bins to accepted multilayer hypotheses. If full-cut opportunity mining still yields zero ordered layers across real opportunities, pivot to the registered Route 3 layered surface-memory path rather than relaxing thresholds or adding another mask/tile diagnostic.
+
+Annotation should start in parallel from the frozen raw-RGB 54-window packet with two independent annotators. Until genuine labels exist, Gate A and event-region Gate B remain `not_evaluable`.
+
+Slice B engineering may proceed only as B00/B01 scaffolding and matched feasibility. B03/B04 remain blocked until genuine A06 engineering admission and B02 oracle-capacity admission.
+
+### v4 implementation checkpoint
+
+The v4 source update adds:
+
+- ordered-layer opportunity diagnostics to `evaluate_frame_geometry`; every frame report now includes a target-bin candidate waterfall, raw/accepted layer histograms, depth-span distribution, and rejection counts;
+- `cut-opportunity-mining`, a Slurm action that consumes exact A02 and X02 terminals, runs the X02 abstention rule across all `cut_roasted_beef` frames, and writes `phase9-cut-opportunity-mining-v1`;
+- `depth_visibility.capacity`, a CPU Slice B/B00 transaction fixture for point-neutral in-place reassignment, null-reset moment surgery, hard-static budget accounting, and event-blind donor selection;
+- `operator-static`, a runner action that seals those B00 static tests;
+- `configs/depth_visibility/phase9_cut_opportunity_cycle_v4.json`, a four-entry cycle covering v4 I01, A05 packet build, B00 static operator test, and the X03 full-cut opportunity-mining Slurm job.
+
+Validation before any v4 submission:
+
+- focused fast-pilot plus capacity tests: 10/10 PASS;
+- full Phase 9 unit discovery: 84/84 PASS;
+- Python compilation: PASS;
+- Slurm shell syntax checks: PASS;
+- cycle-v4 matrix sanity check: PASS (4 runs);
+- `git diff --check`: PASS.

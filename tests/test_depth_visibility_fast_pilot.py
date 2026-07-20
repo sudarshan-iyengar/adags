@@ -58,6 +58,45 @@ class FastPilotTests(unittest.TestCase):
         self.assertAlmostEqual(report["cross_view_agreement_fraction_of_valid"], 1.0)
         self.assertEqual(report["target_ordered_multilayer_bin_count"], 0)
         self.assertEqual(len(bins), report["target_supported_bin_count"])
+        opportunity = report["target_layer_opportunity"]
+        waterfall = {item["stage"]: item["count"] for item in opportunity["candidate_count_waterfall"]}
+        self.assertEqual(waterfall["minimum_camera_bins"], report["target_supported_bin_count"])
+        self.assertEqual(waterfall["ordered_multilayer_bins"], 0)
+        self.assertEqual(
+            opportunity["ordered_layer_rejection_counts"],
+            {"single_depth_cluster": report["target_supported_bin_count"]},
+        )
+
+    def test_two_depth_planes_report_ordered_layer_opportunity(self):
+        K = np.array([[40.0, 0.0, 15.5], [0.0, 40.0, 11.5], [0.0, 0.0, 1.0]])
+        depth = np.full((6, 24, 32), 2.0, dtype=np.float64)
+        depth[3:] = 3.0
+        prediction = {
+            "depth": depth,
+            "intrinsics": np.repeat(K[None, ...], 6, axis=0),
+            "extrinsics": np.repeat(np.eye(4)[None, ...], 6, axis=0),
+        }
+        report, _ = evaluate_frame_geometry(
+            [prediction],
+            [("cam01", "cam02", "cam03", "cam04", "cam05", "cam06")],
+            target_K=K,
+            target_w2c=np.eye(4),
+            target_width=32,
+            target_height=24,
+            stride=8,
+            minimum_cameras=3,
+            maximum_depth_sigma=2.5,
+            target_bin_pixels=8,
+        )
+        self.assertGreater(report["target_ordered_multilayer_bin_count"], 0)
+        opportunity = report["target_layer_opportunity"]
+        waterfall = {item["stage"]: item["count"] for item in opportunity["candidate_count_waterfall"]}
+        self.assertEqual(
+            waterfall["ordered_multilayer_bins"],
+            report["target_ordered_multilayer_bin_count"],
+        )
+        self.assertGreater(waterfall["two_raw_depth_cluster_bins"], 0)
+        self.assertGreater(report["ordered_layer_relative_depth_gap"]["count"], 0)
 
     def test_anchor_mask_applies_on_source_and_target_support(self):
         K = np.array([[40.0, 0.0, 15.5], [0.0, 40.0, 11.5], [0.0, 0.0, 1.0]])

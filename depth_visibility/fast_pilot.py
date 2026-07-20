@@ -112,10 +112,8 @@ def _unique_camera_predictions(
     return result
 
 
-def _cluster_depth_layers(
+def _raw_depth_layer_candidates(
     samples: Sequence[tuple[float, str, float]],
-    *,
-    minimum_cameras: int,
 ) -> list[Mapping[str, Any]]:
     ordered = sorted(samples, key=lambda item: (item[0], item[1]))
     clusters: list[list[tuple[float, str, float]]] = []
@@ -132,19 +130,31 @@ def _cluster_depth_layers(
             clusters[-1].append(sample)
         else:
             clusters.append([sample])
+
     layers = []
     for cluster in clusters:
         cameras = sorted({item[1] for item in cluster})
-        if len(cameras) >= minimum_cameras:
-            layers.append(
-                {
-                    "median_optical_z": float(np.median([item[0] for item in cluster])),
-                    "physical_camera_count": len(cameras),
-                    "sample_count": len(cluster),
-                    "median_risk": float(np.median([item[2] for item in cluster])),
-                }
-            )
+        layers.append(
+            {
+                "median_optical_z": float(np.median([item[0] for item in cluster])),
+                "physical_camera_count": len(cameras),
+                "sample_count": len(cluster),
+                "median_risk": float(np.median([item[2] for item in cluster])),
+            }
+        )
     return layers
+
+
+def _cluster_depth_layers(
+    samples: Sequence[tuple[float, str, float]],
+    *,
+    minimum_cameras: int,
+) -> list[Mapping[str, Any]]:
+    return [
+        layer
+        for layer in _raw_depth_layer_candidates(samples)
+        if layer["physical_camera_count"] >= minimum_cameras
+    ]
 
 
 def anchor_duplicate_diagnostic(
@@ -377,11 +387,39 @@ def evaluate_frame_geometry(
     supported_bins: set[tuple[int, int]] = set()
     multilayer_bins = 0
     depth_gaps = []
+    bin_camera_histogram: Counter[int] = Counter()
+    raw_layer_histogram: Counter[int] = Counter()
+    accepted_layer_histogram: Counter[int] = Counter()
+    rejection_counts: Counter[str] = Counter()
+    supported_bin_depth_spans = []
+    two_raw_layer_bins = 0
+    two_accepted_layer_bins = 0
     for key, samples in bins.items():
-        if len({item[1] for item in samples}) < minimum_cameras:
+        camera_count = len({item[1] for item in samples})
+        bin_camera_histogram[camera_count] += 1
+        if camera_count < minimum_cameras:
+            rejection_counts["insufficient_bin_cameras"] += 1
             continue
+
         supported_bins.add(key)
-        layers = _cluster_depth_layers(samples, minimum_cameras=minimum_cameras)
+        raw_layers = _raw_depth_layer_candidates(samples)
+        layers = [
+            layer
+            for layer in raw_layers
+            if layer["physical_camera_count"] >= minimum_cameras
+        ]
+        raw_layer_histogram[len(raw_layers)] += 1
+        accepted_layer_histogram[len(layers)] += 1
+        if len(raw_layers) >= 2:
+            two_raw_layer_bins += 1
+        if len(layers) >= 2:
+            two_accepted_layer_bins += 1
+
+        depths = [item[0] for item in samples]
+        supported_bin_depth_spans.append(
+            (max(depths) - min(depths))
+            / max(abs(min(depths)), np.finfo(np.float64).tiny)
+        )
         if len(layers) >= 2:
             multilayer_bins += 1
             for front, rear in zip(layers, layers[1:]):
@@ -389,6 +427,10 @@ def evaluate_frame_geometry(
                     (rear["median_optical_z"] - front["median_optical_z"])
                     / max(abs(front["median_optical_z"]), np.finfo(np.float64).tiny)
                 )
+        elif len(raw_layers) < 2:
+            rejection_counts["single_depth_cluster"] += 1
+        else:
+            rejection_counts["depth_clusters_insufficient_camera_support"] += 1
 
     if supported_bins:
         xs = [item[0] for item in supported_bins]
@@ -437,6 +479,29 @@ def evaluate_frame_geometry(
             multilayer_bins / len(supported_bins) if supported_bins else 0.0
         ),
         "ordered_layer_relative_depth_gap": _distribution(depth_gaps),
+        "target_layer_opportunity": {
+            "candidate_count_waterfall": [
+                {"stage": "projected_target_bins", "count": len(bins)},
+                {"stage": "minimum_camera_bins", "count": len(supported_bins)},
+                {"stage": "two_raw_depth_cluster_bins", "count": two_raw_layer_bins},
+                {"stage": "two_min_camera_layer_bins", "count": two_accepted_layer_bins},
+                {"stage": "ordered_multilayer_bins", "count": multilayer_bins},
+            ],
+            "bin_camera_count_histogram": {
+                str(key): int(value) for key, value in sorted(bin_camera_histogram.items())
+            },
+            "raw_depth_layer_count_histogram": {
+                str(key): int(value) for key, value in sorted(raw_layer_histogram.items())
+            },
+            "accepted_depth_layer_count_histogram": {
+                str(key): int(value) for key, value in sorted(accepted_layer_histogram.items())
+            },
+            "ordered_layer_rejection_counts": {
+                key: int(value) for key, value in sorted(rejection_counts.items())
+            },
+            "supported_bin_relative_depth_span": _distribution(supported_bin_depth_spans),
+            "interpretation": "aggregate target-bin opportunity diagnostics; not a surface-track or label-dependent Gate A score",
+        },
         "supported_point_risk": _distribution(risk_array),
         "risk_coverage": risk_coverage,
         "threshold_authority": {

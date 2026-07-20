@@ -1,0 +1,464 @@
+{
+  "schema_version": "phase9-run-matrix-v2",
+  "cycle": "csvl-isr-cut-opportunity-v4",
+  "generated_after_x02": true,
+  "x02_terminal_sha256": "d99b188ca130b06a14a2541db271fdc3645f1768a046c56fc6cc6a83a731424b",
+  "x02_report_sha256": "604e3ebae40845d162ac7e790281273082cca3487b29993ef1d6e76976c11323",
+  "run_count": 4,
+  "registered_total_max_gpu_hours": 24.0,
+  "submission_ready": true,
+  "runs": [
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V4-I01-IMPLEMENTATION-FREEZE",
+      "stage": "I01-v4",
+      "action": "freeze-implementation",
+      "scope": "engineering",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": null,
+      "camera_time_population": "not_applicable",
+      "claim_or_uncertainty": "The v4 opportunity-mining and B00/A05 implementation bytes are immutably bound.",
+      "necessity": "The full-cut Slurm run must execute exact committed and pushed bytes.",
+      "pre_observation_promotion_predicate": "Clean tracked branch equals upstream and cycle-v4 hashes resolve.",
+      "completion_rule": "Validated implementation freeze and command registry for all v4 entries.",
+      "failure_interpretation_and_action": "Repair once; do not submit X03 from unbound bytes.",
+      "prerequisites": [],
+      "input_artifacts": [],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V4-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": false,
+        "resolved_manifest_sha256": null,
+        "status": "not_applicable"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "1ca3dce1f630b4059fb7d46f9aaf804efbaee39e8e2cb856df2b6b862179216d",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "87d6ff35ac3048b0526e46c6a40e77d79f0f9de82a0a7c571c4f7b9f099dce5a",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "freeze-implementation",
+          "--run-id",
+          "P9-V4-I01-IMPLEMENTATION-FREEZE",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-I01-IMPLEMENTATION-FREEZE/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_cut_opportunity_cycle_v4.json",
+          "--allow-unresolved-local"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-I01-IMPLEMENTATION-FREEZE/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/authority/implementation-freeze.json",
+          "schema": "phase9-implementation-freeze-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/authority/commands.json",
+          "schema": "phase9-command-registry-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "none",
+        "site": "login",
+        "profile": "login",
+        "partition": null,
+        "account": null,
+        "qos": null,
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 1,
+        "host_memory_gib": 4,
+        "gpus_per_node": 0,
+        "gpu_type": null,
+        "gpu_memory_gib": null,
+        "wall_minutes": 15,
+        "dependency_mode": null,
+        "stdout": null,
+        "stderr": null
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-I01-IMPLEMENTATION-FREEZE",
+        "retention_class": "durable_decision",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 1,
+        "maximum_temporary_gib": 1
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260720,
+        "shuffle": 20277731,
+        "training": 20260720
+      },
+      "training": null,
+      "max_gpu_hours": 0
+    },
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V4-A05-ANNOTATION-PACKET",
+      "stage": "A05-v4",
+      "action": "build-annotation-packet",
+      "scope": "engineering",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": null,
+      "camera_time_population": "not_applicable",
+      "claim_or_uncertainty": "The frozen 54-window raw-RGB annotation packet is buildable with empty human fields.",
+      "necessity": "Annotation can start without CSVL/DA3/render leakage.",
+      "pre_observation_promotion_predicate": "Packet derives only from the frozen annotation manifest and leaves all human fields empty.",
+      "completion_rule": "Packet and R009-separation proof are sealed.",
+      "failure_interpretation_and_action": "Repair packet/schema plumbing before human handoff; do not auto-fill labels.",
+      "prerequisites": [
+        "P9-V4-I01-IMPLEMENTATION-FREEZE"
+      ],
+      "input_artifacts": [],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V4-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "unresolved"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "1ca3dce1f630b4059fb7d46f9aaf804efbaee39e8e2cb856df2b6b862179216d",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "300a5f28e72431f77556769ec682c6ed3a63dbc69ccec7eb7e628f118e24803c",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "build-annotation-packet",
+          "--run-id",
+          "P9-V4-A05-ANNOTATION-PACKET",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-A05-ANNOTATION-PACKET/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_cut_opportunity_cycle_v4.json"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-A05-ANNOTATION-PACKET/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-A05-ANNOTATION-PACKET/annotation-packet.json",
+          "schema": "phase9-annotation-packet-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-A05-ANNOTATION-PACKET/r009-separation-proof.json",
+          "schema": "phase9-r009-separation-proof-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "none",
+        "site": "login",
+        "profile": "login",
+        "partition": null,
+        "account": null,
+        "qos": null,
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 1,
+        "host_memory_gib": 4,
+        "gpus_per_node": 0,
+        "gpu_type": null,
+        "gpu_memory_gib": null,
+        "wall_minutes": 15,
+        "dependency_mode": null,
+        "stdout": null,
+        "stderr": null
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-A05-ANNOTATION-PACKET",
+        "retention_class": "durable_decision",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 1,
+        "maximum_temporary_gib": 1
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260720,
+        "shuffle": 20277731,
+        "training": 20260720
+      },
+      "training": null,
+      "max_gpu_hours": 0
+    },
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V4-B00-OPERATOR-STATIC-S0",
+      "stage": "B00-v4",
+      "action": "operator-static",
+      "scope": "engineering",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": null,
+      "camera_time_population": "not_applicable",
+      "claim_or_uncertainty": "The Slice B row transaction is point-neutral and optimizer-state-safe on CPU fixtures.",
+      "necessity": "Training lanes must not begin until B00 invariants are executable.",
+      "pre_observation_promotion_predicate": "Static fixture covers budget accounting, donor selection, reassignment, null-reset, and Adam moment row surgery.",
+      "completion_rule": "Terminal payload reports passing operator-static tests.",
+      "failure_interpretation_and_action": "Failure blocks Slice B training and requires operator repair, not visibility-threshold tuning.",
+      "prerequisites": [
+        "P9-V4-I01-IMPLEMENTATION-FREEZE"
+      ],
+      "input_artifacts": [],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V4-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "unresolved"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "1ca3dce1f630b4059fb7d46f9aaf804efbaee39e8e2cb856df2b6b862179216d",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "69b31199e2db2eac46b7acaeaa2c71af29efdbfc499c0f3d05233b5372c6cbcf",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "operator-static",
+          "--run-id",
+          "P9-V4-B00-OPERATOR-STATIC-S0",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-B00-OPERATOR-STATIC-S0/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_cut_opportunity_cycle_v4.json"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-B00-OPERATOR-STATIC-S0/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "none",
+        "site": "login",
+        "profile": "login",
+        "partition": null,
+        "account": null,
+        "qos": null,
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 1,
+        "host_memory_gib": 4,
+        "gpus_per_node": 0,
+        "gpu_type": null,
+        "gpu_memory_gib": null,
+        "wall_minutes": 15,
+        "dependency_mode": null,
+        "stdout": null,
+        "stderr": null
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-B00-OPERATOR-STATIC-S0",
+        "retention_class": "durable_decision",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 1,
+        "maximum_temporary_gib": 1
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260720,
+        "shuffle": 20277731,
+        "training": 20260720
+      },
+      "training": null,
+      "max_gpu_hours": 0
+    },
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720",
+      "stage": "X03",
+      "action": "cut-opportunity-mining",
+      "scope": "exploratory",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": "cut_roasted_beef",
+      "camera_time_population": "all 300 cut_roasted_beef frames, two six-view train groups, calibration-only cam00 target",
+      "claim_or_uncertainty": "Full cut opportunity mining proves whether X02 zero ordered layers were a toy-window artifact or a scene-scale zero-yield failure.",
+      "necessity": "This is the single production-facing unblocker before Route 3 consideration.",
+      "pre_observation_promotion_predicate": "Reuse X02 per-pixel abstention exactly; no threshold change, no gauge correction, no cam00 RGB, no labels.",
+      "completion_rule": "Terminal plus parseable full-cut report with candidate-count waterfalls and ordered-layer rejection counts.",
+      "failure_interpretation_and_action": "If ordered layers are still zero across cut, pivot to Route 3 layered surface memory; if nonzero, proceed to full CSVL ledger/annotations.",
+      "prerequisites": [
+        "P9-V4-I01-IMPLEMENTATION-FREEZE",
+        "P9-A02-DA3-WEIGHT-SHA",
+        "P9-V3-X02-CUT-ANCHOR-ABSTENTION-S20260717"
+      ],
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v1/executions/P9-A02-DA3-WEIGHT-SHA/terminal.json",
+          "producer_run_id": "P9-A02-DA3-WEIGHT-SHA",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v3/executions/P9-V3-X02-CUT-ANCHOR-ABSTENTION-S20260717/terminal.json",
+          "producer_run_id": "P9-V3-X02-CUT-ANCHOR-ABSTENTION-S20260717",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        }
+      ],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V4-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "unresolved"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "1ca3dce1f630b4059fb7d46f9aaf804efbaee39e8e2cb856df2b6b862179216d",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "7196b0c0662b8699a49bf18739f244d55565e4f8976a96c91311862758c9dfb2",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "cut-opportunity-mining",
+          "--run-id",
+          "P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_cut_opportunity_cycle_v4.json",
+          "--scene",
+          "cut_roasted_beef"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720/cut-opportunity-mining.json",
+          "schema": "phase9-cut-opportunity-mining-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "profile": "gpu1440",
+        "partition": "boost_usr_prod",
+        "account": "euhpc_d21_034",
+        "qos": "boost_qos_lprod",
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 8,
+        "host_memory_gib": 64,
+        "gpus_per_node": 1,
+        "gpu_type": "a100",
+        "gpu_memory_gib": 64,
+        "wall_minutes": 1440,
+        "dependency_mode": "afterok",
+        "stdout": "logs/P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720_%j.out",
+        "stderr": "logs/P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720_%j.err"
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v4/executions/P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720",
+        "retention_class": "transient_generated",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 200,
+        "maximum_temporary_gib": 250
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260720,
+        "shuffle": 20277731,
+        "training": 20260720
+      },
+      "training": null,
+      "max_gpu_hours": 24
+    }
+  ]
+}
