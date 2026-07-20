@@ -409,3 +409,21 @@ After the local v4 checkpoint above, commit `00602a5731f0295bcd2471608bcba9b4a13
 The raw-RGB annotation packet producer completed with terminal SHA-256 `343f60f1c98aa400bba68da2464482cfb164a188649766cedb99307730fa0189`; packet SHA-256 `98e42669149b90116291569e4f33077050058b56fd83291a00953370a2a3ce6b`; R009 separation proof SHA-256 `6f9d52c2114c7438d5dc6a34e7cd6d852079eb5921ec5d1fcbdf01f4ac45a469`. The B00 operator-static producer completed with terminal SHA-256 `b0e9285cf26cecbe848f2a036ab88621678b54abcb70c3cb78501037479fe6c7` and 5/5 CPU Slice B fixture tests passing.
 
 `P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720` was submitted through Slurm as job `49909443` at `2026-07-20T18:28:03Z`; initial `squeue` state was `PENDING`. This submission is still only the production-facing opportunity-mining unblocker. It admits no Route 3 pivot, threshold change, B03/B04 training, or claim update until the terminal report is hashed and interpreted.
+
+### X03 full-cut opportunity result
+
+`P9-V4-X03-CUT-OPPORTUNITY-MINING-S20260720` completed as Slurm job `49909443` with `COMPLETED/0:0` in `00:11:12` (0.1867 A100 GPU-hours). Terminal SHA-256: `3ed30bcfbdc5a2a843d72261a51e5900ecdb7c118fcd202a8703b011a7eb7ce1`. Report SHA-256: `78be452f3a8cb19d7fe91a51fab7954701af0fba0f6844673bf9d8dcd4dd14c8`.
+
+The full-cut opportunity miner executed geometry for all 300 `cut_roasted_beef` frames. All 300 frames had supported target bins. The aggregate candidate waterfall was:
+
+| Stage | Count |
+| --- | ---: |
+| projected target bins | 3,067,491 |
+| bins with minimum camera support | 201,030 |
+| bins with at least two raw depth clusters | 27,740 |
+| bins with at least two minimum-camera-supported layers | 158 |
+| ordered multilayer bins | 158 |
+
+The 158 accepted ordered multilayer bins appeared across 123 frames; the maximum per frame was 3. Rejection counts were 2,866,461 bins with insufficient bin cameras, 173,290 single-depth-cluster bins, and 27,582 depth-cluster bins with insufficient camera support.
+
+Interpretation: the X02 zero-layer result was a local three-frame yield issue, not a full-cut zero-yield failure. This does not pass Gate A, because human labels are still absent, but it removes the zero-opportunity stop condition. The next admissible work is full CSVL ledger/evaluation production plus the human annotation workflow. Route 3 should not be triggered on zero ordered-layer yield from the current evidence.
