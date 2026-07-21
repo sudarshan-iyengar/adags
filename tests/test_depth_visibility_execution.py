@@ -443,5 +443,28 @@ class ExecutionBindingTests(unittest.TestCase):
         self.assertNotIn('scripts/run_phase9_depth_visibility.py   "$ACTION"', wrapper)
 
 
+class SliceBPreparedIntegrationTests(unittest.TestCase):
+    def test_main_uses_cli_seed_after_logger_setup(self):
+        source = (REPO / "main.py").read_text(encoding="utf-8")
+        self.assertIn("setup_seed(args.seed)", source)
+        self.assertIn("safe_state(args.quiet, seed=args.seed)", source)
+        self.assertNotIn("safe_state(args.quiet)\n", source)
+
+    def test_main_counts_dynamic_and_hard_static_as_total_budget(self):
+        source = (REPO / "main.py").read_text(encoding="utf-8")
+        self.assertIn("dynamic_points = int(gaussians.get_xyz.shape[0])", source)
+        self.assertIn("total_points = dynamic_points + static_points", source)
+        self.assertIn('"num_GS": "points/dynamic"', source)
+        self.assertIn("hard_total = hard_dynamic + hard_static", source)
+        self.assertNotIn("dynamic_points = total_points - static_points", source)
+
+    def test_gaussian_model_persists_capacity_state_in_routing_dict(self):
+        source = (REPO / "scene/gaussian_model.py").read_text(encoding="utf-8")
+        self.assertIn('"capacity_state": self._capture_capacity_state()', source)
+        self.assertIn('self._restore_capacity_state(routing_motion_params.get("capacity_state"))', source)
+        self.assertIn("def build_capacity_bank(self):", source)
+        self.assertIn("created_iteration=iteration", source)
+
+
 if __name__ == "__main__":
     unittest.main()

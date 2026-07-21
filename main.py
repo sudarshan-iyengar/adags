@@ -533,9 +533,9 @@ def tensor_mean_norm(value, dim=-1):
 def collect_decomposition_diagnostics(gaussians, opt=None):
     metrics = {}
 
-    total_points = int(gaussians.get_xyz.shape[0])
     static_points = int(gaussians.get_static_xyz.shape[0]) if hasattr(gaussians, "get_static_xyz") else 0
-    dynamic_points = max(0, total_points - static_points)
+    dynamic_points = int(gaussians.get_xyz.shape[0])
+    total_points = dynamic_points + static_points
     add_scalar_metric(metrics, "points/total", total_points)
     add_scalar_metric(metrics, "points/static", static_points)
     add_scalar_metric(metrics, "points/dynamic", dynamic_points)
@@ -760,19 +760,23 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
             "psnr": "test/psnr",
             "ssim": "test/ssim",
             "lpips": "test/lpips",
-            "num_GS": "points/total",
+            "num_GS": "points/dynamic",
             "static": "points/hard_static",
         }
         for stat_name, metric_name in metric_map.items():
             if stat_name in validation_stats:
                 eval_metrics[metric_name] = validation_stats[stat_name]
         if "num_GS" in validation_stats and "static" in validation_stats:
-            hard_dynamic = validation_stats["num_GS"] - validation_stats["static"]
-            eval_metrics["points/static"] = validation_stats["static"]
+            hard_dynamic = int(validation_stats["num_GS"])
+            hard_static = int(validation_stats["static"])
+            hard_total = hard_dynamic + hard_static
+            eval_metrics["points/total"] = hard_total
+            eval_metrics["points/static"] = hard_static
             eval_metrics["points/dynamic"] = hard_dynamic
             eval_metrics["points/hard_dynamic"] = hard_dynamic
+            eval_metrics["points/hard_static"] = hard_static
             eval_metrics["points/hard_static_fraction"] = (
-                validation_stats["static"] / validation_stats["num_GS"] if validation_stats["num_GS"] > 0 else 0.0
+                hard_static / hard_total if hard_total > 0 else 0.0
             )
     eval_metrics.update(evaluate_motion_prior_test_metrics(scene, pipe, background, scene.motion_prior_cache))
     summary_updates.update(build_validation_summary_updates(eval_metrics, first_iter))
@@ -1250,6 +1254,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         env_map_optimizer.zero_grad(set_to_none=True)
 
     final_diagnostics = collect_decomposition_diagnostics(scene.gaussians, opt)
+    final_dynamic_points = int(scene.gaussians.get_xyz.shape[0])
+    final_static_points = int(scene.gaussians.get_static_xyz.shape[0]) if hasattr(scene.gaussians, 'get_static_xyz') else 0
+    final_total_points = final_dynamic_points + final_static_points
     summary_updates = {
         "best_test_psnr": best_psnr,
         "best_val_psnr": best_psnr if best_val_iter is not None else None,
@@ -1257,12 +1264,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         "final_psnr": summary_scalar((final_val_metrics or {}).get("test/psnr")),
         "final_val_iter": final_val_iter,
         "final_iteration": opt.iterations,
-        "final_total_points": scene.gaussians.get_xyz.shape[0],
-        "final_static_points": scene.gaussians.get_static_xyz.shape[0] if hasattr(scene.gaussians, 'get_static_xyz') else 0,
-        "final_dynamic_points": (
-            scene.gaussians.get_xyz.shape[0] - scene.gaussians.get_static_xyz.shape[0]
-            if hasattr(scene.gaussians, 'get_static_xyz') else scene.gaussians.get_xyz.shape[0]
-        ),
+        "final_total_points": final_total_points,
+        "final_static_points": final_static_points,
+        "final_dynamic_points": final_dynamic_points,
         "model_path": scene.model_path,
         "start_checkpoint": checkpoint,
         "visibility_event_manifest": getattr(opt, "visibility_event_manifest", ""),
@@ -1295,9 +1299,9 @@ def prepare_output_and_logger(args):
 def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed, testing_iterations, scene: Scene, renderFunc, renderArgs, loss_dict=None, wandb_run=None):
     gaussians = scene.gaussians
     opt = getattr(scene, 'opt', None)
-    total_points = gaussians.get_xyz.shape[0]
     static_points = gaussians.get_static_xyz.shape[0] if hasattr(gaussians, 'get_static_xyz') else 0
-    dynamic_points = total_points - static_points
+    dynamic_points = gaussians.get_xyz.shape[0]
+    total_points = dynamic_points + static_points
     hard_static_conversion = bool(getattr(opt, "enable_hard_static_conversion", False)) if opt is not None else False
     histogram_log_interval = max(1, int(getattr(opt, "histogram_log_interval", 1))) if opt is not None else 1
     log_histograms = (
@@ -1657,7 +1661,7 @@ if __name__ == "__main__":
     setup_seed(args.seed)
     print("Optimizing " + args.model_path)
 
-    safe_state(args.quiet)
+    safe_state(args.quiet, seed=args.seed)
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
 
     wandb_run = init_wandb(args)

@@ -30,6 +30,9 @@ from utils.general_utils import strip_symmetric, build_scaling_rotation
 from utils.sh_utils import sh_channels_4d
 import torch.nn.functional as F
 
+from depth_visibility.capacity import CapacityBank, capacity_budget as capacity_budget_from_bank
+from depth_visibility.errors import ContractError
+
 
 class GaussianModel:
 
@@ -149,6 +152,11 @@ class GaussianModel:
         self.motion_scaffold_weight_temp = 0.05
         self.motion_scaffold_chunk = 65536
         self.motion_track_dt = 1.0 / 30.0
+        self._capacity_stable_ids = torch.empty(0, dtype=torch.long)
+        self._capacity_generation = torch.empty(0, dtype=torch.long)
+        self._capacity_last_reassigned = torch.empty(0, dtype=torch.long)
+        self._capacity_next_stable_id = 0
+        self._capacity_cumulative_point_iterations = 0
         self.enable_rendered_flow = False
         self.enable_motion_aware_densify = False
         self.motion_aware_densify_boost = 1.0
@@ -211,6 +219,7 @@ class GaussianModel:
                 "motion_scaffold_init_scale": self.motion_scaffold_init_scale,
                 "motion_scaffold_weight_temp": self.motion_scaffold_weight_temp,
                 "motion_track_dt": self.motion_track_dt,
+                "capacity_state": self._capture_capacity_state(),
             }
 
             return (
@@ -379,6 +388,7 @@ class GaussianModel:
                 self.motion_track_dt = routing_motion_params.get(
                     "motion_track_dt", self.motion_track_dt
                 )
+                self._restore_capacity_state(routing_motion_params.get("capacity_state"))
 
         if training_args is not None:
             self.training_setup(training_args)
@@ -898,6 +908,7 @@ class GaussianModel:
             self._motion_lora_coeff = nn.Parameter(
                 torch.zeros((self.get_xyz.shape[0], self.motion_lora_rank), device="cuda").requires_grad_(True)
             )
+            self._ensure_capacity_state(created_iteration=0)
 
     def create_from_pth(self, path, spatial_lr_scale):
         assert self.gaussian_dim == 4 and self.rot_4d
@@ -987,6 +998,7 @@ class GaussianModel:
         motion_scaffold_basis = init_4d_gaussian.get("motion_scaffold_basis", None)
         if motion_scaffold_basis is not None:
             self._motion_scaffold_basis = nn.Parameter(motion_scaffold_basis.cuda().requires_grad_(True))
+        self._ensure_capacity_state(created_iteration=0)
 
     # ----------------- Training setup -----------------
 
@@ -1141,6 +1153,144 @@ class GaussianModel:
                 self._motion_scaffold_attach_idx = self._motion_scaffold_attach_idx.to(device).long()
                 self._motion_scaffold_attach_w = self._motion_scaffold_attach_w.to(device)
 
+
+    def _capacity_device(self):
+        return self.get_xyz.device if torch.is_tensor(self.get_xyz) else torch.device("cpu")
+
+    def _capture_capacity_state(self):
+        self._ensure_capacity_state()
+        return {
+            "schema_version": "phase9-capacity-state-v1",
+            "stable_ids": self._capacity_stable_ids.detach().cpu(),
+            "generation": self._capacity_generation.detach().cpu(),
+            "last_reassigned": self._capacity_last_reassigned.detach().cpu(),
+            "next_stable_id": int(self._capacity_next_stable_id),
+            "cumulative_point_iterations": int(self._capacity_cumulative_point_iterations),
+        }
+
+    def _restore_capacity_state(self, state):
+        if not state:
+            self._ensure_capacity_state(created_iteration=0)
+            return
+        if state.get("schema_version") != "phase9-capacity-state-v1":
+            raise ContractError("unsupported capacity state schema")
+        n_points = int(self.get_xyz.shape[0])
+        device = self._capacity_device()
+        stable_ids = torch.as_tensor(state["stable_ids"], dtype=torch.long, device=device).reshape(-1)
+        generation = torch.as_tensor(state["generation"], dtype=torch.long, device=device).reshape(-1)
+        last_reassigned = torch.as_tensor(state["last_reassigned"], dtype=torch.long, device=device).reshape(-1)
+        if stable_ids.shape[0] != n_points or generation.shape[0] != n_points or last_reassigned.shape[0] != n_points:
+            raise ContractError("capacity state row count does not match Gaussian rows")
+        if stable_ids.numel() and torch.unique(stable_ids).numel() != stable_ids.numel():
+            raise ContractError("capacity stable IDs must be unique")
+        self._capacity_stable_ids = stable_ids
+        self._capacity_generation = generation
+        self._capacity_last_reassigned = last_reassigned
+        next_id = int(state.get("next_stable_id", 0))
+        minimum_next = int(stable_ids.max().item()) + 1 if stable_ids.numel() else 0
+        self._capacity_next_stable_id = max(next_id, minimum_next)
+        self._capacity_cumulative_point_iterations = int(state.get("cumulative_point_iterations", 0))
+
+    def _ensure_capacity_state(self, created_iteration=0):
+        n_points = int(self.get_xyz.shape[0])
+        device = self._capacity_device()
+        valid = (
+            self._capacity_stable_ids.shape[0] == n_points
+            and self._capacity_generation.shape[0] == n_points
+            and self._capacity_last_reassigned.shape[0] == n_points
+        )
+        if not valid:
+            self._capacity_stable_ids = torch.arange(n_points, dtype=torch.long, device=device)
+            self._capacity_generation = torch.full((n_points,), int(created_iteration), dtype=torch.long, device=device)
+            self._capacity_last_reassigned = torch.zeros(n_points, dtype=torch.long, device=device)
+            self._capacity_next_stable_id = n_points
+            return
+        self._capacity_stable_ids = self._capacity_stable_ids.to(device=device, dtype=torch.long)
+        self._capacity_generation = self._capacity_generation.to(device=device, dtype=torch.long)
+        self._capacity_last_reassigned = self._capacity_last_reassigned.to(device=device, dtype=torch.long)
+        minimum_next = int(self._capacity_stable_ids.max().item()) + 1 if n_points else 0
+        self._capacity_next_stable_id = max(int(self._capacity_next_stable_id), minimum_next)
+
+    def _append_capacity_rows(self, row_count, created_iteration):
+        row_count = int(row_count)
+        if self.gaussian_dim != 4 or row_count <= 0:
+            return
+        current_count = int(self.get_xyz.shape[0])
+        old_count = int(self._capacity_stable_ids.shape[0])
+        if current_count != old_count + row_count:
+            raise ContractError("capacity append does not match Gaussian row growth")
+        device = self._capacity_device()
+        start = int(self._capacity_next_stable_id)
+        new_ids = torch.arange(start, start + row_count, dtype=torch.long, device=device)
+        self._capacity_stable_ids = torch.cat([self._capacity_stable_ids.to(device), new_ids], dim=0)
+        self._capacity_generation = torch.cat(
+            [
+                self._capacity_generation.to(device),
+                torch.full((row_count,), int(created_iteration or 0), dtype=torch.long, device=device),
+            ],
+            dim=0,
+        )
+        self._capacity_last_reassigned = torch.cat(
+            [self._capacity_last_reassigned.to(device), torch.zeros(row_count, dtype=torch.long, device=device)],
+            dim=0,
+        )
+        self._capacity_next_stable_id = start + row_count
+
+    def _prune_capacity_state(self, valid_points_mask):
+        if self.gaussian_dim != 4:
+            return
+        mask = torch.as_tensor(valid_points_mask, dtype=torch.bool, device=self._capacity_device()).reshape(-1)
+        if mask.shape[0] != self._capacity_stable_ids.shape[0]:
+            raise ContractError("capacity prune mask does not match stable ID rows")
+        self._capacity_stable_ids = self._capacity_stable_ids[mask]
+        self._capacity_generation = self._capacity_generation[mask]
+        self._capacity_last_reassigned = self._capacity_last_reassigned[mask]
+
+    def build_capacity_bank(self):
+        if self.gaussian_dim != 4:
+            raise ContractError("Slice B capacity bank requires a 4D Gaussian model")
+        self._ensure_capacity_state()
+        parameters = {
+            "_xyz": self._xyz,
+            "_features_dc": self._features_dc,
+            "_features_rest": self._features_rest,
+            "_scaling": self._scaling,
+            "_rotation": self._rotation,
+            "_opacity": self._opacity,
+            "_t": self._t,
+            "_scaling_t": self._scaling_t,
+            "_route_logit": self._route_logit,
+            "_motion_v": self._motion_v,
+            "_motion_a": self._motion_a,
+            "_motion_lora_coeff": self._motion_lora_coeff,
+            "_staticness_score": self._staticness_score,
+        }
+        parameters = {
+            name: value for name, value in parameters.items()
+            if isinstance(value, nn.Parameter) and value.shape[:1] == self._xyz.shape[:1]
+        }
+        accumulators = {
+            "xyz_gradient_accum": self.xyz_gradient_accum,
+            "t_gradient_accum": self.t_gradient_accum,
+            "denom": self.denom,
+            "max_radii2D": self.max_radii2D,
+        }
+        accumulators = {
+            name: value for name, value in accumulators.items()
+            if torch.is_tensor(value) and value.shape[:1] == self._xyz.shape[:1]
+        }
+        return CapacityBank(
+            parameters=parameters,
+            accumulators=accumulators,
+            stable_ids=self._capacity_stable_ids,
+            generation=self._capacity_generation,
+            last_reassigned=self._capacity_last_reassigned,
+            hard_static_count=int(self.get_static_xyz.shape[0]),
+        )
+
+    def capacity_budget_summary(self):
+        return capacity_budget_from_bank(self.build_capacity_bank())
+
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense
         self.enable_soft_routing = getattr(training_args, "enable_soft_routing", True)
@@ -1168,6 +1318,7 @@ class GaussianModel:
 
         if self.gaussian_dim == 4:
             self._ensure_route_and_motion_tensors(self.route_logit_init)
+            self._ensure_capacity_state(created_iteration=0)
 
         l = [
             {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
@@ -1307,6 +1458,10 @@ class GaussianModel:
 
     def prune_points(self, mask):
         valid_points_mask = ~mask
+        capacity_valid_points_mask = None
+        if self.gaussian_dim == 4:
+            self._ensure_capacity_state(created_iteration=0)
+            capacity_valid_points_mask = valid_points_mask.detach().clone()
         optimizable_tensors = self._prune_optimizer(valid_points_mask)
 
         self._xyz = optimizable_tensors["xyz"]
@@ -1340,6 +1495,7 @@ class GaussianModel:
             self.t_gradient_accum = self.t_gradient_accum[valid_points_mask]
             if self._staticness_score.numel() > 0:
                 self._staticness_score = self._staticness_score[valid_points_mask]
+            self._prune_capacity_state(capacity_valid_points_mask)
 
     def prune_static_points(self, mask):
         valid_points_mask = ~mask
@@ -1449,7 +1605,10 @@ class GaussianModel:
             new_motion_lora_coeff=None,
             new_motion_scaffold_attach_idx=None,
             new_motion_scaffold_attach_w=None,
+            created_iteration=None,
     ):
+        if self.gaussian_dim == 4:
+            self._ensure_capacity_state(created_iteration=0)
         old_motion_scaffold_attach_idx = self._motion_scaffold_attach_idx
         old_motion_scaffold_attach_w = self._motion_scaffold_attach_w
         d = {
@@ -1550,6 +1709,8 @@ class GaussianModel:
         )
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
+        if self.gaussian_dim == 4:
+            self._append_capacity_rows(new_xyz.shape[0], created_iteration)
 
     def densification_postfix_static(
             self,
@@ -1631,7 +1792,7 @@ class GaussianModel:
 
     # split/clone methods unchanged (just using helpers above)
 
-    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2, max_new_points=None):
+    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2, max_new_points=None, iteration=None):
         n_init_points = self.get_xyz.shape[0]
         padded_grad = torch.zeros((n_init_points), device="cuda")
         padded_grad[: grads.shape[0]] = grads.squeeze()
@@ -1755,6 +1916,7 @@ class GaussianModel:
             new_motion_lora_coeff,
             new_motion_scaffold_attach_idx,
             new_motion_scaffold_attach_w,
+            created_iteration=iteration,
         )
 
         prune_filter = torch.cat(
@@ -1770,7 +1932,7 @@ class GaussianModel:
         self.prune_points(prune_filter)
         return selected_count
 
-    def densify_and_clone(self, grads, grad_threshold, scene_extent, max_new_points=None):
+    def densify_and_clone(self, grads, grad_threshold, scene_extent, max_new_points=None, iteration=None):
         grad_norm = torch.norm(grads, dim=-1)
         selected_pts_mask = grad_norm >= grad_threshold
         selected_pts_mask = torch.logical_and(
@@ -1831,6 +1993,7 @@ class GaussianModel:
             new_motion_lora_coeff,
             new_motion_scaffold_attach_idx,
             new_motion_scaffold_attach_w,
+            created_iteration=iteration,
         )
         return selected_count
 
@@ -1985,6 +2148,7 @@ class GaussianModel:
             max_grad,
             extent,
             max_new_points=remaining_new_points,
+            iteration=iteration,
         )
         if remaining_new_points is not None:
             remaining_new_points = max(0, remaining_new_points - cloned_points)
@@ -1993,6 +2157,7 @@ class GaussianModel:
             max_grad,
             extent,
             max_new_points=remaining_new_points,
+            iteration=iteration,
         )
 
         # 5) Densify static gaussians (unchanged)
