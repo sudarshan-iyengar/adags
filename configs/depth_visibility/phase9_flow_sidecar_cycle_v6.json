@@ -1,0 +1,241 @@
+{
+  "schema_version": "phase9-run-matrix-v2",
+  "cycle": "csvl-isr-flow-sidecar-v6",
+  "generated_after_v5_p01_submission": true,
+  "v5_p01_run_id": "P9-V5-P01-CUT-DA3-SIDECAR-S20260721",
+  "v5_p01_dependency_required": false,
+  "run_count": 2,
+  "registered_total_max_gpu_hours": 0.0,
+  "submission_ready": true,
+  "runs": [
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V6-I01-IMPLEMENTATION-FREEZE",
+      "stage": "I01-v6",
+      "action": "freeze-implementation",
+      "scope": "engineering",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": null,
+      "camera_time_population": "not_applicable",
+      "claim_or_uncertainty": "The v6 P02 flow adapter implementation bytes are immutably bound.",
+      "necessity": "The full-cut flow manifest must execute exact committed and pushed bytes.",
+      "pre_observation_promotion_predicate": "Clean tracked branch equals upstream and cycle-v6 hashes resolve.",
+      "completion_rule": "Validated implementation freeze and command registry for all v6 entries.",
+      "failure_interpretation_and_action": "Repair once; do not submit P02 from unbound bytes.",
+      "prerequisites": [],
+      "input_artifacts": [],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V6-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": false,
+        "resolved_manifest_sha256": null,
+        "status": "not_applicable"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "95c972d9ef9a819b0bcf5cac23c0591d3edd2a023fcc59976c126ba92569e1a4",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "fc83ca34591ebb310f62007ba786ec74b0684675d3fb3e3896323f2a2a3f0bf9",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "freeze-implementation",
+          "--run-id",
+          "P9-V6-I01-IMPLEMENTATION-FREEZE",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-I01-IMPLEMENTATION-FREEZE/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_flow_sidecar_cycle_v6.json",
+          "--allow-unresolved-local"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-I01-IMPLEMENTATION-FREEZE/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/authority/implementation-freeze.json",
+          "schema": "phase9-implementation-freeze-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/authority/commands.json",
+          "schema": "phase9-command-registry-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "none",
+        "site": "login",
+        "profile": "login",
+        "partition": null,
+        "account": null,
+        "qos": null,
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 1,
+        "host_memory_gib": 4,
+        "gpus_per_node": 0,
+        "gpu_type": null,
+        "gpu_memory_gib": null,
+        "wall_minutes": 15,
+        "dependency_mode": null,
+        "stdout": null,
+        "stderr": null
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-I01-IMPLEMENTATION-FREEZE",
+        "retention_class": "durable_decision",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 1,
+        "maximum_temporary_gib": 1
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260721,
+        "shuffle": 20277732,
+        "training": 20260721
+      },
+      "training": null,
+      "max_gpu_hours": 0
+    },
+    {
+      "schema_version": "phase9-run-entry-v2",
+      "run_id": "P9-V6-P02-CUT-FLOW-ADAPT-S20260721",
+      "stage": "P02-v6",
+      "action": "adapt-flow",
+      "scope": "engineering",
+      "status": "registered_not_submitted",
+      "conditional": false,
+      "scene": "cut_roasted_beef",
+      "camera_time_population": "all_5681_cut_train_temporal_pairs_no_cam00_rgb",
+      "claim_or_uncertainty": "Existing SEA-RAFT source-frame flow is sealed with explicit forward direction, validity semantics, and hashes.",
+      "necessity": "Temporal correspondence must be trustworthy before any CSVL ledger or event metric can consume flow.",
+      "pre_observation_promotion_predicate": "Every used train flow NPZ passes direction, shape, dtype, finiteness, source image hash, target image hash, and split checks.",
+      "completion_rule": "Slurm terminal state, exit 0, phase9-flow-manifest-v1 sealed, 5681 records, cam00_rgb_opened=false, Gate A remains not_evaluable.",
+      "failure_interpretation_and_action": "Invalid legacy flow requires a new registered generation cycle; do not guess direction or consume partial flow.",
+      "prerequisites": [
+        "P9-V6-I01-IMPLEMENTATION-FREEZE"
+      ],
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-I01-IMPLEMENTATION-FREEZE/terminal.json",
+          "producer_run_id": "P9-V6-I01-IMPLEMENTATION-FREEZE",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        }
+      ],
+      "external_inputs": [],
+      "implementation_binding": {
+        "producer_run_id": "P9-V6-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "95c972d9ef9a819b0bcf5cac23c0591d3edd2a023fcc59976c126ba92569e1a4",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "command": {
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "status": "requires_I01_resolution",
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "argv_template_sha256": "7d9f4ddb5094226a9893d301b9240be9167b2054ab4e718c0307a85551f70242",
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "adapt-flow",
+          "--run-id",
+          "P9-V6-P02-CUT-FLOW-ADAPT-S20260721",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-P02-CUT-FLOW-ADAPT-S20260721/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_flow_sidecar_cycle_v6.json",
+          "--scene",
+          "cut_roasted_beef"
+        ]
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-P02-CUT-FLOW-ADAPT-S20260721/terminal.json",
+          "schema": "phase9-terminal-manifest-v1",
+          "required": true,
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/preprocess/cut_roasted_beef/flow/manifest.json",
+          "schema": "phase9-flow-manifest-v1",
+          "required": true,
+          "sha256": null
+        }
+      ],
+      "scheduler": {
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "profile": "cpu12",
+        "partition": "boost_usr_prod",
+        "account": "euhpc_d21_034",
+        "qos": "boost_qos_lprod",
+        "nodes": 1,
+        "tasks_per_node": 1,
+        "cpus_per_task": 8,
+        "host_memory_gib": 64,
+        "gpus_per_node": 0,
+        "gpu_type": null,
+        "gpu_memory_gib": null,
+        "wall_minutes": 720,
+        "dependency_mode": "afterok",
+        "stdout": "logs/P9-V6-P02-CUT-FLOW-ADAPT-S20260721_%j.out",
+        "stderr": "logs/P9-V6-P02-CUT-FLOW-ADAPT-S20260721_%j.err"
+      },
+      "storage": {
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-P02-CUT-FLOW-ADAPT-S20260721",
+        "retention_class": "transient_generated",
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 20,
+        "maximum_temporary_gib": 150
+      },
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260721,
+        "shuffle": 20277732,
+        "training": 20260721
+      },
+      "training": null,
+      "max_gpu_hours": 0
+    }
+  ]
+}

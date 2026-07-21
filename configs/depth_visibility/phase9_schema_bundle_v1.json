@@ -153,6 +153,132 @@
         },
         "array_hashes": {
           "type": "object"
+        },
+        "flow_npz_path": {
+          "type": "string"
+        },
+        "flow_dtype": {
+          "type": "string"
+        },
+        "valid_dtype": {
+          "type": "string"
+        },
+        "valid_pixel_fraction": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "phase9-flow-manifest-v1": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "run_id",
+        "scene",
+        "flow_record_schema_version",
+        "flow_root",
+        "source_split",
+        "target_camera",
+        "cam00_rgb_opened",
+        "direction",
+        "generator",
+        "camera_ids",
+        "frame_range",
+        "temporal_pair_count_per_camera",
+        "expected_record_count",
+        "record_count",
+        "raw_flow_file_count",
+        "unused_flow_file_count",
+        "valid_fraction_minimum",
+        "valid_fraction_mean",
+        "valid_fraction_maximum",
+        "split_binding",
+        "records",
+        "label_dependent_gate_a"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "phase9-flow-manifest-v1"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "scene": {
+          "type": "string"
+        },
+        "flow_record_schema_version": {
+          "const": "depth-visibility-flow-schema-v1"
+        },
+        "flow_root": {
+          "type": "string"
+        },
+        "source_split": {
+          "const": "train"
+        },
+        "target_camera": {
+          "type": "string"
+        },
+        "cam00_rgb_opened": {
+          "const": false
+        },
+        "direction": {
+          "enum": [
+            "forward_t_to_t_plus_1",
+            "backward_t_to_t_minus_1"
+          ]
+        },
+        "generator": {
+          "type": "object"
+        },
+        "camera_ids": {
+          "type": "array",
+          "minItems": 1
+        },
+        "frame_range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "temporal_pair_count_per_camera": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expected_record_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "raw_flow_file_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "unused_flow_file_count": {
+          "type": "integer"
+        },
+        "unused_flow_file_examples": {
+          "type": "array"
+        },
+        "valid_fraction_minimum": {
+          "type": "number"
+        },
+        "valid_fraction_mean": {
+          "type": "number"
+        },
+        "valid_fraction_maximum": {
+          "type": "number"
+        },
+        "split_binding": {
+          "type": "object"
+        },
+        "records": {
+          "type": "array",
+          "minItems": 1
+        },
+        "label_dependent_gate_a": {
+          "const": "not_evaluable"
         }
       },
       "additionalProperties": false

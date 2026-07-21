@@ -262,6 +262,40 @@ class ExecutionBindingTests(unittest.TestCase):
                     prediction=prediction,
                 )
 
+
+    def test_flow_record_builder_seals_forward_source_frame_npz(self):
+        source = SimpleNamespace(
+            camera_id="cam01", file_stem="images/cam01_0000", frame=0,
+            time=0.0, width=3, height=2, image_sha256="a" * 64,
+        )
+        target = SimpleNamespace(
+            camera_id="cam01", file_stem="images/cam01_0001", frame=1,
+            time=0.1, width=3, height=2, image_sha256="b" * 64,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            flow_path = Path(directory) / "cam01_0000.npz"
+            np.savez_compressed(
+                flow_path,
+                flow=np.zeros((2, 3, 2), dtype=np.float32),
+                mask=np.ones((2, 3), dtype=bool),
+            )
+            record = MODULE._build_flow_record(
+                scene="cut_roasted_beef", flow_path=flow_path,
+                source_record=source, target_record=target,
+                direction="forward_t_to_t_plus_1", generator_revision="c" * 64,
+            )
+            self.assertEqual(record["source_frame"], 0)
+            self.assertEqual(record["target_frame"], 1)
+            self.assertEqual(record["direction"], "forward_t_to_t_plus_1")
+            self.assertEqual(record["valid_pixel_fraction"], 1.0)
+            self.assertEqual(record["array_hashes"]["npz_sha256"], MODULE.sha256_file(flow_path))
+            with self.assertRaises(MODULE.ContractError):
+                MODULE._build_flow_record(
+                    scene="cut_roasted_beef", flow_path=flow_path,
+                    source_record=source, target_record=target,
+                    direction="backward_t_to_t_minus_1", generator_revision="c" * 64,
+                )
+
     def test_geometry_input_check_rejects_cross_group_anchor_scale_drift(self):
         K = np.repeat(np.eye(3)[None, ...], 6, axis=0)
         first = {

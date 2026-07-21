@@ -60,6 +60,7 @@ from depth_visibility.evaluator import (
 )
 from depth_visibility.errors import ContractError, ProvenanceError
 from depth_visibility.fixtures import two_plane_track_pixels
+from depth_visibility.flow import validate_flow_manifest
 from depth_visibility.groups import enumerate_anchor_groups
 from depth_visibility.ledger import build_target_frame_ledger
 from depth_visibility.n3v import compute_r_scene, load_scene_index, validate_split_binding
@@ -748,6 +749,213 @@ def action_produce_da3(
         "group_count": len(group_records),
         "array_file_count": arrays_payload["file_count"],
         "total_array_bytes": arrays_payload["total_file_bytes"],
+        "cam00_rgb_opened": False,
+        "label_dependent_gate_a": "not_evaluable",
+    }
+
+
+def _array_sha256(array: np.ndarray) -> str:
+    return hashlib.sha256(np.ascontiguousarray(array).tobytes()).hexdigest()
+
+
+def _build_flow_record(
+    *,
+    scene: str,
+    flow_path: Path,
+    source_record: Any,
+    target_record: Any,
+    direction: str,
+    generator_revision: str,
+) -> dict[str, Any]:
+    if source_record.camera_id != target_record.camera_id:
+        raise ProvenanceError("P02 flow pairs must remain within one train camera")
+    raw_sha = sha256_file(flow_path)
+    with np.load(flow_path, allow_pickle=False) as payload:
+        if set(payload.files) != {"flow", "mask"}:
+            raise ProvenanceError(f"P02 flow NPZ has unexpected keys: {flow_path}")
+        flow = np.asarray(payload["flow"])
+        mask = np.asarray(payload["mask"])
+    expected_hw = (int(source_record.height), int(source_record.width))
+    if flow.dtype != np.float32 or flow.shape != (*expected_hw, 2) or not np.isfinite(flow).all():
+        raise ProvenanceError(f"P02 flow array shape/dtype/finiteness mismatch: {flow_path}")
+    if mask.dtype != np.bool_ or mask.shape != expected_hw:
+        raise ProvenanceError(f"P02 flow validity mask shape/dtype mismatch: {flow_path}")
+    if (source_record.image_sha256 is None) or (target_record.image_sha256 is None):
+        raise ProvenanceError("P02 requires hashed train source and target RGB images")
+    dt_seconds = float(target_record.time - source_record.time)
+    validate_flow_manifest(
+        {
+            "source_camera": source_record.camera_id,
+            "target_camera": target_record.camera_id,
+            "source_image": source_record.file_stem,
+            "target_image": target_record.file_stem,
+            "source_frame": source_record.frame,
+            "target_frame": target_record.frame,
+            "direction": direction,
+            "dt": dt_seconds,
+            "height": source_record.height,
+            "width": source_record.width,
+            "units": "pixels",
+            "pixel_centers": "integer",
+            "sampling": "bilinear_align_corners_false",
+            "validity_semantics": "true_means_sample_is_valid",
+            "occlusion_semantics": "true_means_not_occluded",
+            "generator_revision": generator_revision,
+            "source_hashes": [source_record.image_sha256, target_record.image_sha256],
+            "array_hash": raw_sha,
+        }
+    )
+    return {
+        "schema_version": "depth-visibility-flow-schema-v1",
+        "scene": scene,
+        "flow_npz_path": str(flow_path),
+        "source_image": source_record.file_stem,
+        "target_image": target_record.file_stem,
+        "source_camera": source_record.camera_id,
+        "target_camera": target_record.camera_id,
+        "source_frame": int(source_record.frame),
+        "target_frame": int(target_record.frame),
+        "direction": direction,
+        "dt_seconds": dt_seconds,
+        "source_width": int(source_record.width),
+        "source_height": int(source_record.height),
+        "target_width": int(target_record.width),
+        "target_height": int(target_record.height),
+        "units": "pixels_at_source_resolution",
+        "coordinate_convention": "integer_pixel_centers",
+        "sampling": "bilinear_align_corners_false",
+        "flow_key": "flow",
+        "valid_key": "mask",
+        "validity_semantics": "true_means_sample_is_valid",
+        "occlusion_semantics": "true_means_not_occluded",
+        "generator_name": "SEA-RAFT",
+        "generator_revision": generator_revision,
+        "source_hashes": [source_record.image_sha256, target_record.image_sha256],
+        "array_hashes": {
+            "npz_sha256": raw_sha,
+            "flow_contiguous_sha256": _array_sha256(flow),
+            "mask_contiguous_sha256": _array_sha256(mask.astype(np.uint8)),
+        },
+        "flow_dtype": str(flow.dtype),
+        "valid_dtype": str(mask.dtype),
+        "valid_pixel_fraction": float(mask.mean()),
+    }
+
+
+def action_adapt_flow(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Seal existing SEA-RAFT flow sidecars without generating new flow."""
+
+    config = _json(DEFAULT_CONFIG)
+    scene = str(entry.get("scene") or "")
+    if args.scene != scene or scene != "cut_roasted_beef":
+        raise ProvenanceError("P02 v6 is admitted only for cut_roasted_beef")
+    direction = str(config["evaluation"]["flow_direction"])
+    if direction != "forward_t_to_t_plus_1":
+        raise ProvenanceError("P02 raw SEA-RAFT sidecars require forward_t_to_t_plus_1 semantics")
+    project_root = _expand("$WORK/proj_adags")
+    scene_root = project_root / "data/n3v" / scene
+    flow_root = scene_root / "flow"
+    generator_path = project_root / "repo/SEA-RAFT/generate_dataset_flow.py"
+    if not flow_root.is_dir() or not generator_path.is_file():
+        raise ProvenanceError("P02 raw flow root or SEA-RAFT generator is missing")
+
+    index = load_scene_index(
+        scene_root,
+        scene=scene,
+        expose_test_images=False,
+        hash_train_images=True,
+        timestamp_tolerance_seconds=float(config["camera"]["timestamp_tolerance_seconds"]),
+    )
+    split_manifest = _json(REPO_ROOT / config["data"]["split_manifest"])
+    split_binding = {
+        key: dict(value)
+        for key, value in validate_split_binding(index, split_manifest).items()
+    }
+    if any(record.image_path is not None for record in index.by_camera_frame("test").values()):
+        raise ProvenanceError("P02 attempted to expose held-out cam00 RGB")
+
+    by_camera_frame = index.by_camera_frame("train")
+    train_cameras = sorted({camera for camera, _ in by_camera_frame})
+    train_frames = sorted({frame for _, frame in by_camera_frame})
+    if train_frames != list(range(min(train_frames), max(train_frames) + 1)):
+        raise ProvenanceError("P02 train frames are not contiguous")
+    raw_flow_paths = sorted(flow_root.glob("*.npz"))
+    raw_flow_names = {path.name for path in raw_flow_paths}
+    expected_names: set[str] = set()
+    records: list[dict[str, Any]] = []
+    valid_fractions: list[float] = []
+    generator_revision = sha256_file(generator_path)
+    for camera in train_cameras:
+        for frame in train_frames[:-1]:
+            source = by_camera_frame[(camera, frame)]
+            target = by_camera_frame[(camera, frame + 1)]
+            flow_name = f"{Path(source.file_stem).name}.npz"
+            flow_path = flow_root / flow_name
+            expected_names.add(flow_name)
+            if not flow_path.is_file():
+                raise ProvenanceError(f"P02 missing expected train flow sidecar: {flow_path}")
+            record = _build_flow_record(
+                scene=scene,
+                flow_path=flow_path,
+                source_record=source,
+                target_record=target,
+                direction=direction,
+                generator_revision=generator_revision,
+            )
+            records.append(record)
+            valid_fractions.append(float(record["valid_pixel_fraction"]))
+
+    expected_count = len(train_cameras) * (len(train_frames) - 1)
+    if len(records) != expected_count:
+        raise ProvenanceError("P02 emitted the wrong number of flow records")
+    unused_flow_files = sorted(raw_flow_names - expected_names)
+    manifest_path = _expected_path(entry, "phase9-flow-manifest-v1")
+    manifest = {
+        "schema_version": "phase9-flow-manifest-v1",
+        "run_id": entry["run_id"],
+        "scene": scene,
+        "flow_record_schema_version": "depth-visibility-flow-schema-v1",
+        "flow_root": str(flow_root),
+        "source_split": "train",
+        "target_camera": str(config["data"]["test_camera"]),
+        "cam00_rgb_opened": False,
+        "direction": direction,
+        "generator": {
+            "name": "SEA-RAFT",
+            "script_path": str(generator_path),
+            "script_sha256": generator_revision,
+            "provenance": "generate_dataset_flow.py saves model(img_t, img_t_plus_1) to the source-frame NPZ.",
+        },
+        "camera_ids": train_cameras,
+        "frame_range": [int(train_frames[0]), int(train_frames[-1])],
+        "temporal_pair_count_per_camera": len(train_frames) - 1,
+        "expected_record_count": expected_count,
+        "record_count": len(records),
+        "raw_flow_file_count": len(raw_flow_paths),
+        "unused_flow_file_count": len(unused_flow_files),
+        "unused_flow_file_examples": unused_flow_files[:10],
+        "valid_fraction_minimum": min(valid_fractions),
+        "valid_fraction_mean": float(sum(valid_fractions) / len(valid_fractions)),
+        "valid_fraction_maximum": max(valid_fractions),
+        "split_binding": split_binding,
+        "records": records,
+        "label_dependent_gate_a": "not_evaluable",
+    }
+    write_json_atomic(manifest_path, manifest)
+    reference = _scientific_file_ref(
+        manifest_path, "phase9-flow-manifest-v1", entry["run_id"]
+    )
+    return [reference], {
+        "scene": scene,
+        "direction": direction,
+        "record_count": len(records),
+        "expected_record_count": expected_count,
+        "raw_flow_file_count": len(raw_flow_paths),
+        "unused_flow_file_count": len(unused_flow_files),
         "cam00_rgb_opened": False,
         "label_dependent_gate_a": "not_evaluable",
     }
@@ -1855,6 +2063,7 @@ def main() -> int:
         "hash-da3": lambda: action_hash_da3(entry, args, execution),
         "da3-conformance": lambda: action_da3_conformance(entry, args, execution),
         "produce-da3": lambda: action_produce_da3(entry, args, execution),
+        "adapt-flow": lambda: action_adapt_flow(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),

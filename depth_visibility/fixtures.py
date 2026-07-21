@@ -54,7 +54,7 @@ def flow_manifest(
     if direction == "forward_t_to_t_plus_1":
         source_frame = 0 if source_frame is None else int(source_frame)
         target_frame = source_frame + 1 if target_frame is None else int(target_frame)
-    elif direction == "backward_t_plus_1_to_t":
+    elif direction == "backward_t_to_t_minus_1":
         source_frame = 1 if source_frame is None else int(source_frame)
         target_frame = source_frame - 1 if target_frame is None else int(target_frame)
     else:

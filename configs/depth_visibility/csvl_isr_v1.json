@@ -88,7 +88,7 @@
       "scene"
     ],
     "exact_zero_mse_reported": true,
-    "flow_direction": "backward_t_to_t_minus_1",
+    "flow_direction": "forward_t_to_t_plus_1",
     "lpips_backbone": "alex",
     "lpips_package": "lpipsPyTorch",
     "lpips_version": "0.1",

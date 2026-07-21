@@ -32,13 +32,13 @@ class FlowTests(unittest.TestCase):
     def test_manifest_direction_and_resize_are_fail_closed(self):
         forward_record = validate_flow_manifest(flow_manifest())
         backward_record = validate_flow_manifest(
-            flow_manifest(direction="backward_t_plus_1_to_t")
+            flow_manifest(direction="backward_t_to_t_minus_1")
         )
         self.assertEqual(forward_record.source_frame, 0)
         self.assertEqual(backward_record.source_frame, 1)
 
         invalid = flow_manifest()
-        invalid["direction"] = "backward_t_plus_1_to_t"
+        invalid["direction"] = "backward_t_to_t_minus_1"
         with self.assertRaises(FlowSemanticsError):
             validate_flow_manifest(invalid)
         invalid = flow_manifest()

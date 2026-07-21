@@ -37,7 +37,7 @@ class FlowRecord:
 
 
 _REQUIRED = tuple(field.name for field in dataclasses.fields(FlowRecord))
-_DIRECTIONS = {"forward_t_to_t_plus_1", "backward_t_plus_1_to_t"}
+_DIRECTIONS = {"forward_t_to_t_plus_1", "backward_t_to_t_minus_1"}
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 

@@ -138,6 +138,18 @@ SCHEMA_RULES: dict[str, tuple[set[str], set[str]]] = {
         },
         {"runtime"},
     ),
+    "phase9-flow-manifest-v1": (
+        {
+            "schema_version", "run_id", "scene", "flow_record_schema_version",
+            "flow_root", "source_split", "target_camera", "cam00_rgb_opened",
+            "direction", "generator", "camera_ids", "frame_range",
+            "temporal_pair_count_per_camera", "expected_record_count",
+            "record_count", "raw_flow_file_count", "unused_flow_file_count",
+            "valid_fraction_minimum", "valid_fraction_mean", "valid_fraction_maximum",
+            "split_binding", "records", "label_dependent_gate_a",
+        },
+        {"unused_flow_file_examples"},
+    ),
 }
 
 
