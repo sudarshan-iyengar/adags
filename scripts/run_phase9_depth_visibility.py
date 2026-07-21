@@ -31,7 +31,7 @@ from depth_visibility.annotation import (
     load_json,
     validate_empty_annotation_packet,
 )
-from depth_visibility.artifacts import build_inventory, write_canonical_array
+from depth_visibility.artifacts import build_inventory, load_verified_array, write_canonical_array
 from depth_visibility.baselines import validate_baseline_registry
 from depth_visibility.canonical import domain_id, sha256_file
 from depth_visibility.da3_adapter import (
@@ -61,6 +61,7 @@ from depth_visibility.evaluator import (
 from depth_visibility.errors import ContractError, ProvenanceError
 from depth_visibility.fixtures import two_plane_track_pixels
 from depth_visibility.flow import validate_flow_manifest
+from depth_visibility.schema import validate_payload
 from depth_visibility.groups import enumerate_anchor_groups
 from depth_visibility.ledger import build_target_frame_ledger
 from depth_visibility.n3v import compute_r_scene, load_scene_index, validate_split_binding
@@ -296,6 +297,180 @@ def _bound_a02_authority(
     if produced[0].get("sha256") != authority_sha:
         raise ProvenanceError("DA3 authority bytes do not match the A02 terminal")
     return authority_path, _json(authority_path), str(expected_terminal_sha)
+
+
+
+
+P01_DA3_SIDECAR_RUN_ID = "P9-V5-P01-CUT-DA3-SIDECAR-S20260721"
+P02_FLOW_SIDECAR_RUN_ID = "P9-V6-P02-CUT-FLOW-ADAPT-S20260721"
+
+
+def _require_completed_terminal_input(
+    execution: dict[str, Any] | None,
+    *,
+    producer_run_id: str,
+    action: str,
+) -> tuple[Path, dict[str, Any], str]:
+    if execution is None:
+        raise ProvenanceError(f"{producer_run_id} terminal requires a resolved execution manifest")
+    matches = [
+        item for item in execution.get("input_artifacts", [])
+        if item.get("producer_run_id") == producer_run_id
+        and item.get("schema") == "phase9-terminal-manifest-v1"
+    ]
+    if len(matches) != 1 or not str(matches[0].get("status", "")).startswith("resolved_exact"):
+        raise ProvenanceError(f"P03 lacks one exact resolved terminal input for {producer_run_id}")
+    terminal_ref = matches[0]
+    terminal_path = _expand(str(terminal_ref["path"])).resolve()
+    expected_sha = str(terminal_ref.get("sha256") or "")
+    if not terminal_path.is_file() or sha256_file(terminal_path) != expected_sha:
+        raise ProvenanceError(f"{producer_run_id} terminal bytes do not match the resolved P03 input")
+    terminal = _json(terminal_path)
+    if (
+        terminal.get("schema_version") != "phase9-terminal-manifest-v1"
+        or terminal.get("run_id") != producer_run_id
+        or terminal.get("action") != action
+        or terminal.get("status") != "completed"
+        or terminal.get("exit_code") != 0
+    ):
+        raise ProvenanceError(f"{producer_run_id} terminal is not a successful {action} run")
+    return terminal_path, terminal, expected_sha
+
+
+def _bound_terminal_json_artifact(
+    terminal: Mapping[str, Any],
+    *,
+    producer_run_id: str,
+    schema: str,
+) -> tuple[Path, dict[str, Any], str]:
+    produced = [
+        item for item in terminal.get("produced_artifacts", [])
+        if item.get("schema") == schema and item.get("producer_run_id") == producer_run_id
+    ]
+    if len(produced) != 1:
+        raise ProvenanceError(f"{producer_run_id} terminal does not bind exactly one {schema}")
+    path = _expand(str(produced[0].get("path", ""))).resolve()
+    if not path.is_file():
+        raise ProvenanceError(f"{schema} artifact is missing: {path}")
+    actual_sha = sha256_file(path)
+    if produced[0].get("sha256") != actual_sha:
+        raise ProvenanceError(f"{schema} bytes do not match the producer terminal")
+    payload = _json(path)
+    if payload.get("schema_version") != schema or payload.get("run_id") != producer_run_id:
+        raise ProvenanceError(f"{schema} payload identity is incompatible with {producer_run_id}")
+    return path, payload, actual_sha
+
+
+def _bound_p03_inputs(execution: dict[str, Any] | None) -> dict[str, Any]:
+    p01_terminal_path, p01_terminal, p01_terminal_sha = _require_completed_terminal_input(
+        execution,
+        producer_run_id=P01_DA3_SIDECAR_RUN_ID,
+        action="produce-da3",
+    )
+    da3_manifest_path, da3_manifest, da3_manifest_sha = _bound_terminal_json_artifact(
+        p01_terminal,
+        producer_run_id=P01_DA3_SIDECAR_RUN_ID,
+        schema="phase9-da3-sidecar-v1",
+    )
+    da3_arrays_path, da3_arrays, da3_arrays_sha = _bound_terminal_json_artifact(
+        p01_terminal,
+        producer_run_id=P01_DA3_SIDECAR_RUN_ID,
+        schema="phase9-da3-array-inventory-v1",
+    )
+    p02_terminal_path, p02_terminal, p02_terminal_sha = _require_completed_terminal_input(
+        execution,
+        producer_run_id=P02_FLOW_SIDECAR_RUN_ID,
+        action="adapt-flow",
+    )
+    flow_manifest_path, flow_manifest, flow_manifest_sha = _bound_terminal_json_artifact(
+        p02_terminal,
+        producer_run_id=P02_FLOW_SIDECAR_RUN_ID,
+        schema="phase9-flow-manifest-v1",
+    )
+    return {
+        "p01_terminal_path": p01_terminal_path,
+        "p01_terminal_sha256": p01_terminal_sha,
+        "da3_manifest_path": da3_manifest_path,
+        "da3_manifest": da3_manifest,
+        "da3_manifest_sha256": da3_manifest_sha,
+        "da3_arrays_path": da3_arrays_path,
+        "da3_arrays": da3_arrays,
+        "da3_arrays_sha256": da3_arrays_sha,
+        "p02_terminal_path": p02_terminal_path,
+        "p02_terminal_sha256": p02_terminal_sha,
+        "flow_manifest_path": flow_manifest_path,
+        "flow_manifest": flow_manifest,
+        "flow_manifest_sha256": flow_manifest_sha,
+    }
+
+
+def _select_sidecar_anchor_groups(
+    group_records: list[Mapping[str, Any]],
+) -> tuple[str, list[Mapping[str, Any]]]:
+    by_members: dict[tuple[str, ...], Mapping[str, Any]] = {}
+    for record in group_records:
+        members = tuple(str(value) for value in record.get("member_camera_ids", []))
+        if not members or any(value == "cam00" for value in members):
+            raise ProvenanceError("P03 sidecar group is missing train-camera membership or contains cam00")
+        if members in by_members:
+            raise ProvenanceError("P03 sidecar frame contains duplicate camera groups")
+        by_members[members] = record
+    unique = tuple(sorted(by_members))
+    cameras = sorted({camera for group in unique for camera in group})
+    eligible = [camera for camera in cameras if sum(camera in group for group in unique) >= 2]
+    if not eligible:
+        raise ProvenanceError("P03 cannot find a repeated train-camera anchor in sidecars")
+    anchor_camera_id = eligible[0]
+    selected_members = tuple(group for group in unique if anchor_camera_id in group)[:2]
+    if len(selected_members) != 2:
+        raise ProvenanceError("P03 selected anchor lacks two distinct sidecar groups")
+    return anchor_camera_id, [by_members[members] for members in selected_members]
+
+
+def _load_p01_group_prediction(
+    sidecar_root: Path,
+    group: Mapping[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    refs = group.get("array_refs", {})
+    required = {
+        "depth", "confidence", "processed_intrinsics", "aligned_w2c",
+        "expected_processed_intrinsics",
+    }
+    if not isinstance(refs, Mapping) or not required.issubset(refs):
+        raise ProvenanceError("P03 DA3 sidecar group lacks required array references")
+
+    def load(name: str) -> np.ndarray:
+        ref = refs[name]
+        if not isinstance(ref, Mapping):
+            raise ProvenanceError(f"P03 DA3 array reference is not an object: {name}")
+        return np.asarray(load_verified_array(sidecar_root / str(ref["path"]), ref))
+
+    depth = load("depth")
+    confidence = load("confidence")
+    intrinsics = load("processed_intrinsics")
+    extrinsics = load("aligned_w2c")
+    expected_intrinsics = load("expected_processed_intrinsics")
+    members = [str(value) for value in group.get("member_camera_ids", [])]
+    if (
+        depth.ndim != 3
+        or confidence.shape != depth.shape
+        or intrinsics.shape != (depth.shape[0], 3, 3)
+        or expected_intrinsics.shape != intrinsics.shape
+        or extrinsics.shape != (depth.shape[0], 4, 4)
+        or len(members) != depth.shape[0]
+    ):
+        raise ProvenanceError("P03 DA3 sidecar arrays are not mutually aligned")
+    prediction = {
+        "depth": depth,
+        "confidence": confidence,
+        "intrinsics": intrinsics,
+        "extrinsics": extrinsics,
+    }
+    group_input = {
+        "member_camera_ids": members,
+        "expected_processed_intrinsics": expected_intrinsics,
+    }
+    return prediction, group_input
 
 
 def action_hash_da3(
@@ -960,6 +1135,421 @@ def action_adapt_flow(
         "label_dependent_gate_a": "not_evaluable",
     }
 
+
+
+
+def action_build_csvl(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Build a sealed full-cut label-free CSVL bin-layer evidence ledger."""
+
+    config = _json(DEFAULT_CONFIG)
+    scene = str(entry.get("scene") or "")
+    expected_scene = str(config["data"]["development_scene"])
+    target_camera = str(config["data"]["test_camera"])
+    if scene != expected_scene or args.scene != scene or scene != "cut_roasted_beef":
+        raise ProvenanceError("P03 v7 is admitted only for cut_roasted_beef")
+
+    bindings = _bound_p03_inputs(execution)
+    da3_manifest = bindings["da3_manifest"]
+    da3_arrays = bindings["da3_arrays"]
+    flow_manifest = bindings["flow_manifest"]
+    if (
+        da3_manifest.get("schema_version") != "phase9-da3-sidecar-v1"
+        or da3_manifest.get("run_id") != P01_DA3_SIDECAR_RUN_ID
+        or da3_manifest.get("scene") != scene
+        or da3_manifest.get("target_camera") != target_camera
+        or da3_manifest.get("cam00_rgb_opened") is not False
+        or da3_manifest.get("label_dependent_gate_a") != "not_evaluable"
+    ):
+        raise ProvenanceError("P03 DA3 manifest is incompatible with the cut CSVL ledger")
+    if (
+        da3_arrays.get("schema_version") != "phase9-da3-array-inventory-v1"
+        or da3_arrays.get("run_id") != P01_DA3_SIDECAR_RUN_ID
+        or sha256_file(bindings["da3_arrays_path"]) != da3_manifest.get("array_inventory_sha256")
+    ):
+        raise ProvenanceError("P03 DA3 array inventory does not match the P01 manifest")
+    if (
+        flow_manifest.get("schema_version") != "phase9-flow-manifest-v1"
+        or flow_manifest.get("run_id") != P02_FLOW_SIDECAR_RUN_ID
+        or flow_manifest.get("scene") != scene
+        or flow_manifest.get("target_camera") != target_camera
+        or flow_manifest.get("cam00_rgb_opened") is not False
+        or flow_manifest.get("direction") != "forward_t_to_t_plus_1"
+        or int(flow_manifest.get("record_count", -1)) != int(flow_manifest.get("expected_record_count", -2))
+    ):
+        raise ProvenanceError("P03 flow manifest is incompatible with the cut CSVL ledger")
+
+    project_root = _expand("$WORK/proj_adags")
+    scene_root = project_root / "data/n3v" / scene
+    index = load_scene_index(
+        scene_root,
+        scene=scene,
+        expose_test_images=False,
+        hash_train_images=False,
+        timestamp_tolerance_seconds=float(config["camera"]["timestamp_tolerance_seconds"]),
+    )
+    split_manifest = _json(REPO_ROOT / config["data"]["split_manifest"])
+    split_binding = {
+        key: dict(value)
+        for key, value in validate_split_binding(index, split_manifest).items()
+    }
+    test_records = index.by_camera_frame("test")
+    if any(record.image_path is not None for record in test_records.values()):
+        raise ProvenanceError("P03 attempted to expose held-out cam00 RGB")
+
+    groups_by_frame: dict[int, list[Mapping[str, Any]]] = {}
+    for group in da3_manifest.get("groups", []):
+        if group.get("scene") != scene or group.get("target_camera") != target_camera:
+            raise ProvenanceError("P03 DA3 sidecar group has incompatible scene or target camera")
+        frame = int(group["frame"])
+        groups_by_frame.setdefault(frame, []).append(group)
+    frames = [int(item["frame"]) for item in da3_manifest.get("frames", [])]
+    frames = sorted(frames)
+    if (
+        len(frames) != int(da3_manifest.get("frame_count", -1))
+        or sum(len(value) for value in groups_by_frame.values()) != int(da3_manifest.get("group_count", -1))
+        or set(frames) != set(groups_by_frame)
+    ):
+        raise ProvenanceError("P03 DA3 frame/group counts do not match the sidecar manifest")
+    if list(flow_manifest.get("frame_range", [])) != [frames[0], frames[-1]]:
+        raise ProvenanceError("P03 flow frame range does not cover the DA3 frame range")
+    flow_cameras = [str(value) for value in flow_manifest.get("camera_ids", [])]
+    if target_camera in flow_cameras:
+        raise ProvenanceError("P03 flow manifest includes the held-out target camera")
+
+    sidecar_root = bindings["da3_manifest_path"].parent
+    frame_reports: list[dict[str, Any]] = []
+    frame_bin_sets: list[tuple[int, set[tuple[int, int]]]] = []
+    ordered_bin_rows: list[list[int]] = []
+    ordered_layer_rows: list[list[float]] = []
+    relative_limit = float(config["fusion"]["duplicate_relative_mad_maximum"])
+    stride = int(config["sampling"]["grid_stride_pixels"])
+    for frame in frames:
+        target = test_records.get((target_camera, frame))
+        if target is None or target.image_path is not None:
+            raise ProvenanceError("P03 requires calibration-only cam00 target access")
+        anchor_camera_id, selected_groups = _select_sidecar_anchor_groups(
+            groups_by_frame[frame]
+        )
+        predictions = []
+        group_inputs = []
+        for group in selected_groups:
+            prediction, group_input = _load_p01_group_prediction(sidecar_root, group)
+            predictions.append(prediction)
+            group_inputs.append(group_input)
+        input_check = dict(
+            _geometry_input_check(
+                predictions,
+                group_inputs,
+                anchor_camera_id=anchor_camera_id,
+            )
+        )
+        anchor_indices = [
+            group["member_camera_ids"].index(anchor_camera_id)
+            for group in group_inputs
+        ]
+        first_index, second_index = anchor_indices
+        first_prediction, second_prediction = predictions
+        extrinsic_max_abs = float(
+            np.max(
+                np.abs(
+                    np.asarray(first_prediction["extrinsics"])[first_index]
+                    - np.asarray(second_prediction["extrinsics"])[second_index]
+                )
+            )
+        )
+        input_check["anchor_extrinsic_maximum_absolute_difference"] = extrinsic_max_abs
+        coordinate_admitted = (
+            input_check["processed_k_corner_error_maximum_pixels"] <= 0.5
+            and extrinsic_max_abs <= float(config["da3"]["conformance_repeat_atol"])
+        )
+        input_check["coordinate_admitted"] = bool(coordinate_admitted)
+        group_ids = [str(group["group_id"]) for group in selected_groups]
+        group_members = [list(group["member_camera_ids"]) for group in selected_groups]
+        if not coordinate_admitted:
+            frame_payload = {
+                "scene": scene,
+                "frame": int(frame),
+                "target_camera": target_camera,
+                "anchor_camera_id": anchor_camera_id,
+                "source_da3_group_ids": group_ids,
+                "geometry_executed": False,
+                "geometry_input_check": input_check,
+                "blocked_reason": "coordinate_not_admitted",
+            }
+            frame_reports.append(
+                {
+                    **frame_payload,
+                    "frame_ledger_id": domain_id("phase9-p03-csvl-frame-ledger-v1", frame_payload),
+                    "ordered_multilayer_bins": [],
+                }
+            )
+            continue
+
+        duplicate_report, aggregate_depth, retained_mask = anchor_duplicate_diagnostic(
+            np.asarray(first_prediction["depth"])[first_index],
+            np.asarray(second_prediction["depth"])[second_index],
+            np.asarray(first_prediction["confidence"])[first_index],
+            np.asarray(second_prediction["confidence"])[second_index],
+            relative_limit=relative_limit,
+            calibration_stride=stride,
+        )
+        geometry, supported_bins, layer_records = evaluate_frame_geometry(
+            predictions,
+            group_members,
+            target_K=target.K,
+            target_w2c=target.w2c_opencv,
+            target_width=target.width,
+            target_height=target.height,
+            stride=stride,
+            minimum_cameras=int(config["fusion"]["minimum_physical_cameras"]),
+            maximum_depth_sigma=float(config["fusion"]["maximum_depth_sigma"]),
+            target_bin_pixels=stride,
+            camera_depth_overrides={anchor_camera_id: aggregate_depth},
+            camera_valid_masks={anchor_camera_id: retained_mask},
+            include_layer_records=True,
+        )
+        sealed_bins = []
+        for raw_record in layer_records:
+            payload = {
+                "scene": scene,
+                "frame": int(frame),
+                "target_camera": target_camera,
+                "hypothesis_type": "target_bin_ordered_multilayer",
+                "visibility_event_state": "unknown_without_temporal_identity_or_human_reference",
+                "physical_ancestry": sorted(str(value) for value in raw_record["source_cameras"]),
+                "source_da3_group_ids": group_ids,
+                "anchor_camera_id": anchor_camera_id,
+                "target_bin": list(raw_record["target_bin"]),
+                "target_bin_pixels": int(raw_record["target_bin_pixels"]),
+                "physical_camera_count": int(raw_record["physical_camera_count"]),
+                "sample_count": int(raw_record["sample_count"]),
+                "source_cameras": list(raw_record["source_cameras"]),
+                "layers": [dict(layer) for layer in raw_record["layers"]],
+                "order_pairs": [dict(pair) for pair in raw_record["order_pairs"]],
+            }
+            sealed = {
+                "csvl_hypothesis_id": domain_id(
+                    "phase9-p03-csvl-bin-layer-hypothesis-v1", payload
+                ),
+                **payload,
+            }
+            sealed_bins.append(sealed)
+            bin_x, bin_y = (int(value) for value in sealed["target_bin"])
+            ordered_bin_rows.append(
+                [
+                    int(frame),
+                    bin_x,
+                    bin_y,
+                    int(len(sealed["layers"])),
+                    int(sealed["sample_count"]),
+                    int(sealed["physical_camera_count"]),
+                ]
+            )
+            for layer in sealed["layers"]:
+                ordered_layer_rows.append(
+                    [
+                        float(frame),
+                        float(bin_x),
+                        float(bin_y),
+                        float(layer["layer_ordinal"]),
+                        float(layer["median_optical_z"]),
+                        float(layer["sample_count"]),
+                        float(layer["physical_camera_count"]),
+                        float(layer["median_risk"]),
+                    ]
+                )
+        frame_payload = {
+            "scene": scene,
+            "frame": int(frame),
+            "target_camera": target_camera,
+            "anchor_camera_id": anchor_camera_id,
+            "source_da3_group_ids": group_ids,
+            "source_group_members": group_members,
+            "geometry_executed": True,
+            "geometry_input_check": input_check,
+            "anchor_duplicate": duplicate_report,
+            "geometry": geometry,
+            "ordered_multilayer_bins": sealed_bins,
+        }
+        frame_reports.append(
+            {
+                **frame_payload,
+                "frame_ledger_id": domain_id("phase9-p03-csvl-frame-ledger-v1", frame_payload),
+            }
+        )
+        frame_bin_sets.append((int(frame), supported_bins))
+
+    csvl_root = _expected_path(entry, "phase9-csvl-ledger-v1").parent
+    arrays_root = csvl_root / "arrays"
+    bin_table = (
+        np.asarray(ordered_bin_rows, dtype=np.int64).reshape((-1, 6))
+        if ordered_bin_rows else np.empty((0, 6), dtype=np.int64)
+    )
+    layer_table = (
+        np.asarray(ordered_layer_rows, dtype=np.float64).reshape((-1, 8))
+        if ordered_layer_rows else np.empty((0, 8), dtype=np.float64)
+    )
+    array_refs = {
+        "ordered_multilayer_bins": write_canonical_array(
+            arrays_root / "ordered_multilayer_bins.npy",
+            bin_table,
+            "phase9-p03-csvl-ordered-multilayer-bins",
+            relative_to=csvl_root,
+        ),
+        "ordered_layers": write_canonical_array(
+            arrays_root / "ordered_layers.npy",
+            layer_table,
+            "phase9-p03-csvl-ordered-layers",
+            relative_to=csvl_root,
+        ),
+    }
+    inventory = build_inventory(
+        arrays_root,
+        paths=["ordered_multilayer_bins.npy", "ordered_layers.npy"],
+    )
+    arrays_payload_no_id = {
+        "schema_version": "phase9-csvl-array-inventory-v1",
+        "run_id": entry["run_id"],
+        "method_id": str(config["method_id"]),
+        "scene": scene,
+        "array_root": "arrays",
+        "file_count": len(inventory),
+        "total_file_bytes": sum(int(item["bytes"]) for item in inventory),
+        "files": inventory,
+        "arrays": array_refs,
+        "input_array_inventories": [
+            {
+                "path": str(bindings["da3_arrays_path"]),
+                "schema": "phase9-da3-array-inventory-v1",
+                "producer_run_id": P01_DA3_SIDECAR_RUN_ID,
+                "sha256": bindings["da3_arrays_sha256"],
+            }
+        ],
+    }
+    arrays_payload = {
+        **arrays_payload_no_id,
+        "artifact_id": domain_id("phase9-p03-csvl-array-inventory-v1", arrays_payload_no_id),
+    }
+    arrays_path = _expected_path(entry, "phase9-csvl-array-inventory-v1")
+    validate_payload("phase9-csvl-array-inventory-v1", arrays_payload)
+    write_json_atomic(arrays_path, arrays_payload)
+
+    aggregate = dict(_aggregate_layer_opportunities(frame_reports))
+    aggregate["emitted_ordered_multilayer_bin_hypothesis_count"] = int(len(ordered_bin_rows))
+    aggregate["emitted_layer_hypothesis_count"] = int(len(ordered_layer_rows))
+    aggregate["interpretation"] = (
+        "full-cut label-free target-bin layer evidence; not a human-reference Gate A score"
+    )
+    flow_summary = {
+        "direction": str(flow_manifest["direction"]),
+        "record_count": int(flow_manifest["record_count"]),
+        "expected_record_count": int(flow_manifest["expected_record_count"]),
+        "camera_count": len(flow_cameras),
+        "frame_range": [int(value) for value in flow_manifest["frame_range"]],
+        "valid_fraction_minimum": float(flow_manifest["valid_fraction_minimum"]),
+        "valid_fraction_mean": float(flow_manifest["valid_fraction_mean"]),
+        "valid_fraction_maximum": float(flow_manifest["valid_fraction_maximum"]),
+        "consumption_status": "sealed_available_not_used_for_temporal_identity_propagation_v1",
+    }
+    ledger_payload_no_id = {
+        "schema_version": "phase9-csvl-ledger-v1",
+        "run_id": entry["run_id"],
+        "method_id": str(config["method_id"]),
+        "scene": scene,
+        "target_camera": target_camera,
+        "cam00_rgb_opened": False,
+        "label_dependent_gate_a": "not_evaluable",
+        "methodology_status": "full_cut_label_free_bin_layer_ledger_no_temporal_identity_propagation",
+        "evidence_boundary": {
+            "held_out_target_rgb": "not_opened",
+            "human_labels": "not_consumed",
+            "temporal_identity_status": "not_propagated_in_p03_v7",
+            "transition_label_status": "unknown_without_human_reference",
+            "capacity_admission_status": "not_admitted_by_p03_alone",
+        },
+        "input_bindings": {
+            "p01_terminal": {
+                "path": str(bindings["p01_terminal_path"]),
+                "producer_run_id": P01_DA3_SIDECAR_RUN_ID,
+                "schema": "phase9-terminal-manifest-v1",
+                "sha256": bindings["p01_terminal_sha256"],
+            },
+            "p01_da3_sidecar": {
+                "path": str(bindings["da3_manifest_path"]),
+                "producer_run_id": P01_DA3_SIDECAR_RUN_ID,
+                "schema": "phase9-da3-sidecar-v1",
+                "sha256": bindings["da3_manifest_sha256"],
+            },
+            "p01_da3_array_inventory": {
+                "path": str(bindings["da3_arrays_path"]),
+                "producer_run_id": P01_DA3_SIDECAR_RUN_ID,
+                "schema": "phase9-da3-array-inventory-v1",
+                "sha256": bindings["da3_arrays_sha256"],
+            },
+            "p02_terminal": {
+                "path": str(bindings["p02_terminal_path"]),
+                "producer_run_id": P02_FLOW_SIDECAR_RUN_ID,
+                "schema": "phase9-terminal-manifest-v1",
+                "sha256": bindings["p02_terminal_sha256"],
+            },
+            "p02_flow_manifest": {
+                "path": str(bindings["flow_manifest_path"]),
+                "producer_run_id": P02_FLOW_SIDECAR_RUN_ID,
+                "schema": "phase9-flow-manifest-v1",
+                "sha256": bindings["flow_manifest_sha256"],
+            },
+        },
+        "frame_count": len(frame_reports),
+        "geometry_frame_count": int(sum(1 for item in frame_reports if item.get("geometry_executed"))),
+        "frames": frame_reports,
+        "aggregate_layer_opportunity": aggregate,
+        "temporal_bin_transitions": temporal_bin_transitions(frame_bin_sets),
+        "temporal_interpretation": "target-bin occupancy proxy only; not a surface-track reveal/hide label",
+        "flow_summary": flow_summary,
+        "duplicate_semantics": {
+            "x02_rule_reused": "per-pixel two-sample relative half-difference >0.05 abstains; retained pixels use confidence-weighted aggregate",
+            "threshold_changed": False,
+            "heldout_scale_diagnostic_applied_to_geometry": False,
+        },
+        "threshold_authority": {
+            "grid_stride_pixels": stride,
+            "minimum_physical_cameras": int(config["fusion"]["minimum_physical_cameras"]),
+            "maximum_depth_sigma": float(config["fusion"]["maximum_depth_sigma"]),
+            "duplicate_relative_mad_maximum": relative_limit,
+            "target_bin_pixels": stride,
+        },
+        "split_binding": split_binding,
+        "array_inventory_sha256": sha256_file(arrays_path),
+    }
+    ledger_payload = {
+        **ledger_payload_no_id,
+        "artifact_id": domain_id("phase9-p03-csvl-ledger-v1", ledger_payload_no_id),
+    }
+    ledger_path = _expected_path(entry, "phase9-csvl-ledger-v1")
+    validate_payload("phase9-csvl-ledger-v1", ledger_payload)
+    write_json_atomic(ledger_path, ledger_payload)
+    refs = [
+        _scientific_file_ref(ledger_path, "phase9-csvl-ledger-v1", entry["run_id"]),
+        _scientific_file_ref(arrays_path, "phase9-csvl-array-inventory-v1", entry["run_id"]),
+    ]
+    return refs, {
+        "scene": scene,
+        "frame_count": len(frame_reports),
+        "geometry_frame_count": ledger_payload_no_id["geometry_frame_count"],
+        "frames_with_ordered_layers": aggregate["frames_with_ordered_layers"],
+        "total_ordered_multilayer_bins": aggregate["total_ordered_multilayer_bins"],
+        "emitted_ordered_multilayer_bin_hypothesis_count": len(ordered_bin_rows),
+        "emitted_layer_hypothesis_count": len(ordered_layer_rows),
+        "csvl_ledger_sha256": sha256_file(ledger_path),
+        "csvl_array_inventory_sha256": sha256_file(arrays_path),
+        "cam00_rgb_opened": False,
+        "label_dependent_gate_a": "not_evaluable",
+        "temporal_identity_status": "not_propagated_in_p03_v7",
+    }
 
 def action_fast_visibility_pilot(
     entry: dict[str, Any],
@@ -2064,6 +2654,7 @@ def main() -> int:
         "da3-conformance": lambda: action_da3_conformance(entry, args, execution),
         "produce-da3": lambda: action_produce_da3(entry, args, execution),
         "adapt-flow": lambda: action_adapt_flow(entry, args, execution),
+        "build-csvl": lambda: action_build_csvl(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),

@@ -138,6 +138,7 @@ def _raw_depth_layer_candidates(
             {
                 "median_optical_z": float(np.median([item[0] for item in cluster])),
                 "physical_camera_count": len(cameras),
+                "physical_cameras": cameras,
                 "sample_count": len(cluster),
                 "median_risk": float(np.median([item[2] for item in cluster])),
             }
@@ -267,7 +268,10 @@ def evaluate_frame_geometry(
     target_bin_pixels: int = 8,
     camera_depth_overrides: Mapping[str, np.ndarray] | None = None,
     camera_valid_masks: Mapping[str, np.ndarray] | None = None,
-) -> tuple[Mapping[str, Any], set[tuple[int, int]]]:
+    include_layer_records: bool = False,
+) -> tuple[Mapping[str, Any], set[tuple[int, int]]] | tuple[
+    Mapping[str, Any], set[tuple[int, int]], list[Mapping[str, Any]]
+]:
     """Measure calibrated cross-view support and target-projected depth ordering."""
 
     cameras = _unique_camera_predictions(group_predictions, group_members)
@@ -394,6 +398,7 @@ def evaluate_frame_geometry(
     supported_bin_depth_spans = []
     two_raw_layer_bins = 0
     two_accepted_layer_bins = 0
+    ordered_layer_records: list[Mapping[str, Any]] = []
     for key, samples in bins.items():
         camera_count = len({item[1] for item in samples})
         bin_camera_histogram[camera_count] += 1
@@ -422,10 +427,44 @@ def evaluate_frame_geometry(
         )
         if len(layers) >= 2:
             multilayer_bins += 1
+            layer_records = []
+            for ordinal, layer in enumerate(layers):
+                layer_records.append(
+                    {
+                        "layer_ordinal": int(ordinal),
+                        "depth_order": "front_to_rear",
+                        "median_optical_z": float(layer["median_optical_z"]),
+                        "physical_camera_count": int(layer["physical_camera_count"]),
+                        "physical_cameras": list(layer["physical_cameras"]),
+                        "sample_count": int(layer["sample_count"]),
+                        "median_risk": float(layer["median_risk"]),
+                    }
+                )
+            order_pairs = []
             for front, rear in zip(layers, layers[1:]):
-                depth_gaps.append(
+                relative_gap = (
                     (rear["median_optical_z"] - front["median_optical_z"])
                     / max(abs(front["median_optical_z"]), np.finfo(np.float64).tiny)
+                )
+                depth_gaps.append(relative_gap)
+                order_pairs.append(
+                    {
+                        "front_layer_ordinal": int(len(order_pairs)),
+                        "rear_layer_ordinal": int(len(order_pairs) + 1),
+                        "relative_depth_gap": float(relative_gap),
+                    }
+                )
+            if include_layer_records:
+                ordered_layer_records.append(
+                    {
+                        "target_bin": [int(key[0]), int(key[1])],
+                        "target_bin_pixels": int(target_bin_pixels),
+                        "physical_camera_count": int(camera_count),
+                        "sample_count": int(len(samples)),
+                        "source_cameras": sorted({item[1] for item in samples}),
+                        "layers": layer_records,
+                        "order_pairs": order_pairs,
+                    }
                 )
         elif len(raw_layers) < 2:
             rejection_counts["single_depth_cluster"] += 1
@@ -512,6 +551,8 @@ def evaluate_frame_geometry(
             "minimum_sigma_z_relative": 0.01,
         },
     }
+    if include_layer_records:
+        return report, supported_bins, ordered_layer_records
     return report, supported_bins
 
 

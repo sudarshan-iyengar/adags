@@ -330,6 +330,105 @@ class ExecutionBindingTests(unittest.TestCase):
             report["processed_k_corner_error_maximum_pixels"], 0.0
         )
 
+
+    def test_p03_terminal_artifact_binding_rejects_mutated_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact_path = root / "manifest.json"
+            artifact_path.write_text(
+                json.dumps({
+                    "schema_version": "phase9-da3-sidecar-v1",
+                    "run_id": MODULE.P01_DA3_SIDECAR_RUN_ID,
+                }) + "\n",
+                encoding="utf-8",
+            )
+            artifact_sha = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+            terminal = {
+                "produced_artifacts": [{
+                    "path": str(artifact_path),
+                    "schema": "phase9-da3-sidecar-v1",
+                    "producer_run_id": MODULE.P01_DA3_SIDECAR_RUN_ID,
+                    "sha256": artifact_sha,
+                }],
+            }
+            path, payload, observed_sha = MODULE._bound_terminal_json_artifact(
+                terminal,
+                producer_run_id=MODULE.P01_DA3_SIDECAR_RUN_ID,
+                schema="phase9-da3-sidecar-v1",
+            )
+            self.assertEqual(path, artifact_path.resolve())
+            self.assertEqual(payload["run_id"], MODULE.P01_DA3_SIDECAR_RUN_ID)
+            self.assertEqual(observed_sha, artifact_sha)
+            artifact_path.write_text("{}\n", encoding="utf-8")
+            with self.assertRaises(MODULE.ProvenanceError):
+                MODULE._bound_terminal_json_artifact(
+                    terminal,
+                    producer_run_id=MODULE.P01_DA3_SIDECAR_RUN_ID,
+                    schema="phase9-da3-sidecar-v1",
+                )
+
+    def test_p03_anchor_group_selection_uses_repeated_lower_camera(self):
+        groups = [
+            {"member_camera_ids": ["cam02", "cam03", "cam04"]},
+            {"member_camera_ids": ["cam01", "cam02", "cam05"]},
+            {"member_camera_ids": ["cam01", "cam06", "cam07"]},
+        ]
+        anchor, selected = MODULE._select_sidecar_anchor_groups(groups)
+        self.assertEqual(anchor, "cam01")
+        self.assertEqual(
+            [tuple(item["member_camera_ids"]) for item in selected],
+            [("cam01", "cam02", "cam05"), ("cam01", "cam06", "cam07")],
+        )
+        with self.assertRaises(MODULE.ProvenanceError):
+            MODULE._select_sidecar_anchor_groups([
+                {"member_camera_ids": ["cam00", "cam01", "cam02"]},
+            ])
+
+    def test_p03_group_prediction_loads_verified_sidecar_arrays(self):
+        K = np.repeat(np.eye(3)[None, ...], 3, axis=0)
+        w2c = np.repeat(np.eye(4)[None, ...], 3, axis=0)
+        group_input = {
+            "member_camera_ids": ["cam01", "cam02", "cam03"],
+            "intrinsics": K,
+            "extrinsics_w2c": w2c,
+            "expected_processed_intrinsics": K,
+            "source_records": [
+                {
+                    "camera_id": f"cam{index:02d}",
+                    "image_path": f"/data/cam{index:02d}.png",
+                    "image_sha256": f"{index}" * 64,
+                    "file_stem": f"cam{index:02d}_000000",
+                    "time": 0.0,
+                }
+                for index in range(1, 4)
+            ],
+        }
+        prediction = {
+            "depth": np.ones((3, 4, 5), dtype=np.float64),
+            "confidence": np.ones((3, 4, 5), dtype=np.float64),
+            "intrinsics": K,
+            "extrinsics": w2c,
+            "processed_images": np.zeros((3, 4, 5, 3), dtype=np.float32),
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            record = MODULE._write_da3_group_sidecar(
+                sidecar_root=root,
+                scene="cut_roasted_beef",
+                frame=0,
+                group_index=0,
+                target_camera="cam00",
+                group_input=group_input,
+                prediction=prediction,
+            )
+            loaded_prediction, loaded_group = MODULE._load_p01_group_prediction(root, record)
+            np.testing.assert_array_equal(loaded_prediction["depth"], prediction["depth"])
+            self.assertEqual(loaded_group["member_camera_ids"], group_input["member_camera_ids"])
+            depth_path = root / record["array_refs"]["depth"]["path"]
+            np.save(depth_path, np.zeros((3, 4, 5), dtype=np.float64))
+            with self.assertRaises(Exception):
+                MODULE._load_p01_group_prediction(root, record)
+
     def test_freeze_uses_the_explicit_matrix_argument(self):
         source = inspect.getsource(MODULE.action_freeze_implementation)
         self.assertIn("Path(args.matrix).resolve()", source)

@@ -1,0 +1,261 @@
+{
+  "cycle": "csvl-isr-csvl-ledger-v7",
+  "generated_after_v5_p01_and_v6_p02_completion": true,
+  "registered_total_max_gpu_hours": 0.0,
+  "run_count": 2,
+  "runs": [
+    {
+      "action": "freeze-implementation",
+      "camera_time_population": "not_applicable",
+      "claim_or_uncertainty": "The v7 P03 CSVL ledger implementation bytes are immutably bound.",
+      "command": {
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "freeze-implementation",
+          "--run-id",
+          "P9-V7-I01-IMPLEMENTATION-FREEZE",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/executions/P9-V7-I01-IMPLEMENTATION-FREEZE/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_csvl_cycle_v7.json",
+          "--allow-unresolved-local"
+        ],
+        "argv_template_sha256": "f4611759df26563bbc17d128b60cd3344e65befe3ac8f40a762eafbe96374670",
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "completion_rule": "Validated implementation freeze and command registry for all v7 entries.",
+      "conditional": false,
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "95c972d9ef9a819b0bcf5cac23c0591d3edd2a023fcc59976c126ba92569e1a4",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/executions/P9-V7-I01-IMPLEMENTATION-FREEZE/terminal.json",
+          "required": true,
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/authority/implementation-freeze.json",
+          "required": true,
+          "schema": "phase9-implementation-freeze-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/authority/commands.json",
+          "required": true,
+          "schema": "phase9-command-registry-v1",
+          "sha256": null
+        }
+      ],
+      "external_inputs": [],
+      "failure_interpretation_and_action": "Repair once; do not submit P03 from unbound bytes.",
+      "implementation_binding": {
+        "producer_run_id": "P9-V7-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": false,
+        "resolved_manifest_sha256": null,
+        "status": "not_applicable"
+      },
+      "input_artifacts": [],
+      "max_gpu_hours": 0,
+      "necessity": "The full-cut CSVL ledger must execute exact committed and pushed bytes.",
+      "pre_observation_promotion_predicate": "Clean tracked branch equals upstream and cycle-v7 hashes resolve.",
+      "prerequisites": [],
+      "run_id": "P9-V7-I01-IMPLEMENTATION-FREEZE",
+      "scene": null,
+      "scheduler": {
+        "account": null,
+        "cpus_per_task": 1,
+        "dependency_mode": null,
+        "gpu_memory_gib": null,
+        "gpu_type": null,
+        "gpus_per_node": 0,
+        "host_memory_gib": 4,
+        "nodes": 1,
+        "partition": null,
+        "profile": "login",
+        "qos": null,
+        "scheduler": "none",
+        "site": "login",
+        "stderr": null,
+        "stdout": null,
+        "tasks_per_node": 1,
+        "wall_minutes": 15
+      },
+      "schema_version": "phase9-run-entry-v2",
+      "scope": "engineering",
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260721,
+        "shuffle": 20277732,
+        "training": 20260721
+      },
+      "stage": "I01-v7",
+      "status": "registered_not_submitted",
+      "storage": {
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 1,
+        "maximum_temporary_gib": 1,
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/executions/P9-V7-I01-IMPLEMENTATION-FREEZE",
+        "retention_class": "durable_decision"
+      },
+      "training": null
+    },
+    {
+      "action": "build-csvl",
+      "camera_time_population": "all_300_cut_train_frames_no_cam00_rgb",
+      "claim_or_uncertainty": "A sealed label-free CSVL bin-layer evidence ledger exists for cut_roasted_beef; temporal identities and Gate A labels remain not evaluable.",
+      "command": {
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "build-csvl",
+          "--run-id",
+          "P9-V7-P03-CUT-CSVL-LEDGER-S20260721",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/executions/P9-V7-P03-CUT-CSVL-LEDGER-S20260721/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_csvl_cycle_v7.json",
+          "--scene",
+          "cut_roasted_beef"
+        ],
+        "argv_template_sha256": "5bade74012f5485cc5ca1d14a750e07df6b7f4cea65f308df11f720e309f481c",
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "completion_rule": "Slurm terminal state, exit 0, phase9-csvl-ledger-v1 and phase9-csvl-array-inventory-v1 sealed, 300 frames processed, cam00_rgb_opened=false, Gate A remains not_evaluable.",
+      "conditional": false,
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "95c972d9ef9a819b0bcf5cac23c0591d3edd2a023fcc59976c126ba92569e1a4",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/executions/P9-V7-P03-CUT-CSVL-LEDGER-S20260721/terminal.json",
+          "required": true,
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/preprocess/cut_roasted_beef/csvl/ledger.json",
+          "required": true,
+          "schema": "phase9-csvl-ledger-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/preprocess/cut_roasted_beef/csvl/arrays.json",
+          "required": true,
+          "schema": "phase9-csvl-array-inventory-v1",
+          "sha256": null
+        }
+      ],
+      "external_inputs": [],
+      "failure_interpretation_and_action": "Fix sidecar binding or ledger serialization; do not fabricate labels, temporal identities, or capacity admission.",
+      "implementation_binding": {
+        "producer_run_id": "P9-V7-I01-IMPLEMENTATION-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/executions/P9-V7-I01-IMPLEMENTATION-FREEZE/terminal.json",
+          "producer_run_id": "P9-V7-I01-IMPLEMENTATION-FREEZE",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/executions/P9-V5-P01-CUT-DA3-SIDECAR-S20260721/terminal.json",
+          "producer_run_id": "P9-V5-P01-CUT-DA3-SIDECAR-S20260721",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": "b68b25b574a239dbe7136b0ca3b940628ea9cffbf5a56e7868500940c1e89cc0",
+          "status": "resolved_exact_completed"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-P02-CUT-FLOW-ADAPT-S20260721/terminal.json",
+          "producer_run_id": "P9-V6-P02-CUT-FLOW-ADAPT-S20260721",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": "97c79317d455e31aed5b1a0291ba2fa9afd9282a5fff08a8c8c09eca20f0c32b",
+          "status": "resolved_exact_completed"
+        }
+      ],
+      "max_gpu_hours": 0,
+      "necessity": "P03 must bind the completed P01 DA3 sidecars and P02 flow manifest before A06 engineering admission or capacity experiments can consume visibility evidence.",
+      "pre_observation_promotion_predicate": "P01 and P02 terminals resolve exactly; every selected DA3 sidecar array passes hash/semantic verification; cam00 RGB remains unopened.",
+      "prerequisites": [
+        "P9-V7-I01-IMPLEMENTATION-FREEZE"
+      ],
+      "run_id": "P9-V7-P03-CUT-CSVL-LEDGER-S20260721",
+      "scene": "cut_roasted_beef",
+      "scheduler": {
+        "account": "euhpc_d21_034",
+        "cpus_per_task": 32,
+        "dependency_mode": "afterok",
+        "gpu_memory_gib": null,
+        "gpu_type": null,
+        "gpus_per_node": 0,
+        "host_memory_gib": 384,
+        "nodes": 1,
+        "partition": "boost_usr_prod",
+        "profile": "cpu12",
+        "qos": "boost_qos_lprod",
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "stderr": "logs/P9-V7-P03-CUT-CSVL-LEDGER-S20260721_%j.err",
+        "stdout": "logs/P9-V7-P03-CUT-CSVL-LEDGER-S20260721_%j.out",
+        "tasks_per_node": 1,
+        "wall_minutes": 720
+      },
+      "schema_version": "phase9-run-entry-v2",
+      "scope": "engineering",
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260721,
+        "shuffle": 20277732,
+        "training": 20260721
+      },
+      "stage": "P03-v7",
+      "status": "registered_not_submitted",
+      "storage": {
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 150,
+        "maximum_temporary_gib": 200,
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v7/executions/P9-V7-P03-CUT-CSVL-LEDGER-S20260721",
+        "retention_class": "transient_generated"
+      },
+      "training": null
+    }
+  ],
+  "schema_version": "phase9-run-matrix-v2",
+  "submission_ready": true,
+  "v5_p01_run_id": "P9-V5-P01-CUT-DA3-SIDECAR-S20260721",
+  "v6_p02_run_id": "P9-V6-P02-CUT-FLOW-ADAPT-S20260721"
+}

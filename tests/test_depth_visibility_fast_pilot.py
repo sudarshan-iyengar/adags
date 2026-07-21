@@ -76,7 +76,7 @@ class FastPilotTests(unittest.TestCase):
             "intrinsics": np.repeat(K[None, ...], 6, axis=0),
             "extrinsics": np.repeat(np.eye(4)[None, ...], 6, axis=0),
         }
-        report, _ = evaluate_frame_geometry(
+        report, _, layer_records = evaluate_frame_geometry(
             [prediction],
             [("cam01", "cam02", "cam03", "cam04", "cam05", "cam06")],
             target_K=K,
@@ -87,6 +87,7 @@ class FastPilotTests(unittest.TestCase):
             minimum_cameras=3,
             maximum_depth_sigma=2.5,
             target_bin_pixels=8,
+            include_layer_records=True,
         )
         self.assertGreater(report["target_ordered_multilayer_bin_count"], 0)
         opportunity = report["target_layer_opportunity"]
@@ -97,6 +98,9 @@ class FastPilotTests(unittest.TestCase):
         )
         self.assertGreater(waterfall["two_raw_depth_cluster_bins"], 0)
         self.assertGreater(report["ordered_layer_relative_depth_gap"]["count"], 0)
+        self.assertEqual(len(layer_records), report["target_ordered_multilayer_bin_count"])
+        self.assertEqual(layer_records[0]["layers"][0]["depth_order"], "front_to_rear")
+        self.assertEqual(layer_records[0]["order_pairs"][0]["front_layer_ordinal"], 0)
 
     def test_anchor_mask_applies_on_source_and_target_support(self):
         K = np.array([[40.0, 0.0, 15.5], [0.0, 40.0, 11.5], [0.0, 0.0, 1.0]])

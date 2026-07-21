@@ -150,6 +150,25 @@ SCHEMA_RULES: dict[str, tuple[set[str], set[str]]] = {
         },
         {"unused_flow_file_examples"},
     ),
+    "phase9-csvl-array-inventory-v1": (
+        {
+            "schema_version", "run_id", "method_id", "scene", "array_root",
+            "file_count", "total_file_bytes", "files", "arrays",
+            "input_array_inventories", "artifact_id",
+        },
+        set(),
+    ),
+    "phase9-csvl-ledger-v1": (
+        {
+            "schema_version", "run_id", "method_id", "scene", "target_camera",
+            "cam00_rgb_opened", "label_dependent_gate_a", "methodology_status",
+            "evidence_boundary", "input_bindings", "frame_count", "geometry_frame_count",
+            "frames", "aggregate_layer_opportunity", "temporal_bin_transitions",
+            "temporal_interpretation", "flow_summary", "duplicate_semantics",
+            "threshold_authority", "split_binding", "array_inventory_sha256", "artifact_id",
+        },
+        set(),
+    ),
 }
 
 
