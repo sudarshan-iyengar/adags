@@ -2585,6 +2585,171 @@ def action_operator_static(entry: dict[str, Any], args: argparse.Namespace) -> t
     return [], payload
 
 
+
+def _phase9_train_base_config() -> Path:
+    return REPO_ROOT / "configs/n3v/fixed_budget_lora_route0_filemask_residual_600k.yaml"
+
+
+def _json_file_ref_payload(path: Path, schema: str, run_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    write_json_atomic(path, payload)
+    return _scientific_file_ref(path, schema, run_id)
+
+
+def action_train(entry: dict[str, Any], args: argparse.Namespace, execution: dict[str, Any] | None) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    from omegaconf import OmegaConf
+
+    training = entry.get("training")
+    if not isinstance(training, dict):
+        raise ContractError("train action requires a registered training block")
+    scene = args.scene or entry.get("scene")
+    if not scene:
+        raise ContractError("train action requires a scene")
+    if entry.get("scene") and scene != entry["scene"]:
+        raise ProvenanceError(f"scene mismatch: matrix={entry['scene']} argv={scene}")
+
+    base_config = _phase9_train_base_config()
+    if not base_config.is_file():
+        raise ProvenanceError(f"missing Slice B base training config: {base_config}")
+    output_root = _output_root(entry)
+    output_root.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = _expected_path(entry, "adags-checkpoint-v1")
+    model_path = checkpoint_path.parent
+    model_path.mkdir(parents=True, exist_ok=True)
+    metrics_path = _expected_path(entry, "phase9-training-metrics-v1")
+    capacity_path = _expected_path(entry, "phase9-capacity-ledger-v1")
+    provenance_path = _expected_path(entry, "phase9-provenance-v1")
+    renders_path = _expected_path(entry, "phase9-render-inventory-v1")
+
+    cfg = OmegaConf.load(str(base_config))
+    end_iteration = int(training["end_iteration"])
+    topology_cutoff = int(training.get("topology_cutoff_iteration", end_iteration))
+    point_ceiling = int(training.get("point_ceiling", 600000))
+    mode = str(training.get("mode", "common"))
+    cfg.OptimizationParams.iterations = end_iteration
+    cfg.OptimizationParams.position_lr_max_steps = end_iteration
+    cfg.OptimizationParams.densify_until_iter = min(topology_cutoff, end_iteration)
+    cfg.OptimizationParams.densify_until_num_points = point_ceiling
+    cfg.OptimizationParams.enable_hard_static_conversion = False
+    cfg.OptimizationParams.slice_b_capacity_mode = "disabled" if mode == "common" else mode
+    cfg.OptimizationParams.slice_b_capacity_iteration = int(training.get("start_iteration") or 5001)
+    cfg.OptimizationParams.slice_b_capacity_k = int(training.get("requested_k") or 0)
+    cfg.OptimizationParams.slice_b_capacity_seed = int(entry.get("seeds", {}).get("capacity") or 0)
+
+    derived_config = output_root / "train-config.yaml"
+    OmegaConf.save(cfg, str(derived_config))
+    dataset_root = Path(os.environ.get("ADAGS_PROJECT_ROOT", os.environ.get("WORK", "") + "/proj_adags")) / "data/n3v"
+    dataset_path = dataset_root / scene
+    if not dataset_path.is_dir():
+        raise ProvenanceError(f"missing N3V scene directory: {dataset_path}")
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "main.py"),
+        "--config",
+        str(derived_config),
+        "--model_path",
+        str(model_path),
+        "--source_path",
+        str(dataset_path),
+        "--seed",
+        str(int(entry.get("seeds", {}).get("training") or 0)),
+        "--test_iterations",
+        str(end_iteration),
+        "--save_iterations",
+        str(end_iteration),
+        "--wandb_mode",
+        "disabled",
+        "--experiment_name",
+        "phase9_csvl_isr_v1",
+        "--method_family",
+        f"slice_b_{mode}",
+        "--budget_label",
+        f"phase9_{point_ceiling}",
+    ]
+    input_checkpoint = training.get("input_checkpoint") or {}
+    if input_checkpoint.get("path"):
+        start_checkpoint = _expand(input_checkpoint["path"])
+        if not start_checkpoint.is_file():
+            raise ProvenanceError(f"missing input checkpoint: {start_checkpoint}")
+        command.extend(["--start_checkpoint", str(start_checkpoint)])
+
+    completed = subprocess.run(command, cwd=str(REPO_ROOT), text=True)
+    if completed.returncode != 0:
+        raise ContractError(f"main.py training failed with exit code {completed.returncode}")
+    if not checkpoint_path.is_file():
+        raise ContractError(f"expected checkpoint was not produced: {checkpoint_path}")
+    summary_path = model_path / "summary.json"
+    if not summary_path.is_file():
+        raise ContractError(f"expected local summary was not produced: {summary_path}")
+    model_capacity_path = model_path / "capacity-ledger.json"
+    if not model_capacity_path.is_file():
+        raise ContractError(f"expected capacity ledger was not produced: {model_capacity_path}")
+
+    summary = _json(summary_path)
+    capacity_payload = _json(model_capacity_path)
+    capacity_payload.update({"run_id": entry["run_id"], "source_path": str(model_capacity_path)})
+    metrics_payload = {
+        "schema_version": "phase9-training-metrics-v1",
+        "run_id": entry["run_id"],
+        "scene": scene,
+        "training": training,
+        "summary_path": str(summary_path),
+        "summary": summary.get("summary", {}),
+        "checkpoint_path": str(checkpoint_path),
+    }
+    render_files = []
+    for suffix in ("*.png", "*.jpg", "*.jpeg"):
+        for path in sorted(model_path.rglob(suffix)):
+            render_files.append({
+                "path": str(path),
+                "relative_path": str(path.relative_to(model_path)),
+                "sha256": sha256_file(path),
+            })
+    renders_payload = {
+        "schema_version": "phase9-render-inventory-v1",
+        "run_id": entry["run_id"],
+        "scene": scene,
+        "model_path": str(model_path),
+        "render_count": len(render_files),
+        "renders": render_files,
+    }
+    git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(REPO_ROOT), text=True).strip()
+    git_status = subprocess.check_output(["git", "status", "--short"], cwd=str(REPO_ROOT), text=True).splitlines()
+    provenance_payload = {
+        "schema_version": "phase9-provenance-v1",
+        "run_id": entry["run_id"],
+        "scene": scene,
+        "action": "train",
+        "git_commit": git_commit,
+        "git_dirty": bool(git_status),
+        "base_config_path": str(base_config),
+        "base_config_sha256": sha256_file(base_config),
+        "derived_config_path": str(derived_config),
+        "derived_config_sha256": sha256_file(derived_config),
+        "command": command,
+        "execution_manifest_sha256": sha256_file(_expand(args.execution_manifest)) if args.execution_manifest else None,
+    }
+    produced = [
+        _scientific_file_ref(checkpoint_path, "adags-checkpoint-v1", entry["run_id"]),
+        _json_file_ref_payload(metrics_path, "phase9-training-metrics-v1", entry["run_id"], metrics_payload),
+        _json_file_ref_payload(capacity_path, "phase9-capacity-ledger-v1", entry["run_id"], capacity_payload),
+        _json_file_ref_payload(provenance_path, "phase9-provenance-v1", entry["run_id"], provenance_payload),
+        _json_file_ref_payload(renders_path, "phase9-render-inventory-v1", entry["run_id"], renders_payload),
+    ]
+    payload = {
+        "schema_version": "phase9-train-terminal-payload-v1",
+        "run_id": entry["run_id"],
+        "scene": scene,
+        "mode": mode,
+        "checkpoint_path": str(checkpoint_path),
+        "checkpoint_sha256": sha256_file(checkpoint_path),
+        "metrics_path": str(metrics_path),
+        "capacity_ledger_path": str(capacity_path),
+        "render_count": len(render_files),
+        "summary": summary.get("summary", {}),
+    }
+    return produced, payload
+
+
 def action_decide(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     decision_path = _expected_path(entry, "phase9-decision-v1")
     payload = {
@@ -2661,6 +2826,7 @@ def main() -> int:
         "build-annotation-packet": lambda: action_annotation_packet(entry, args),
         "operator-static": lambda: action_operator_static(entry, args),
         "freeze-implementation": lambda: action_freeze_implementation(entry, args),
+        "train": lambda: action_train(entry, args, execution),
         "decide": lambda: action_decide(entry, args),
     }
     try:

@@ -153,6 +153,10 @@ class OptimizationParams(ParamGroup):
         self.visibility_event_beta = 1.0
         self.visibility_event_start_iter = 0
         self.visibility_event_warmup_iters = 0
+        self.slice_b_capacity_mode = "disabled"
+        self.slice_b_capacity_iteration = 5001
+        self.slice_b_capacity_k = 0
+        self.slice_b_capacity_seed = 0
         self.lambda_dynamic_roi = 0.0
         self.lambda_static_exclusion = 0.0
         self.lambda_track_flow = 0.0

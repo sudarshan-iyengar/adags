@@ -465,6 +465,23 @@ class SliceBPreparedIntegrationTests(unittest.TestCase):
         self.assertIn("def build_capacity_bank(self):", source)
         self.assertIn("created_iteration=iteration", source)
 
+    def test_main_has_guarded_slice_b_transaction_hook(self):
+        source = (REPO / "main.py").read_text(encoding="utf-8")
+        self.assertIn("def maybe_apply_slice_b_capacity_transaction", source)
+        self.assertIn("validate_slice_b_capacity_configuration(opt)", source)
+        self.assertIn("gaussians.update_learning_rate(iteration)", source)
+        self.assertIn("maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration)", source)
+        self.assertIn("write_slice_b_capacity_ledger(scene.model_path, scene.gaussians, opt)", source)
+        self.assertIn("write_local_run_summary(args.model_path, summary_updates)", source)
+
+    def test_phase9_launcher_registers_train_action(self):
+        source = (REPO / "scripts/run_phase9_depth_visibility.py").read_text(encoding="utf-8")
+        self.assertIn("def action_train", source)
+        self.assertIn("fixed_budget_lora_route0_filemask_residual_600k.yaml", source)
+        self.assertIn('"train": lambda: action_train(entry, args, execution)', source)
+        self.assertIn("phase9-training-metrics-v1", source)
+        self.assertIn("phase9-capacity-ledger-v1", source)
+
 
 if __name__ == "__main__":
     unittest.main()

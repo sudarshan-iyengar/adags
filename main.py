@@ -44,6 +44,8 @@ from utils.motion_prior_utils import (
 )
 from utils.mesh_utils import GaussianExtractor
 from utils.render_utils import generate_path, create_videos
+from depth_visibility.capacity import apply_point_neutral_transaction, select_event_blind_donors
+from depth_visibility.errors import ContractError
 import torchvision.transforms.functional as TF
 
 try:
@@ -661,6 +663,151 @@ def visibility_event_training_scale(opt, iteration):
     return max(0.0, min(1.0, float(iteration - start_iter + 1) / float(warmup_iters)))
 
 
+
+SLICE_B_CAPACITY_MODES = {
+    "disabled",
+    "common",
+    "route0",
+    "no-op",
+    "null-reset",
+    "capacity-only",
+    "capacity_only",
+    "oracle-capacity",
+    "oracle_capacity",
+    "full",
+    "shuffled",
+}
+
+
+def normalized_slice_b_capacity_mode(opt):
+    mode = str(getattr(opt, "slice_b_capacity_mode", "disabled") or "disabled")
+    mode = mode.strip().lower()
+    if mode not in SLICE_B_CAPACITY_MODES:
+        raise ContractError(f"unknown Slice B capacity mode: {mode}")
+    return mode.replace("_", "-")
+
+
+def validate_slice_b_capacity_configuration(opt):
+    mode = normalized_slice_b_capacity_mode(opt)
+    if mode in {"disabled", "common", "route0", "no-op", "null-reset"}:
+        return mode
+    raise ContractError(
+        f"Slice B capacity mode {mode!r} requires a sealed target sidecar; "
+        "only route0/no-op/null-reset trainer hooks are admitted in this implementation"
+    )
+
+
+def maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration):
+    mode = normalized_slice_b_capacity_mode(opt)
+    if mode in {"disabled", "common"}:
+        return None
+    trigger_iteration = int(getattr(opt, "slice_b_capacity_iteration", 5001))
+    if int(iteration) != trigger_iteration:
+        return None
+    if getattr(gaussians, "gaussian_dim", None) != 4:
+        raise ContractError("Slice B capacity transaction requires a 4D Gaussian model")
+    bank = gaussians.build_capacity_bank()
+    budget_before = gaussians.capacity_budget_summary()
+    if budget_before["hard_static"] != 0:
+        raise ContractError("Slice B v1 requires zero hard-static rows")
+    if not hasattr(gaussians, "slice_b_capacity_transactions"):
+        gaussians.slice_b_capacity_transactions = []
+    base = {
+        "schema_version": "phase9-capacity-transaction-v1",
+        "iteration": int(iteration),
+        "mode": mode,
+        "capacity_seed": int(getattr(opt, "slice_b_capacity_seed", 0)),
+        "budget_before": budget_before,
+    }
+    if mode in {"route0", "no-op"}:
+        result = {
+            **base,
+            "requested_k": 0,
+            "realized_k": 0,
+            "abstained": False,
+            "reason": "route0_no_op",
+            "budget_after": gaussians.capacity_budget_summary(),
+            "moment_rows_reset": 0,
+        }
+        gaussians.slice_b_capacity_transactions.append(result)
+        return result
+    if mode != "null-reset":
+        raise ContractError(f"unsupported admitted Slice B capacity mode: {mode}")
+    requested_k = int(getattr(opt, "slice_b_capacity_k", 0))
+    if requested_k <= 0:
+        raise ContractError("null-reset Slice B capacity mode requires slice_b_capacity_k > 0")
+    donor_selection = select_event_blind_donors(
+        xyz=gaussians._xyz.detach(),
+        scaling_log=gaussians._scaling.detach(),
+        opacity_logit=gaussians._opacity.detach(),
+        denom=gaussians.denom.detach(),
+        generation=bank.generation.detach(),
+        stable_ids=bank.stable_ids.detach(),
+        current_iteration=int(iteration),
+        k=requested_k,
+    )
+    if donor_selection.get("abstained"):
+        result = {
+            **base,
+            **donor_selection,
+            "budget_after": gaussians.capacity_budget_summary(),
+            "moment_rows_reset": 0,
+        }
+        gaussians.slice_b_capacity_transactions.append(result)
+        return result
+    donors = torch.as_tensor(donor_selection["selected_indices"], dtype=torch.long, device=gaussians._xyz.device)
+    transaction = apply_point_neutral_transaction(
+        bank,
+        gaussians.optimizer,
+        donors,
+        None,
+        iteration=int(iteration),
+        mode="null-reset",
+    )
+    result = {**base, **donor_selection, **transaction, "abstained": False}
+    gaussians.slice_b_capacity_transactions.append(result)
+    return result
+
+
+
+def write_local_run_summary(model_path, summary_updates):
+    path = Path(model_path) / "summary.json"
+    payload = {
+        "schema_version": "adags-run-summary-v1",
+        "model_path": str(model_path),
+        "summary": summary_updates or {},
+    }
+    path.write_text(
+        json.dumps(
+            payload,
+            indent=2,
+            sort_keys=True,
+            allow_nan=False,
+            default=lambda value: value.item() if hasattr(value, "item") else str(value),
+        ) + "\n",
+        encoding="utf-8",
+    )
+    return str(path)
+
+
+def write_slice_b_capacity_ledger(model_path, gaussians, opt):
+    path = Path(model_path) / "capacity-ledger.json"
+    mode = normalized_slice_b_capacity_mode(opt)
+    transactions = list(getattr(gaussians, "slice_b_capacity_transactions", []) or [])
+    payload = {
+        "schema_version": "phase9-capacity-ledger-v1",
+        "mode": mode,
+        "trigger_iteration": int(getattr(opt, "slice_b_capacity_iteration", 5001)),
+        "requested_k": int(getattr(opt, "slice_b_capacity_k", 0)),
+        "capacity_seed": int(getattr(opt, "slice_b_capacity_seed", 0)),
+        "transaction_count": len(transactions),
+        "transactions": transactions,
+        "final_budget": gaussians.capacity_budget_summary() if getattr(gaussians, "gaussian_dim", None) == 4 else None,
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
+    return str(path)
+
+
 def summary_alias_name(metric_name):
     if metric_name.startswith("test/"):
         return metric_name[len("test/"):]
@@ -806,6 +953,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         (model_params, first_iter) = torch.load(checkpoint)
         gaussians.restore(model_params, opt)
     configure_visibility_events_from_opt(gaussians, opt, dataset.source_path)
+    validate_slice_b_capacity_configuration(opt)
+    gaussians.slice_b_capacity_transactions = []
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -872,6 +1021,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             iter_start.record()
             gaussians.visibility_event_training_scale = visibility_event_training_scale(opt, iteration)
             gaussians.update_learning_rate(iteration)
+            slice_b_capacity_result = maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration)
+            if slice_b_capacity_result is not None:
+                print(json.dumps({"slice_b_capacity_transaction": slice_b_capacity_result}, sort_keys=True))
 
             if iteration % opt.sh_increase_interval == 0:
                 gaussians.oneupSHdegree()
@@ -1254,6 +1406,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         env_map_optimizer.zero_grad(set_to_none=True)
 
     final_diagnostics = collect_decomposition_diagnostics(scene.gaussians, opt)
+    capacity_ledger_path = write_slice_b_capacity_ledger(scene.model_path, scene.gaussians, opt)
     final_dynamic_points = int(scene.gaussians.get_xyz.shape[0])
     final_static_points = int(scene.gaussians.get_static_xyz.shape[0]) if hasattr(scene.gaussians, 'get_static_xyz') else 0
     final_total_points = final_dynamic_points + final_static_points
@@ -1271,6 +1424,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         "start_checkpoint": checkpoint,
         "visibility_event_manifest": getattr(opt, "visibility_event_manifest", ""),
         "visibility_event_count": len(getattr(scene.gaussians, "visibility_event_runtime_events", []) or []),
+        "slice_b_capacity_ledger": capacity_ledger_path,
     }
     if best_val_metrics is not None:
         summary_updates.update(prefixed_summary_metrics("best_val", best_val_metrics))
@@ -1679,6 +1833,8 @@ if __name__ == "__main__":
                                          args.rot_4d, args.force_sh_3d, args.num_pts, args.num_pts_ratio, wandb_run)
             summary_updates["model_path"] = args.model_path
     finally:
+        if summary_updates is not None:
+            write_local_run_summary(args.model_path, summary_updates)
         finish_wandb_run(wandb_run, summary_updates)
 
     print("\nComplete.")
