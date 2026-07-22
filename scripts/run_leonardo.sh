@@ -77,6 +77,9 @@ mkdir -p "$META_DIR"
 source "$PROJECT_ROOT/exp_index/leonardo_env.sh"
 cd "$REPO_DIR"
 
+# Keep repo-local CUDA extension packages importable on Leonardo.
+export PYTHONPATH="$REPO_DIR/simple-knn:${PYTHONPATH:-}"
+
 if [[ -n "${ADAGS_TORCH_EXTENSIONS_DIR:-}" ]]; then
   export TORCH_EXTENSIONS_DIR="$ADAGS_TORCH_EXTENSIONS_DIR"
 elif [[ -n "${SLURM_JOB_ID:-}" ]]; then

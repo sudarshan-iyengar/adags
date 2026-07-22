@@ -5,6 +5,7 @@
 /.obsidian/
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Local datasets, run outputs, and generated analysis
 /data/
