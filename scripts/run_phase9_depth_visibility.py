@@ -30,9 +30,16 @@ from depth_visibility.annotation import (
     build_empty_annotation_packet,
     load_json,
     validate_empty_annotation_packet,
+    validate_human_label_freeze,
 )
 from depth_visibility.artifacts import build_inventory, load_verified_array, write_canonical_array
 from depth_visibility.baselines import validate_baseline_registry
+from depth_visibility.capacity import (
+    CapacityBank,
+    apply_point_neutral_transaction,
+    build_event_blind_capacity_targets,
+    select_event_blind_donors,
+)
 from depth_visibility.canonical import domain_id, sha256_file
 from depth_visibility.da3_adapter import (
     INFERENCE_ARGUMENTS,
@@ -52,13 +59,14 @@ from depth_visibility.fast_pilot import (
 )
 from depth_visibility.evaluator import (
     artifact_reference,
+    decide_gate_a,
     load_run_entry,
     terminal_manifest,
     validate_execution_manifest,
     resolved_python_argv,
     write_json_atomic,
 )
-from depth_visibility.errors import ContractError, ProvenanceError
+from depth_visibility.errors import ContractError, ProvenanceError, SchemaError
 from depth_visibility.fixtures import two_plane_track_pixels
 from depth_visibility.flow import validate_flow_manifest
 from depth_visibility.schema import validate_payload
@@ -2296,6 +2304,366 @@ def action_cut_opportunity_mining(
     return [reference], payload
 
 
+
+def _completed_terminal_inputs(execution: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if execution is None:
+        raise ProvenanceError("action requires a resolved execution manifest")
+    terminals = []
+    for reference in execution.get("input_artifacts", []):
+        if reference.get("schema") != "phase9-terminal-manifest-v1":
+            continue
+        if not str(reference.get("status", "")).startswith("resolved_exact"):
+            continue
+        path = _expand(str(reference.get("path", ""))).resolve()
+        expected_sha = str(reference.get("sha256") or "")
+        if not path.is_file() or sha256_file(path) != expected_sha:
+            raise ProvenanceError(f"terminal input bytes do not match resolved binding: {path}")
+        terminal = _json(path)
+        if (
+            terminal.get("schema_version") != "phase9-terminal-manifest-v1"
+            or terminal.get("status") != "completed"
+            or terminal.get("exit_code") != 0
+        ):
+            raise ProvenanceError(f"terminal input is not a successful completed run: {path}")
+        terminals.append({"path": path, "sha256": expected_sha, "terminal": terminal})
+    return terminals
+
+
+def _bound_input_json_artifact(
+    execution: dict[str, Any] | None,
+    *,
+    schema: str,
+    producer_run_id: str | None = None,
+    required: bool = True,
+) -> tuple[Path, dict[str, Any], str, dict[str, Any]] | None:
+    matches = []
+    for terminal_record in _completed_terminal_inputs(execution):
+        terminal = terminal_record["terminal"]
+        for artifact in terminal.get("produced_artifacts", []):
+            if artifact.get("schema") != schema:
+                continue
+            if producer_run_id is not None and artifact.get("producer_run_id") != producer_run_id:
+                continue
+            path = _expand(str(artifact.get("path", ""))).resolve()
+            if not path.is_file():
+                raise ProvenanceError(f"bound input artifact is missing: {path}")
+            actual_sha = sha256_file(path)
+            if artifact.get("sha256") != actual_sha:
+                raise ProvenanceError(f"bound input artifact bytes changed: {path}")
+            payload = _json(path)
+            if payload.get("schema_version") != schema:
+                raise ProvenanceError(f"bound input artifact has wrong schema: {path}")
+            matches.append((path, payload, actual_sha, terminal_record))
+    if len(matches) == 1:
+        return matches[0]
+    if not matches and not required:
+        return None
+    raise ProvenanceError(f"expected exactly one bound input artifact for {schema}, got {len(matches)}")
+
+
+def _maybe_expected_path(entry: dict[str, Any], schema: str) -> Path | None:
+    matches = [item for item in entry["expected_outputs"] if item["schema"] == schema]
+    if not matches:
+        return None
+    if len(matches) != 1:
+        raise ContractError(f"{entry['run_id']} expects {len(matches)} outputs with schema {schema}")
+    return _expand(matches[0]["path"])
+
+
+def _external_json_input(
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+    *,
+    role: str,
+) -> tuple[Path, dict[str, Any], str]:
+    candidates: list[dict[str, Any]] = []
+    if args.input:
+        candidates.append({"path": args.input, "sha256": None, "role": role})
+    if execution is not None:
+        for item in execution.get("external_inputs", []):
+            if item.get("role") == role and item.get("path"):
+                candidates.append(dict(item))
+    if len(candidates) != 1:
+        raise ProvenanceError(f"{role} requires exactly one external JSON input, got {len(candidates)}")
+    reference = candidates[0]
+    path = _expand(str(reference["path"])).resolve()
+    if not path.is_file():
+        raise ProvenanceError(f"external JSON input is missing: {path}")
+    actual_sha = sha256_file(path)
+    expected_sha = reference.get("sha256")
+    if expected_sha and actual_sha != expected_sha:
+        raise ProvenanceError(f"external JSON input hash mismatch: {path}")
+    return path, _json(path), actual_sha
+
+
+def _write_bound_copy(
+    destination: Path,
+    payload: dict[str, Any],
+    *,
+    source_path: Path,
+    source_sha256: str,
+    run_id: str,
+) -> dict[str, Any]:
+    sealed = {
+        **payload,
+        "freeze_run_id": run_id,
+        "source_artifact_path": str(source_path),
+        "source_artifact_sha256": source_sha256,
+    }
+    write_json_atomic(destination, sealed)
+    return sealed
+
+
+def action_freeze_train_sidecars(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    ledger_path, ledger, ledger_sha, terminal_record = _bound_input_json_artifact(
+        execution,
+        schema="phase9-csvl-ledger-v1",
+    )
+    scene = str(entry.get("scene") or args.scene or ledger.get("scene") or "")
+    if scene != ledger.get("scene"):
+        raise ProvenanceError("train sidecar scene does not match the CSVL ledger")
+    if ledger.get("cam00_rgb_opened") is not False:
+        raise ProvenanceError("freeze-train-sidecars rejects any source that opened cam00 RGB")
+    if ledger.get("label_dependent_gate_a") != "not_evaluable":
+        raise ProvenanceError("freeze-train-sidecars rejects label-dependent Gate A fields")
+    evidence = ledger.get("evidence_boundary", {})
+    if evidence.get("human_labels") != "not_consumed":
+        raise ProvenanceError("freeze-train-sidecars rejects human label inputs")
+    if "r009" in json.dumps(ledger, sort_keys=True).lower():
+        raise ProvenanceError("freeze-train-sidecars rejects R009-derived fields")
+    aggregate = ledger.get("aggregate_layer_opportunity", {})
+    destination = _expected_path(entry, "phase9-train-sidecars-v1")
+    payload = {
+        "schema_version": "phase9-train-sidecars-v1",
+        "run_id": entry["run_id"],
+        "scene": scene,
+        "sidecar_type": "generic_capacity_only_event_blind_v1",
+        "admitted_training_modes": ["capacity-only", "null-reset"],
+        "unsupported_training_modes": ["oracle-capacity", "visibility-only", "full", "shuffled"],
+        "cam00_rgb_opened": False,
+        "label_dependent_gate_a": "not_evaluable",
+        "read_boundary": {
+            "csvl_ledger": "label_free_p03_v9_only",
+            "cam00_rgb": "forbidden",
+            "human_labels": "forbidden",
+            "evaluator_masks": "forbidden",
+            "r009_fields": "forbidden",
+        },
+        "capacity_policy": {
+            "donor_selection": "event_blind_low_opacity_redundant_old_slot_v1",
+            "target_construction": "event_blind_existing_dynamic_row_clone_v1",
+            "point_neutral": True,
+            "point_ceiling": int(_json(DEFAULT_CONFIG)["representation"]["point_ceiling"]),
+        },
+        "csvl_binding": {
+            "path": str(ledger_path),
+            "schema": "phase9-csvl-ledger-v1",
+            "producer_run_id": terminal_record["terminal"]["run_id"],
+            "sha256": ledger_sha,
+        },
+        "csvl_summary": {
+            "frame_count": int(ledger.get("frame_count", 0)),
+            "geometry_frame_count": int(ledger.get("geometry_frame_count", 0)),
+            "frames_with_ordered_layers": int(aggregate.get("frames_with_ordered_layers", 0)),
+            "total_ordered_multilayer_bins": int(aggregate.get("total_ordered_multilayer_bins", 0)),
+            "emitted_ordered_multilayer_bin_hypothesis_count": int(aggregate.get("emitted_ordered_multilayer_bin_hypothesis_count", 0)),
+        },
+    }
+    write_json_atomic(destination, payload)
+    return [_scientific_file_ref(destination, "phase9-train-sidecars-v1", entry["run_id"])], payload
+
+
+def action_freeze_human_labels(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    source_path, artifact, source_sha = _external_json_input(args, execution, role="human_annotation_return")
+    window_ref = artifact.get("source_window_manifest", {})
+    window_path = _expand(str(window_ref.get("path", DEFAULT_WINDOWS))).resolve()
+    if not window_path.is_file():
+        raise ProvenanceError("completed annotation-window manifest is missing")
+    expected_window_sha = window_ref.get("sha256")
+    if expected_window_sha and sha256_file(window_path) != expected_window_sha:
+        raise ProvenanceError("completed annotation-window manifest hash mismatch")
+    windows_manifest = load_json(window_path)
+    audit = validate_human_label_freeze(artifact, windows_manifest)
+    annotators = artifact.get("annotator_records")
+    adjudication = artifact.get("adjudication_record")
+    if not isinstance(annotators, list) or len(annotators) != 2:
+        raise ContractError("freeze-human-labels requires exactly two annotator records")
+    annotator_ids = [str(item.get("annotator_id")) for item in annotators]
+    if len(set(annotator_ids)) != 2 or any(value in {"", "None"} for value in annotator_ids):
+        raise ContractError("freeze-human-labels requires distinct annotator IDs")
+    if not isinstance(adjudication, Mapping) or adjudication.get("status") != "completed":
+        raise ContractError("freeze-human-labels requires completed adjudication")
+    scene = str(entry.get("scene") or args.scene or artifact.get("scene") or "")
+    if scene and artifact.get("scene") not in {None, scene}:
+        raise ProvenanceError("human label scene mismatch")
+    destination = _expected_path(entry, "phase9-human-label-freeze-v1")
+    sealed = _write_bound_copy(destination, dict(artifact), source_path=source_path, source_sha256=source_sha, run_id=entry["run_id"])
+    refs = [_scientific_file_ref(destination, "phase9-human-label-freeze-v1", entry["run_id"])]
+    return refs, {"scene": scene, "row_counts": audit["row_counts"], "evidence_type": sealed["evidence_type"], "labels_complete": True}
+
+
+def action_run_monocular_baselines(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    validate_baseline_registry(_json(DEFAULT_BASELINES))
+    source_path, artifact, source_sha = _external_json_input(args, execution, role="monocular_baseline_predictions")
+    if artifact.get("schema_version") != "phase9-r031-family-predictions-v1":
+        raise SchemaError("wrong monocular baseline prediction schema")
+    scene = str(entry.get("scene") or args.scene or "")
+    if artifact.get("scene") != scene:
+        raise ProvenanceError("monocular baseline scene mismatch")
+    if artifact.get("labels_consumed") is not False:
+        raise ProvenanceError("monocular baselines must be frozen before label consumption")
+    destination = _expected_path(entry, "phase9-r031-family-predictions-v1")
+    sealed = _write_bound_copy(destination, dict(artifact), source_path=source_path, source_sha256=source_sha, run_id=entry["run_id"])
+    return [_scientific_file_ref(destination, "phase9-r031-family-predictions-v1", entry["run_id"])], {"scene": scene, "baseline_family_count": len(sealed.get("families", [])), "labels_consumed": False}
+
+
+def action_score_gate_a(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    ledger_ref = _bound_input_json_artifact(execution, schema="phase9-csvl-ledger-v1")
+    label_ref = _bound_input_json_artifact(execution, schema="phase9-human-label-freeze-v1")
+    baseline_ref = _bound_input_json_artifact(execution, schema="phase9-r031-family-predictions-v1")
+    source_path, score, source_sha = _external_json_input(args, execution, role="gate_a_score_units")
+    if score.get("schema_version") != "phase9-gate-a-score-v1":
+        raise SchemaError("wrong Gate A score schema")
+    scene = str(entry.get("scene") or args.scene or "")
+    if score.get("scene") != scene:
+        raise ProvenanceError("Gate A score scene mismatch")
+    if score.get("evidence_type") != "human_reference" or score.get("labels_complete") is not True:
+        raise ProvenanceError("Gate A scoring requires complete human_reference labels")
+    metrics = score.get("metrics", {})
+    required = {
+        "ordering_accuracy", "ordering_auroc", "ordering_coverage", "event_f1",
+        "event_recall", "boundary_f1_delta", "region_iou_delta",
+        "cross_view_inconsistency_relative_reduction",
+        "temporal_inconsistency_relative_reduction", "ordering_ece", "transition_ece",
+        "evaluable_track_fraction",
+    }
+    missing = sorted(required - set(metrics))
+    if missing:
+        raise ContractError(f"Gate A score is missing required engineering metrics: {missing}")
+    config = _json(DEFAULT_CONFIG)
+    engineering = decide_gate_a(score, config, tier="engineering")
+    claim_grade = decide_gate_a(score, config, tier="claim_grade")
+    destination = _expected_path(entry, "phase9-gate-a-score-v1")
+    sealed = {
+        **dict(score),
+        "input_bindings": {
+            "csvl_ledger": {"path": str(ledger_ref[0]), "sha256": ledger_ref[2]},
+            "human_labels": {"path": str(label_ref[0]), "sha256": label_ref[2]},
+            "monocular_baselines": {"path": str(baseline_ref[0]), "sha256": baseline_ref[2]},
+            "score_units": {"path": str(source_path), "sha256": source_sha},
+        },
+        "decisions": {"engineering": engineering, "claim_grade": claim_grade},
+    }
+    write_json_atomic(destination, sealed)
+    refs = [_scientific_file_ref(destination, "phase9-gate-a-score-v1", entry["run_id"])]
+    calibrator_path = _maybe_expected_path(entry, "phase9-gate-a-calibrator-v1")
+    if calibrator_path is not None:
+        calibrator = {
+            "schema_version": "phase9-gate-a-calibrator-v1",
+            "run_id": entry["run_id"],
+            "scene": scene,
+            "source_score_sha256": sha256_file(destination),
+            "calibration_status": "frozen_from_external_score_units",
+            "engineering_decision_status": engineering["status"],
+        }
+        write_json_atomic(calibrator_path, calibrator)
+        refs.append(_scientific_file_ref(calibrator_path, "phase9-gate-a-calibrator-v1", entry["run_id"]))
+    return refs, {"scene": scene, "engineering_status": engineering["status"], "claim_grade_status": claim_grade["status"], "metrics": metrics}
+
+
+def action_freeze_evaluator(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    flow_ref = _bound_input_json_artifact(execution, schema="phase9-flow-manifest-v1")
+    scene = str(entry.get("scene") or args.scene or flow_ref[1].get("scene") or "")
+    if flow_ref[1].get("scene") != scene:
+        raise ProvenanceError("evaluator flow scene mismatch")
+    label_ref = _bound_input_json_artifact(execution, schema="phase9-human-label-freeze-v1", required=False)
+    if scene in {"cut_roasted_beef", "flame_steak", "sear_steak"} and label_ref is None:
+        raise ProvenanceError("annotation scenes require frozen human labels before evaluator freeze")
+    destination = _expected_path(entry, "phase9-evaluator-freeze-v1")
+    payload = {
+        "schema_version": "phase9-evaluator-freeze-v1",
+        "run_id": entry["run_id"],
+        "scene": scene,
+        "cam00_rgb_opened": False,
+        "outcome_renders_consumed": False,
+        "formulas": {
+            "event_psnr": "pooled_masked_psnr_v1",
+            "static_admission": "static_scene_admission_v1",
+            "flow_relative_flicker": "flow_relative_flicker_v1",
+            "reveal_ghost": "reveal_ghost_v1",
+        },
+        "input_bindings": {
+            "flow_manifest": {"path": str(flow_ref[0]), "sha256": flow_ref[2]},
+            "human_labels": None if label_ref is None else {"path": str(label_ref[0]), "sha256": label_ref[2]},
+        },
+        "label_status": "human_reference_frozen" if label_ref is not None else "label_free_static_only",
+    }
+    write_json_atomic(destination, payload)
+    return [_scientific_file_ref(destination, "phase9-evaluator-freeze-v1", entry["run_id"])], {"scene": scene, "label_status": payload["label_status"], "outcome_renders_consumed": False}
+
+
+def action_operator_gpu_smoke(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    import torch
+    from torch import nn
+
+    if not torch.cuda.is_available():
+        raise ContractError("operator-gpu-smoke requires CUDA and must run under a GPU Slurm allocation")
+    device = torch.device("cuda")
+    n = 16
+    parameters = {
+        "_xyz": nn.Parameter(torch.arange(n * 3, dtype=torch.float32, device=device).reshape(n, 3) / 100.0),
+        "_scaling": nn.Parameter(torch.log(torch.full((n, 3), 0.10, dtype=torch.float32, device=device))),
+        "_opacity": nn.Parameter(torch.linspace(-5.0, 2.0, n, device=device).reshape(n, 1)),
+    }
+    accumulators = {"denom": torch.ones(n, 1, device=device), "xyz_gradient_accum": torch.ones(n, 1, device=device)}
+    bank = CapacityBank(
+        parameters=parameters,
+        accumulators=accumulators,
+        stable_ids=torch.arange(1000, 1000 + n, dtype=torch.long, device=device),
+        generation=torch.zeros(n, dtype=torch.long, device=device),
+        last_reassigned=torch.zeros(n, dtype=torch.long, device=device),
+    )
+    optimizer = torch.optim.Adam(list(parameters.values()), lr=0.01, amsgrad=True)
+    loss = sum(parameter.square().sum() for parameter in parameters.values())
+    loss.backward(); optimizer.step(); optimizer.zero_grad(set_to_none=True)
+    selected = select_event_blind_donors(
+        xyz=parameters["_xyz"].detach(),
+        scaling_log=parameters["_scaling"].detach(),
+        opacity_logit=parameters["_opacity"].detach(),
+        denom=accumulators["denom"].detach(),
+        generation=bank.generation.detach(),
+        stable_ids=bank.stable_ids.detach(),
+        current_iteration=5001,
+        k=1,
+    )
+    if selected.get("abstained"):
+        raise ContractError(f"GPU donor selection abstained: {selected}")
+    donors = torch.as_tensor(selected["selected_indices"], dtype=torch.long, device=device)
+    targets, target_meta = build_event_blind_capacity_targets(bank, donors, seed=0, iteration=5001)
+    transaction = apply_point_neutral_transaction(bank, optimizer, donors, targets, iteration=5001, mode="reassign")
+    payload = {"device": str(device), "donor_selection": selected, "target_metadata": target_meta, "transaction": transaction, "finite": True}
+    return [], payload
+
 def action_annotation_packet(entry: dict[str, Any], args: argparse.Namespace) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     manifest = load_json(DEFAULT_WINDOWS)
     packet = build_empty_annotation_packet(
@@ -2634,6 +3002,11 @@ def action_train(entry: dict[str, Any], args: argparse.Namespace, execution: dic
     cfg.OptimizationParams.slice_b_capacity_iteration = int(training.get("start_iteration") or 5001)
     cfg.OptimizationParams.slice_b_capacity_k = int(training.get("requested_k") or 0)
     cfg.OptimizationParams.slice_b_capacity_seed = int(entry.get("seeds", {}).get("capacity") or 0)
+    sidecar_ref = _bound_input_json_artifact(execution, schema="phase9-train-sidecars-v1", required=False)
+    if sidecar_ref is not None:
+        cfg.OptimizationParams.slice_b_capacity_sidecar = str(sidecar_ref[0])
+    elif mode not in {"common", "route0"}:
+        raise ProvenanceError(f"training mode {mode} requires a frozen train sidecar")
 
     derived_config = output_root / "train-config.yaml"
     OmegaConf.save(cfg, str(derived_config))
@@ -2824,7 +3197,13 @@ def main() -> int:
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),
         "build-annotation-packet": lambda: action_annotation_packet(entry, args),
+        "freeze-human-labels": lambda: action_freeze_human_labels(entry, args, execution),
+        "run-monocular-baselines": lambda: action_run_monocular_baselines(entry, args, execution),
+        "score-gate-a": lambda: action_score_gate_a(entry, args, execution),
+        "freeze-train-sidecars": lambda: action_freeze_train_sidecars(entry, args, execution),
+        "freeze-evaluator": lambda: action_freeze_evaluator(entry, args, execution),
         "operator-static": lambda: action_operator_static(entry, args),
+        "operator-gpu-smoke": lambda: action_operator_gpu_smoke(entry, args),
         "freeze-implementation": lambda: action_freeze_implementation(entry, args),
         "train": lambda: action_train(entry, args, execution),
         "decide": lambda: action_decide(entry, args),

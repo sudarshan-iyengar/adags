@@ -157,6 +157,7 @@ class OptimizationParams(ParamGroup):
         self.slice_b_capacity_iteration = 5001
         self.slice_b_capacity_k = 0
         self.slice_b_capacity_seed = 0
+        self.slice_b_capacity_sidecar = ""
         self.lambda_dynamic_roi = 0.0
         self.lambda_static_exclusion = 0.0
         self.lambda_track_flow = 0.0

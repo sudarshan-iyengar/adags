@@ -6,6 +6,7 @@ from torch import nn
 from depth_visibility.capacity import (
     CapacityBank,
     apply_point_neutral_transaction,
+    build_event_blind_capacity_targets,
     capacity_budget,
     select_event_blind_donors,
 )
@@ -117,6 +118,38 @@ class CapacityTransactionTests(unittest.TestCase):
             apply_point_neutral_transaction(
                 bank, optimizer, torch.tensor([0]), target_rows, iteration=5001
             )
+
+    def test_event_blind_capacity_targets_clone_non_donor_rows_deterministically(self):
+        bank = _make_bank()
+        donors = torch.tensor([1, 6])
+        targets, metadata = build_event_blind_capacity_targets(
+            bank, donors, seed=11, iteration=5001
+        )
+        self.assertEqual(metadata["target_policy"], "event_blind_existing_dynamic_row_clone_v1")
+        self.assertEqual(len(metadata["target_source_indices"]), 2)
+        self.assertTrue(set(metadata["target_source_indices"]).isdisjoint({1, 6}))
+        again, again_meta = build_event_blind_capacity_targets(
+            bank, donors, seed=11, iteration=5001
+        )
+        self.assertEqual(metadata["target_source_indices"], again_meta["target_source_indices"])
+        for name in bank.parameters:
+            self.assertTrue(torch.equal(targets[name], again[name]))
+            expected = bank.parameters[name].detach()[metadata["target_source_indices"]]
+            self.assertTrue(torch.equal(targets[name], expected))
+
+    def test_capacity_only_reassignment_preserves_budget_with_generic_targets(self):
+        bank = _make_bank()
+        optimizer = _make_optimizer(bank)
+        donors = torch.tensor([0])
+        targets, _ = build_event_blind_capacity_targets(
+            bank, donors, seed=3, iteration=5001
+        )
+        result = apply_point_neutral_transaction(
+            bank, optimizer, donors, targets, iteration=5001, mode="reassign"
+        )
+        self.assertEqual(result["budget_before"], result["budget_after"])
+        self.assertEqual(result["realized_k"], 1)
+        self.assertTrue(torch.all(optimizer.state[bank.parameters["_xyz"]]["exp_avg"][donors] == 0.0))
 
     def test_select_event_blind_donor_uses_low_opacity_redundant_old_slot(self):
         n = 8

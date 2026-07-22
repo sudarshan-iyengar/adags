@@ -429,6 +429,128 @@ class ExecutionBindingTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 MODULE._load_p01_group_prediction(root, record)
 
+    def test_freeze_train_sidecars_rejects_label_or_cam00_polluted_csvl(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger_path = root / "ledger.json"
+            ledger = {
+                "schema_version": "phase9-csvl-ledger-v1",
+                "scene": "cut_roasted_beef",
+                "cam00_rgb_opened": True,
+                "label_dependent_gate_a": "not_evaluable",
+                "evidence_boundary": {"human_labels": "not_consumed"},
+                "frame_count": 300,
+                "geometry_frame_count": 300,
+                "aggregate_layer_opportunity": {},
+            }
+            ledger_path.write_text(json.dumps(ledger) + "\n", encoding="utf-8")
+            ledger_sha = MODULE.sha256_file(ledger_path)
+            terminal_path = root / "terminal.json"
+            terminal = {
+                "schema_version": "phase9-terminal-manifest-v1",
+                "run_id": "P9-V9-P03-CUT-CSVL-GPUDBG-S20260722",
+                "action": "build-csvl",
+                "status": "completed",
+                "exit_code": 0,
+                "produced_artifacts": [{
+                    "path": str(ledger_path),
+                    "schema": "phase9-csvl-ledger-v1",
+                    "producer_run_id": "P9-V9-P03-CUT-CSVL-GPUDBG-S20260722",
+                    "sha256": ledger_sha,
+                }],
+            }
+            terminal_path.write_text(json.dumps(terminal) + "\n", encoding="utf-8")
+            terminal_sha = MODULE.sha256_file(terminal_path)
+            execution = {"input_artifacts": [{
+                "path": str(terminal_path),
+                "producer_run_id": terminal["run_id"],
+                "schema": "phase9-terminal-manifest-v1",
+                "sha256": terminal_sha,
+                "status": "resolved_exact_completed",
+            }]}
+            entry = {
+                "run_id": "P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE",
+                "scene": "cut_roasted_beef",
+                "expected_outputs": [{
+                    "path": str(root / "train-sidecars.json"),
+                    "schema": "phase9-train-sidecars-v1",
+                }],
+            }
+            args = SimpleNamespace(scene="cut_roasted_beef")
+            with self.assertRaises(MODULE.ProvenanceError):
+                MODULE.action_freeze_train_sidecars(entry, args, execution)
+            ledger["cam00_rgb_opened"] = False
+            ledger["evidence_boundary"] = {"human_labels": "consumed"}
+            ledger_path.write_text(json.dumps(ledger) + "\n", encoding="utf-8")
+            terminal["produced_artifacts"][0]["sha256"] = MODULE.sha256_file(ledger_path)
+            terminal_path.write_text(json.dumps(terminal) + "\n", encoding="utf-8")
+            execution["input_artifacts"][0]["sha256"] = MODULE.sha256_file(terminal_path)
+            with self.assertRaises(MODULE.ProvenanceError):
+                MODULE.action_freeze_train_sidecars(entry, args, execution)
+
+    def test_freeze_train_sidecars_emits_generic_capacity_sidecar(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger_path = root / "ledger.json"
+            ledger = {
+                "schema_version": "phase9-csvl-ledger-v1",
+                "scene": "cut_roasted_beef",
+                "cam00_rgb_opened": False,
+                "label_dependent_gate_a": "not_evaluable",
+                "evidence_boundary": {"human_labels": "not_consumed"},
+                "frame_count": 300,
+                "geometry_frame_count": 300,
+                "aggregate_layer_opportunity": {
+                    "frames_with_ordered_layers": 123,
+                    "total_ordered_multilayer_bins": 158,
+                    "emitted_ordered_multilayer_bin_hypothesis_count": 158,
+                },
+            }
+            ledger_path.write_text(json.dumps(ledger) + "\n", encoding="utf-8")
+            terminal_path = root / "terminal.json"
+            terminal = {
+                "schema_version": "phase9-terminal-manifest-v1",
+                "run_id": "P9-V9-P03-CUT-CSVL-GPUDBG-S20260722",
+                "action": "build-csvl",
+                "status": "completed",
+                "exit_code": 0,
+                "produced_artifacts": [{
+                    "path": str(ledger_path),
+                    "schema": "phase9-csvl-ledger-v1",
+                    "producer_run_id": "P9-V9-P03-CUT-CSVL-GPUDBG-S20260722",
+                    "sha256": MODULE.sha256_file(ledger_path),
+                }],
+            }
+            terminal_path.write_text(json.dumps(terminal) + "\n", encoding="utf-8")
+            execution = {"input_artifacts": [{
+                "path": str(terminal_path),
+                "producer_run_id": terminal["run_id"],
+                "schema": "phase9-terminal-manifest-v1",
+                "sha256": MODULE.sha256_file(terminal_path),
+                "status": "resolved_exact_completed",
+            }]}
+            entry = {
+                "run_id": "P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE",
+                "scene": "cut_roasted_beef",
+                "expected_outputs": [{
+                    "path": str(root / "train-sidecars.json"),
+                    "schema": "phase9-train-sidecars-v1",
+                }],
+            }
+            produced, payload = MODULE.action_freeze_train_sidecars(
+                entry, SimpleNamespace(scene="cut_roasted_beef"), execution
+            )
+            self.assertEqual(produced[0]["schema"], "phase9-train-sidecars-v1")
+            self.assertIn("capacity-only", payload["admitted_training_modes"])
+            self.assertIn("oracle-capacity", payload["unsupported_training_modes"])
+            self.assertEqual(payload["csvl_summary"]["total_ordered_multilayer_bins"], 158)
+
+    def test_external_score_input_is_required_for_gate_a_scoring(self):
+        with self.assertRaises(MODULE.ProvenanceError):
+            MODULE._external_json_input(
+                SimpleNamespace(input=None), {"external_inputs": []}, role="gate_a_score_units"
+            )
+
     def test_freeze_uses_the_explicit_matrix_argument(self):
         source = inspect.getsource(MODULE.action_freeze_implementation)
         self.assertIn("Path(args.matrix).resolve()", source)

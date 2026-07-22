@@ -44,7 +44,7 @@ from utils.motion_prior_utils import (
 )
 from utils.mesh_utils import GaussianExtractor
 from utils.render_utils import generate_path, create_videos
-from depth_visibility.capacity import apply_point_neutral_transaction, select_event_blind_donors
+from depth_visibility.capacity import apply_point_neutral_transaction, build_event_blind_capacity_targets, select_event_blind_donors
 from depth_visibility.errors import ContractError
 import torchvision.transforms.functional as TF
 
@@ -674,6 +674,8 @@ SLICE_B_CAPACITY_MODES = {
     "capacity_only",
     "oracle-capacity",
     "oracle_capacity",
+    "visibility-only",
+    "visibility_only",
     "full",
     "shuffled",
 }
@@ -687,13 +689,41 @@ def normalized_slice_b_capacity_mode(opt):
     return mode.replace("_", "-")
 
 
+def load_slice_b_capacity_sidecar(opt, mode):
+    sidecar = str(getattr(opt, "slice_b_capacity_sidecar", "") or "")
+    if mode != "capacity-only":
+        return None
+    if not sidecar:
+        raise ContractError("capacity-only Slice B mode requires slice_b_capacity_sidecar")
+    path = Path(sidecar)
+    if not path.is_file():
+        raise ContractError(f"capacity-only sidecar is missing: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != "phase9-train-sidecars-v1":
+        raise ContractError("capacity-only sidecar has the wrong schema")
+    admitted = {str(value).replace("_", "-") for value in payload.get("admitted_training_modes", [])}
+    if "capacity-only" not in admitted:
+        raise ContractError("capacity-only sidecar does not admit capacity-only mode")
+    if payload.get("cam00_rgb_opened") is not False or payload.get("label_dependent_gate_a") != "not_evaluable":
+        raise ContractError("capacity-only sidecar violates the train read boundary")
+    policy = payload.get("capacity_policy", {})
+    if policy.get("donor_selection") != "event_blind_low_opacity_redundant_old_slot_v1":
+        raise ContractError("capacity-only sidecar has an unsupported donor policy")
+    if policy.get("target_construction") != "event_blind_existing_dynamic_row_clone_v1":
+        raise ContractError("capacity-only sidecar has an unsupported target policy")
+    return payload
+
+
 def validate_slice_b_capacity_configuration(opt):
     mode = normalized_slice_b_capacity_mode(opt)
     if mode in {"disabled", "common", "route0", "no-op", "null-reset"}:
         return mode
+    if mode == "capacity-only":
+        load_slice_b_capacity_sidecar(opt, mode)
+        return mode
     raise ContractError(
-        f"Slice B capacity mode {mode!r} requires a sealed target sidecar; "
-        "only route0/no-op/null-reset trainer hooks are admitted in this implementation"
+        f"Slice B capacity mode {mode!r} requires a sealed target sidecar/schema; "
+        "only route0/no-op/null-reset/capacity-only hooks are admitted in this implementation"
     )
 
 
@@ -706,6 +736,7 @@ def maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration):
         return None
     if getattr(gaussians, "gaussian_dim", None) != 4:
         raise ContractError("Slice B capacity transaction requires a 4D Gaussian model")
+    sidecar_payload = load_slice_b_capacity_sidecar(opt, mode)
     bank = gaussians.build_capacity_bank()
     budget_before = gaussians.capacity_budget_summary()
     if budget_before["hard_static"] != 0:
@@ -718,6 +749,7 @@ def maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration):
         "mode": mode,
         "capacity_seed": int(getattr(opt, "slice_b_capacity_seed", 0)),
         "budget_before": budget_before,
+        "sidecar_run_id": None if sidecar_payload is None else sidecar_payload.get("run_id"),
     }
     if mode in {"route0", "no-op"}:
         result = {
@@ -731,11 +763,11 @@ def maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration):
         }
         gaussians.slice_b_capacity_transactions.append(result)
         return result
-    if mode != "null-reset":
+    if mode not in {"null-reset", "capacity-only"}:
         raise ContractError(f"unsupported admitted Slice B capacity mode: {mode}")
     requested_k = int(getattr(opt, "slice_b_capacity_k", 0))
     if requested_k <= 0:
-        raise ContractError("null-reset Slice B capacity mode requires slice_b_capacity_k > 0")
+        raise ContractError(f"{mode} Slice B capacity mode requires slice_b_capacity_k > 0")
     donor_selection = select_event_blind_donors(
         xyz=gaussians._xyz.detach(),
         scaling_log=gaussians._scaling.detach(),
@@ -756,15 +788,26 @@ def maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration):
         gaussians.slice_b_capacity_transactions.append(result)
         return result
     donors = torch.as_tensor(donor_selection["selected_indices"], dtype=torch.long, device=gaussians._xyz.device)
+    target_rows = None
+    target_metadata = {}
+    transaction_mode = "null-reset"
+    if mode == "capacity-only":
+        target_rows, target_metadata = build_event_blind_capacity_targets(
+            bank,
+            donors,
+            seed=int(getattr(opt, "slice_b_capacity_seed", 0)),
+            iteration=int(iteration),
+        )
+        transaction_mode = "reassign"
     transaction = apply_point_neutral_transaction(
         bank,
         gaussians.optimizer,
         donors,
-        None,
+        target_rows,
         iteration=int(iteration),
-        mode="null-reset",
+        mode=transaction_mode,
     )
-    result = {**base, **donor_selection, **transaction, "abstained": False}
+    result = {**base, **donor_selection, **target_metadata, **transaction, "abstained": False}
     gaussians.slice_b_capacity_transactions.append(result)
     return result
 
@@ -800,6 +843,7 @@ def write_slice_b_capacity_ledger(model_path, gaussians, opt):
         "trigger_iteration": int(getattr(opt, "slice_b_capacity_iteration", 5001)),
         "requested_k": int(getattr(opt, "slice_b_capacity_k", 0)),
         "capacity_seed": int(getattr(opt, "slice_b_capacity_seed", 0)),
+        "capacity_sidecar": str(getattr(opt, "slice_b_capacity_sidecar", "") or ""),
         "transaction_count": len(transactions),
         "transactions": transactions,
         "final_budget": gaussians.capacity_budget_summary() if getattr(gaussians, "gaussian_dim", None) == 4 else None,

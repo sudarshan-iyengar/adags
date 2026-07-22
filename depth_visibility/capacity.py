@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import random
 from typing import Mapping
 
 import torch
@@ -159,6 +160,40 @@ def apply_point_neutral_transaction(
     }
 
 
+def build_event_blind_capacity_targets(
+    bank: CapacityBank,
+    donor_indices: torch.Tensor,
+    *,
+    seed: int,
+    iteration: int,
+) -> tuple[dict[str, torch.Tensor], dict[str, object]]:
+    """Build generic event-blind replacement rows from existing dynamic slots."""
+
+    row_count = bank.dynamic_count
+    device = next(iter(bank.parameters.values())).device
+    donors = _as_index(donor_indices, device=device, row_count=row_count)
+    donor_set = {int(value) for value in donors.detach().cpu().tolist()}
+    source_pool = [index for index in range(row_count) if index not in donor_set]
+    if not source_pool:
+        raise ContractError("capacity-only target construction needs at least one non-donor source row")
+
+    rng = random.Random(f"phase9-capacity-only-v1:{int(seed)}:{int(iteration)}")
+    rng.shuffle(source_pool)
+    source_indices = [source_pool[index % len(source_pool)] for index in range(int(donors.numel()))]
+    source_tensor = torch.as_tensor(source_indices, dtype=torch.long)
+    target_rows = {
+        name: parameter.detach()[source_tensor.to(parameter.device)].clone()
+        for name, parameter in bank.parameters.items()
+    }
+    return target_rows, {
+        "target_policy": "event_blind_existing_dynamic_row_clone_v1",
+        "target_source_indices": [int(value) for value in source_indices],
+        "source_pool_count": len(source_pool),
+        "target_seed": int(seed),
+        "target_iteration": int(iteration),
+    }
+
+
 def select_event_blind_donors(
     *,
     xyz: torch.Tensor,
@@ -250,6 +285,7 @@ def select_event_blind_donors(
 __all__ = [
     "CapacityBank",
     "apply_point_neutral_transaction",
+    "build_event_blind_capacity_targets",
     "capacity_budget",
     "select_event_blind_donors",
 ]
