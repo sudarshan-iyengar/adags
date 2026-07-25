@@ -1,0 +1,516 @@
+{
+  "cycle": "cycle-v13-bounded-selector",
+  "gate_a_engineering_gate": {
+    "ece_maximum": 0.15,
+    "event_f1_minimum": 0.45,
+    "event_recall_minimum": 0.6,
+    "localization_must_beat_registered_baseline_family": true,
+    "ordering_accuracy_minimum": 0.7,
+    "ordering_auroc_minimum": 0.75
+  },
+  "p01_da3_manifest_cycle": "cycle-v5",
+  "p01_terminal_sha256": "b68b25b574a239dbe7136b0ca3b940628ea9cffbf5a56e7868500940c1e89cc0",
+  "p02_flow_manifest_cycle": "cycle-v6",
+  "p02_terminal_sha256": "97c79317d455e31aed5b1a0291ba2fa9afd9282a5fff08a8c8c09eca20f0c32b",
+  "p03_csvl_ledger_cycle": "cycle-v9",
+  "p03_csvl_summary": {
+    "cam00_rgb_opened": false,
+    "emitted_layer_hypothesis_count": 316,
+    "emitted_ordered_multilayer_bin_hypothesis_count": 158,
+    "frame_count": 300,
+    "frames_with_ordered_layers": 123,
+    "geometry_frame_count": 300,
+    "label_dependent_gate_a": "not_evaluable",
+    "scene": "cut_roasted_beef"
+  },
+  "p03_terminal_sha256": "dd45de6b3e0cbe36eec4a88aa1f7537a8761042b43e5154508fc044754612c67",
+  "registered_total_max_gpu_hours": 4.0,
+  "run_count": 3,
+  "runs": [
+    {
+      "action": "freeze-implementation",
+      "camera_time_population": "not_applicable",
+      "claim_or_uncertainty": "Implementation freeze after fixing checkpoint resume and bounding event-blind capacity donor selection for 562k-point continuations.",
+      "command": {
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "freeze-implementation",
+          "--run-id",
+          "P9-V13-I01-BOUNDED-SELECTOR-FREEZE",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-I01-BOUNDED-SELECTOR-FREEZE/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_csvl_cycle_v13_bounded_selector.json"
+        ],
+        "argv_template_sha256": "43a17bed8afb3540a947c23685bae97b642259f0c7aacc1f0fd7746e40e05d16",
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "completion_rule": "terminal completed with required artifacts and exact hashes",
+      "conditional": false,
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "95c972d9ef9a819b0bcf5cac23c0591d3edd2a023fcc59976c126ba92569e1a4",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-I01-BOUNDED-SELECTOR-FREEZE/terminal.json",
+          "required": true,
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/authority/implementation-freeze.json",
+          "required": true,
+          "schema": "phase9-implementation-freeze-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/authority/commands.json",
+          "required": true,
+          "schema": "phase9-command-registry-v1",
+          "sha256": null
+        }
+      ],
+      "external_inputs": [],
+      "failure_interpretation_and_action": "Clean/push/freeze before any Slurm submission.",
+      "implementation_binding": {
+        "producer_run_id": "P9-V13-I01-BOUNDED-SELECTOR-FREEZE",
+        "required_before_submission": false,
+        "resolved_manifest_sha256": null,
+        "status": "not_applicable"
+      },
+      "input_artifacts": [],
+      "max_gpu_hours": 0.0,
+      "necessity": "Registered resume-trigger correction freeze.",
+      "pre_observation_promotion_predicate": "Clean tracked branch equals upstream; resume loop executes iteration 5001 from chkpnt5000.",
+      "prerequisites": [],
+      "run_id": "P9-V13-I01-BOUNDED-SELECTOR-FREEZE",
+      "scene": null,
+      "scheduler": {
+        "account": null,
+        "cpus_per_task": 1,
+        "dependency_mode": null,
+        "gpu_memory_gib": null,
+        "gpu_type": null,
+        "gpus_per_node": 0,
+        "host_memory_gib": 4,
+        "nodes": 1,
+        "partition": null,
+        "profile": "login",
+        "qos": null,
+        "scheduler": "none",
+        "site": "login",
+        "stderr": null,
+        "stdout": null,
+        "tasks_per_node": 1,
+        "wall_minutes": 15
+      },
+      "schema_version": "phase9-run-entry-v2",
+      "scope": "engineering",
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260722,
+        "shuffle": 20277733,
+        "training": null
+      },
+      "stage": "I01-v13-bounded-selector",
+      "status": "registered_not_submitted",
+      "storage": {
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 20,
+        "maximum_temporary_gib": 20,
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-I01-BOUNDED-SELECTOR-FREEZE",
+        "retention_class": "durable_decision"
+      },
+      "training": null
+    },
+    {
+      "action": "train",
+      "camera_time_population": "cut_roasted_beef post-P03 registered population",
+      "claim_or_uncertainty": "Matched route0 continuation from sealed v11 common checkpoint under bounded-selector implementation freeze; Slice B trigger iteration 5001 must be observed in ledger.",
+      "command": {
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "train",
+          "--run-id",
+          "P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_csvl_cycle_v13_bounded_selector.json",
+          "--scene",
+          "cut_roasted_beef"
+        ],
+        "argv_template_sha256": "3ac844a574320f677423e0cb7029137cf999ac23c898e3b5dd42f91988383409",
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "completion_rule": "terminal completed with required artifacts and exact hashes",
+      "conditional": false,
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "95c972d9ef9a819b0bcf5cac23c0591d3edd2a023fcc59976c126ba92569e1a4",
+        "derived_config_path": "configs/depth_visibility/isr_modes_v1.json",
+        "derived_config_sha256": "42008c63712e03440ce002d6a64dc13ee119d8b390b695df3cf5e376b807168f",
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001/terminal.json",
+          "required": true,
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/cut_roasted_beef/seed-0/route0/chkpnt5250.pth",
+          "required": true,
+          "schema": "adags-checkpoint-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001/metrics.json",
+          "required": true,
+          "schema": "phase9-training-metrics-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001/capacity-ledger.json",
+          "required": true,
+          "schema": "phase9-capacity-ledger-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001/provenance.json",
+          "required": true,
+          "schema": "phase9-provenance-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001/renders.json",
+          "required": true,
+          "schema": "phase9-render-inventory-v1",
+          "sha256": null
+        }
+      ],
+      "external_inputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
+          "role": "sealed_v11_common_checkpoint",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "adags-checkpoint-v1",
+          "sha256": "18f80a0f2c2d7f0c6f66a31c9ddcc58db451ce6358cb36467a859464ad5cdb98",
+          "status": "resolved_exact_completed_cross_cycle"
+        }
+      ],
+      "failure_interpretation_and_action": "Do not run oracle or B03; diagnose operator/representation.",
+      "implementation_binding": {
+        "producer_run_id": "P9-V13-I01-BOUNDED-SELECTOR-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/executions/P9-V11-B01-CUT-S0-COMMON-I5000/terminal.json",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v10/executions/P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE/terminal.json",
+          "producer_run_id": "P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        }
+      ],
+      "max_gpu_hours": 2.0,
+      "necessity": "Registered post-P03 v10 step.",
+      "pre_observation_promotion_predicate": "Finite exact budget/transaction ledger; no catastrophic early harm.",
+      "prerequisites": [
+        "P9-V11-B01-CUT-S0-COMMON-I5000",
+        "P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE"
+      ],
+      "run_id": "P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001",
+      "scene": "cut_roasted_beef",
+      "scheduler": {
+        "account": "euhpc_d21_034",
+        "cpus_per_task": 8,
+        "dependency_mode": "afterok",
+        "gpu_memory_gib": 64,
+        "gpu_type": "a100",
+        "gpus_per_node": 1,
+        "host_memory_gib": 96,
+        "nodes": 1,
+        "partition": "boost_usr_prod",
+        "profile": "gpu2",
+        "qos": "boost_qos_lprod",
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "stderr": "logs/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001_%j.err",
+        "stdout": "logs/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001_%j.out",
+        "tasks_per_node": 1,
+        "wall_minutes": 120
+      },
+      "schema_version": "phase9-run-entry-v2",
+      "scope": "engineering",
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260722,
+        "shuffle": 20277733,
+        "training": 20260722
+      },
+      "stage": "B01-continuation-v13-bounded-selector",
+      "status": "registered_not_submitted",
+      "storage": {
+        "maximum_checkpoint_output_gib": 20,
+        "maximum_durable_run_gib": 50,
+        "maximum_temporary_gib": 20,
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001",
+        "retention_class": "transient_generated"
+      },
+      "training": {
+        "capacity_seed": 0,
+        "end_iteration": 5250,
+        "input_checkpoint": {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "adags-checkpoint-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        },
+        "mode": "route0",
+        "output_checkpoint": {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/cut_roasted_beef/seed-0/route0/chkpnt5250.pth",
+          "schema": "adags-checkpoint-v1",
+          "sha256": null
+        },
+        "point_ceiling": 600000,
+        "requested_k": 0,
+        "run_directory": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-ROUTE0-I5250-TX5001",
+        "start_iteration": 5001,
+        "topology_cutoff_iteration": 5000,
+        "transaction_id": null,
+        "transaction_state": null
+      }
+    },
+    {
+      "action": "train",
+      "camera_time_population": "cut_roasted_beef post-P03 registered population",
+      "claim_or_uncertainty": "Capacity-only continuation from sealed v11 common checkpoint using bounded event-blind donor selector; Slice B trigger iteration 5001 must be observed in ledger.",
+      "command": {
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "train",
+          "--run-id",
+          "P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_csvl_cycle_v13_bounded_selector.json",
+          "--scene",
+          "cut_roasted_beef"
+        ],
+        "argv_template_sha256": "88021a2e565f0b44ccadc35f9ee3c0eff4e877f8a5705d59e730befb8dc421a5",
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "completion_rule": "terminal completed with required artifacts and exact hashes",
+      "conditional": false,
+      "configuration": {
+        "annotation_windows": "configs/depth_visibility/annotation_windows_v1.json",
+        "base_config_path": "configs/depth_visibility/csvl_isr_v1.json",
+        "base_config_sha256": "95c972d9ef9a819b0bcf5cac23c0591d3edd2a023fcc59976c126ba92569e1a4",
+        "derived_config_path": "configs/depth_visibility/isr_modes_v1.json",
+        "derived_config_sha256": "42008c63712e03440ce002d6a64dc13ee119d8b390b695df3cf5e376b807168f",
+        "method": "research-wiki/operations/phase9-csvl-isr-v1-method.md",
+        "objective": "research-wiki/objectives/depth-visibility-capacity-v1.md",
+        "resolved_merged_config_sha256": null,
+        "slice_b_contract": "research-wiki/operations/phase9-csvl-isr-v1-slice-b-contract.md",
+        "split": "configs/depth_visibility/n3v_split_v1.json",
+        "status": "requires_I01_resolution"
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001/terminal.json",
+          "required": true,
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/cut_roasted_beef/seed-0/capacity_only/chkpnt5250.pth",
+          "required": true,
+          "schema": "adags-checkpoint-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001/metrics.json",
+          "required": true,
+          "schema": "phase9-training-metrics-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001/capacity-ledger.json",
+          "required": true,
+          "schema": "phase9-capacity-ledger-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001/provenance.json",
+          "required": true,
+          "schema": "phase9-provenance-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001/renders.json",
+          "required": true,
+          "schema": "phase9-render-inventory-v1",
+          "sha256": null
+        }
+      ],
+      "external_inputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
+          "role": "sealed_v11_common_checkpoint",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "adags-checkpoint-v1",
+          "sha256": "18f80a0f2c2d7f0c6f66a31c9ddcc58db451ce6358cb36467a859464ad5cdb98",
+          "status": "resolved_exact_completed_cross_cycle"
+        }
+      ],
+      "failure_interpretation_and_action": "Do not run oracle or B03; diagnose operator/representation.",
+      "implementation_binding": {
+        "producer_run_id": "P9-V13-I01-BOUNDED-SELECTOR-FREEZE",
+        "required_before_submission": true,
+        "resolved_manifest_sha256": null,
+        "status": "requires_I01_resolution"
+      },
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/executions/P9-V11-B01-CUT-S0-COMMON-I5000/terminal.json",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v10/executions/P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE/terminal.json",
+          "producer_run_id": "P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        }
+      ],
+      "max_gpu_hours": 2.0,
+      "necessity": "Registered post-P03 v10 step.",
+      "pre_observation_promotion_predicate": "Finite exact budget/transaction ledger; no catastrophic early harm.",
+      "prerequisites": [
+        "P9-V11-B01-CUT-S0-COMMON-I5000",
+        "P9-V10-P04-CUT-TRAIN-SIDECARS-FREEZE"
+      ],
+      "run_id": "P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001",
+      "scene": "cut_roasted_beef",
+      "scheduler": {
+        "account": "euhpc_d21_034",
+        "cpus_per_task": 8,
+        "dependency_mode": "afterok",
+        "gpu_memory_gib": 64,
+        "gpu_type": "a100",
+        "gpus_per_node": 1,
+        "host_memory_gib": 96,
+        "nodes": 1,
+        "partition": "boost_usr_prod",
+        "profile": "gpu2",
+        "qos": "boost_qos_lprod",
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "stderr": "logs/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001_%j.err",
+        "stdout": "logs/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001_%j.out",
+        "tasks_per_node": 1,
+        "wall_minutes": 120
+      },
+      "schema_version": "phase9-run-entry-v2",
+      "scope": "engineering",
+      "seeds": {
+        "bootstrap": null,
+        "capacity": 20260722,
+        "shuffle": 20277733,
+        "training": 20260722
+      },
+      "stage": "B01-continuation-v13-bounded-selector",
+      "status": "registered_not_submitted",
+      "storage": {
+        "maximum_checkpoint_output_gib": 20,
+        "maximum_durable_run_gib": 50,
+        "maximum_temporary_gib": 20,
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001",
+        "retention_class": "transient_generated"
+      },
+      "training": {
+        "capacity_seed": 0,
+        "end_iteration": 5250,
+        "input_checkpoint": {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "adags-checkpoint-v1",
+          "sha256": null,
+          "status": "unresolved_until_submission"
+        },
+        "mode": "capacity_only",
+        "output_checkpoint": {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/cut_roasted_beef/seed-0/capacity_only/chkpnt5250.pth",
+          "schema": "adags-checkpoint-v1",
+          "sha256": null
+        },
+        "point_ceiling": 600000,
+        "requested_k": 256,
+        "run_directory": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v13/executions/P9-V13-B01-CUT-S0-CAPACITY_ONLY-I5250-TX5001",
+        "start_iteration": 5001,
+        "topology_cutoff_iteration": 5000,
+        "transaction_id": null,
+        "transaction_state": null
+      }
+    }
+  ],
+  "schema_version": "phase9-run-matrix-v2",
+  "source_baseline_commit": "688ec19f11ee22298082db3bb076e73179107033",
+  "submission_blocker": "requires clean pushed worktree freeze plus external human/baseline/score artifacts before Gate A and B01 submissions",
+  "submission_ready": false,
+  "supersedes": [
+    "configs/depth_visibility/phase9_run_matrix_v1.json",
+    "configs/depth_visibility/phase9_csvl_cycle_v7.json",
+    "configs/depth_visibility/phase9_csvl_cycle_v8.json",
+    "configs/depth_visibility/phase9_csvl_cycle_v9.json",
+    "configs/depth_visibility/phase9_csvl_cycle_v12_resume_trigger_fix.json"
+  ],
+  "description": "Clean Slice B B01 continuation reruns after fixing checkpoint resume iteration and bounding capacity-only donor selection. The v11 common checkpoint is reused; route0 and capacity-only receive new run IDs and must execute iteration 5001."
+}

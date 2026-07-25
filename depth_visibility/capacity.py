@@ -225,34 +225,55 @@ def select_event_blind_donors(
     if k > n:
         raise ContractError("donor selection K exceeds dynamic row count")
 
-    activated_opacity = torch.sigmoid(opacity_logit.reshape(n))
-    ages = int(current_iteration) - generation.to(dtype=torch.long).reshape(n)
-    bottom_count = int(torch.floor(torch.tensor(0.20 * n)).item())
+    with torch.no_grad():
+        xyz_detached = xyz.detach()
+        activated_opacity = torch.sigmoid(opacity_logit.reshape(n).detach())
+        ages = int(current_iteration) - generation.to(dtype=torch.long).reshape(n)
+        scales = torch.exp(scaling_log.detach()).reshape(n, -1).amax(dim=1)
+    bottom_count = max(1, int(0.20 * n))
     if bottom_count <= 0:
         return {"selected_indices": [], "base_universe_indices": [], "abstained": True, "reason": "empty_bottom_opacity_population"}
-    order = sorted(range(n), key=lambda idx: (float(activated_opacity[idx]), int(stable_ids[idx])))
-    bottom = set(order[:bottom_count])
-    scales = torch.exp(scaling_log).reshape(n, -1).amax(dim=1)
+    order = torch.argsort(activated_opacity, stable=True)[:bottom_count]
+    order = order[ages[order] >= 500]
+    if int(order.numel()) == 0:
+        return {
+            "selected_indices": [],
+            "base_universe_indices": [],
+            "requested_k": int(k),
+            "realized_k": 0,
+            "abstained": True,
+            "reason": "empty_old_bottom_opacity_population",
+        }
     neighbor_counts = []
     base_universe = []
-    for idx in sorted(bottom):
-        if int(ages[idx]) < 500:
-            continue
-        distances = torch.linalg.norm(xyz - xyz[idx], dim=1)
-        eligible = []
-        for other in range(n):
-            if other == idx:
+    candidate_limit = min(int(order.numel()), max(int(k) * 16, 4096))
+    candidates = order[:candidate_limit].to(device=xyz_detached.device, dtype=torch.long)
+    xyz_float = xyz_detached.to(dtype=torch.float32)
+    opacity_flat = activated_opacity.to(device=xyz_detached.device).reshape(1, n)
+    batch_size = 32
+    inspected_candidate_count = 0
+    for start in range(0, int(candidates.numel()), batch_size):
+        batch = candidates[start : start + batch_size]
+        inspected_candidate_count = start + int(batch.numel())
+        batch_xyz = xyz_float.index_select(0, batch)
+        distances = torch.cdist(batch_xyz, xyz_float)
+        radii = (2.0 * scales.to(device=xyz_detached.device).index_select(0, batch)).reshape(-1, 1)
+        batch_opacity = activated_opacity.to(device=xyz_detached.device).index_select(0, batch).reshape(-1, 1)
+        eligible = (
+            torch.isfinite(distances)
+            & (distances <= radii.to(dtype=distances.dtype))
+            & (opacity_flat > batch_opacity)
+        )
+        counts = eligible.sum(dim=1)
+        for idx, count in zip(batch.detach().cpu().tolist(), counts.detach().cpu().tolist()):
+            if int(count) <= 0:
                 continue
-            if (
-                torch.isfinite(distances[other])
-                and float(distances[other]) <= 2.0 * float(scales[idx])
-                and float(activated_opacity[other]) > float(activated_opacity[idx])
-            ):
-                eligible.append(other)
-        if not eligible:
-            continue
-        neighbor_counts.append((idx, len(eligible)))
-        base_universe.append(idx)
+            neighbor_counts.append((int(idx), int(count)))
+            base_universe.append(int(idx))
+            if len(base_universe) >= k:
+                break
+        if len(base_universe) >= k:
+            break
     if len(base_universe) < k:
         return {
             "selected_indices": [],
@@ -261,6 +282,8 @@ def select_event_blind_donors(
             "realized_k": 0,
             "abstained": True,
             "reason": "fewer_than_k_donors",
+            "candidate_limit": int(candidate_limit),
+            "inspected_candidate_count": int(inspected_candidate_count),
         }
     neighbor_count = {idx: count for idx, count in neighbor_counts}
     ranked = sorted(
@@ -279,6 +302,8 @@ def select_event_blind_donors(
         "requested_k": int(k),
         "realized_k": int(k),
         "abstained": False,
+        "candidate_limit": int(candidate_limit),
+        "inspected_candidate_count": int(inspected_candidate_count),
     }
 
 
