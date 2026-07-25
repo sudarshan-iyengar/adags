@@ -263,8 +263,8 @@
         "qos": "boost_qos_lprod",
         "scheduler": "slurm",
         "site": "leonardo",
-        "stderr": "logs/P9-V10-B01-CUT-S0-COMMON-I5000_%j.err",
-        "stdout": "logs/P9-V10-B01-CUT-S0-COMMON-I5000_%j.out",
+        "stderr": "logs/P9-V11-B01-CUT-S0-COMMON-I5000_%j.err",
+        "stdout": "logs/P9-V11-B01-CUT-S0-COMMON-I5000_%j.out",
         "tasks_per_node": 1,
         "wall_minutes": 900
       },
@@ -436,8 +436,8 @@
         "qos": "boost_qos_lprod",
         "scheduler": "slurm",
         "site": "leonardo",
-        "stderr": "logs/P9-V10-B01-CUT-S0-ROUTE0-I5250_%j.err",
-        "stdout": "logs/P9-V10-B01-CUT-S0-ROUTE0-I5250_%j.out",
+        "stderr": "logs/P9-V11-B01-CUT-S0-ROUTE0-I5250_%j.err",
+        "stdout": "logs/P9-V11-B01-CUT-S0-ROUTE0-I5250_%j.out",
         "tasks_per_node": 1,
         "wall_minutes": 120
       },
@@ -615,8 +615,8 @@
         "qos": "boost_qos_lprod",
         "scheduler": "slurm",
         "site": "leonardo",
-        "stderr": "logs/P9-V10-B01-CUT-S0-CAPACITY_ONLY-I5250_%j.err",
-        "stdout": "logs/P9-V10-B01-CUT-S0-CAPACITY_ONLY-I5250_%j.out",
+        "stderr": "logs/P9-V11-B01-CUT-S0-CAPACITY_ONLY-I5250_%j.err",
+        "stdout": "logs/P9-V11-B01-CUT-S0-CAPACITY_ONLY-I5250_%j.out",
         "tasks_per_node": 1,
         "wall_minutes": 120
       },
