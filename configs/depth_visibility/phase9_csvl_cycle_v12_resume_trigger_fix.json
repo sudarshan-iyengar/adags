@@ -216,7 +216,16 @@
           "sha256": null
         }
       ],
-      "external_inputs": [],
+      "external_inputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
+          "role": "sealed_v11_common_checkpoint",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "adags-checkpoint-v1",
+          "sha256": "18f80a0f2c2d7f0c6f66a31c9ddcc58db451ce6358cb36467a859464ad5cdb98",
+          "status": "resolved_exact_completed_cross_cycle"
+        }
+      ],
       "failure_interpretation_and_action": "Do not run oracle or B03; diagnose operator/representation.",
       "implementation_binding": {
         "producer_run_id": "P9-V12-I01-RESUME-TRIGGER-FIX-FREEZE",
@@ -229,13 +238,6 @@
           "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/executions/P9-V11-B01-CUT-S0-COMMON-I5000/terminal.json",
           "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
           "schema": "phase9-terminal-manifest-v1",
-          "sha256": null,
-          "status": "unresolved_until_submission"
-        },
-        {
-          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
-          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
-          "schema": "adags-checkpoint-v1",
           "sha256": null,
           "status": "unresolved_until_submission"
         },
@@ -395,7 +397,16 @@
           "sha256": null
         }
       ],
-      "external_inputs": [],
+      "external_inputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
+          "role": "sealed_v11_common_checkpoint",
+          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
+          "schema": "adags-checkpoint-v1",
+          "sha256": "18f80a0f2c2d7f0c6f66a31c9ddcc58db451ce6358cb36467a859464ad5cdb98",
+          "status": "resolved_exact_completed_cross_cycle"
+        }
+      ],
       "failure_interpretation_and_action": "Do not run oracle or B03; diagnose operator/representation.",
       "implementation_binding": {
         "producer_run_id": "P9-V12-I01-RESUME-TRIGGER-FIX-FREEZE",
@@ -408,13 +419,6 @@
           "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/executions/P9-V11-B01-CUT-S0-COMMON-I5000/terminal.json",
           "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
           "schema": "phase9-terminal-manifest-v1",
-          "sha256": null,
-          "status": "unresolved_until_submission"
-        },
-        {
-          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v11/cut_roasted_beef/seed-0/common/chkpnt5000.pth",
-          "producer_run_id": "P9-V11-B01-CUT-S0-COMMON-I5000",
-          "schema": "adags-checkpoint-v1",
           "sha256": null,
           "status": "unresolved_until_submission"
         },
