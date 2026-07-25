@@ -1020,7 +1020,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         vars()[f"ema_{lambda_name.replace('lambda_', '')}_for_log"] = 0.0
 
     progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
-    first_iter += 1
 
     if pipe.env_map_res:
         env_map = nn.Parameter(torch.zeros((3, pipe.env_map_res, pipe.env_map_res), dtype=torch.float, device="cuda").requires_grad_(True))
