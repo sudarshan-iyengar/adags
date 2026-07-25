@@ -169,6 +169,21 @@ SCHEMA_RULES: dict[str, tuple[set[str], set[str]]] = {
         },
         set(),
     ),
+    "phase9-csvl-vpl-stage1-ledger-v1": (
+        {
+            "schema_version", "method_id", "identity_semantics",
+            "scientific_content_hash", "scientific_hash_contract",
+            "scientific_payload", "runtime_metadata", "artifact_id",
+        },
+        set(),
+    ),
+    "phase9-csvl-vpl-stage1-diagnostics-v1": (
+        {
+            "schema_version", "method_id", "ledger_scientific_content_hash",
+            "diagnostics", "cpu_only_evidence", "artifact_id",
+        },
+        set(),
+    ),
 }
 
 

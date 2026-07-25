@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from depth_visibility.artifacts import (
+    atomic_write_json_immutable,
     build_inventory,
     load_verified_array,
     write_canonical_array,
@@ -83,6 +84,12 @@ class CanonicalTests(unittest.TestCase):
             self.assertTrue(terminal.is_file())
             with self.assertRaises(ArtifactError):
                 write_terminal_last(terminal, {"status": "again"}, [root / "a.npy"])
+            immutable = root / "stage1-ledger.json"
+            atomic_write_json_immutable(immutable, {"risk": 0.25})
+            self.assertEqual(json.loads(immutable.read_text(encoding="utf-8"))["risk"], 0.25)
+            with self.assertRaises(ArtifactError):
+                atomic_write_json_immutable(immutable, {"risk": 0.5})
+
 
     def test_frozen_config_strictness(self):
         path = Path("configs/depth_visibility/csvl_isr_v1.json")
@@ -153,6 +160,11 @@ class CanonicalTests(unittest.TestCase):
                 manifest["scenes"]["fixture_scene"]["train"]["record_identity_sha256"],
             )
             self.assertIsNone(index.split("test")[0].image_path)
+            calibration_only = load_scene_index(
+                root, expose_train_images=False, expose_test_images=False
+            )
+            self.assertTrue(all(record.image_path is None for record in calibration_only.split("train")))
+            self.assertTrue(all(record.image_path is None for record in calibration_only.split("test")))
             self.assertAlmostEqual(compute_r_scene(list(index.split("train"))), 0.5)
 
 

@@ -31,6 +31,12 @@ fi
 
 # shellcheck source=/dev/null
 source "$ENV_SCRIPT"
+if [[ "$ACTION" == "build-stage1-tracks" ]]; then
+  # The allocation may reserve one GPU for scheduling, but the application is CPU-only.
+  export CUDA_VISIBLE_DEVICES=""
+  export NVIDIA_VISIBLE_DEVICES="none"
+fi
+
 export PYTHONPATH="$REPO_ROOT/simple-knn:$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-1}}"

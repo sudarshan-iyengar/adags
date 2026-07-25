@@ -1,0 +1,43 @@
+{
+  "association": {
+    "base_endpoint_tolerance_pixels": 2.0,
+    "endpoint_cost_weight": 0.8,
+    "geometry_cost_weight": 0.2,
+    "maximum_world_displacement_rscene_per_frame": 0.05,
+    "minimum_cameras": 2,
+    "p03_target_bin_pixels": 8,
+    "search_cost_maximum": 1.0,
+    "second_best_ratio_minimum": 1.2
+  },
+  "canonical_hash": {
+    "algorithm": "sha256_domain_separated_csvl_cjson_v1",
+    "domain": "csvl-vpl-stage1-v1/scientific-content",
+    "excluded_runtime_fields": [
+      "absolute_output_root",
+      "slurm_job_id",
+      "timestamp_utc"
+    ]
+  },
+  "controls": [
+    "corrupted_flow",
+    "reversed_flow",
+    "camera_swap",
+    "temporal_offset"
+  ],
+  "dormancy": {
+    "maximum_frames": 5
+  },
+  "identity_semantics": "algorithmic_association_hypothesis_not_physical_identity",
+  "method_id": "csvl-vpl-stage1-surface-hypothesis-ledger-v1",
+  "prohibited_reads": [
+    "cam00_rgb",
+    "train_rgb_direct_read",
+    "annotations",
+    "evaluation_masks",
+    "r009",
+    "wandb",
+    "model_weights",
+    "reconstruction_outputs"
+  ],
+  "schema_version": "csvl-vpl-stage1-config-v1"
+}

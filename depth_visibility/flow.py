@@ -40,6 +40,8 @@ _REQUIRED = tuple(field.name for field in dataclasses.fields(FlowRecord))
 _DIRECTIONS = {"forward_t_to_t_plus_1", "backward_t_to_t_minus_1"}
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
+P02_FLOW_RECORD_SCHEMA = "depth-visibility-flow-schema-v1"
+
 
 def validate_flow_manifest(manifest: Mapping[str, Any]) -> FlowRecord:
     missing = [key for key in _REQUIRED if key not in manifest]
@@ -97,6 +99,77 @@ def validate_flow_manifest(manifest: Mapping[str, Any]) -> FlowRecord:
     values["source_hashes"] = tuple(str(value) for value in source_hashes)
     values["array_hash"] = str(values["array_hash"])
     return FlowRecord(**{key: values[key] for key in _REQUIRED})
+
+
+def validate_p02_flow_record(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the exact sealed P02 forward-flow record contract.
+
+    P02 predates :class:`FlowRecord` and uses native-source field names.  This
+    adapter is intentionally strict instead of guessing dimensions, direction,
+    units, camera identity, or array hashes.
+    """
+
+    required = {
+        "schema_version", "scene", "source_camera", "target_camera",
+        "source_frame", "target_frame", "source_image", "target_image",
+        "source_width", "source_height", "target_width", "target_height",
+        "direction", "dt_seconds", "units", "coordinate_convention",
+        "sampling", "validity_semantics", "occlusion_semantics",
+        "generator_name", "generator_revision", "flow_npz_path",
+        "flow_key", "valid_key", "flow_dtype", "valid_dtype",
+        "valid_pixel_fraction", "source_hashes", "array_hashes",
+    }
+    missing = sorted(required - set(record))
+    unknown = sorted(set(record) - required)
+    if missing or unknown:
+        raise FlowSemanticsError(f"P02 flow record missing={missing} unknown={unknown}")
+    if record["schema_version"] != P02_FLOW_RECORD_SCHEMA:
+        raise FlowSemanticsError("P02 flow record schema mismatch")
+    camera = str(record["source_camera"])
+    if not camera or camera != str(record["target_camera"]) or camera == "cam00":
+        raise FlowSemanticsError("P02 temporal flow must remain in one permitted train camera")
+    source_frame = int(record["source_frame"])
+    target_frame = int(record["target_frame"])
+    if record["direction"] != "forward_t_to_t_plus_1" or target_frame != source_frame + 1:
+        raise FlowSemanticsError("P02 flow direction/frame order mismatch")
+    dt = float(record["dt_seconds"])
+    if not math.isfinite(dt) or dt <= 0:
+        raise FlowSemanticsError("P02 flow dt must be finite and positive")
+    dimensions = tuple(int(record[key]) for key in (
+        "source_width", "source_height", "target_width", "target_height"
+    ))
+    if any(value <= 0 for value in dimensions) or dimensions[:2] != dimensions[2:]:
+        raise FlowSemanticsError("P02 flow dimensions must be positive and unchanged")
+    fixed = {
+        "units": "pixels_at_source_resolution",
+        "coordinate_convention": "integer_pixel_centers",
+        "sampling": "bilinear_align_corners_false",
+        "validity_semantics": "true_means_sample_is_valid",
+        "occlusion_semantics": "true_means_not_occluded",
+        "flow_key": "flow",
+        "valid_key": "mask",
+        "flow_dtype": "float32",
+        "valid_dtype": "bool",
+    }
+    for key, expected in fixed.items():
+        if record[key] != expected:
+            raise FlowSemanticsError(f"P02 flow convention mismatch: {key}")
+    fraction = float(record["valid_pixel_fraction"])
+    if not math.isfinite(fraction) or not 0 <= fraction <= 1:
+        raise FlowSemanticsError("P02 valid-pixel fraction is outside [0,1]")
+    hashes = record["array_hashes"]
+    if not isinstance(hashes, Mapping) or set(hashes) != {
+        "flow_contiguous_sha256", "mask_contiguous_sha256", "npz_sha256"
+    } or any(_SHA256.fullmatch(str(value)) is None for value in hashes.values()):
+        raise FlowSemanticsError("P02 array hashes are incomplete or malformed")
+    source_hashes = record["source_hashes"]
+    if not isinstance(source_hashes, list) or len(source_hashes) != 2 or any(
+        _SHA256.fullmatch(str(value)) is None for value in source_hashes
+    ):
+        raise FlowSemanticsError("P02 source image hashes are incomplete or malformed")
+    if not str(record["flow_npz_path"]) or not str(record["generator_revision"]):
+        raise FlowSemanticsError("P02 flow path and generator revision are mandatory")
+    return dict(record)
 
 
 def adapt_declared_flow(flow: np.ndarray, record: FlowRecord, output_shape: tuple[int, int]) -> np.ndarray:
@@ -261,9 +334,11 @@ def reciprocal_node_flow_matches(
 
 __all__ = [
     "FlowRecord",
+    "P02_FLOW_RECORD_SCHEMA",
     "adapt_declared_flow",
     "bilinear_flow",
     "forward_backward_cycle",
     "reciprocal_node_flow_matches",
     "validate_flow_manifest",
+    "validate_p02_flow_record",
 ]

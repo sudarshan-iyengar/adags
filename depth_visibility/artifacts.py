@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import tempfile
 from collections.abc import Iterable, Mapping
@@ -63,6 +64,29 @@ def atomic_write_json(path: os.PathLike[str] | str, payload: Any) -> Path:
     """Write canonical scientific JSON with one trailing newline."""
 
     return atomic_write_bytes(path, canonical_json_bytes(payload) + b"\n")
+
+
+def atomic_write_json_immutable(path: os.PathLike[str] | str, payload: Any) -> Path:
+    """Create a deterministic, numeric JSON artifact exactly once.
+
+    Stage-versioned scientific ledgers are immutable. Refusing an existing
+    destination prevents a retry from silently mutating historical evidence.
+    """
+
+    target = Path(path)
+    if target.exists():
+        raise ArtifactError(f"immutable artifact already exists: {target}")
+    try:
+        encoded = json.dumps(
+            payload,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8") + b"\n"
+    except (TypeError, ValueError) as exc:
+        raise SchemaError("immutable JSON payload is not finite JSON data") from exc
+    return atomic_write_bytes(target, encoded)
 
 
 def _relative_artifact_path(path: Path, relative_to: Path | None) -> str:
@@ -192,6 +216,7 @@ def write_terminal_last(
 __all__ = [
     "atomic_write_bytes",
     "atomic_write_json",
+    "atomic_write_json_immutable",
     "build_inventory",
     "load_verified_array",
     "write_canonical_array",

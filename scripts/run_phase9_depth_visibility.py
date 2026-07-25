@@ -32,14 +32,13 @@ from depth_visibility.annotation import (
     validate_empty_annotation_packet,
     validate_human_label_freeze,
 )
-from depth_visibility.artifacts import build_inventory, load_verified_array, write_canonical_array
-from depth_visibility.baselines import validate_baseline_registry
-from depth_visibility.capacity import (
-    CapacityBank,
-    apply_point_neutral_transaction,
-    build_event_blind_capacity_targets,
-    select_event_blind_donors,
+from depth_visibility.artifacts import (
+    atomic_write_json_immutable,
+    build_inventory,
+    load_verified_array,
+    write_canonical_array,
 )
+from depth_visibility.baselines import validate_baseline_registry
 from depth_visibility.canonical import domain_id, sha256_file
 from depth_visibility.da3_adapter import (
     INFERENCE_ARGUMENTS,
@@ -1559,6 +1558,365 @@ def action_build_csvl(
         "temporal_identity_status": "not_propagated_in_p03_v7",
     }
 
+
+def _stage1_cpu_only_evidence() -> dict[str, Any]:
+    """Fail closed unless the Stage-1 application is isolated from CUDA."""
+
+    visible = os.environ.get("CUDA_VISIBLE_DEVICES")
+    nvidia_visible = os.environ.get("NVIDIA_VISIBLE_DEVICES")
+    if visible not in {"", "-1"}:
+        raise ProvenanceError("Stage-1 diagnostic requires CUDA_VISIBLE_DEVICES to hide all devices")
+    if "torch" in sys.modules:
+        raise ProvenanceError("Stage-1 diagnostic must not import torch")
+    maps_path = Path("/proc/self/maps")
+    mapped = maps_path.read_text(encoding="utf-8", errors="replace") if maps_path.is_file() else ""
+    cuda_libraries = sorted(
+        {
+            token
+            for line in mapped.splitlines()
+            for token in line.split()
+            if "libcuda" in token.lower() or "libcudart" in token.lower()
+        }
+    )
+    if cuda_libraries:
+        raise ProvenanceError("Stage-1 process mapped a CUDA runtime/driver library")
+    process_rows: list[str] = []
+    try:
+        query = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-compute-apps=pid,used_memory",
+                "--format=csv,noheader,nounits",
+            ],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20,
+        )
+        if query.returncode == 0:
+            process_rows = [line.strip() for line in query.stdout.splitlines() if line.strip()]
+    except (OSError, subprocess.TimeoutExpired):
+        process_rows = []
+    own_pid = str(os.getpid())
+    own_rows = [line for line in process_rows if line.split(",", 1)[0].strip() == own_pid]
+    if own_rows:
+        raise ProvenanceError("Stage-1 application unexpectedly appears as an NVIDIA compute process")
+    return {
+        "application_device": "cpu",
+        "cuda_visible_devices": visible,
+        "nvidia_visible_devices": nvidia_visible,
+        "torch_imported": False,
+        "model_loaded": False,
+        "tensor_cuda_moves": 0,
+        "cuda_api_calls_by_application": 0,
+        "cuda_kernel_launches_by_application": 0,
+        "cuda_runtime_or_driver_libraries_mapped": cuda_libraries,
+        "nvidia_compute_process_rows_for_application_pid": own_rows,
+        "application_gpu_memory_mib": 0,
+        "gpu_reserved_for_scheduling_only": bool(os.environ.get("SLURM_GPUS_ON_NODE")),
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "evidence_method": "devices hidden before Python; no torch/model; no CUDA libraries mapped; PID absent from nvidia-smi compute apps",
+    }
+
+
+def action_build_stage1_tracks(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Build one immutable label-free CSVL-VPL Stage-1 hypothesis ledger."""
+
+    from datetime import datetime, timezone
+
+    from depth_visibility.surface_tracks import (
+        DIAGNOSTICS_SCHEMA,
+        LEDGER_SCHEMA,
+        METHOD_ID as STAGE1_METHOD_ID,
+        P02FlowStore,
+        associate_observations,
+        build_candidate_evidence,
+        build_diagnostics_artifact,
+        build_stage1_ledger,
+        canonical_scientific_hash,
+        extract_p03_observations,
+        summarize_association,
+        validate_no_fabricated_hidden_geometry,
+        validate_stage1_config,
+    )
+
+    scene = str(entry.get("scene") or args.scene or "")
+    if scene != "cut_roasted_beef":
+        raise ProvenanceError("CSVL-VPL Stage 1 is admitted only for sealed cut_roasted_beef")
+    p03_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-csvl-ledger-v1",
+        producer_run_id="P9-V9-P03-CUT-CSVL-GPUDBG-S20260722",
+    )
+    p02_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-flow-manifest-v1",
+        producer_run_id=P02_FLOW_SIDECAR_RUN_ID,
+    )
+    assert p03_ref is not None and p02_ref is not None
+    p03_path, p03, p03_sha, p03_terminal_record = p03_ref
+    p02_path, p02, p02_sha, p02_terminal_record = p02_ref
+    if p03.get("scene") != scene or p02.get("scene") != scene:
+        raise ProvenanceError("Stage-1 input scene mismatch")
+    p03_p02 = p03.get("input_bindings", {}).get("p02_flow_manifest", {})
+    if Path(str(p03_p02.get("path", ""))).resolve() != p02_path or p03_p02.get("sha256") != p02_sha:
+        raise ProvenanceError("sealed P03 does not bind the supplied P02 manifest exactly")
+    transitive_bindings = []
+    for name, reference in sorted(p03.get("input_bindings", {}).items()):
+        path = Path(str(reference.get("path", ""))).resolve()
+        expected_sha = str(reference.get("sha256") or "")
+        if not path.is_file() or sha256_file(path) != expected_sha:
+            raise ProvenanceError(f"P03 transitive input binding changed: {name}")
+        transitive_bindings.append({"role": name, **dict(reference)})
+
+    config_path = (REPO_ROOT / entry["configuration"]["base_config_path"]).resolve()
+    stage1_config = validate_stage1_config(_json(config_path))
+    config_sha = sha256_file(config_path)
+    project_root = _expand("$WORK/proj_adags")
+    scene_root = project_root / "data/n3v" / scene
+    index = load_scene_index(
+        scene_root,
+        scene=scene,
+        expose_train_images=False,
+        expose_test_images=False,
+        hash_train_images=False,
+        timestamp_tolerance_seconds=1e-6,
+    )
+    if any(
+        record.image_path is not None or record.image_sha256 is not None
+        for split in ("train", "test")
+        for record in index.split(split)
+    ):
+        raise ProvenanceError("Stage-1 calibration index unexpectedly exposed an RGB path or hash")
+    split_manifest_path = REPO_ROOT / "configs/depth_visibility/n3v_split_v1.json"
+    split_binding = {
+        key: dict(value)
+        for key, value in validate_split_binding(index, _json(split_manifest_path)).items()
+    }
+    if split_binding != p03.get("split_binding"):
+        raise ProvenanceError("Stage-1 calibration binding differs from sealed P03")
+    train_records = index.by_camera_frame("train")
+    target_records = index.by_camera_frame("test")
+    r_scene = compute_r_scene(list(index.split("train")))
+    observations = extract_p03_observations(
+        p03,
+        target_records=target_records,
+        config=stage1_config,
+    )
+    flow_store = P02FlowStore(p02, manifest_path=p02_path, manifest_sha256=p02_sha)
+    frame_range = tuple(int(value) for value in p02["frame_range"])
+    mode_results: dict[str, dict[str, Any]] = {}
+    mode_candidates: dict[str, list[dict[str, Any]]] = {}
+    for mode in ("valid", *stage1_config["controls"]):
+        candidates = build_candidate_evidence(
+            observations,
+            train_records=train_records,
+            target_records=target_records,
+            flow_store=flow_store,
+            r_scene=r_scene,
+            config=stage1_config,
+            mode=str(mode),
+        )
+        result = associate_observations(
+            observations,
+            candidates,
+            config=stage1_config,
+            frame_range=(frame_range[0], frame_range[1]),
+        )
+        validate_no_fabricated_hidden_geometry(result)
+        mode_candidates[str(mode)] = candidates
+        mode_results[str(mode)] = result
+
+    valid_result = mode_results["valid"]
+    valid_candidates = mode_candidates["valid"]
+    repeat_result = associate_observations(
+        observations,
+        valid_candidates,
+        config=stage1_config,
+        frame_range=(frame_range[0], frame_range[1]),
+    )
+    if repeat_result != valid_result:
+        raise ContractError("Stage-1 deterministic association replay changed exact content")
+    consumed_flow_artifacts = flow_store.consumed_artifacts()
+    consumed_record_ids = {str(value["record_id"]) for value in consumed_flow_artifacts}
+    referenced_record_ids = {
+        str(record_id)
+        for candidates in mode_candidates.values()
+        for candidate in candidates
+        for record_id in candidate["flow_record_ids"]
+    }
+    if not referenced_record_ids.issubset(consumed_record_ids):
+        raise ProvenanceError("Stage-1 candidate references an unbound flow record")
+
+    cpu_evidence = _stage1_cpu_only_evidence()
+    read_proof = {
+        "cam00_rgb_opened": False,
+        "train_rgb_opened": False,
+        "train_rgb_paths_exposed": False,
+        "test_rgb_paths_exposed": False,
+        "annotations_consumed": False,
+        "evaluation_masks_consumed": False,
+        "r009_consumed": False,
+        "wandb_written": False,
+        "model_or_weights_loaded": False,
+        "permitted_inputs": [
+            "sealed_P03_ordered_surface_ledger",
+            "sealed_P02_flow_manifest_and_hash_bound_NPZ_records",
+            "P03_bound_P01_provenance",
+            "hash_bound_train_and_test_calibration_metadata",
+            "frozen_Stage1_config",
+        ],
+    }
+    input_bindings = {
+        "p03_terminal": {
+            "path": str(p03_terminal_record["path"]),
+            "schema": "phase9-terminal-manifest-v1",
+            "producer_run_id": p03_terminal_record["terminal"]["run_id"],
+            "sha256": p03_terminal_record["sha256"],
+        },
+        "p03_ledger": {
+            "path": str(p03_path),
+            "schema": "phase9-csvl-ledger-v1",
+            "producer_run_id": p03_terminal_record["terminal"]["run_id"],
+            "sha256": p03_sha,
+        },
+        "p02_terminal": {
+            "path": str(p02_terminal_record["path"]),
+            "schema": "phase9-terminal-manifest-v1",
+            "producer_run_id": p02_terminal_record["terminal"]["run_id"],
+            "sha256": p02_terminal_record["sha256"],
+        },
+        "p02_flow_manifest": {
+            "path": str(p02_path),
+            "schema": "phase9-flow-manifest-v1",
+            "producer_run_id": p02_terminal_record["terminal"]["run_id"],
+            "sha256": p02_sha,
+        },
+        "p01_p02_p03_transitive_bindings": transitive_bindings,
+        "train_calibration": {
+            "path": str(scene_root / "transforms_train.json"),
+            "schema": "n3v-transforms-train-calibration",
+            "sha256": index.source_sha256["train"],
+        },
+        "test_calibration": {
+            "path": str(scene_root / "transforms_test.json"),
+            "schema": "n3v-transforms-test-calibration",
+            "sha256": index.source_sha256["test"],
+        },
+        "stage1_config": {
+            "path": str(config_path),
+            "schema": stage1_config["schema_version"],
+            "sha256": config_sha,
+        },
+        "consumed_p02_flow_records": consumed_flow_artifacts,
+    }
+    control_summaries = {
+        mode: summarize_association(mode_results[mode], mode_candidates[mode])
+        for mode in stage1_config["controls"]
+    }
+    valid_summary = summarize_association(valid_result, valid_candidates)
+    scientific_core = {
+        "scene": scene,
+        "target_camera": "cam00",
+        "method_id": STAGE1_METHOD_ID,
+        "stage_scope": "label_free_surface_hypothesis_evidence_only_no_lifecycle_actions_no_reconstruction_claim",
+        "identity_semantics": "track_id_is_algorithmic_association_hypothesis_not_proven_physical_surface_identity",
+        "input_bindings": input_bindings,
+        "read_boundary": read_proof,
+        "association_config": stage1_config,
+        "r_scene": r_scene,
+        "frame_range": [frame_range[0], frame_range[1]],
+        "observations": observations,
+        "valid_candidate_evidence": valid_candidates,
+        "association_result": valid_result,
+        "valid_diagnostics": valid_summary,
+        "invalid_control_diagnostics": control_summaries,
+        "interpretation": "engineering evidence adequacy for later independent Gate-A assessment; not CSVL-VPL reconstruction validation",
+    }
+    core_hash_first = canonical_scientific_hash(scientific_core)
+    core_hash_second = canonical_scientific_hash(dict(scientific_core))
+    if core_hash_first != core_hash_second:
+        raise ContractError("Stage-1 canonical scientific core hash did not repeat")
+    scientific_payload = {
+        **scientific_core,
+        "deterministic_repeat": {
+            "association_payload_exact_match": True,
+            "scientific_core_hash_first": core_hash_first,
+            "scientific_core_hash_second": core_hash_second,
+            "scientific_core_hash_match": True,
+        },
+    }
+    runtime_metadata = {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "absolute_output_root": str(_output_root(entry).resolve()),
+    }
+    ledger_first = build_stage1_ledger(
+        scientific_payload, runtime_metadata=runtime_metadata, config=stage1_config
+    )
+    ledger_second = build_stage1_ledger(
+        dict(scientific_payload),
+        runtime_metadata={
+            "timestamp_utc": "excluded_repeat_probe",
+            "slurm_job_id": "excluded_repeat_probe",
+            "absolute_output_root": "/excluded/repeat/probe",
+        },
+        config=stage1_config,
+    )
+    if ledger_first["scientific_content_hash"] != ledger_second["scientific_content_hash"]:
+        raise ContractError("Stage-1 final canonical scientific-content hash did not repeat")
+    diagnostics = {
+        "valid": valid_summary,
+        "controls": control_summaries,
+        "deterministic_repeat": {
+            "canonical_scientific_content_hash_first": ledger_first["scientific_content_hash"],
+            "canonical_scientific_content_hash_second": ledger_second["scientific_content_hash"],
+            "exact_match": True,
+        },
+        "provenance": {
+            "complete": bool(valid_summary["provenance_complete"]),
+            "consumed_flow_record_count": len(consumed_flow_artifacts),
+            "all_candidate_flow_refs_bound": True,
+        },
+        "scope": "Stage1_only_no_GateA_decision_no_trainer_or_primitive_lifecycle_authority",
+    }
+    diagnostic_artifact = build_diagnostics_artifact(
+        ledger_scientific_content_hash=ledger_first["scientific_content_hash"],
+        diagnostics=diagnostics,
+        cpu_only_evidence=cpu_evidence,
+    )
+    ledger_path = _expected_path(entry, LEDGER_SCHEMA)
+    diagnostic_path = _expected_path(entry, DIAGNOSTICS_SCHEMA)
+    atomic_write_json_immutable(ledger_path, ledger_first)
+    atomic_write_json_immutable(diagnostic_path, diagnostic_artifact)
+    refs = [
+        _scientific_file_ref(ledger_path, LEDGER_SCHEMA, entry["run_id"]),
+        _scientific_file_ref(diagnostic_path, DIAGNOSTICS_SCHEMA, entry["run_id"]),
+    ]
+    return refs, {
+        "scene": scene,
+        "method_id": STAGE1_METHOD_ID,
+        "canonical_scientific_content_hash": ledger_first["scientific_content_hash"],
+        "canonical_repeat_match": True,
+        "ledger_file_sha256": sha256_file(ledger_path),
+        "diagnostics_file_sha256": sha256_file(diagnostic_path),
+        "track_count": valid_summary["track_count"],
+        "multi_frame_track_count": valid_summary["multi_frame_track_count"],
+        "multi_frame_rear_track_count": valid_summary["multi_frame_rear_track_count"],
+        "provenance_complete": valid_summary["provenance_complete"],
+        "cam00_rgb_opened": False,
+        "application_device": "cpu",
+        "cuda_kernel_launches_by_application": 0,
+        "application_gpu_memory_mib": 0,
+        "stage_outcome": "requires_post_runtime_evidence_review",
+    }
+
+
 def action_fast_visibility_pilot(
     entry: dict[str, Any],
     args: argparse.Namespace,
@@ -2626,6 +2984,13 @@ def action_operator_gpu_smoke(entry: dict[str, Any], args: argparse.Namespace) -
     import torch
     from torch import nn
 
+    from depth_visibility.capacity import (
+        CapacityBank,
+        apply_point_neutral_transaction,
+        build_event_blind_capacity_targets,
+        select_event_blind_donors,
+    )
+
     if not torch.cuda.is_available():
         raise ContractError("operator-gpu-smoke requires CUDA and must run under a GPU Slurm allocation")
     device = torch.device("cuda")
@@ -2735,6 +3100,26 @@ def _validate_runtime_execution(
         path = _expand(str(implementation.get(path_key, "")))
         if not path.is_file() or sha256_file(path) != implementation.get(sha_key):
             raise ProvenanceError(f"current {label} bytes differ from I01 binding")
+    implementation_manifest = _json(
+        _expand(str(implementation.get("implementation_manifest_path", "")))
+    )
+    if implementation_manifest.get("binding_mode") == "exact_worktree_files_no_commit_claim":
+        source_files = implementation_manifest.get("source_files")
+        if not isinstance(source_files, list) or not source_files:
+            raise ProvenanceError("exact-worktree implementation manifest has no source files")
+        for reference in source_files:
+            relative = Path(str(reference.get("path", "")))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ProvenanceError("exact-worktree source path escapes the repository")
+            source = (REPO_ROOT / relative).resolve()
+            try:
+                source.relative_to(REPO_ROOT)
+            except ValueError as exc:
+                raise ProvenanceError("exact-worktree source path escapes the repository") from exc
+            if not source.is_file() or sha256_file(source) != reference.get("sha256"):
+                raise ProvenanceError(f"current source bytes differ from exact-worktree binding: {relative}")
+        if implementation_manifest.get("commit") != implementation.get("commit"):
+            raise ProvenanceError("exact-worktree manifest commit context changed")
     current_config = _resolved_config_binding(entry)
     for key in ("base_config_sha256", "derived_config_sha256", "resolved_merged_config_sha256"):
         if current_config.get(key) != execution["configuration"].get(key):
@@ -3193,6 +3578,7 @@ def main() -> int:
         "produce-da3": lambda: action_produce_da3(entry, args, execution),
         "adapt-flow": lambda: action_adapt_flow(entry, args, execution),
         "build-csvl": lambda: action_build_csvl(entry, args, execution),
+        "build-stage1-tracks": lambda: action_build_stage1_tracks(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),

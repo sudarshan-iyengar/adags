@@ -203,6 +203,7 @@ def load_scene_index(
     scene_root: str | Path,
     *,
     scene: str | None = None,
+    expose_train_images: bool = True,
     expose_test_images: bool = False,
     hash_train_images: bool = False,
     timestamp_tolerance_seconds: float = 1e-6,
@@ -217,7 +218,7 @@ def load_scene_index(
     scene_name = root.name if scene is None else scene
     train, train_sha = _parse_split(
         scene_name, root, "train", "transforms_train.json",
-        expose_images=True, hash_images=hash_train_images,
+        expose_images=expose_train_images, hash_images=hash_train_images,
     )
     test, test_sha = _parse_split(
         scene_name, root, "test", "transforms_test.json",
