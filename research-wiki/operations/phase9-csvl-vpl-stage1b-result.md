@@ -3,6 +3,7 @@
 Date: 2026-07-26
 Branch: `codex/hpc-orchestrator-bootstrap`
 Stage-1 commit: `70a9a678df290a2ae9510f313fdb704cae2632f4`
+Stage-1B freeze commit: `d68b25db613ae245bdd83a7b9bfcfe9f6ff608cb`
 Run: `P9-VPL-S1B-D01-CUT-S20260726`
 Slurm job: `50250624`
 Outcome: `STAGE1B_CONTROL_OR_BINDING_DEFECT`
@@ -71,6 +72,10 @@ Unrelated pre-existing research-wiki edits and the prior experiment-audit trace
 were preserved and excluded from the Stage-1 commit and Stage-1B source binding.
 The narrow Stage-1B freeze commit is identified by the subsequent Stage-1C
 authority and a post-freeze pointer on this page. No push was made.
+
+That freeze commit is `d68b25db613ae245bdd83a7b9bfcfe9f6ff608cb`;
+this pointer is a Stage-1C authority update and does not alter the immutable
+Stage-1B runtime record.
 
 ## Exact inputs and authority
 

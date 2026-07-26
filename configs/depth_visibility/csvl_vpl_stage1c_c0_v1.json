@@ -1,0 +1,46 @@
+{
+  "identity_semantics": "candidate and track identities are algorithmic hypotheses, not proven physical surfaces",
+  "method_id": "csvl-vpl-stage1c-label-free-interval-admission-v1",
+  "read_boundary": {
+    "annotations": false,
+    "evaluation_masks": false,
+    "reconstruction_outputs": false,
+    "rgb": false,
+    "sealed_stage1_ledger": true,
+    "sealed_stage1b_audit": true,
+    "wandb": false
+  },
+  "schema_version": "csvl-vpl-stage1c-c0-config-v1",
+  "selection_rule": {
+    "annotations_or_evaluator_masks_used": false,
+    "candidate_universe": "sealed Stage-1 P03 geometry-prefiltered candidates with at least two permitted cameras and valid sealed P02 mask support, before any association score or admission",
+    "development_interval_count": 1,
+    "hard_requirements": {
+      "complete_endpoint_and_camera_provenance_required": true,
+      "front_rear_cross_order_candidate_count_minimum": 1,
+      "multi_candidate_source_count_minimum": 1
+    },
+    "maximum_candidate_gap_frames": 5,
+    "minimum_permitted_cameras_per_candidate": 2,
+    "projected_support_base_tolerance_pixels": 2.0,
+    "ranking_order": [
+      "cross_order_candidate_count_descending",
+      "cross_order_gap_gt_one_count_descending",
+      "multi_candidate_source_count_descending",
+      "gap_without_intermediate_compatible_edge_count_descending",
+      "camera_direction_disagreement_mean_descending",
+      "flow_directional_diversity_descending",
+      "candidate_count_descending",
+      "start_frame_ascending"
+    ],
+    "reconstruction_outcomes_used": false,
+    "score_or_admission_used": false,
+    "secondary_interval_count": 0,
+    "tail_rule": "include one end-aligned window when the regular stride omits it",
+    "window_endpoint_rule": "both candidate endpoints must lie in the closed window",
+    "window_length_frames": 30,
+    "window_stride_frames": 15
+  },
+  "stage1b_freeze_commit": "d68b25db613ae245bdd83a7b9bfcfe9f6ff608cb",
+  "stage_scope": "Gate_C0_only_no_association_redesign_no_GateA_authority"
+}

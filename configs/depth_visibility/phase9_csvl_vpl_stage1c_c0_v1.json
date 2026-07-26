@@ -1,0 +1,133 @@
+{
+  "cycle": "csvl-vpl-stage1c-gate-c0-v1",
+  "run_count": 1,
+  "runs": [
+    {
+      "action": "admit-stage1c-interval",
+      "camera_time_population": "all sealed Stage-1 P03 observations and pre-score candidate edges over cut_roasted_beef frames 0 through 299",
+      "claim_or_uncertainty": "Label-free interval capability only; no temporal identity, association, reveal, or physical-surface claim.",
+      "command": {
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "admit-stage1c-interval",
+          "--run-id",
+          "P9-VPL-S1C-C0-CUT-S20260726",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1c-association-redesign/executions/P9-VPL-S1C-C0-CUT-S20260726/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_csvl_vpl_stage1c_c0_v1.json",
+          "--scene",
+          "cut_roasted_beef"
+        ],
+        "argv_template_sha256": null,
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "status": "requires_exact_worktree_binding"
+      },
+      "completion_rule": "The immutable label-free window scan binds exact Stage-1/Stage-1B artifacts, enumerates every frozen window, reports every admission quantity, repeats the canonical hash exactly, and remains CPU-only.",
+      "conditional": false,
+      "configuration": {
+        "base_config_path": "configs/depth_visibility/csvl_vpl_stage1c_c0_v1.json",
+        "base_config_sha256": "6b77b9ec224d2661e1d147405f1ad3c09e6b8e1b286e4515146c3f2b115f39d8",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-vpl-stage1c-authority.md",
+        "resolved_merged_config_sha256": null,
+        "status": "requires_exact_worktree_binding"
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1c-association-redesign/executions/P9-VPL-S1C-C0-CUT-S20260726/terminal.json",
+          "required": true,
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1c-association-redesign/preprocess/cut_roasted_beef/interval-selection-v1.json",
+          "required": true,
+          "schema": "phase9-csvl-vpl-stage1c-interval-selection-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1c-association-redesign/preprocess/cut_roasted_beef/diagnostics-c0-v1.json",
+          "required": true,
+          "schema": "phase9-csvl-vpl-stage1c-c0-diagnostics-v1",
+          "sha256": null
+        }
+      ],
+      "external_inputs": [],
+      "failure_interpretation_and_action": "If no window has a front/rear cross-order candidate, stop with STAGE1C_NO_INFORMATIVE_INTERVAL and do not implement Gate C1.",
+      "implementation_binding": {
+        "binding_mode": "exact_worktree_files_no_clean_tree_claim",
+        "required_before_submission": true,
+        "stage1b_freeze_commit": "d68b25db613ae245bdd83a7b9bfcfe9f6ff608cb",
+        "status": "requires_prepare_csvl_vpl_stage1c_c0"
+      },
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1-v1/executions/P9-VPL-S1-D01-CUT-S20260726/terminal.json",
+          "producer_run_id": "P9-VPL-S1-D01-CUT-S20260726",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": "8db32fa81aeb541cb53aeae74a7abdfc2849f00be8a163a51eee31f00b8767a3",
+          "status": "resolved_exact_completed"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1b-association-audit/executions/P9-VPL-S1B-D01-CUT-S20260726/terminal.json",
+          "producer_run_id": "P9-VPL-S1B-D01-CUT-S20260726",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": "0543587003eb0196b3ea2af6b287dfb64295cb0276a8817b037d48c919dcf8c7",
+          "status": "resolved_exact_completed"
+        }
+      ],
+      "max_gpu_hours": 2,
+      "necessity": "A single bounded scan is required to determine whether existing sealed evidence contains any label-free cross-order reveal-test opportunity before association redesign.",
+      "pre_observation_promotion_predicate": "The Stage-1B freeze commit exists, the descriptive correction is verified non-scientific, focused tests pass, and the C0 selection rule/config/input bytes are frozen before submission.",
+      "prerequisites": [],
+      "run_id": "P9-VPL-S1C-C0-CUT-S20260726",
+      "scene": "cut_roasted_beef",
+      "scheduler": {
+        "account": "euhpc_d21_034",
+        "cpus_per_task": 8,
+        "dependency_mode": null,
+        "gpu_memory_gib": 64,
+        "gpu_type": "A100",
+        "gpus_per_node": 1,
+        "host_memory_gib": 64,
+        "nodes": 1,
+        "partition": "boost_usr_prod",
+        "profile": "cpu_only_application_one_gpu_reservation",
+        "qos": "boost_qos_lprod",
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "stderr": "logs/P9-VPL-S1C-C0-CUT-S20260726_%j.err",
+        "stdout": "logs/P9-VPL-S1C-C0-CUT-S20260726_%j.out",
+        "tasks_per_node": 1,
+        "wall_minutes": 120
+      },
+      "schema_version": "phase9-run-entry-v2",
+      "scope": "engineering_stage1c_gate_c0_label_free_interval_admission_only",
+      "seeds": {
+        "association": 20260726,
+        "bootstrap": null,
+        "capacity": null,
+        "shuffle": null,
+        "training": null
+      },
+      "stage": "CSVL-VPL-Stage1C-Gate-C0",
+      "status": "registered_not_submitted",
+      "storage": {
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 2,
+        "maximum_temporary_gib": 1,
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1c-association-redesign/executions/P9-VPL-S1C-C0-CUT-S20260726",
+        "retention_class": "durable_stage1c_gate_c0_evidence"
+      },
+      "training": null
+    }
+  ],
+  "schema_version": "phase9-run-matrix-v2",
+  "submission_ready": true
+}

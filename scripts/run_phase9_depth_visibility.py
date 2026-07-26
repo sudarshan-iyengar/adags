@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import copy
 import hashlib
 import json
 import os
@@ -2254,6 +2255,141 @@ def action_audit_stage1b_association(
     }
 
 
+def action_admit_stage1c_interval(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Run only the frozen label-free Stage-1C Gate-C0 interval scan."""
+
+    from datetime import datetime, timezone
+
+    from depth_visibility.interval_admission import (
+        ARTIFACT_SCHEMA,
+        DIAGNOSTICS_SCHEMA,
+        METHOD_ID as STAGE1C_C0_METHOD_ID,
+        STAGE1B_FREEZE_COMMIT,
+        assert_label_free_read_path,
+        build_interval_artifact,
+        build_scientific_payload,
+        validate_config as validate_stage1c_c0_config,
+    )
+
+    scene = str(entry.get("scene") or args.scene or "")
+    if scene != "cut_roasted_beef":
+        raise ProvenanceError("CSVL-VPL Stage 1C C0 is admitted only for sealed cut_roasted_beef")
+    ancestry = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "merge-base", "--is-ancestor", STAGE1B_FREEZE_COMMIT, "HEAD"],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if ancestry.returncode != 0:
+        raise ProvenanceError("Stage-1C C0 does not descend from the frozen Stage-1B commit")
+    stage1_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-csvl-vpl-stage1-ledger-v1",
+        producer_run_id="P9-VPL-S1-D01-CUT-S20260726",
+    )
+    stage1b_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-csvl-vpl-stage1b-association-audit-v1",
+        producer_run_id="P9-VPL-S1B-D01-CUT-S20260726",
+    )
+    assert stage1_ref is not None and stage1b_ref is not None
+    stage1_path, stage1_ledger, _, _ = stage1_ref
+    stage1b_path, stage1b_audit, _, _ = stage1b_ref
+    assert_label_free_read_path(stage1_path)
+    assert_label_free_read_path(stage1b_path)
+    config_path = (REPO_ROOT / entry["configuration"]["base_config_path"]).resolve()
+    stage1c_config = validate_stage1c_c0_config(_json(config_path))
+    scientific_payload = build_scientific_payload(
+        stage1_ledger=stage1_ledger,
+        stage1_ledger_path=stage1_path,
+        stage1b_audit=stage1b_audit,
+        stage1b_audit_path=stage1b_path,
+        config=stage1c_config,
+    )
+    runtime_metadata = {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "absolute_output_root": str(_output_root(entry).resolve()),
+    }
+    artifact = build_interval_artifact(
+        scientific_payload,
+        runtime_metadata=runtime_metadata,
+        config=stage1c_config,
+    )
+    repeated = build_interval_artifact(
+        copy.deepcopy(scientific_payload),
+        runtime_metadata={
+            "timestamp_utc": "excluded_repeat_probe",
+            "slurm_job_id": "excluded_repeat_probe",
+            "absolute_output_root": "/excluded/repeat/probe",
+        },
+        config=stage1c_config,
+    )
+    if artifact["scientific_content_hash"] != repeated["scientific_content_hash"]:
+        raise ContractError("Stage-1C C0 canonical scientific-content hash did not repeat")
+    cpu_evidence = _stage1_cpu_only_evidence()
+    selection = scientific_payload["selection"]
+    diagnostics = {
+        "schema_version": DIAGNOSTICS_SCHEMA,
+        "method_id": STAGE1C_C0_METHOD_ID,
+        "stage1b_freeze_commit": STAGE1B_FREEZE_COMMIT,
+        "interval_selection_scientific_content_hash": artifact["scientific_content_hash"],
+        "gate_c0": {
+            "admitted": selection["gate_c0_admitted"],
+            "reason": selection["gate_c0_reason"],
+            "window_count": selection["window_count"],
+            "admissible_window_count": selection["admissible_window_count"],
+            "selected_interval_bounds": [
+                [value["start_frame"], value["end_frame"]]
+                for value in selection["selected_intervals"]
+            ],
+            "total_cross_order_candidate_count": sum(
+                value["cross_order_candidate_count"] for value in selection["all_windows"]
+            ),
+        },
+        "deterministic_repeat": {
+            "canonical_scientific_content_hash_first": artifact["scientific_content_hash"],
+            "canonical_scientific_content_hash_second": repeated["scientific_content_hash"],
+            "exact_match": True,
+        },
+        "read_boundary": scientific_payload["read_boundary"],
+        "cpu_only_evidence": cpu_evidence,
+        "scope": "Gate_C0_only_no_association_redesign_no_GateA_authority",
+    }
+    artifact_path = _expected_path(entry, ARTIFACT_SCHEMA)
+    diagnostics_path = _expected_path(entry, DIAGNOSTICS_SCHEMA)
+    atomic_write_json_immutable(artifact_path, artifact)
+    atomic_write_json_immutable(diagnostics_path, diagnostics)
+    refs = [
+        _scientific_file_ref(artifact_path, ARTIFACT_SCHEMA, entry["run_id"]),
+        _scientific_file_ref(diagnostics_path, DIAGNOSTICS_SCHEMA, entry["run_id"]),
+    ]
+    outcome = (
+        "gate_c0_admitted_c1_required_not_executed"
+        if selection["gate_c0_admitted"]
+        else "STAGE1C_NO_INFORMATIVE_INTERVAL"
+    )
+    return refs, {
+        "scene": scene,
+        "method_id": STAGE1C_C0_METHOD_ID,
+        "stage1b_freeze_commit": STAGE1B_FREEZE_COMMIT,
+        "canonical_scientific_content_hash": artifact["scientific_content_hash"],
+        "canonical_repeat_match": True,
+        "gate_c0_admitted": selection["gate_c0_admitted"],
+        "admissible_window_count": selection["admissible_window_count"],
+        "stage1c_outcome": outcome,
+        "cam00_rgb_opened": False,
+        "annotations_opened": False,
+        "application_device": "cpu",
+        "cuda_kernel_launches_by_application": 0,
+        "application_gpu_memory_mib": 0,
+    }
+
+
 def action_fast_visibility_pilot(
     entry: dict[str, Any],
     args: argparse.Namespace,
@@ -3917,6 +4053,7 @@ def main() -> int:
         "build-csvl": lambda: action_build_csvl(entry, args, execution),
         "build-stage1-tracks": lambda: action_build_stage1_tracks(entry, args, execution),
         "audit-stage1b-association": lambda: action_audit_stage1b_association(entry, args, execution),
+        "admit-stage1c-interval": lambda: action_admit_stage1c_interval(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),
