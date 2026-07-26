@@ -1,0 +1,155 @@
+{
+  "cycle": "csvl-vpl-stage1b-association-audit-v1",
+  "run_count": 1,
+  "runs": [
+    {
+      "action": "audit-stage1b-association",
+      "camera_time_population": "exact_sealed_Stage1_candidate_universe_over_cut_roasted_beef_frames_0_299",
+      "claim_or_uncertainty": "Forensic association-discrimination evidence only; track_id remains an algorithmic hypothesis, not proven physical surface identity.",
+      "command": {
+        "argv_template": [
+          "python",
+          "scripts/run_phase9_depth_visibility.py",
+          "audit-stage1b-association",
+          "--run-id",
+          "P9-VPL-S1B-D01-CUT-S20260726",
+          "--execution-manifest",
+          "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1b-association-audit/executions/P9-VPL-S1B-D01-CUT-S20260726/resolved-execution.json",
+          "--matrix",
+          "configs/depth_visibility/phase9_csvl_vpl_stage1b_v1.json",
+          "--scene",
+          "cut_roasted_beef"
+        ],
+        "argv_template_sha256": null,
+        "launcher_path": "scripts/run_phase9_depth_visibility.py",
+        "launcher_sha256": null,
+        "resolved_argv": null,
+        "resolved_argv_sha256": null,
+        "status": "requires_exact_worktree_binding"
+      },
+      "completion_rule": "Immutable Stage-1B audit and diagnostics exist, full replay equals sealed Stage 1, decompositions repeat exactly, every consumed P02 record is hash-bound, and the application remains CPU-only.",
+      "conditional": false,
+      "configuration": {
+        "base_config_path": "configs/depth_visibility/csvl_vpl_stage1b_v1.json",
+        "base_config_sha256": "02c0ba14e7898757860e6a402fda1a187c1d7fedabb755ebd4ddd8efd67a7272",
+        "derived_config_path": null,
+        "derived_config_sha256": null,
+        "method": "research-wiki/operations/phase9-csvl-vpl-stage1-result.md",
+        "resolved_merged_config_sha256": null,
+        "status": "requires_exact_worktree_binding"
+      },
+      "expected_outputs": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1b-association-audit/executions/P9-VPL-S1B-D01-CUT-S20260726/terminal.json",
+          "required": true,
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1b-association-audit/preprocess/cut_roasted_beef/association-audit-v1.json",
+          "required": true,
+          "schema": "phase9-csvl-vpl-stage1b-association-audit-v1",
+          "sha256": null
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1b-association-audit/preprocess/cut_roasted_beef/diagnostics-v1.json",
+          "required": true,
+          "schema": "phase9-csvl-vpl-stage1b-diagnostics-v1",
+          "sha256": null
+        }
+      ],
+      "external_inputs": [
+        {
+          "path": "$WORK/proj_adags/data/n3v/cut_roasted_beef/transforms_train.json",
+          "producer_run_id": null,
+          "role": "calibration_only_train_metadata",
+          "schema": "n3v-transforms-train-calibration",
+          "sha256": "5f45aa1b9aadbcb6d623ae6376a97d9f3c8188a86e934f406da450d7083bb679"
+        },
+        {
+          "path": "$WORK/proj_adags/data/n3v/cut_roasted_beef/transforms_test.json",
+          "producer_run_id": null,
+          "role": "calibration_only_test_metadata_no_rgb",
+          "schema": "n3v-transforms-test-calibration",
+          "sha256": "1900f8b23ff91cde46a1a65f467b51e11ae877c7015f22bb3249303eceb7ab89"
+        }
+      ],
+      "failure_interpretation_and_action": "Repair only a demonstrated instrumentation, control, metric, coordinate, or binding defect; do not redesign association or submit a second job.",
+      "implementation_binding": {
+        "binding_mode": "exact_worktree_files_no_commit_claim",
+        "required_before_submission": true,
+        "stage1_commit": "70a9a678df290a2ae9510f313fdb704cae2632f4",
+        "status": "requires_prepare_csvl_vpl_stage1b"
+      },
+      "input_artifacts": [
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1-v1/executions/P9-VPL-S1-D01-CUT-S20260726/terminal.json",
+          "producer_run_id": "P9-VPL-S1-D01-CUT-S20260726",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": "8db32fa81aeb541cb53aeae74a7abdfc2849f00be8a163a51eee31f00b8767a3",
+          "status": "resolved_exact_completed"
+        },
+        {
+          "path": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v9/executions/P9-V9-P03-CUT-CSVL-GPUDBG-S20260722/terminal.json",
+          "producer_run_id": "P9-V9-P03-CUT-CSVL-GPUDBG-S20260722",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": "dd45de6b3e0cbe36eec4a88aa1f7537a8761042b43e5154508fc044754612c67",
+          "status": "resolved_exact_completed"
+        },
+        {
+          "path": "/leonardo_scratch/fast/EUHPC_D21_034/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v6/executions/P9-V6-P02-CUT-FLOW-ADAPT-S20260721/terminal.json",
+          "producer_run_id": "P9-V6-P02-CUT-FLOW-ADAPT-S20260721",
+          "schema": "phase9-terminal-manifest-v1",
+          "sha256": "97c79317d455e31aed5b1a0291ba2fa9afd9282a5fff08a8c8c09eca20f0c32b",
+          "status": "resolved_exact_completed"
+        }
+      ],
+      "max_gpu_hours": 2,
+      "necessity": "One bounded forensic replay is required to determine whether flow causes Stage-1 associations and whether valid evidence discriminates against matched controls.",
+      "pre_observation_promotion_predicate": "Focused Stage-1B tests and static validation pass and exact worktree/config/input bindings resolve before the single submission.",
+      "prerequisites": [],
+      "run_id": "P9-VPL-S1B-D01-CUT-S20260726",
+      "scene": "cut_roasted_beef",
+      "scheduler": {
+        "account": "euhpc_d21_034",
+        "cpus_per_task": 8,
+        "dependency_mode": null,
+        "gpu_memory_gib": 64,
+        "gpu_type": "A100",
+        "gpus_per_node": 1,
+        "host_memory_gib": 64,
+        "nodes": 1,
+        "partition": "boost_usr_prod",
+        "profile": "cpu_only_application_one_gpu_reservation",
+        "qos": "boost_qos_lprod",
+        "scheduler": "slurm",
+        "site": "leonardo",
+        "stderr": "logs/P9-VPL-S1B-D01-CUT-S20260726_%j.err",
+        "stdout": "logs/P9-VPL-S1B-D01-CUT-S20260726_%j.out",
+        "tasks_per_node": 1,
+        "wall_minutes": 120
+      },
+      "schema_version": "phase9-run-entry-v2",
+      "scope": "engineering_stage1b_forensic_audit_only",
+      "seeds": {
+        "association": 20260726,
+        "bootstrap": null,
+        "capacity": null,
+        "shuffle": null,
+        "training": null
+      },
+      "stage": "CSVL-VPL-Stage1B",
+      "status": "registered_not_submitted",
+      "storage": {
+        "maximum_checkpoint_output_gib": 0,
+        "maximum_durable_run_gib": 16,
+        "maximum_temporary_gib": 8,
+        "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/stage1b-association-audit/executions/P9-VPL-S1B-D01-CUT-S20260726",
+        "retention_class": "durable_stage1b_forensic_evidence"
+      },
+      "training": null
+    }
+  ],
+  "schema_version": "phase9-run-matrix-v2",
+  "submission_ready": true
+}

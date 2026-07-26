@@ -254,6 +254,14 @@ class P02FlowStore:
     def consumed_artifacts(self) -> list[dict[str, Any]]:
         return [self._consumed[key] for key in sorted(self._consumed)]
 
+    def load_bound_step_for_audit(
+        self, camera: str, frame: int
+    ) -> tuple[np.ndarray, np.ndarray, dict[str, Any], dict[str, Any]]:
+        """Expose one already sealed P02 step to read-only forensic instrumentation."""
+
+        flow, valid, reference = self._load(str(camera), int(frame))
+        return flow, valid, dict(reference), dict(self.records[(str(camera), int(frame))])
+
 
 def _bin_center(target_bin: Iterable[int], size: int) -> np.ndarray:
     x, y = (int(value) for value in target_bin)

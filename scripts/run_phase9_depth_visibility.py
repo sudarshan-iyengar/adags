@@ -1917,6 +1917,343 @@ def action_build_stage1_tracks(
     }
 
 
+def action_audit_stage1b_association(
+    entry: dict[str, Any],
+    args: argparse.Namespace,
+    execution: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Forensically replay the exact sealed Stage-1 association universe."""
+
+    from datetime import datetime, timezone
+
+    from depth_visibility.association_audit import (
+        AUDIT_SCHEMA,
+        DIAGNOSTICS_SCHEMA,
+        METHOD_ID as STAGE1B_METHOD_ID,
+        STAGE1_COMMIT,
+        build_ablation_candidate_sets,
+        build_audit_artifact,
+        build_candidate_audit,
+        build_diagnostics_artifact,
+        canonical_scientific_hash,
+        control_definitions,
+        interval_diagnostics,
+        matched_control_diagnostics,
+        metric_definitions,
+        paired_discrimination,
+        replay_ablations,
+        validate_stage1b_config,
+    )
+    from depth_visibility.surface_tracks import (
+        P02FlowStore,
+        extract_p03_observations,
+        validate_no_fabricated_hidden_geometry,
+        validate_stage1_config,
+    )
+
+    scene = str(entry.get("scene") or args.scene or "")
+    if scene != "cut_roasted_beef":
+        raise ProvenanceError("CSVL-VPL Stage 1B is admitted only for sealed cut_roasted_beef")
+    if _git("rev-parse", "HEAD") != STAGE1_COMMIT:
+        raise ProvenanceError("Stage-1B must execute from the preserved Stage-1 commit context")
+
+    stage1_ledger_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-csvl-vpl-stage1-ledger-v1",
+        producer_run_id="P9-VPL-S1-D01-CUT-S20260726",
+    )
+    stage1_diagnostics_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-csvl-vpl-stage1-diagnostics-v1",
+        producer_run_id="P9-VPL-S1-D01-CUT-S20260726",
+    )
+    p03_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-csvl-ledger-v1",
+        producer_run_id="P9-V9-P03-CUT-CSVL-GPUDBG-S20260722",
+    )
+    p02_ref = _bound_input_json_artifact(
+        execution,
+        schema="phase9-flow-manifest-v1",
+        producer_run_id=P02_FLOW_SIDECAR_RUN_ID,
+    )
+    assert stage1_ledger_ref is not None and stage1_diagnostics_ref is not None
+    assert p03_ref is not None and p02_ref is not None
+    stage1_ledger_path, stage1_ledger, stage1_ledger_sha, stage1_terminal_record = stage1_ledger_ref
+    stage1_diagnostics_path, stage1_diagnostics, stage1_diagnostics_sha, _ = stage1_diagnostics_ref
+    p03_path, p03, p03_sha, p03_terminal_record = p03_ref
+    p02_path, p02, p02_sha, p02_terminal_record = p02_ref
+    if stage1_ledger.get("scientific_content_hash") != stage1_diagnostics.get("ledger_scientific_content_hash"):
+        raise ProvenanceError("sealed Stage-1 ledger and diagnostics content hashes disagree")
+    stage1_scientific = stage1_ledger.get("scientific_payload", {})
+    if stage1_scientific.get("scene") != scene or p03.get("scene") != scene or p02.get("scene") != scene:
+        raise ProvenanceError("Stage-1B input scene mismatch")
+
+    stage1b_config_path = (REPO_ROOT / entry["configuration"]["base_config_path"]).resolve()
+    stage1b_config = validate_stage1b_config(_json(stage1b_config_path))
+    stage1b_config_sha = sha256_file(stage1b_config_path)
+    stage1_config_path = REPO_ROOT / "configs/depth_visibility/csvl_vpl_stage1_v1.json"
+    stage1_config_sha = sha256_file(stage1_config_path)
+    if stage1_config_sha != stage1b_config["stage1_config_sha256"]:
+        raise ProvenanceError("Stage-1B frozen Stage-1 config hash mismatch")
+    stage1_config = validate_stage1_config(_json(stage1_config_path))
+    if stage1_config != stage1_scientific.get("association_config"):
+        raise ProvenanceError("repository Stage-1 config differs from sealed ledger config")
+
+    project_root = _expand("$WORK/proj_adags")
+    scene_root = project_root / "data/n3v" / scene
+    index = load_scene_index(
+        scene_root,
+        scene=scene,
+        expose_train_images=False,
+        expose_test_images=False,
+        hash_train_images=False,
+        timestamp_tolerance_seconds=1e-6,
+    )
+    if any(
+        record.image_path is not None or record.image_sha256 is not None
+        for split in ("train", "test")
+        for record in index.split(split)
+    ):
+        raise ProvenanceError("Stage-1B calibration index unexpectedly exposed RGB data")
+    train_records = index.by_camera_frame("train")
+    target_records = index.by_camera_frame("test")
+    r_scene = compute_r_scene(list(index.split("train")))
+    if not np.isclose(r_scene, float(stage1_scientific["r_scene"]), rtol=0.0, atol=1e-15):
+        raise ProvenanceError("Stage-1B camera calibration scale differs from sealed Stage-1")
+    observations = extract_p03_observations(
+        p03,
+        target_records=target_records,
+        config=stage1_config,
+    )
+    if observations != stage1_scientific.get("observations"):
+        raise ProvenanceError("Stage-1B P03 observation replay differs from sealed Stage-1")
+
+    valid_candidates = list(stage1_scientific["valid_candidate_evidence"])
+    sealed_result = dict(stage1_scientific["association_result"])
+    frame_range = tuple(int(value) for value in stage1_scientific["frame_range"])
+    flow_store = P02FlowStore(p02, manifest_path=p02_path, manifest_sha256=p02_sha)
+    audit_rows = build_candidate_audit(
+        observations,
+        valid_candidates,
+        train_records=train_records,
+        target_records=target_records,
+        flow_store=flow_store,
+        r_scene=r_scene,
+        stage1_config=stage1_config,
+        stage1b_config=stage1b_config,
+    )
+    candidate_sets = build_ablation_candidate_sets(
+        audit_rows,
+        valid_candidates,
+        stage1_config=stage1_config,
+    )
+    ablation_summaries, ablation_results = replay_ablations(
+        observations,
+        candidate_sets,
+        stage1_config=stage1_config,
+        frame_range=(frame_range[0], frame_range[1]),
+        sealed_stage1_result=sealed_result,
+    )
+    for result in ablation_results.values():
+        validate_no_fabricated_hidden_geometry(result)
+    repeated_summaries, repeated_results = replay_ablations(
+        observations,
+        candidate_sets,
+        stage1_config=stage1_config,
+        frame_range=(frame_range[0], frame_range[1]),
+        sealed_stage1_result=sealed_result,
+    )
+    if repeated_summaries != ablation_summaries or repeated_results != ablation_results:
+        raise ContractError("Stage-1B ablation replay changed exact deterministic content")
+
+    consumed_flow_artifacts = flow_store.consumed_artifacts()
+    consumed_ids = {str(value["record_id"]) for value in consumed_flow_artifacts}
+    referenced_ids = {
+        str(record_id)
+        for row in audit_rows
+        for score in row["control_scores"].values()
+        if score is not None
+        for record_id in score["flow_record_ids"]
+    }
+    if not referenced_ids.issubset(consumed_ids):
+        raise ProvenanceError("Stage-1B candidate evidence references an unbound P02 record")
+
+    paired = paired_discrimination(audit_rows)
+    matched = matched_control_diagnostics(audit_rows)
+    interval = interval_diagnostics(observations, audit_rows, sealed_result)
+    cpu_evidence = _stage1_cpu_only_evidence()
+    read_proof = {
+        "cam00_rgb_opened": False,
+        "train_rgb_opened": False,
+        "train_rgb_paths_exposed": False,
+        "test_rgb_paths_exposed": False,
+        "annotations_consumed": False,
+        "evaluation_masks_consumed": False,
+        "wandb_written": False,
+        "model_or_weights_loaded": False,
+        "new_depth_generated": False,
+        "new_flow_generated": False,
+        "trainer_or_lifecycle_code_used": False,
+        "permitted_inputs": [
+            "sealed_Stage1_ledger_and_diagnostics",
+            "sealed_P03_ordered_surface_ledger",
+            "sealed_P02_flow_manifest_and_hash_bound_NPZ_records",
+            "P03_bound_P01_provenance",
+            "hash_bound_train_and_test_calibration_metadata",
+            "frozen_Stage1_and_Stage1B_configs",
+        ],
+    }
+
+    def terminal_binding(record: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "path": str(record["path"]),
+            "schema": "phase9-terminal-manifest-v1",
+            "producer_run_id": record["terminal"]["run_id"],
+            "sha256": record["sha256"],
+        }
+
+    input_bindings = {
+        "stage1_commit": STAGE1_COMMIT,
+        "stage1_terminal": terminal_binding(stage1_terminal_record),
+        "stage1_ledger": {
+            "path": str(stage1_ledger_path), "schema": stage1_ledger["schema_version"],
+            "producer_run_id": stage1_terminal_record["terminal"]["run_id"],
+            "sha256": stage1_ledger_sha,
+            "scientific_content_hash": stage1_ledger["scientific_content_hash"],
+        },
+        "stage1_diagnostics": {
+            "path": str(stage1_diagnostics_path), "schema": stage1_diagnostics["schema_version"],
+            "producer_run_id": stage1_terminal_record["terminal"]["run_id"],
+            "sha256": stage1_diagnostics_sha,
+        },
+        "p03_terminal": terminal_binding(p03_terminal_record),
+        "p03_ledger": {
+            "path": str(p03_path), "schema": p03["schema_version"],
+            "producer_run_id": p03_terminal_record["terminal"]["run_id"], "sha256": p03_sha,
+        },
+        "p02_terminal": terminal_binding(p02_terminal_record),
+        "p02_flow_manifest": {
+            "path": str(p02_path), "schema": p02["schema_version"],
+            "producer_run_id": p02_terminal_record["terminal"]["run_id"], "sha256": p02_sha,
+        },
+        "stage1_config": {
+            "path": str(stage1_config_path), "schema": stage1_config["schema_version"],
+            "sha256": stage1_config_sha,
+        },
+        "stage1b_config": {
+            "path": str(stage1b_config_path), "schema": stage1b_config["schema_version"],
+            "sha256": stage1b_config_sha,
+        },
+        "train_calibration": {
+            "path": str(scene_root / "transforms_train.json"),
+            "schema": "n3v-transforms-train-calibration", "sha256": index.source_sha256["train"],
+        },
+        "test_calibration": {
+            "path": str(scene_root / "transforms_test.json"),
+            "schema": "n3v-transforms-test-calibration", "sha256": index.source_sha256["test"],
+        },
+        "consumed_p02_flow_records": consumed_flow_artifacts,
+    }
+    scientific_core = {
+        "scene": scene,
+        "method_id": STAGE1B_METHOD_ID,
+        "stage1_commit": STAGE1_COMMIT,
+        "stage_scope": "forensic_association_discrimination_only_no_method_redesign_no_lifecycle_actions",
+        "identity_semantics": "track_id_is_algorithmic_association_hypothesis_not_proven_physical_surface_identity",
+        "input_bindings": input_bindings,
+        "read_boundary": read_proof,
+        "stage1b_config": stage1b_config,
+        "control_definitions": control_definitions(),
+        "metric_definitions": metric_definitions(),
+        "candidate_score_audit": audit_rows,
+        "ablation_summaries": ablation_summaries,
+        "ablation_results": ablation_results,
+        "paired_candidate_discrimination": paired,
+        "matched_control_diagnostics": matched,
+        "interval_diagnostics": interval,
+        "interpretation_boundary": "diagnostic evidence only; no Gate-A admission and no trainer or primitive-lifecycle authority",
+    }
+    core_hash_first = canonical_scientific_hash(scientific_core)
+    core_hash_second = canonical_scientific_hash(dict(scientific_core))
+    if core_hash_first != core_hash_second:
+        raise ContractError("Stage-1B canonical scientific core hash did not repeat")
+    scientific_payload = {
+        **scientific_core,
+        "deterministic_repeat": {
+            "ablation_results_exact_match": True,
+            "scientific_core_hash_first": core_hash_first,
+            "scientific_core_hash_second": core_hash_second,
+            "scientific_core_hash_match": True,
+        },
+    }
+    runtime_metadata = {
+        "timestamp_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
+        "absolute_output_root": str(_output_root(entry).resolve()),
+    }
+    audit_first = build_audit_artifact(
+        scientific_payload, runtime_metadata=runtime_metadata, config=stage1b_config,
+    )
+    audit_second = build_audit_artifact(
+        dict(scientific_payload),
+        runtime_metadata={
+            "timestamp_utc": "excluded_repeat_probe", "slurm_job_id": "excluded_repeat_probe",
+            "absolute_output_root": "/excluded/repeat/probe",
+        },
+        config=stage1b_config,
+    )
+    if audit_first["scientific_content_hash"] != audit_second["scientific_content_hash"]:
+        raise ContractError("Stage-1B final canonical scientific-content hash did not repeat")
+    diagnostic_artifact = build_diagnostics_artifact(
+        audit_scientific_content_hash=audit_first["scientific_content_hash"],
+        diagnostics={
+            "ablations": ablation_summaries,
+            "paired_candidate_discrimination": paired,
+            "matched_controls": matched,
+            "interval": interval,
+            "deterministic_repeat": {
+                "canonical_scientific_content_hash_first": audit_first["scientific_content_hash"],
+                "canonical_scientific_content_hash_second": audit_second["scientific_content_hash"],
+                "exact_match": True,
+            },
+            "provenance": {
+                "complete": True, "consumed_flow_record_count": len(consumed_flow_artifacts),
+                "all_candidate_flow_refs_bound": True,
+            },
+            "scope": "Stage1B_only_no_GateA_decision_no_trainer_or_primitive_lifecycle_authority",
+        },
+        cpu_only_evidence=cpu_evidence,
+    )
+    audit_path = _expected_path(entry, AUDIT_SCHEMA)
+    diagnostic_path = _expected_path(entry, DIAGNOSTICS_SCHEMA)
+    atomic_write_json_immutable(audit_path, audit_first)
+    atomic_write_json_immutable(diagnostic_path, diagnostic_artifact)
+    refs = [
+        _scientific_file_ref(audit_path, AUDIT_SCHEMA, entry["run_id"]),
+        _scientific_file_ref(diagnostic_path, DIAGNOSTICS_SCHEMA, entry["run_id"]),
+    ]
+    full_summary = ablation_summaries["full_current_score"]
+    no_flow_summary = ablation_summaries["geometry_plus_camera_without_flow"]
+    return refs, {
+        "scene": scene,
+        "method_id": STAGE1B_METHOD_ID,
+        "stage1_commit": STAGE1_COMMIT,
+        "canonical_scientific_content_hash": audit_first["scientific_content_hash"],
+        "canonical_repeat_match": True,
+        "audit_file_sha256": sha256_file(audit_path),
+        "diagnostics_file_sha256": sha256_file(diagnostic_path),
+        "full_track_count": full_summary["track_count"],
+        "no_flow_track_count": no_flow_summary["track_count"],
+        "no_flow_changed_selected_edges": no_flow_summary["changed_selected_edges_vs_full"],
+        "cam00_rgb_opened": False,
+        "application_device": "cpu",
+        "cuda_kernel_launches_by_application": 0,
+        "application_gpu_memory_mib": 0,
+        "stage1b_outcome": "requires_post_runtime_forensic_review",
+    }
+
+
 def action_fast_visibility_pilot(
     entry: dict[str, Any],
     args: argparse.Namespace,
@@ -3579,6 +3916,7 @@ def main() -> int:
         "adapt-flow": lambda: action_adapt_flow(entry, args, execution),
         "build-csvl": lambda: action_build_csvl(entry, args, execution),
         "build-stage1-tracks": lambda: action_build_stage1_tracks(entry, args, execution),
+        "audit-stage1b-association": lambda: action_audit_stage1b_association(entry, args, execution),
         "fast-visibility-pilot": lambda: action_fast_visibility_pilot(entry, args, execution),
         "anchor-abstention-pilot": lambda: action_anchor_abstention_pilot(entry, args, execution),
         "cut-opportunity-mining": lambda: action_cut_opportunity_mining(entry, args, execution),

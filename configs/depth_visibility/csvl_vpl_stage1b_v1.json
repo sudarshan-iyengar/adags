@@ -1,0 +1,52 @@
+{
+  "schema_version": "csvl-vpl-stage1b-config-v1",
+  "method_id": "csvl-vpl-stage1b-association-discrimination-audit-v1",
+  "stage1_commit": "70a9a678df290a2ae9510f313fdb704cae2632f4",
+  "stage1_config_sha256": "1629c46f60b38d6df412d31e1d44f722730d8efa406e87580bb837509cdab942",
+  "candidate_universe": "exact_stage1_valid_candidate_evidence",
+  "controls": [
+    "valid",
+    "reversed_flow",
+    "camera_swap",
+    "temporal_offset",
+    "corrupted_flow"
+  ],
+  "ablations": [
+    "geometry_p03_only",
+    "flow_only",
+    "camera_reprojection_only",
+    "geometry_plus_camera_without_flow",
+    "geometry_plus_flow_without_camera_specific_consistency",
+    "full_current_score"
+  ],
+  "matched_controls": {
+    "camera_nearest_baseline_candidates": 2,
+    "temporal_offsets_frames": [
+      -2,
+      -1,
+      1,
+      2
+    ],
+    "direction_rotation_degrees": 90
+  },
+  "canonical_hash": {
+    "algorithm": "sha256_domain_separated_csvl_cjson_v1",
+    "domain": "csvl-vpl-stage1b-v1/scientific-content",
+    "excluded_runtime_fields": [
+      "timestamp_utc",
+      "slurm_job_id",
+      "absolute_output_root"
+    ]
+  },
+  "prohibited_reads": [
+    "cam00_rgb",
+    "train_rgb_direct_read",
+    "wandb",
+    "model_weights",
+    "new_depth",
+    "new_flow",
+    "trainer",
+    "lifecycle_actions",
+    "reconstruction_outputs"
+  ]
+}

@@ -31,8 +31,8 @@ fi
 
 # shellcheck source=/dev/null
 source "$ENV_SCRIPT"
-if [[ "$ACTION" == "build-stage1-tracks" ]]; then
-  # The allocation may reserve one GPU for scheduling, but the application is CPU-only.
+if [[ "$ACTION" == "build-stage1-tracks" || "$ACTION" == "audit-stage1b-association" ]]; then
+  # These allocations may reserve one GPU for scheduling, but both applications are CPU-only.
   export CUDA_VISIBLE_DEVICES=""
   export NVIDIA_VISIBLE_DEVICES="none"
 fi
