@@ -61,7 +61,8 @@ wandb/
 # Agent-local installations and state
 /.agents/
 /skills-lock.json
-
+/.claude/
+/.aris/
 # Durable research-wiki pages and referenced figures are tracked normally.
 # Unmanaged Obsidian attachments stay ignored; intentionally place durable
 # referenced figures under research-wiki/assets/ or another tracked path.

@@ -81,3 +81,18 @@ settings in tracked files.
   surfaces, and artifact ignore behavior before requesting runtime experiments.
 - Run shell probes and Git inspections sequentially on Leonardo to avoid
   exhausting sandbox namespace capacity.
+<!-- ARIS-CODEX:BEGIN -->
+## ARIS Codex Skill Scope
+ARIS Codex packages installed in this project: skills-codex
+Managed entries: 82
+Manifest: `.aris/installed-skills-codex.txt`
+ARIS repo root: `/leonardo/home/userexternal/siyengar/aris_repo`
+Project skill path: `.agents/skills/<skill-name>`
+For ARIS Codex workflows, prefer the project-local skills under `.agents/skills/`.
+When a skill needs ARIS helper scripts, resolve the repo root from the manifest or set it explicitly:
+`ARIS_REPO=$(awk -F'\t' '$1=="repo_root"{print $2; exit}' "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags/.aris/installed-skills-codex.txt")`
+Do not edit or delete symlinked skills in place; update upstream or rerun:
+`bash /leonardo/home/userexternal/siyengar/aris_repo/tools/install_aris_codex.sh "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags" --reconcile`
+For copied Codex installs, use:
+`bash /leonardo/home/userexternal/siyengar/aris_repo/tools/smart_update_codex.sh --project "/leonardo_work/EUHPC_D21_034/proj_adags/repo/adags"`
+<!-- ARIS-CODEX:END -->
