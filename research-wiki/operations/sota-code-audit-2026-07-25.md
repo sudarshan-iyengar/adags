@@ -4,6 +4,17 @@ Date: 2026-07-25
 Status: complete decision memo
 Decision: targeted mechanism
 
+## Post-B01 addendum
+
+The implementation evidence and novelty pressure in this memo remain valid, but
+the route ordering is superseded by
+[[phase9-post-b01-csvl-vpl-direction]]. The corrected 256-slot continuation
+shows that point-neutral reassignment is stable but has negligible reconstruction
+impact. Reassignment is therefore retained as a matched-count control and
+transaction substrate. CSVL-VPL, a calibrated persistent-surface ledger coupled
+to a controlled primitive lifecycle, is the selected targeted mechanism. It
+must be compared with both fixed-count reassignment and generic extra capacity.
+
 ## Intent
 
 This memo implements the "SOTA-Code Synthesis Before Gaussian Overhaul" step. The goal is not to run new experiments. The goal is to decide whether current ADAGS evidence justifies a broad Gaussian representation overhaul, one constrained mechanism, or no new mechanism.

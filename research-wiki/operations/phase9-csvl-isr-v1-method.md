@@ -4,6 +4,13 @@ Status: implementation-ready; independently admitted in round 10 (9.1/10)
 Date frozen: 2026-07-15
 Objective: [[objectives/depth-visibility-capacity-v1]]
 
+Post-outcome note, 2026-07-25: this frozen specification remains the historical
+authority for the v1 implementation and its completed outcomes. The corrected
+B01 result establishes reassignment-operator stability but not reconstruction
+impact. The forward method decision is recorded separately in
+[[phase9-post-b01-csvl-vpl-direction]]; this page is not rewritten to imply that
+v1 tested persistent surface identity or visibility-guided allocation.
+
 CSVL-ISR means **Calibrated Surface Visibility Ledger with Intermittent-Surface
 Reassignment**. This document is the cohesive, implementation-facing method
 contract. Raw refinement rounds and independent review history live under the

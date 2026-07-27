@@ -1,7 +1,22 @@
 # Query Pack
 
-Compressed project memory for ideation. Updated 2026-07-15 after canonicalizing
-[[objectives/depth-visibility-capacity-v1]].
+Compressed project memory for ideation. Updated 2026-07-25 after the corrected
+B01 result and [[operations/phase9-post-b01-csvl-vpl-direction]].
+
+## 2026-07-25 post-B01 direction
+
+- The corrected 256-slot B01 continuation produced only `+0.048315468 dB`
+  global PSNR, `+0.011161912 dB` dynamic-mask PSNR, and `+0.055157407 dB`
+  static PSNR. It establishes transaction and optimizer-state stability, not a
+  visibility-mechanism win.
+- The selected direction is CSVL-VPL: a calibrated surface visibility ledger
+  coupled to a visibility-conditioned primitive lifecycle. Fixed-count
+  reassignment remains a matched-count control and reusable transaction
+  substrate.
+- The sealed P03 artifact contains useful calibrated multilayer opportunity
+  evidence, but it does not propagate persistent surface identity. Temporal
+  surface association with uncertainty and abstention is the first approved
+  implementation stage.
 
 ## Project direction
 
@@ -11,15 +26,16 @@ The approved objective has two independent parts:
 1. infer foreground/background order and occluded, hidden, and newly revealed
    surface state from calibrated multiview-temporal depth, appearance, camera
    geometry, and correspondence, with uncertainty and abstention; and
-2. couple Gate-A-passing evidence to budget-neutral preservation plus
-   reassignment/reinitialization of Gaussian capacity so intermittently visible
-   content is learned while visible and reconstructed after reveal without
-   static harm.
+2. couple Gate-A-passing evidence to surface-owned primitive birth, promotion,
+   protection, and retirement, while retaining matched-count and generic-extra-
+   capacity controls so intermittently visible content is learned while visible
+   and reconstructed after reveal without static harm.
 
-Route 1, a deterministic/frozen geometry-first visibility ledger plus one
-capacity component, is approved as lead. Route 3, explicit layered surface
-memory, is fallback. Route 2, a learned visibility field, is permitted only if
-deterministic Gate A passes but remains incomplete.
+The deterministic/frozen geometry-first ledger remains the evidence route, but
+CSVL-VPL replaces one-shot fixed-budget reassignment as the lead method.
+Reassignment remains a control. Local layered surface memory is the explicit
+fallback if a single primitive bank cannot preserve hidden and visible states.
+A learned visibility field remains deferred until deterministic Gate A passes.
 
 ## Approved experimental discipline
 

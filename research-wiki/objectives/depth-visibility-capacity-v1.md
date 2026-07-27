@@ -694,3 +694,37 @@ method and claim-driven matrix are versioned operational contracts under
 `research-wiki/operations/`; they may change concrete engineering within the
 Research Freedom clause but may not weaken approved data separation or gates.
 Every post-outcome revision requires a new experimental cycle.
+
+## 18. Post-B01 method refinement - 2026-07-25
+
+The corrected 256-slot continuation produced `+0.048315468 dB` global PSNR,
+`+0.011161912 dB` dynamic-mask PSNR, and `+0.055157407 dB` static PSNR. This
+validates the point-neutral reassignment transaction and optimizer-state reset
+as executable, but it does not validate the proposed visibility mechanism: the
+target rule was event-blind and did not use a persistent surface ledger.
+
+The objective's data discipline, calibrated-evidence requirement, Gate A/Gate B
+independence, route0 baseline, oracle attribution, event evaluation, and static
+no-harm rules remain unchanged. The representation decision is refined as
+follows:
+
+1. One-shot fixed-count reassignment is retained as a matched-count control and
+   reusable transaction substrate, not as the lead discovery mechanism.
+2. The selected method is CSVL-VPL: a calibrated surface visibility ledger
+   coupled to a surface-owned primitive lifecycle. The lifecycle may initialize
+   or promote primitives from visible multiview surface evidence, normalize
+   learning by usable exposure, protect evidence-supported hidden surfaces, and
+   retire capacity only under hysteretic low utility.
+3. The 600k route0 system remains the fixed baseline and a matched-capacity
+   comparison. Exact budget matching is not a hard discovery constraint, but
+   every lane must report realized points, parameters, optimizer and model
+   memory, training compute, wall time, and rendering speed. Generic extra
+   capacity is mandatory before attributing a gain to visibility guidance.
+4. Local layered surface memory is the representation fallback if a single
+   primitive bank cannot preserve hidden and visible surface states.
+
+This refinement does not authorize representation code or training in the
+current direction-selection task. The first approved implementation stage is
+limited to completing and verifying label-free temporal surface identity in the
+ledger. The sealed P03 artifact is an opportunity map, not a passing Gate A;
+claim-grade human evaluation remains required before representation training.

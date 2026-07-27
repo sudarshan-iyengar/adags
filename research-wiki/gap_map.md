@@ -1,6 +1,32 @@
 # Gap Map
 
-Updated 2026-06-30 after a recent literature pass over CVPR, ICCV, ECCV, NeurIPS, ICLR, SIGGRAPH Asia, arXiv, and Semantic Scholar indexed pages. Tournament update added 2026-06-30.
+Updated 2026-07-25 after the corrected CSVL-ISR B01 result, current-code
+inspection, and implementation-level literature reconciliation.
+
+## Post-B01 Update - 2026-07-25
+
+The corrected 256-slot B01 continuation is an operator-stability control, not
+mechanism evidence: global PSNR improved by only `+0.048315468 dB`, dynamic-mask
+PSNR by `+0.011161912 dB`, and static PSNR by `+0.055157407 dB`. It used an
+event-blind target rule and therefore did not test calibrated visibility-guided
+allocation.
+
+The selected direction is [[operations/phase9-post-b01-csvl-vpl-direction]]:
+CSVL-VPL, a calibrated surface visibility ledger coupled to a surface-owned
+primitive lifecycle. This refines G5, G9, G13, and G14 together. Fixed-count
+reassignment remains a matched-count control and optimizer-safe transaction
+substrate; generic extra capacity is mandatory as the capacity control.
+
+The sealed P03 artifact supplies calibrated multilayer opportunity evidence but
+does not propagate persistent surface identity. The first unresolved gap is
+therefore uncertainty-bearing temporal surface association and abstention, not
+another capacity intervention.
+
+Implementation-level novelty pressure is stronger than the earlier paper-only
+map: temporal-visibility densification, opacity modulation, proxy-guided growth,
+multi-bank promotion, and layered representations all have close precedents.
+The narrower open hypothesis is calibrated non-rigid front/rear surface identity
+plus abstaining evidence and controlled surface-owned lifecycle changes.
 
 ## Tournament Update - 2026-06-30
 
