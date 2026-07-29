@@ -3,6 +3,9 @@
 ## Current research state
 
 - [[operations/phase9-csvl-vpl-v2-direction]] (approved direction, 2026-07-29)
+- [[operations/phase0-census-result]] (PHASE0_NO_GO, 2026-07-29)
+- [[operations/phase0-census-preregistration]]
+- [[operations/phase9-annotation-contract-draft]] (awaiting user sign-off)
 - [[objectives/depth-visibility-capacity-v1]]
 - [[operations/phase9-csvl-vpl-stage1-result]] (no-go, 2026-07-26)
 - [[operations/phase9-csvl-vpl-stage1b-result]] (no-go, 2026-07-26)
