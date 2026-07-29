@@ -512,6 +512,8 @@ class CertifiedRevealTracker:
     smooth_kappa: float = 5.0
     sample_cap: int = 0
     eligible: np.ndarray | None = None
+    diagnostics: bool = False
+    diagnostics_cap: int = 100000
 
     def __post_init__(self) -> None:
         shape = (self.num_primitives, self.num_cameras)
@@ -533,6 +535,11 @@ class CertifiedRevealTracker:
         self.run_length_histogram: dict = {}
         self.completions_by_frame: dict = {}
         self.samples: list = []
+        # Diagnostic-only records (no effect on certification logic):
+        self.abort_records: list = []
+        self.short_end_records: list = []
+        self.abort_total = 0
+        self.short_end_total = 0
 
     def update(
         self,
@@ -602,6 +609,30 @@ class CertifiedRevealTracker:
         self.grace_left[charged] = (self.grace_left[charged] - charge[charged]).astype(np.int8)
         aborting = over_budget
 
+        if self.diagnostics:
+            short_end = revealing & (self.run_total < self.min_gap_occ_frames)
+            self.abort_total += int(aborting.sum())
+            self.short_end_total += int(short_end.sum())
+            if aborting.any() and len(self.abort_records) < self.diagnostics_cap:
+                prim_idx, cam_idx = np.nonzero(aborting)
+                budget = self.diagnostics_cap - len(self.abort_records)
+                for p, c in zip(prim_idx[:budget].tolist(), cam_idx[:budget].tolist()):
+                    self.abort_records.append({
+                        "primitive": int(p), "camera_index": int(c),
+                        "frame": int(frame), "gap_occ_frames": int(self.run_total[p, c]),
+                        "charge": int(charge[p, c]),
+                        "hard_interruption": bool(hard_interruption[p, c]),
+                        "broken_near": bool(broken_near[p, c]),
+                    })
+            if short_end.any() and len(self.short_end_records) < self.diagnostics_cap:
+                prim_idx, cam_idx = np.nonzero(short_end)
+                budget = self.diagnostics_cap - len(self.short_end_records)
+                for p, c in zip(prim_idx[:budget].tolist(), cam_idx[:budget].tolist()):
+                    self.short_end_records.append({
+                        "primitive": int(p), "camera_index": int(c),
+                        "frame": int(frame), "gap_occ_frames": int(self.run_total[p, c]),
+                    })
+
         ending = revealing | aborting
         if ending.any():
             self.in_occ &= ~ending
@@ -614,6 +645,16 @@ class CertifiedRevealTracker:
         self.last_occ_depth[streak_broken] = np.nan
 
         self.anchored |= self.near_consec >= self.anchor_consec
+
+    def censored_long_runs(self, min_length: int) -> list[dict[str, Any]]:
+        """Pairs still in an uncertified occlusion run of >= min_length at pass end."""
+        mask = self.in_occ & (self.run_total >= min_length)
+        prim_idx, cam_idx = np.nonzero(mask)
+        return [
+            {"primitive": int(p), "camera_index": int(c),
+             "gap_occ_frames": int(self.run_total[p, c])}
+            for p, c in zip(prim_idx.tolist(), cam_idx.tolist())
+        ]
 
     def summary(self, camera_ids: list[str]) -> dict[str, Any]:
         return {

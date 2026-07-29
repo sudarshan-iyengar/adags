@@ -191,6 +191,50 @@ class CertifiedRevealTrackerTests(unittest.TestCase):
         self.assertEqual(tracker.samples[0]["end_frame"], 6)
 
 
+class DiagnosticsRecordingTests(unittest.TestCase):
+    def test_abort_recorded_with_reason(self):
+        tracker = make_tracker(diagnostics=True)
+        drive(tracker, [NEAR, NEAR, GAP, GAP, OTHER, GAP, OTHER, GAP, NEAR, NEAR])
+        self.assertEqual(tracker.certified_total, 0)
+        self.assertEqual(tracker.abort_total, 1)
+        record = tracker.abort_records[0]
+        self.assertEqual(record["frame"], 6)
+        self.assertTrue(record["hard_interruption"])
+        self.assertGreaterEqual(record["gap_occ_frames"], 3)
+
+    def test_short_end_recorded(self):
+        tracker = make_tracker(diagnostics=True)
+        drive(tracker, [NEAR, NEAR, GAP, GAP, NEAR, NEAR])
+        self.assertEqual(tracker.certified_total, 0)
+        self.assertEqual(tracker.short_end_total, 1)
+        self.assertEqual(tracker.short_end_records[0]["gap_occ_frames"], 2)
+
+    def test_censored_long_run_reported(self):
+        tracker = make_tracker(diagnostics=True)
+        drive(tracker, [NEAR, NEAR] + [GAP] * 20)
+        self.assertEqual(tracker.certified_total, 0)
+        censored = tracker.censored_long_runs(15)
+        self.assertEqual(len(censored), 1)
+        self.assertGreaterEqual(censored[0]["gap_occ_frames"], 20)
+
+    def test_diagnostics_off_records_nothing(self):
+        tracker = make_tracker()
+        drive(tracker, [NEAR, NEAR, GAP, GAP, OTHER, GAP, OTHER, GAP, NEAR, NEAR])
+        self.assertEqual(tracker.abort_records, [])
+        self.assertEqual(tracker.abort_total, 0)
+
+    def test_certification_unaffected_by_diagnostics(self):
+        plain = make_tracker()
+        instrumented = make_tracker(diagnostics=True)
+        seq = [NEAR, NEAR, GAP, GAP, GAP, GAP, NEAR, NEAR]
+        drive(plain, seq)
+        drive(instrumented, seq)
+        self.assertEqual(plain.certified_total, instrumented.certified_total)
+        self.assertTrue(
+            np.array_equal(plain.certified_pairs, instrumented.certified_pairs)
+        )
+
+
 class QuartileAndFloorTests(unittest.TestCase):
     def test_quartile_labels(self):
         values = np.arange(100, dtype=np.float64)
