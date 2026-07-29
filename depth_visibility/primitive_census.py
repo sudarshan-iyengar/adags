@@ -431,3 +431,269 @@ def shuffled_frame_assignment(num_frames: int, num_cameras: int, seed: int) -> n
     """Per-camera fixed pseudorandom frame permutation; (C, T) int array."""
     rng = np.random.default_rng(seed)
     return np.stack([rng.permutation(num_frames) for _ in range(num_cameras)], axis=0)
+
+
+# ---------------------------------------------------------------------------
+# Census-v2: gap-aware classification and certified-reveal state machine
+# ---------------------------------------------------------------------------
+
+def classify_states_v2(
+    z: np.ndarray,
+    pixels: np.ndarray,
+    in_view: np.ndarray,
+    present: np.ndarray,
+    d_map: np.ndarray,
+    sigma_map: np.ndarray,
+    valid_map: np.ndarray,
+    *,
+    tau_rel: float,
+    kappa: float,
+    k_gap: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Per-primitive state plus gap-occlusion evidence for one (camera, frame).
+
+    Returns (states int8, gap_raw bool, occ_depth f32 NaN-filled,
+    occ_sigma f32 NaN-filled). gap_raw = BEHIND with (z - d) >= k_gap * margin
+    (witness is applied by the caller from the full state matrix).
+    """
+    n = z.shape[0]
+    states = np.zeros(n, dtype=np.int8)
+    gap_raw = np.zeros(n, dtype=bool)
+    occ_depth = np.full(n, np.nan, dtype=np.float32)
+    occ_sigma = np.full(n, np.nan, dtype=np.float32)
+    usable = in_view & present
+    if not usable.any():
+        return states, gap_raw, occ_depth, occ_sigma
+    px = pixels[usable, 0]
+    py = pixels[usable, 1]
+    pix_valid = valid_map[py, px]
+    idx = np.flatnonzero(usable)[pix_valid]
+    if idx.size == 0:
+        return states, gap_raw, occ_depth, occ_sigma
+    px = pixels[idx, 0]
+    py = pixels[idx, 1]
+    d = d_map[py, px].astype(np.float64)
+    sig = sigma_map[py, px].astype(np.float64)
+    margin = np.maximum(tau_rel * d, kappa * sig)
+    delta = z[idx] - d
+    state = np.full(idx.shape[0], STATE_NEAR_SURFACE, dtype=np.int8)
+    state[delta > margin] = STATE_BEHIND
+    state[delta < -margin] = STATE_IN_FRONT
+    states[idx] = state
+    gap_raw[idx] = delta >= k_gap * margin
+    occ_depth[idx] = d
+    occ_sigma[idx] = sig
+    return states, gap_raw, occ_depth, occ_sigma
+
+
+@dataclass
+class CertifiedRevealTracker:
+    """Vectorized anchored-hysteresis certification per (primitive, camera).
+
+    Rule (frozen in the census-v2 preregistration): an anchor of
+    `anchor_consec` consecutive near-surface frames, entry after
+    `entry_consec` consecutive gap-occluded (witnessed, coherent) frames, a
+    run totalling >= `min_gap_occ_frames` gap-occluded frames with at most
+    `grace_frames` interruption frames, certification on `reveal_consec`
+    consecutive near-surface frames. Occluder-depth coherence: an accepted
+    gap frame must satisfy |d - d_prev| <= max(smooth_rel*d,
+    smooth_kappa*sigma) against the previous accepted gap frame of the same
+    streak. Pairs where `eligible` is False never certify.
+    """
+
+    num_primitives: int
+    num_cameras: int
+    anchor_consec: int = 2
+    entry_consec: int = 2
+    reveal_consec: int = 2
+    min_gap_occ_frames: int = 3
+    grace_frames: int = 1
+    smooth_rel: float = 0.2
+    smooth_kappa: float = 5.0
+    sample_cap: int = 0
+    eligible: np.ndarray | None = None
+
+    def __post_init__(self) -> None:
+        shape = (self.num_primitives, self.num_cameras)
+        if self.eligible is None:
+            self.eligible = np.ones(shape, dtype=bool)
+        if self.eligible.shape != shape:
+            raise ValueError("eligible mask shape mismatch")
+        self.anchored = np.zeros(shape, dtype=bool)
+        self.near_consec = np.zeros(shape, dtype=np.int16)
+        self.occ_consec = np.zeros(shape, dtype=np.int16)
+        self.in_occ = np.zeros(shape, dtype=bool)
+        self.run_total = np.zeros(shape, dtype=np.int16)
+        self.grace_left = np.zeros(shape, dtype=np.int8)
+        self.last_occ_depth = np.full(shape, np.nan, dtype=np.float32)
+        self.certified_pairs = np.zeros(shape, dtype=bool)
+        self.certified_total = 0
+        self.end_frames: set = set()
+        self.per_camera = np.zeros(self.num_cameras, dtype=np.int64)
+        self.run_length_histogram: dict = {}
+        self.completions_by_frame: dict = {}
+        self.samples: list = []
+
+    def update(
+        self,
+        frame: int,
+        near: np.ndarray,
+        gap_raw: np.ndarray,
+        occ_depth: np.ndarray,
+        occ_sigma: np.ndarray,
+    ) -> None:
+        smooth_ok = np.isnan(self.last_occ_depth) | (
+            np.abs(occ_depth - self.last_occ_depth)
+            <= np.maximum(self.smooth_rel * occ_depth, self.smooth_kappa * occ_sigma)
+        )
+        gap_occ = gap_raw & smooth_ok & self.eligible
+
+        prev_near_consec = self.near_consec.copy()
+        self.near_consec = np.where(near, self.near_consec + 1, 0).astype(np.int16)
+        self.occ_consec = np.where(gap_occ, self.occ_consec + 1, 0).astype(np.int16)
+
+        entering = self.anchored & (~self.in_occ) & (self.occ_consec >= self.entry_consec)
+        if entering.any():
+            self.in_occ |= entering
+            self.run_total[entering] = self.occ_consec[entering]
+            self.grace_left[entering] = self.grace_frames
+            self.anchored &= ~entering
+
+        active = self.in_occ & ~entering
+        continuing = active & gap_occ
+        self.run_total[continuing] += 1
+
+        revealing = active & near & (self.near_consec >= self.reveal_consec)
+        certify = revealing & (self.run_total >= self.min_gap_occ_frames) & self.eligible
+        if certify.any():
+            count = int(certify.sum())
+            self.certified_total += count
+            self.certified_pairs |= certify
+            self.end_frames.add(int(frame))
+            self.per_camera += certify.sum(axis=0)
+            self.completions_by_frame[int(frame)] = (
+                self.completions_by_frame.get(int(frame), 0) + count
+            )
+            lengths, counts = np.unique(self.run_total[certify], return_counts=True)
+            for length, cnt in zip(lengths.tolist(), counts.tolist()):
+                key = int(length)
+                self.run_length_histogram[key] = self.run_length_histogram.get(key, 0) + int(cnt)
+            if self.sample_cap and len(self.samples) < self.sample_cap:
+                prim_idx, cam_idx = np.nonzero(certify)
+                budget = self.sample_cap - len(self.samples)
+                for p, c in zip(prim_idx[:budget].tolist(), cam_idx[:budget].tolist()):
+                    self.samples.append({
+                        "primitive": int(p),
+                        "camera_index": int(c),
+                        "end_frame": int(frame),
+                        "gap_occ_frames": int(self.run_total[p, c]),
+                    })
+
+        # Interruption accounting. A near frame below reveal_consec is PENDING
+        # (no charge yet): it becomes one interruption only if its streak
+        # breaks before reaching reveal_consec. A frame that is neither near
+        # nor an accepted gap frame is a hard interruption. Charges beyond the
+        # remaining grace abort the run without certification.
+        broken_near = active & (~near) & (prev_near_consec >= 1)
+        hard_interruption = active & (~near) & (~gap_occ)
+        charge = broken_near.astype(np.int8) + hard_interruption.astype(np.int8)
+        over_budget = active & (charge > self.grace_left)
+        charged = active & (charge > 0) & ~over_budget
+        self.grace_left[charged] = (self.grace_left[charged] - charge[charged]).astype(np.int8)
+        aborting = over_budget
+
+        ending = revealing | aborting
+        if ending.any():
+            self.in_occ &= ~ending
+            self.run_total[ending] = 0
+            self.grace_left[ending] = 0
+            self.last_occ_depth[ending] = np.nan
+
+        self.last_occ_depth = np.where(gap_occ, occ_depth, self.last_occ_depth)
+        streak_broken = (~self.in_occ) & (~gap_occ)
+        self.last_occ_depth[streak_broken] = np.nan
+
+        self.anchored |= self.near_consec >= self.anchor_consec
+
+    def summary(self, camera_ids: list[str]) -> dict[str, Any]:
+        return {
+            "certified_events": int(self.certified_total),
+            "certified_pairs": int(self.certified_pairs.sum()),
+            "distinct_end_frames": len(self.end_frames),
+            "distinct_end_cameras": int((self.per_camera > 0).sum()),
+            "per_camera_certified": {
+                camera_ids[c]: int(self.per_camera[c]) for c in range(self.num_cameras)
+            },
+            "run_length_histogram": {
+                str(k): v for k, v in sorted(self.run_length_histogram.items())
+            },
+            "completions_by_frame": {
+                str(k): v for k, v in sorted(self.completions_by_frame.items())
+            },
+        }
+
+
+def quartile_labels(values: np.ndarray) -> tuple[np.ndarray, list[float]]:
+    """Label each value 0..3 by quartile; returns (labels, [q25, q50, q75])."""
+    finite = np.isfinite(values)
+    if not finite.any():
+        return np.zeros(values.shape[0], dtype=np.int8), [float("nan")] * 3
+    qs = [float(np.percentile(values[finite], p)) for p in (25.0, 50.0, 75.0)]
+    labels = np.zeros(values.shape[0], dtype=np.int8)
+    labels[values > qs[0]] = 1
+    labels[values > qs[1]] = 2
+    labels[values > qs[2]] = 3
+    labels[~finite] = 0
+    return labels, qs
+
+
+def evaluate_census2_floors(summary: Mapping[str, Any], floors: Mapping[str, Any]) -> dict[str, Any]:
+    valid = summary["valid"]
+    shuffle = summary["shuffle"]
+    consistency = summary["consistency"]
+    maps = summary["consensus_maps"]
+
+    g1 = (
+        valid["certified_pairs"] >= floors["g1_min_certified_pairs"]
+        and valid["distinct_end_frames"] >= floors["g1_min_distinct_end_frames"]
+        and valid["distinct_end_cameras"] >= floors["g1_min_distinct_cameras"]
+    )
+    shuffle_pairs = max(int(shuffle["certified_pairs"]), 0)
+    if shuffle_pairs == 0:
+        rho = float("inf") if valid["certified_pairs"] > 0 else 0.0
+        g2 = valid["certified_pairs"] >= floors["g1_min_certified_pairs"]
+    else:
+        rho = valid["certified_pairs"] / shuffle_pairs
+        g2 = rho >= floors["g2_min_valid_over_shuffle"]
+    evaluated = max(int(consistency["evaluated"]), 1)
+    conflict_fraction = consistency["conflict"] / evaluated
+    g3 = (
+        conflict_fraction <= floors["g3_max_conflict_fraction"]
+        and maps["pass_fraction"] >= floors["g3_min_map_pass_fraction"]
+    )
+    per_camera = valid["per_camera_certified"]
+    total = max(sum(per_camera.values()), 1)
+    max_share = max(per_camera.values()) / total if per_camera else 1.0
+    g4 = max_share <= floors["g4_max_camera_share"]
+    verdict = bool(g1 and g2 and g3 and g4)
+    return {
+        "g1_certified_abundance": {
+            "pass": bool(g1),
+            "pairs": valid["certified_pairs"],
+            "distinct_end_frames": valid["distinct_end_frames"],
+            "distinct_end_cameras": valid["distinct_end_cameras"],
+        },
+        "g2_control_separation": {
+            "pass": bool(g2),
+            "valid_pairs": valid["certified_pairs"],
+            "shuffle_pairs": shuffle_pairs,
+            "rho": rho if np.isfinite(rho) else "inf",
+        },
+        "g3_evidence_validity": {
+            "pass": bool(g3),
+            "conflict_fraction": conflict_fraction,
+            "map_pass_fraction": maps["pass_fraction"],
+        },
+        "g4_non_degeneracy": {"pass": bool(g4), "max_camera_share": max_share},
+        "census2_go": verdict,
+    }

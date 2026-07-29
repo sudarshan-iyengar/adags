@@ -1,0 +1,95 @@
+{
+  "schema_version": "phase0-census2-config-v1",
+  "scene": "cut_roasted_beef",
+  "p01_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/cycle-v5/preprocess/cut_roasted_beef/da3",
+  "output_root": "$WORK/proj_adags/runs/phase9-depth-visibility-capacity/phase0-census2-v1",
+  "checkpoints": [
+    {
+      "label": "primary_6000",
+      "path": "$WORK/proj_adags/runs/fixed_budget_lora_route0_600k_9000/20260722_102349_cut_roasted_beef_fixed_budget_lora_route0_600k_9000/chkpnt6000.pth",
+      "role": "primary",
+      "allow_restore_failure": false
+    },
+    {
+      "label": "maturity_3000",
+      "path": "$WORK/proj_adags/runs/fixed_budget_lora_route0_600k_9000/20260722_102349_cut_roasted_beef_fixed_budget_lora_route0_600k_9000/chkpnt3000.pth",
+      "role": "comparison",
+      "allow_restore_failure": false
+    },
+    {
+      "label": "maturity_9000",
+      "path": "$WORK/proj_adags/runs/fixed_budget_lora_route0_600k_9000/20260722_102349_cut_roasted_beef_fixed_budget_lora_route0_600k_9000/chkpnt9000.pth",
+      "role": "comparison",
+      "allow_restore_failure": false
+    },
+    {
+      "label": "independent_0701_6000",
+      "path": "$WORK/proj_adags/runs/fixed_budget_lora_route0_600k/20260701_012706_cut_roasted_beef_fixed_budget_lora_route0_600k/chkpnt6000.pth",
+      "role": "comparison",
+      "allow_restore_failure": true
+    }
+  ],
+  "model": {
+    "sh_degree": 3,
+    "gaussian_dim": 4,
+    "time_duration": [0.0, 10.0],
+    "rot_4d": false,
+    "force_sh_3d": true,
+    "sh_degree_t": 0
+  },
+  "frames": {"start": 0, "end": 299, "fps": 30.0},
+  "excluded_cameras": ["cam12", "cam19"],
+  "min_members": 3,
+  "confidence_percentile": 20.0,
+  "min_valid_pixel_fraction": 0.5,
+  "opacity_floor": 0.005,
+  "marginal_t_threshold": 0.05,
+  "near_clip": 0.01,
+  "margin_tau_rel": 0.03,
+  "margin_kappa_sigma": 2.5,
+  "certification": {
+    "k_gap": 3.0,
+    "occluder_smooth_rel": 0.2,
+    "occluder_smooth_kappa_sigma": 5.0,
+    "anchor_consec": 2,
+    "entry_consec": 2,
+    "reveal_consec": 2,
+    "min_gap_occ_frames": 3,
+    "grace_frames": 1,
+    "abort_consec": 2,
+    "baseline_window": [0, 29],
+    "baseline_min_evaluable": 5,
+    "baseline_behind_majority": 0.5,
+    "certification_window": [30, 299]
+  },
+  "shuffle_seed": 20260729,
+  "consistency": {
+    "frame_stride": 10,
+    "pixel_stride": 60,
+    "camera_pair_count": 20
+  },
+  "strata": {
+    "motion_range_quartiles": true,
+    "near_stability_quartiles": true,
+    "opacity_split": 0.5,
+    "scale_quartiles": true
+  },
+  "floors": {
+    "g1_min_certified_pairs": 2000,
+    "g1_min_distinct_end_frames": 10,
+    "g1_min_distinct_cameras": 8,
+    "g2_min_valid_over_shuffle": 3.0,
+    "g3_max_conflict_fraction": 0.15,
+    "g3_min_map_pass_fraction": 0.90,
+    "g4_max_camera_share": 0.60
+  },
+  "diagnosis": {
+    "d_rho_threshold": 3.0,
+    "d4_checkpoint_dependence_ratio": 2.0
+  },
+  "transitions_sample_cap": 20000,
+  "r009_descriptive_windows": {
+    "cut_roasted_beef_hand_tongs_meat": [95, 110],
+    "cut_roasted_beef_hand_knife_meat": [140, 155]
+  }
+}
