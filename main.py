@@ -813,6 +813,114 @@ def maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration):
 
 
 
+LIFECYCLE_FPS = 30.0
+
+
+def lifecycle_view_key(viewpoint_cam):
+    """Map a training camera onto the ``(camera_id, frame)`` evidence key.
+
+    N3V image names are ``<camera>_<frame>`` and timestamps are ``frame / 30``
+    (see scene/dataset_readers.py), which is why the lifecycle runs at
+    ``LIFECYCLE_FPS`` and why ``frame_ratio != 1`` is rejected at setup.
+    """
+
+    name = str(getattr(viewpoint_cam, "image_name", "") or "")
+    camera_id = name.split("_")[0]
+    if not camera_id or camera_id == name:
+        raise ContractError(
+            f"lifecycle requires <camera>_<frame> image names, got {name!r}"
+        )
+    return camera_id, int(round(float(viewpoint_cam.timestamp) * LIFECYCLE_FPS))
+
+
+def setup_lifecycle(gaussians, scene, dataset, opt, device="cuda"):
+    """Build the CSVL-VPL v2 evidence runtime and lifecycle manager.
+
+    Returns ``None`` when ``lifecycle_enable`` is false so that non-lifecycle
+    lanes keep the base trainer behaviour exactly. Fail-closed on every missing
+    or inconsistent input.
+    """
+
+    if not bool(getattr(opt, "lifecycle_enable", False)):
+        return None
+
+    from depth_visibility.evidence_runtime import EvidenceRuntime
+    from scene.lifecycle import LifecycleConfig, LifecycleManager
+
+    raw_dir = str(getattr(opt, "lifecycle_evidence_dir", "") or "")
+    if not raw_dir:
+        raise ContractError("lifecycle_enable requires a lifecycle_evidence_dir")
+    # OmegaConf does not expand shell variables, so lane configs may carry $WORK.
+    evidence_dir = os.path.expandvars(os.path.expanduser(raw_dir))
+    if "$" in evidence_dir:
+        raise ContractError(
+            f"lifecycle_evidence_dir keeps unresolved environment variables: {evidence_dir}"
+        )
+    if not os.path.isdir(evidence_dir):
+        raise ContractError(f"lifecycle evidence directory not found: {evidence_dir}")
+
+    frame_ratio = int(getattr(dataset, "frame_ratio", 1) or 1)
+    if frame_ratio != 1:
+        raise ContractError(
+            "the lifecycle frame mapping assumes frame_ratio == 1 "
+            f"(timestamp * {LIFECYCLE_FPS:g}); got frame_ratio={frame_ratio}"
+        )
+
+    time_shift = int(getattr(opt, "lifecycle_time_shift", 0))
+    evidence = EvidenceRuntime(
+        consensus_dir=evidence_dir,
+        device=device,
+        mode="time_shift" if time_shift else "valid",
+        time_shift=time_shift,
+        tau_rel=float(getattr(opt, "lifecycle_tau_rel", 0.03)),
+        kappa=float(getattr(opt, "lifecycle_kappa", 2.5)),
+        k_gap=float(getattr(opt, "lifecycle_k_gap", 3.0)),
+        sigma_abstain=float(getattr(opt, "lifecycle_sigma_abstain", 0.20)),
+        preload=bool(getattr(opt, "lifecycle_evidence_preload", True)),
+    )
+
+    cfg = LifecycleConfig.from_namespace(opt)
+    scene_extent = float(getattr(scene, "cameras_extent", 0.0) or 0.0)
+    if scene_extent <= 0.0:
+        scene_extent = float(getattr(gaussians, "spatial_lr_scale", 0.0) or 0.0)
+    if scene_extent <= 0.0:
+        raise ContractError("lifecycle requires a positive scene extent")
+
+    ledger_path = os.path.join(scene.model_path, "lifecycle-ledger.jsonl")
+    manager = LifecycleManager(
+        gaussians,
+        evidence,
+        cfg,
+        ledger_path=ledger_path,
+        scene_extent=scene_extent,
+        fps=LIFECYCLE_FPS,
+    )
+    gaussians.lifecycle = manager
+
+    pending_state = getattr(gaussians, "_pending_lifecycle_state", None)
+    restored = bool(pending_state) and manager.load_state_dict(pending_state)
+    gaussians._pending_lifecycle_state = None
+
+    print(json.dumps({
+        "lifecycle_setup": {
+            "evidence_dir": evidence_dir,
+            "evidence_mode": cfg.evidence_mode,
+            "runtime_mode": evidence.mode,
+            "time_shift": time_shift,
+            "cameras": len(getattr(evidence, "cameras", []) or []),
+            "frames": len(getattr(evidence, "frames", []) or []),
+            "protection": bool(cfg.protection),
+            "exposure": bool(cfg.exposure),
+            "birth": bool(cfg.birth),
+            "birth_mode": cfg.birth_mode,
+            "scene_extent": scene_extent,
+            "ledger_path": ledger_path,
+            "state_restored": restored,
+        }
+    }, sort_keys=True))
+    return manager
+
+
 def write_local_run_summary(model_path, summary_updates):
     path = Path(model_path) / "summary.json"
     payload = {
@@ -999,6 +1107,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     configure_visibility_events_from_opt(gaussians, opt, dataset.source_path)
     validate_slice_b_capacity_configuration(opt)
     gaussians.slice_b_capacity_transactions = []
+    # CSVL-VPL v2: built after training_setup and after the optional checkpoint
+    # restore so the manager sees the final row count and any stashed state.
+    lifecycle_manager = setup_lifecycle(gaussians, scene, dataset, opt)
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -1086,6 +1197,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             batch_point_grad, batch_visibility_filter, batch_radii = [], [], []
             batch_point_grad_static, batch_visibility_filter_static, batch_radii_static = [], [], []
             batch_dynamic_densify_weight = []
+            lifecycle_views = []
+            lifecycle_gt_images = []
+            lifecycle_protected = 0
             Ldynamic_roi = torch.tensor(0.0, device=device)
             Lstatic_exclusion = torch.tensor(0.0, device=device)
             Ltrack_flow = torch.tensor(0.0, device=device)
@@ -1102,6 +1216,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 gt_image, viewpoint_cam = batch_data[batch_idx]
                 gt_image = gt_image.cuda()
                 viewpoint_cam = viewpoint_cam.cuda()
+
+                if lifecycle_manager is not None:
+                    # One entry per rendered view, in micro-batch order; the
+                    # index is the `view_index` used by accumulate_exposure.
+                    lifecycle_views.append(lifecycle_view_key(viewpoint_cam))
+                    lifecycle_gt_images.append(gt_image)
 
                 render_pkg = render(viewpoint_cam, gaussians, pipe, background)
                 image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
@@ -1315,6 +1435,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     total_loss += Lscaffold_reg.item()
                     Lscaffold_reg.backward()
 
+            # ================= CSVL-VPL v2 evidence + protection =================
+            # Placed after EVERY backward of the iteration (reconstruction,
+            # gate, motion and scaffold terms) and before optimizer.step(), so
+            # frozen rows cannot pick gradient back up from a later backward.
+            if lifecycle_manager is not None:
+                lifecycle_manager.observe_batch(lifecycle_views, iteration)
+                lifecycle_protected = lifecycle_manager.apply_protection()
+
             iter_end.record()
 
             # ================= logging dictionary =================
@@ -1419,11 +1547,31 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         if static:
                             gaussians.add_densification_stats_grad_static(batch_viewspace_point_grad_static, visibility_filter_static)
 
+                    # Exposure mirrors the densification denominator exactly: the
+                    # same `visibility_filter` that add_densification_stats* just
+                    # used, once per rendered view with that view's evidence
+                    # weights. With all-ones weights this sums to
+                    # batch_size * denom, which the /batch_size below undoes.
+                    if lifecycle_manager is not None:
+                        for view_index in range(len(lifecycle_views)):
+                            lifecycle_manager.accumulate_exposure(view_index, visibility_filter)
+
                     if iteration > opt.densify_from_iter:
                         size_threshold = 20 if iteration > opt.opacity_reset_interval else None
                         if iteration % opt.densification_interval == 0:
                             if hard_static_conversion:
                                 gaussians.update_staticness_score()
+                            lifecycle_exposure_denominator = None
+                            lifecycle_protect_mask = None
+                            if lifecycle_manager is not None:
+                                lifecycle_exposure_denominator = lifecycle_manager.exposure_denominator()
+                                if lifecycle_exposure_denominator is not None and batch_size > 1:
+                                    # exposure counts views, `denom` counts
+                                    # iterations; convert to iteration units so
+                                    # densify_grad_threshold keeps its meaning.
+                                    lifecycle_exposure_denominator = lifecycle_exposure_denominator / float(batch_size)
+                                if lifecycle_manager.cfg.protection:
+                                    lifecycle_protect_mask = lifecycle_manager.protected_persistent()
                             gaussians.densify_and_prune(
                                 max_grad=opt.densify_grad_threshold,
                                 min_opacity=opt.thresh_opa_prune,
@@ -1436,6 +1584,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                                 iteration=iteration,
                                 enable_hard_static_conversion=hard_static_conversion,
                                 max_total_points=opt.densify_until_num_points,
+                                exposure_denominator=lifecycle_exposure_denominator,
+                                protect_mask=lifecycle_protect_mask,
                             )
                     if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                         gaussians.reset_opacity()
@@ -1447,6 +1597,34 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     if pipe.env_map_res and iteration < pipe.env_optimize_until and env_map_optimizer is not None:
                         env_map_optimizer.step()
                         env_map_optimizer.zero_grad(set_to_none=True)
+
+                # ================= CSVL-VPL v2 birth + ledger =================
+                # After optimizer.step() so Adam moments exist for every row the
+                # point-neutral transaction may reassign. Already inside no_grad.
+                if lifecycle_manager is not None:
+                    if lifecycle_views:
+                        birth_view = lifecycle_views[0]
+                        birth_gt_image = lifecycle_gt_images[0]
+                        for view_index, view in enumerate(lifecycle_views):
+                            # Prefer a view whose camera actually carries evidence;
+                            # cam12/cam19 are trained but excluded from the census.
+                            if lifecycle_manager.evidence.has_camera(view[0]):
+                                birth_view = view
+                                birth_gt_image = lifecycle_gt_images[view_index]
+                                break
+                        birth_record = lifecycle_manager.maybe_birth(
+                            iteration,
+                            birth_view,
+                            gt_image=birth_gt_image,
+                            spatial_lr_scale=gaussians.spatial_lr_scale,
+                        )
+                        if birth_record is not None:
+                            print(json.dumps(
+                                {"lifecycle_birth": birth_record},
+                                sort_keys=True,
+                                default=lambda value: value.item() if hasattr(value, "item") else str(value),
+                            ))
+                    lifecycle_manager.log(iteration, extra={"n_protected": int(lifecycle_protected)})
 
     final_diagnostics = collect_decomposition_diagnostics(scene.gaussians, opt)
     capacity_ledger_path = write_slice_b_capacity_ledger(scene.model_path, scene.gaussians, opt)
@@ -1469,6 +1647,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         "visibility_event_count": len(getattr(scene.gaussians, "visibility_event_runtime_events", []) or []),
         "slice_b_capacity_ledger": capacity_ledger_path,
     }
+    if lifecycle_manager is not None:
+        summary_updates["lifecycle"] = lifecycle_manager.summary()
+        summary_updates["lifecycle_ledger"] = lifecycle_manager.ledger_path
     if best_val_metrics is not None:
         summary_updates.update(prefixed_summary_metrics("best_val", best_val_metrics))
     final_metrics = dict(final_diagnostics)

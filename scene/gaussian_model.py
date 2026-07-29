@@ -34,6 +34,47 @@ from depth_visibility.capacity import CapacityBank, capacity_budget as capacity_
 from depth_visibility.errors import ContractError
 
 
+def _as_row_bool_mask(mask, row_count, where, device=None):
+    """Fail-closed (N,) bool view of a per-primitive mask.
+
+    Rows appended after the mask was captured (densification clones/splits) are
+    never protected, so a shorter mask is padded with ``False``. A longer mask
+    means the caller lost row alignment and is a hard error.
+    """
+
+    if mask is None:
+        return None
+    values = torch.as_tensor(mask).reshape(-1)
+    if values.dtype != torch.bool:
+        values = values.to(torch.bool)
+    if device is not None:
+        values = values.to(device)
+    row_count = int(row_count)
+    have = int(values.shape[0])
+    if have == row_count:
+        return values
+    if have < row_count:
+        pad = torch.zeros(row_count - have, dtype=torch.bool, device=values.device)
+        return torch.cat([values, pad], dim=0)
+    raise ContractError(
+        f"{where}: protection mask has {have} rows but the Gaussian bank has {row_count}"
+    )
+
+
+def _as_row_denominator(values, row_count, where, device=None):
+    """Fail-closed (N, 1) float view of a per-primitive densification denominator."""
+
+    tensor = torch.as_tensor(values).reshape(-1, 1)
+    if int(tensor.shape[0]) != int(row_count):
+        raise ContractError(
+            f"{where}: densification denominator has {int(tensor.shape[0])} rows but the "
+            f"Gaussian bank has {int(row_count)}"
+        )
+    if device is not None:
+        tensor = tensor.to(device)
+    return tensor.to(torch.float32)
+
+
 class GaussianModel:
 
     def setup_functions(self):
@@ -166,6 +207,11 @@ class GaussianModel:
         self._motion_scaffold_attach_idx = torch.empty(0, dtype=torch.long)
         self._motion_scaffold_attach_w = torch.empty(0)
 
+        # CSVL-VPL v2: set by the trainer to a scene.lifecycle.LifecycleManager.
+        # Stays None for every lane that does not enable the lifecycle.
+        self.lifecycle = None
+        self._pending_lifecycle_state = None
+
         self.setup_functions()
 
     def capture(self):
@@ -220,6 +266,11 @@ class GaussianModel:
                 "motion_scaffold_weight_temp": self.motion_scaffold_weight_temp,
                 "motion_track_dt": self.motion_track_dt,
                 "capacity_state": self._capture_capacity_state(),
+                "lifecycle_state": (
+                    self.lifecycle.state_dict()
+                    if getattr(self, "lifecycle", None) is not None
+                    else None
+                ),
             }
 
             return (
@@ -389,6 +440,10 @@ class GaussianModel:
                     "motion_track_dt", self.motion_track_dt
                 )
                 self._restore_capacity_state(routing_motion_params.get("capacity_state"))
+                # The lifecycle manager does not exist yet at restore time; stash
+                # the payload so the trainer can hand it to the manager it builds
+                # immediately after. Tolerant when the checkpoint predates v2.
+                self._pending_lifecycle_state = routing_motion_params.get("lifecycle_state")
 
         if training_args is not None:
             self.training_setup(training_args)
@@ -1497,6 +1552,13 @@ class GaussianModel:
                 self._staticness_score = self._staticness_score[valid_points_mask]
             self._prune_capacity_state(capacity_valid_points_mask)
 
+        # CSVL-VPL v2 row-alignment hook: slice lifecycle state with the surviving
+        # rows. Runs for every prune path (densify prune, split parent removal,
+        # dynamic->static conversion).
+        lifecycle = getattr(self, "lifecycle", None)
+        if lifecycle is not None:
+            lifecycle.on_rows_pruned(valid_points_mask)
+
     def prune_static_points(self, mask):
         valid_points_mask = ~mask
         optimizable_tensors = self._prune_optimizer(valid_points_mask, static=True)
@@ -1712,6 +1774,13 @@ class GaussianModel:
         if self.gaussian_dim == 4:
             self._append_capacity_rows(new_xyz.shape[0], created_iteration)
 
+        # CSVL-VPL v2 row-alignment hook: extend lifecycle state for the appended
+        # rows and restart the exposure denominator at the densify round boundary
+        # (mirrors the xyz_gradient_accum/denom reset above).
+        lifecycle = getattr(self, "lifecycle", None)
+        if lifecycle is not None:
+            lifecycle.on_rows_added(int(new_xyz.shape[0]), iteration=created_iteration)
+
     def densification_postfix_static(
             self,
             new_xyz,
@@ -1792,7 +1861,8 @@ class GaussianModel:
 
     # split/clone methods unchanged (just using helpers above)
 
-    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2, max_new_points=None, iteration=None):
+    def densify_and_split(self, grads, grad_threshold, scene_extent, N=2, max_new_points=None, iteration=None,
+                          protect_mask=None):
         n_init_points = self.get_xyz.shape[0]
         padded_grad = torch.zeros((n_init_points), device="cuda")
         padded_grad[: grads.shape[0]] = grads.squeeze()
@@ -1802,6 +1872,13 @@ class GaussianModel:
             torch.max(self.get_scaling, dim=1).values
             > self.percent_dense * scene_extent,
             )
+        # CSVL-VPL v2 protection veto: a split destroys its parent, so persistently
+        # occluded rows must never be selected.
+        split_protect_mask = _as_row_bool_mask(
+            protect_mask, n_init_points, "densify_and_split", device=selected_pts_mask.device
+        )
+        if split_protect_mask is not None:
+            selected_pts_mask = torch.logical_and(selected_pts_mask, ~split_protect_mask)
         selected_pts_mask = self._limit_densify_selection(selected_pts_mask, padded_grad, max_new_points)
         selected_count = int(selected_pts_mask.sum().item())
         if selected_count == 0:
@@ -1919,9 +1996,15 @@ class GaussianModel:
             created_iteration=iteration,
         )
 
+        parent_removal_mask = selected_pts_mask
+        if split_protect_mask is not None:
+            # Redundant by construction (the veto was applied before selection);
+            # kept explicit so the parent-removal path can never delete a
+            # protected row if the selection logic changes.
+            parent_removal_mask = torch.logical_and(parent_removal_mask, ~split_protect_mask)
         prune_filter = torch.cat(
             (
-                selected_pts_mask,
+                parent_removal_mask,
                 torch.zeros(
                     N * selected_pts_mask.sum(),
                     device="cuda",
@@ -2097,7 +2180,25 @@ class GaussianModel:
             iteration=None,
             enable_hard_static_conversion=False,
             max_total_points=-1,
+            *,
+            exposure_denominator=None,
+            protect_mask=None,
     ):
+        # CSVL-VPL v2: `exposure_denominator` replaces `denom` in the densification
+        # gradient normalization and `protect_mask` vetoes destructive operations
+        # (prune, split parent removal) on persistently occluded rows. Both are
+        # None for every lane that does not enable the lifecycle, which leaves the
+        # base behaviour bit-identical.
+        def _current_protect_mask(expected_rows, where):
+            if protect_mask is None:
+                return None
+            lifecycle = getattr(self, "lifecycle", None)
+            # The lifecycle manager keeps its state row-aligned through the
+            # densification_postfix/prune_points hooks, so re-reading it is the
+            # only correct way to track the mask across intra-call row changes.
+            source = protect_mask if lifecycle is None else lifecycle.protected_persistent()
+            return _as_row_bool_mask(source, expected_rows, where, device=self._xyz.device)
+
         # 1) Snapshot temporal gradients BEFORE we touch the point set
         avg_t_grad_snapshot = None
         if self.gaussian_dim == 4 and self.t_gradient_accum.numel() > 0:
@@ -2135,8 +2236,29 @@ class GaussianModel:
             )
 
         # 3) NOW compute grads for densification on the updated dynamic set
-        grads = self.xyz_gradient_accum / self.denom.clamp_min(1.0)
+        densify_denominator = self.denom
+        if exposure_denominator is not None:
+            densify_denominator = _as_row_denominator(
+                exposure_denominator,
+                self.xyz_gradient_accum.shape[0],
+                "densify_and_prune exposure denominator",
+                device=self.xyz_gradient_accum.device,
+            )
+        grads = self.xyz_gradient_accum / densify_denominator.clamp_min(1.0)
         grads[grads.isnan()] = 0.0
+
+        # CSVL-VPL v2 protection veto on the densification score. A persistently
+        # occluded row is frozen (its gradient rows are zeroed every iteration),
+        # so it must not spend densification budget either. This also removes the
+        # exposure floor artifact: `exposure.clamp(min=1)` turns "no exposed
+        # observation this round" into a denominator of one, which would turn the
+        # raw accumulated sum of a fully hidden row into a large densification
+        # score. Only active when protection is on (protect_mask is not None).
+        densify_protect_mask = _current_protect_mask(
+            int(grads.shape[0]), "densify_and_prune densification-score veto"
+        )
+        if densify_protect_mask is not None:
+            grads[densify_protect_mask] = 0.0
 
         # 4) Densify dynamic gaussians
         remaining_new_points = None
@@ -2158,6 +2280,9 @@ class GaussianModel:
             extent,
             max_new_points=remaining_new_points,
             iteration=iteration,
+            protect_mask=_current_protect_mask(
+                int(self.get_xyz.shape[0]), "densify_and_prune split veto"
+            ),
         )
 
         # 5) Densify static gaussians (unchanged)
@@ -2173,6 +2298,11 @@ class GaussianModel:
             big_points_vs = self.max_radii2D > max_screen_size
             big_points_ws = self.get_scaling.max(dim=1).values > 0.1 * extent
             prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
+        prune_protect_mask = _current_protect_mask(
+            int(self.get_xyz.shape[0]), "densify_and_prune prune veto"
+        )
+        if prune_protect_mask is not None:
+            prune_mask = torch.logical_and(prune_mask, ~prune_protect_mask)
         self.prune_points(prune_mask)
 
         # 7) Prune static

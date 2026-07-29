@@ -184,6 +184,41 @@ class OptimizationParams(ParamGroup):
         self.blur_start_sigma = 8.0    # Initial sigma for the blur kernel
         self.histogram_log_interval = 1
 
+        # ---------------- CSVL-VPL v2 visibility-conditioned lifecycle ----------------
+        # Master switch plus the evidence-runtime knobs (EvidenceRuntime, Component 2).
+        self.lifecycle_enable = False
+        self.lifecycle_evidence_dir = ""
+        self.lifecycle_time_shift = 0
+        self.lifecycle_tau_rel = 0.03
+        self.lifecycle_kappa = 2.5
+        self.lifecycle_k_gap = 3.0
+        self.lifecycle_sigma_abstain = 0.20
+        self.lifecycle_evidence_preload = True
+
+        # LifecycleConfig mirror: every field below is read by
+        # scene.lifecycle.LifecycleConfig.from_namespace(opt, prefix="lifecycle_")
+        # and MUST keep the `lifecycle_<field name>` spelling.
+        self.lifecycle_evidence_mode = "e1"
+        self.lifecycle_protection = False
+        self.lifecycle_exposure = False
+        self.lifecycle_birth = False
+        self.lifecycle_birth_mode = "e2"
+        self.lifecycle_occ_exposure_weight = 0.0
+        self.lifecycle_weak_exposure_weight = 0.5
+        self.lifecycle_protect_ema_beta = 0.98
+        self.lifecycle_protect_ema_threshold = 0.6
+        self.lifecycle_birth_interval = 500
+        self.lifecycle_birth_k = 256
+        self.lifecycle_birth_warmup = 1500
+        self.lifecycle_birth_until = 5500
+        self.lifecycle_birth_min_deficit = 64
+        self.lifecycle_deficit_cell_rel = 0.01
+        self.lifecycle_birth_view_checks = 3
+        self.lifecycle_birth_view_min_near = 2
+        self.lifecycle_backproject_stride = 6
+        self.lifecycle_backproject_sigma_max = 0.12
+        self.lifecycle_ledger_interval = 100
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
