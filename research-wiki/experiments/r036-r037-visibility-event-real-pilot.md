@@ -50,3 +50,25 @@ Gate counts:
 - R037 mean oracle PSNR-gap recovery: `-0.0391`.
 
 Interpretation: this invalidates the current fixed opacity-gate training-loop form of the idea. It does not prove visibility-event modeling impossible, but the current non-oracle candidate-local opacity attenuation worsens crop fidelity and static ghosting. Future work should change the mechanism rather than retune R037 on the frozen windows.
+
+## Correction - 2026-07-29
+
+Two material facts were missing from this page:
+
+1. R035 admission rejected 0 of 72 candidates with mean delta score
+   `+0.200982` (`refine-logs/hide_reveal_poc/r035_visibility_event_admission/
+   visibility_event_admission_report.md`) — on the normal-motion side of the
+   R034 synthetic separation (true events `-0.566`, normal `+0.394`). The
+   counterfactual event margin, the idea's core discriminator, had
+   effectively zero separation on real data: Kill Condition 2 of
+   [[ideas/event-causal-visibility-gaussians]] fired before the pilot ran.
+   Running R037 on the candidate set the method's own admission had rejected
+   was a process failure; a method with abstention that is overridden is no
+   longer the method.
+2. R034's perfect synthetic result (AUC 1.0, n=120) predicted nothing about
+   real admission. Synthetic-fixture passage must never be a Go criterion —
+   a trap repeated by the Stage 1 fixtures
+   ([[operations/phase9-csvl-vpl-stage1-result]]).
+
+The +30% static-ghost regression (0.127333 to 0.165836) is the mechanistic
+fingerprint of attenuating dynamic primitives over an intact static branch.
