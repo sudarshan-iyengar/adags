@@ -3,6 +3,8 @@
 ## Current research state
 
 - [[operations/phase9-csvl-vpl-v2-direction]] (approved direction, 2026-07-29)
+- [[operations/phase0-audit-result]] (blinded forensic audit, 2026-07-30)
+- [[operations/phase9-annotation-pilot-protocol]] (prepared, not run)
 - [[operations/phase0-census2-result]] (CENSUS2_NO_GO, D3 carrier exonerated, 2026-07-29)
 - [[operations/phase0-census2-preregistration]]
 - [[operations/phase0-census-result]] (PHASE0_NO_GO, 2026-07-29)
