@@ -1624,7 +1624,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                                 sort_keys=True,
                                 default=lambda value: value.item() if hasattr(value, "item") else str(value),
                             ))
-                    lifecycle_manager.log(iteration, extra={"n_protected": int(lifecycle_protected)})
+                    lifecycle_manager.log(iteration, extra={
+                        "n_protected": int(lifecycle_protected),
+                        "cuda_max_allocated_bytes": int(torch.cuda.max_memory_allocated())
+                        if torch.cuda.is_available() else None,
+                    })
 
     final_diagnostics = collect_decomposition_diagnostics(scene.gaussians, opt)
     capacity_ledger_path = write_slice_b_capacity_ledger(scene.model_path, scene.gaussians, opt)

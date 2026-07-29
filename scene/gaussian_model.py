@@ -2244,6 +2244,20 @@ class GaussianModel:
                 "densify_and_prune exposure denominator",
                 device=self.xyz_gradient_accum.device,
             )
+            # Mean-preserving renormalization: exposure weights are <= 1, so a
+            # raw exposure denominator would inflate every densification score
+            # and turn the mechanism into a one-sided capacity amplifier,
+            # breaking the capacity-matched control lanes. Rescale so the
+            # total denominator mass over observed rows equals the baseline
+            # denominator mass: exposure then REALLOCATES priority toward
+            # under-exposed primitives without changing the average score.
+            # Under all-ones weights the scale is exactly 1 and the baseline
+            # is recovered bit-for-bit up to float rounding.
+            observed = (self.denom > 0).reshape(-1)
+            if observed.any():
+                base_mass = self.denom.reshape(-1)[observed].sum()
+                exposure_mass = densify_denominator.reshape(-1)[observed].sum().clamp_min(1e-12)
+                densify_denominator = densify_denominator * (base_mass / exposure_mass)
         grads = self.xyz_gradient_accum / densify_denominator.clamp_min(1.0)
         grads[grads.isnan()] = 0.0
 

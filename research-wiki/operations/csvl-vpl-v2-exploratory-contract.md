@@ -39,12 +39,14 @@ static-region PSNR) is reported alongside; the two protocols are never mixed.
 | L0 | `lane_l0_route0` | base, lifecycle off | in-harness baseline |
 | L1 | `lane_l1_internal` | E1 protection + occlusion-aware exposure normalization; no births | do the internal limbs alone help? |
 | L2 | `lane_l2_presence_vad` | presence-weighted exposure only (TAD-GS-style control); no protection, no births | is occlusion-awareness needed, or does any presence reweighting do it? |
-| L3 | `lane_l3_full` | full automatic lifecycle: protection + exposure + E2 birth with budget-matched retirement + reveal/unfreeze | the headline mechanism |
+| L3 | `lane_l3_full` | full automatic lifecycle: protection + exposure + E2 birth with point-neutral donor reassignment (retirement = event-blind donor rule with EMA veto plus ordinary EMA-vetoed pruning); reveal/unfreeze is implicit in the stateless per-iteration masking | the headline mechanism |
 | L4 | `lane_l4_generic_capacity` | event-blind births (B01-style targets) at identical cadence/K/donor rule; protection/exposure off | is L3's effect just capacity churn? |
-| L5 | `lane_l5_shifted` | L3 with per-camera circular time-shift (+101 frames) of the evidence | is L3's effect evidence-alignment-specific? |
+| L5 | `lane_l5_shifted` | L3 with one global circular time-shift (+101 frames) applied identically to every camera, preserving cross-camera consistency | is L3's effect evidence-alignment-specific? |
 
 Control-design note (workstream A lesson): the misaligned-evidence control is a
-circular TIME-SHIFT, not a frame shuffle. The audit
+circular TIME-SHIFT, not a frame shuffle: one global shift applied
+identically to every camera, so the evidence stays cross-camera consistent
+and temporally coherent while being wrong-time. The audit
 ([[operations/phase0-audit-result]]) showed frame-shuffling manufactures
 pseudo-events for transition-triggered logic; a time-shift keeps evidence
 temporally coherent while destroying alignment, so it inherits no such
@@ -61,7 +63,9 @@ round 1; the effect-size floor below compensates conservatively.
 Mechanism definitions as implemented (binding for interpretation):
 
 - **Protection** (L1/L3/L5) = per-iteration gradient freezing of primitives
-  whose E1 verdict is OCCLUDED in every evidence-bearing view of the batch,
+  whose E1 verdict is OCCLUDED in every evidence-bearing view of the batch
+  (per-iteration gradient masking — Adam momentum and the shared LoRA basis
+  are not frozen, so this is damping, not a hard freeze),
   PLUS persistent-occlusion (EMA > 0.6) vetoes on pruning, split selection,
   split parent-removal, donor selection, and the densification score (a
   frozen row may not spend clone/split budget — this also guards the
@@ -84,12 +88,20 @@ Mechanism definitions as implemented (binding for interpretation):
 
 ## Schedules, budgets, resources
 
+- Exposure normalization is mean-preserving over observed rows (verified
+  reduction to the baseline denominator under all-ones weights), so exposure
+  lanes reallocate densification priority rather than amplifying total
+  growth. Realized point counts at 1000/3000/6000 are reported for every
+  lane, and the L3-vs-L4 capacity attribution is valid only if their final
+  point counts agree within 2%; otherwise only the resource-disclosed
+  comparison is reported.
 - Iterations 6000; densification per base config; births (L3/L4/L5): K=256
   every 500 iterations in [1500, 5500] (max 9 events, <=2304 reassigned rows),
   strictly point-neutral through the B01 transaction (hard postcondition).
 - Checkpoints saved at 1000/3000/6000; test_iterations 1000/2000/3000/4500/6000.
-- Per-lane: 1 A100, <=6 h wall. Round-1 cap: <=30 GPU-h photographic
-  (6 lanes + smoke + evals + qualitative renders).
+- Per-lane: 1 A100, <=6 h wall (measured baseline ~3.3 h + eval). Round-1:
+  expected ~24 GPU-h, hard worst-case 40 GPU-h (6 lanes + smokes + evals +
+  qualitative renders).
 - **Result-conditioned iteration cap: at most 3 rounds total** (this round
   included). Uniform bug fixes applied identically to every lane do not count
   as rounds; mechanism changes in response to a mechanism's own result do, are
@@ -115,13 +127,15 @@ totals. Round-1 validity requirements:
 
 ## Interpretations (pre-declared)
 
-Noise band: |dPSNR| < 0.05 dB or |dLPIPS| < 1% relative — differences inside it
-are nulls (heuristic band from B01-scale experience; single seed — stated
-limitation).
+Noise bands are per-metric: |dPSNR| < 0.05 dB and relative |dLPIPS| < 1%.
+A lane is a NULL only if BOTH metrics are inside their bands. A SIGNAL claim
+requires at least one metric outside its band with the other metric not
+contradicting it (i.e., not outside its band in the harmful direction).
+(Heuristic bands from B01-scale experience; single seed — stated limitation.)
 
 - **Mechanism-consistent signal**: L3 > L0, L3 > L4, L3 > L5 outside the band
-  on val PSNR or LPIPS, static-region PSNR within -0.05 dB of L0, activation
-  valid -> justifies moving toward annotated event evaluation. Does NOT
+  on val PSNR or LPIPS, static-region PSNR (a training_report-protocol diagnostic, disclosed as
+  such) within -0.05 dB of L0, activation valid -> justifies moving toward annotated event evaluation. Does NOT
   support: any disocclusion claim (needs annotated events + the full causal
   matrix per the objective), any Gate A/B statement, any claim beyond
   cut_roasted_beef at seed 0.

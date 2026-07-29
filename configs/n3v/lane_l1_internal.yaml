@@ -2,7 +2,8 @@
 # E1 external reprojection visibility freezes gradient rows that every
 # evidence-bearing view of the batch reports OCCLUDED, and normalizes the
 # densification gradient by exposed observations instead of rendered views.
-# Capacity operators are untouched, so the point budget matches L0.
+# Exposure reallocates densification priority mean-preservingly; realized point
+# counts are reported per checkpoint and must be compared, not assumed equal.
 gaussian_dim: 4
 time_duration: [0.0, 10.0]
 num_pts: 300_0000

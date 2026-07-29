@@ -195,6 +195,7 @@ class LifecycleManager:
         self.occluded_ema = torch.zeros(count, dtype=torch.float32, device=device)
         self.exposure_accum = torch.zeros(count, dtype=torch.float32, device=device)
         self.born_at = torch.zeros(count, dtype=torch.long, device=device)
+        self._pruned_id_buffer: list[int] = []
 
         self._views: list[tuple[str, int]] = []
         self._verdicts: list[Optional[torch.Tensor]] = []
@@ -663,7 +664,15 @@ class LifecycleManager:
             raise ContractError("capacity bank rows do not match lifecycle state rows")
 
         excluded = self.persistent_occluded_mask().to(device=bank.parameters["_xyz"].device)
+        # Recently-born slots are also excluded from the donor universe so a
+        # birth cannot be recycled as a donor at the next event (slot
+        # ping-pong); identical in e2 and generic modes.
+        recent = (
+            (iteration - self.born_at.to(device=excluded.device)) < int(cfg.birth_interval)
+        ) & (self.born_at.to(device=excluded.device) > 0)
         record["donor_protected_excluded"] = int(excluded.sum().item())
+        record["donor_recent_born_excluded"] = int(recent.sum().item())
+        excluded = excluded | recent
 
         extent = self.scene_extent
         if extent <= 0.0 and spatial_lr_scale:
@@ -836,6 +845,15 @@ class LifecycleManager:
                 f"({int(self.occluded_ema.shape[0])})"
             )
         self.rows_pruned_total += int((~mask).sum().item())
+        pruned = (~mask).nonzero(as_tuple=False).reshape(-1)
+        if pruned.numel():
+            stable = getattr(self.gaussians, "_capacity_stable_ids", None)
+            if stable is not None and int(stable.numel()) == int(mask.shape[0]):
+                sample = stable.reshape(-1)[pruned[:64]].tolist()
+            else:
+                sample = pruned[:64].tolist()
+            self._pruned_id_buffer.extend(int(v) for v in sample)
+            self._pruned_id_buffer = self._pruned_id_buffer[-256:]
         self.occluded_ema = self.occluded_ema[mask]
         self.exposure_accum = self.exposure_accum[mask]
         self.born_at = self.born_at[mask]
@@ -909,10 +927,24 @@ class LifecycleManager:
             "points": int(self.occluded_ema.shape[0]),
             "timers_s": {key: round(float(value), 6) for key, value in self.timers.items()},
         }
+        record["protected_stable_ids_sample"] = self._stable_id_sample(
+            self.protected_persistent(), cap=64
+        )
+        record["pruned_stable_ids_sample"] = list(self._pruned_id_buffer)
+        self._pruned_id_buffer = []
         if extra:
             record.update(dict(extra))
         self._append_ledger(record)
         return record
+
+    def _stable_id_sample(self, mask: torch.Tensor, cap: int = 64) -> list[int]:
+        if mask is None or not int(mask.numel()) or not bool(mask.any()):
+            return []
+        rows = mask.reshape(-1).nonzero(as_tuple=False).reshape(-1)[:cap]
+        stable = getattr(self.gaussians, "_capacity_stable_ids", None)
+        if stable is not None and int(stable.numel()) == int(mask.shape[0]):
+            return [int(v) for v in stable.reshape(-1)[rows].tolist()]
+        return [int(v) for v in rows.tolist()]
 
     def summary(self) -> dict[str, Any]:
         persistent = self.persistent_occluded_mask()

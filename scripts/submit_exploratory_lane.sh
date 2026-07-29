@@ -11,6 +11,10 @@ LANE="${LANE:?LANE must be set, e.g. lane_l0_route0}"
 ROUND="${ROUND:-r1}"
 SEED="${SEED:-0}"
 SCENE="${SCENE:-cut_roasted_beef}"
+case "$SCENE" in
+  cut_roasted_beef|cook_spinach) ;;
+  *) echo "SCENE=$SCENE is not an approved development scene" >&2; exit 2 ;;
+esac
 STAMP="$(date +%Y%m%d_%H%M%S)"
 RUN_DIR="$PROJECT_ROOT/runs/csvl_vpl_v2_exploratory/${STAMP}_${SCENE}_${LANE}_${ROUND}_seed${SEED}"
 CONFIG="$REPO_ROOT/configs/n3v/${LANE}.yaml"
