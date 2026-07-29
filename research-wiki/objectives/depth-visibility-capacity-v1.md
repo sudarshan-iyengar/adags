@@ -728,3 +728,34 @@ current direction-selection task. The first approved implementation stage is
 limited to completing and verifying label-free temporal surface identity in the
 ledger. The sealed P03 artifact is an opportunity map, not a passing Gate A;
 claim-grade human evaluation remains required before representation training.
+
+## 19. Post-Stage-1 v2 refinement - 2026-07-29 (user-approved)
+
+The Section 18 first stage was executed on 2026-07-26 and returned three
+consecutive no-gos (`STAGE1_NO_GO`, `STAGE1B_CONTROL_OR_BINDING_DEFECT`,
+`STAGE1C_NO_INFORMATIVE_INTERVAL`). Stage 1C established that the sealed P03
+evidence contains zero front/rear cross-order candidates on
+`cut_roasted_beef`, so the temporal-surface-association prerequisite as
+formulated is not executable on that evidence. The user approved the CSVL-VPL
+v2 refinement recorded in [[operations/phase9-csvl-vpl-v2-direction]]:
+
+1. Evidence is redefined as primitive-centric reprojection visibility
+   (E1/E1-int/E2) instead of P03 multilayer-bin association. Gate A metrics
+   are re-expressed in those units; data discipline, target exclusion, and
+   the human-annotation requirement are unchanged.
+2. The oracle-evidence-plus-capacity attribution lane of Section 8 is
+   explicitly restored to the required-control list.
+3. Trainer-side mechanisms that consume no external evidence (protection,
+   exposure normalization from rendered visibility) are no longer blocked on
+   Gate A; they require the Section 8 causal controls instead.
+   External-evidence consumers (birth, reveal timing) remain Gate-A-gated.
+4. Scene split (Section 17.5) is refined: development `cut_roasted_beef` plus
+   `cook_spinach`; locked transfer `flame_steak` and `sear_steak` unchanged;
+   `coffee_martini` and `flame_salmon_1` form a stress tier evaluated only at
+   preregistered checkpoints with logged reveals; final admitted comparisons
+   cover all six scenes per Section 11.
+5. Mechanism-claim lanes must run from scratch through the densification
+   window; late-checkpoint continuations are operator pilots only.
+6. Phase 0 (preregistered evidence-opportunity census with frozen floors,
+   wiki repair, annotation contract draft) is authorized; Phase 1+ requires a
+   PHASE0_GO decision and renewed user approval.
