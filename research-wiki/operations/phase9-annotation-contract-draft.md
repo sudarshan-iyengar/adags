@@ -95,6 +95,20 @@ Section 7) — the reference must not be diluted to make methods look good.
 - Annotator identities and time spent are recorded for the paper's
   reproducibility statement.
 
+## Sign-off table — 2026-07-30 (workstream A; decisions still open)
+
+Recommendations only; nothing below executes without the user's explicit
+choice. The labels must be produced by humans in every option — no
+model-generated or agent-generated labels are permissible under any choice,
+and no option below substitutes one.
+
+| # | Decision | Recommendation | Alternatives | Scientific consequences | Cost | Leakage risk |
+|---|---|---|---|---|---|---|
+| 1 | Who annotates | **User + one independent colleague**; the colleague takes the double-annotated subset lead | (b) two independent colleagues; (c) paid service with the frozen rubric | Contract requires genuinely human labels and an independently double-annotated subset. User-as-annotator is valid if packets contain RGB only (no census/method output); disclosed caveat: the user has seen census *summaries*, though not per-window outputs | (a) 12-24 annotator-hours split over two people; (b) same + coordination; (c) money + rubric-transfer risk for surface-order judgments | (a) medium-low, mitigated by RGB-only packets; (b) lowest; (c) low leakage but highest label-quality risk |
+| 2 | Candidate-list source | **Uniform temporal stratification** for the pilot and the final dev-set core; census-assisted supplement (flagged per candidate) only if the forensic audit upgrades trust in certified events | (b) census-assisted only; (c) uniform only | Census-v2 certified events are noise-dominated (rho 0.19), so census-assisted selection is currently weakly justified; uniform is unbiased but spends annotator time on possibly event-free windows | Uniform costs ~20-30% more hours per usable track | Uniform: none. Census-assisted: selection correlation between reference and census-derived methods — must be disclosed, and never used for locked scenes |
+| 3 | Annotation resolution | **Native 1352x1014**, evaluate at the contract's 2/4/8 px tolerances | 676x507 (eval resolution) | Boundary tolerances are defined at native eval resolution; annotating at half resolution doubles effective boundary noise against the 4 px primary tolerance | Native ~20% slower per polygon | None either way |
+| 4 | Timeline | **Pilot (~2-3 h) immediately after sign-off; full dev annotation (~8-12 h) next; locked-scene tracks produced and sealed-at-creation before method freeze** | (b) all-at-once; (c) defer until the automatic pipeline matures | Annotation gates Phase 3/4 claim-grade evaluation, not Phase 1-2 engineering; both censuses failing their controls makes the reference the binding constraint on any certification-rule progress | 12-24 h total as drafted | Sealing discipline for locked scenes as drafted; deferral (c) risks the reference remaining the critical path indefinitely |
+
 ## Open decisions for the user
 
 1. **Who annotates.** Options: (a) the user plus one independent colleague
