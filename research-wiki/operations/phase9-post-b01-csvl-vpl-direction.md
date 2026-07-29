@@ -1,7 +1,17 @@
 # Phase 9 Post-B01 Direction: CSVL-VPL
 
 Date: 2026-07-25
-Status: selected method direction; Stage 1 ledger implementation approved
+Status: SUPERSEDED 2026-07-29 by [[operations/phase9-csvl-vpl-v2-direction]].
+The Stage 1 approved below was implemented and executed on 2026-07-26 and
+returned three consecutive no-gos: [[operations/phase9-csvl-vpl-stage1-result]]
+(`STAGE1_NO_GO`), [[operations/phase9-csvl-vpl-stage1b-result]]
+(`STAGE1B_CONTROL_OR_BINDING_DEFECT`), and
+[[operations/phase9-csvl-vpl-stage1c-result]]
+(`STAGE1C_NO_INFORMATIVE_INTERVAL`). The P03 multilayer-bin evidence route and
+the external temporal-association-first sequencing are retired; the controls,
+accounting, and data discipline below remain reusable. Known defect of this
+page: its Later Causal Requirements list omits the oracle-capacity attribution
+lane required by objective Section 8 and the Phase 8A review; v2 restores it.
 Supersedes as lead mechanism: CSVL-ISR one-shot point-neutral reassignment
 Preserves: [[operations/phase9-slice-b-v13-b01-decision]] as operator evidence
 Parent objective: [[objectives/depth-visibility-capacity-v1]]

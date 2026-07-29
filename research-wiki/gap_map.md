@@ -1,7 +1,35 @@
 # Gap Map
 
-Updated 2026-07-25 after the corrected CSVL-ISR B01 result, current-code
-inspection, and implementation-level literature reconciliation.
+Updated 2026-07-29 after the Stage 1/1B/1C no-gos and the approved CSVL-VPL v2
+direction. The 2026-07-25 update below is retained for history but its central
+claim is falsified.
+
+## Post-Stage-1 Update - 2026-07-29
+
+Stage 1 of CSVL-VPL was executed on 2026-07-26 and returned three no-gos
+([[operations/phase9-csvl-vpl-stage1-result]],
+[[operations/phase9-csvl-vpl-stage1b-result]],
+[[operations/phase9-csvl-vpl-stage1c-result]]). This falsifies the 2026-07-25
+statement below that "the first unresolved gap is uncertainty-bearing temporal
+surface association and abstention": the sealed P03 evidence layer contains
+zero front/rear cross-order candidates in all 19 scanned windows, so there is
+nothing for a temporal association to associate. The binding constraint is the
+evidence representation itself — multilayer bin occupancy requires multi-camera
+co-support of two depth layers in one bin, which a frontal rig almost never
+produces (93.4% of 3.07M bins rejected for insufficient camera co-support).
+
+The approved direction is [[operations/phase9-csvl-vpl-v2-direction]]:
+primitive-centric reprojection visibility (E1/E1-int/E2) replacing the P03 bin
+route, a from-scratch lifecycle that never touches rendered opacity, a restored
+oracle-capacity attribution lane, and an evidence-opportunity census (Phase 0)
+gating all further evidence investment. G9 and G13 remain the target gaps; the
+first unresolved question is now empirical opportunity abundance in the
+primitive-centric representation, not association design.
+
+Additional negative evidence recorded for G13: the Stage-1 association scored
+camera-swapped flow above valid flow; flow was non-causal for its output; and
+the R034 synthetic fixture (AUC 1.0) predicted nothing about real admission
+(R035 accepted 0/72). Fixture passage must never again be a Go criterion.
 
 ## Post-B01 Update - 2026-07-25
 

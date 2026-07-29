@@ -1,22 +1,51 @@
 # Query Pack
 
-Compressed project memory for ideation. Updated 2026-07-25 after the corrected
-B01 result and [[operations/phase9-post-b01-csvl-vpl-direction]].
+Compressed project memory for ideation. Updated 2026-07-29 after the Stage
+1/1B/1C no-gos and the approved [[operations/phase9-csvl-vpl-v2-direction]].
 
-## 2026-07-25 post-B01 direction
+## 2026-07-29 CSVL-VPL v2 direction (current)
+
+- Stage 1 of CSVL-VPL v1 (temporal surface association over sealed P03) was
+  executed 2026-07-26 and returned three no-gos: association could not beat
+  camera-swapped flow; flow was non-causal (98.6% selected-edge overlap
+  without it); and all 19 scanned windows contain zero front/rear cross-order
+  candidates. The P03 multilayer-bin occlusion representation is structurally
+  wrong for a frontal rig and is retired.
+- The approved v2 method keeps the two-part frame and replaces both halves:
+  primitive-centric evidence (E1 external reprojection visibility per
+  primitive/camera/frame; E1-int rendered transmittance; E2 model-deficit
+  birth targeting) and a from-scratch lifecycle (protection by update
+  freezing, occlusion-aware exposure-normalized densification, budget-neutral
+  E2 birth, hysteretic retirement) that never manipulates rendered opacity.
+- Sequencing changed: Phase 0 evidence-opportunity census with preregistered
+  floors gates everything; the oracle-capacity attribution lane (B02) is
+  restored and runs before/alongside inferred-evidence lanes; trainer limbs
+  that consume no external evidence are no longer blocked on Gate A.
+- Scene allocation: dev = cut_roasted_beef + cook_spinach; locked =
+  flame_steak + sear_steak; stress = coffee_martini + flame_salmon_1; final
+  comparisons all six. Capacity: matched-capacity + generic-extra-capacity +
+  shuffled-evidence controls are a hard gate for any visibility-attribution
+  claim; capacity deltas allowed for disclosed Pareto-reported results.
+- Closest-work ranking was corrected after a full sweep with public-code
+  reading: TAD-GS, PersistGS, VAD-GS, RiGS, Mono4DGS-HDR lead; Proxy-GS and
+  OccluGaussian demoted. GauSTAR is the cleanest foil (re-create vs
+  hide/reveal). Budget-neutral reassignment is occupied (SharpTimeGS,
+  3DGS-MCMC) and is a control, never a contribution.
+
+## 2026-07-25 post-B01 direction (superseded 2026-07-29)
 
 - The corrected 256-slot B01 continuation produced only `+0.048315468 dB`
   global PSNR, `+0.011161912 dB` dynamic-mask PSNR, and `+0.055157407 dB`
   static PSNR. It establishes transaction and optimizer-state stability, not a
   visibility-mechanism win.
-- The selected direction is CSVL-VPL: a calibrated surface visibility ledger
-  coupled to a visibility-conditioned primitive lifecycle. Fixed-count
+- The selected direction was CSVL-VPL v1: a calibrated surface visibility
+  ledger coupled to a visibility-conditioned primitive lifecycle. Fixed-count
   reassignment remains a matched-count control and reusable transaction
   substrate.
-- The sealed P03 artifact contains useful calibrated multilayer opportunity
-  evidence, but it does not propagate persistent surface identity. Temporal
-  surface association with uncertainty and abstention is the first approved
-  implementation stage.
+- The sealed P03 artifact was believed to contain useful calibrated multilayer
+  opportunity evidence; Stage 1C subsequently showed it contains zero
+  cross-order opportunities, so the "temporal surface association" first stage
+  recorded here was executed and no-go'd. See the 2026-07-29 section.
 
 ## Project direction
 
