@@ -204,8 +204,19 @@ def select_event_blind_donors(
     stable_ids: torch.Tensor,
     current_iteration: int,
     k: int,
+    excluded_mask: torch.Tensor | None = None,
 ) -> dict[str, object]:
-    """Select event-blind redundant low-opacity dynamic slots."""
+    """Select event-blind redundant low-opacity dynamic slots.
+
+    ``excluded_mask`` is an optional boolean tensor with one entry per dynamic
+    row. Rows flagged ``True`` are removed from the donor universe before
+    ranking, so they can never be selected as donors; they remain available as
+    redundancy witnesses (a protected high-opacity neighbour still makes a
+    candidate redundant). The global "bottom 20% of activated opacity" and
+    "age >= 500" admission rails are applied first and are unchanged, so the
+    exclusion can only shrink the donor universe, never widen it. Passing
+    ``None`` (the default) preserves the previous behaviour exactly.
+    """
 
     tensors = {
         "xyz": xyz,
@@ -224,6 +235,13 @@ def select_event_blind_donors(
         raise ContractError("donor selection tensors have inconsistent row counts")
     if k > n:
         raise ContractError("donor selection K exceeds dynamic row count")
+    excluded = None
+    if excluded_mask is not None:
+        excluded = torch.as_tensor(excluded_mask).reshape(-1)
+        if excluded.dtype != torch.bool:
+            raise ContractError("donor exclusion mask must be boolean")
+        if int(excluded.shape[0]) != n:
+            raise ContractError("donor exclusion mask has an inconsistent row count")
 
     with torch.no_grad():
         xyz_detached = xyz.detach()
@@ -234,6 +252,17 @@ def select_event_blind_donors(
     if bottom_count <= 0:
         return {"selected_indices": [], "base_universe_indices": [], "abstained": True, "reason": "empty_bottom_opacity_population"}
     order = torch.argsort(activated_opacity, stable=True)[:bottom_count]
+    if excluded is not None:
+        order = order[~excluded.to(order.device).index_select(0, order)]
+        if int(order.numel()) == 0:
+            return {
+                "selected_indices": [],
+                "base_universe_indices": [],
+                "requested_k": int(k),
+                "realized_k": 0,
+                "abstained": True,
+                "reason": "empty_unexcluded_bottom_opacity_population",
+            }
     order = order[ages[order] >= 500]
     if int(order.numel()) == 0:
         return {
