@@ -3,8 +3,9 @@
 Date: 2026-07-30
 Branch: `csvl-vpl-v2-exploratory`
 Contract: [[operations/csvl-vpl-v2-exploratory-contract]] (committed at
-`932b32b`, corrected at `e584ea3` after the pre-launch verifier, both before
-any training submission)
+`932b32b`, corrected at `e584ea3` after the pre-launch verifier; both
+pre-date every lane submission; `e584ea3` post-dates only the pre-fix smoke
+whose result it cites)
 Tier: exploratory, development scene `cut_roasted_beef`, seed 0, single round.
 Nothing here is Gate A, Gate B, Phase 0 success, or a disocclusion claim; both
 census verdicts stand. Global and dynamic-mask deltas below are NOT evidence
@@ -15,8 +16,10 @@ of improved disocclusion (that requires annotated events per the objective).
 Smokes `50886783` (pre-fix, 19:55) and `50891508` (post-fix, 21:15); evidence
 build `50882303` (12:45); lanes `50896779` L0 (3:16:04), `50896788` L1
 (3:24:50), `50896801` L2 (3:20:33), `50896810` L3 (3:29:30), `50896816` L4
-(3:28:24), `50896823` L5 (3:28:24); qualitative renders `50968178`. All
-COMPLETED 0:0. Round-1 GPU cost ~21.5 h (within the 24 h expectation).
+(3:28:24), `50896823` L5 (3:28:24) — all of these COMPLETED 0:0. Qualitative
+renders: `50968178` FAILED (1:41), `50972304` FAILED (1:43), `50973410`
+COMPLETED 0:0 (1:26) — see the tooling-debug chain below. Round-1 GPU cost
+21.4 h (within the 24 h expectation).
 
 ## Iteration history
 
@@ -51,14 +54,21 @@ Historical anchor reproduced: L0 34.366/0.9605/0.0524 vs the 20260619 run's
 
 ## Activation validity (a result may not hide behind inactivity)
 
-All lanes pass their contract requirements: L1/L3/L5 gradient-masked 6.5-7.5k
-primitives by iteration 2000 with ~3.4e8 occluded verdicts over training and
-abstention active; L3/L4/L5 realized all 9 birth events at 256/256 rows with
+All lanes pass their contract requirements: L1/L3/L5 protection active well
+before iteration 2000 (per-iteration batch counts ranging 211-7,468 with
+means ~1.8-2.5k over that window; the maxima are 6,459/6,467/7,468) with
+3.4-3.6e8 occluded verdicts over training and abstention active; L3/L4/L5 realized all 9 birth events at 256/256 rows with
 zero skips and point-neutral transactions (budget equality logged per event);
-L2's presence weights averaged ~0.34 (strong reallocation); peak CUDA
-12.8-12.9 GB; per-checkpoint point counts logged (all lanes ~412k @1000,
-515-570k @3000, then saturating toward the 600k cap @6000 while L0
-self-limits at 541,662).
+L2's presence weights average ~0.33 by cross-lane exposure-mean ratio (not a directly logged field; strong reallocation); peak CUDA
+12.8-12.9 GB; per-checkpoint point counts logged for the five
+lifecycle lanes (ledger post-densify snapshots ~412k @1000, 515-570k @3000,
+saturating toward the 600k cap @6000; L0 writes no ledger — its saved
+checkpoints hold 397,405 @1000 and 484,182 @3000, self-limiting at 541,662).
+One validity criterion — "exposure denominator differs from raw view counts
+for >=1% of primitives" — has no directly logged raw-count baseline and is
+satisfied by inference from the verdict histograms (>=2.4% of primitives
+occluded-weighted in the first ledger interval alone); disclosed rather than
+claimed as instrumented.
 
 ## Pre-declared interpretation (applied exactly as contracted)
 
@@ -68,14 +78,22 @@ self-limits at 541,662).
   posted the best PSNR and static PSNR of the matrix. Whatever the lifecycle
   lanes gain does not depend on the evidence being time-aligned with reality.
 - **Occlusion-awareness adds nothing over presence reweighting** at this
-  tier: L2 matches L1 on LPIPS (0.0497 vs 0.0498) and exceeds it on
-  SSIM/PSNR — the presence-equivalent negative for the E1 evidence coupling,
-  pre-declared as a reportable negative.
-- **E2 targeting beats event-blind targets at matched capacity**: L3 vs L4 is
-  +0.286 dB PSNR with final counts within 0.26% (valid per the 2% rule). This
-  is the one contrast where the calibrated evidence side outperforms — but it
-  does not clear L0 or L5, so it attributes target *placement* quality, not
-  alignment benefit.
+  tier — reported as at-least-as-strong-as the pre-declared
+  presence-equivalent pattern (whose exact precondition "L2 ~ L1 with both
+  > L0" is not met: L2 exceeds L1 by +0.168 dB PSNR and L1 sits below L0):
+  L2 matches L1 on LPIPS (0.0497 vs 0.0498) and beats it on SSIM and PSNR,
+  so the occlusion-aware evidence coupling underperforms its own
+  presence-only control.
+- **The full mechanism beats the generic-capacity control at matched
+  capacity**: L3 vs L4 is +0.286 dB PSNR with final counts within 0.26%
+  (valid per the 2% rule). Attribution caveat (verifier-flagged): L3 and L4
+  differ in THREE mechanisms (protection, exposure, birth-target
+  construction), so this contrast does not isolate which limb drives the
+  gap — and L1 (protection+exposure, no births) at 34.231 < L3 shows the
+  internal limbs alone do not explain it either. The pre-declared reading is
+  simply that L3 is not capacity-equivalent to generic churn; a
+  single-limb attribution would need a dedicated round-2 split that was not
+  run.
 - **Capacity is disclosed and instructive**: every lifecycle limb (exposure
   reallocation, protection retention vetoes, birth-seeded densification
   pressure) independently pushed lanes toward the 600k cap (+9-11% Gaussians
@@ -105,10 +123,12 @@ evaluation, not another blind iteration. Negative preserved at its tier.
 
 Support: engineering feasibility of the full automatic pipeline (protection,
 exposure, E2 birth, point-neutral transactions, instrumentation) in full
-6000-iteration trainings at ~5% wall-time overhead; small perceptual
-(LPIPS/SSIM) gains from exposure reweighting of either flavor at disclosed
-capacity cost; E2-vs-generic target-placement advantage at matched capacity;
-slight ghost reduction from protection.
+6000-iteration trainings at +2.3% to +6.9% wall-time overhead (mechanism
+compute itself is ~0.6%; the rest is capacity/eval-driven); a contract-valid
+perceptual signal for the presence-VAD control L2 (LPIPS -5.2% with PSNR
+in-band; L1's mixed signs remain classified mixed, not banked as a gain);
+the full mechanism beating generic capacity churn at matched counts (limb
+attribution not isolated); slight ghost reduction in protection lanes.
 
 Do NOT support: any claim that calibrated visibility evidence improves
 reconstruction (L5 refutes it at this tier); any disocclusion claim; any
