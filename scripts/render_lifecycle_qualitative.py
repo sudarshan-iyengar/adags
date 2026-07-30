@@ -19,21 +19,33 @@ written with the ground truth on the first row and one render+overlay row per
 checkpoint, ordered and labelled by restored training iteration
 (before / during / after).
 
-The camera math is a deliberate *minimal* replication of the training loader so
-that the rendered view is bit-comparable with what the trainer sees, without
-dragging in ``Scene`` and its dataloader machinery:
+Cameras are **not** re-derived here. The script calls the repository's real
+loader functions and then filters the returned list down to the requested
+``(camera, frame)`` pairs by ``image_name``, so there is no second
+implementation of the loader math that could drift from the trainer:
 
-* ``scene/dataset_readers.py::readCamerasFromTransforms`` (OpenGL -> OpenCV
-  axis flip, ``w2c = inv(c2w)``, ``R = w2c[:3,:3].T``, ``T = w2c[:3,3]``,
-  top-level ``fl_x/fl_y/cx/cy`` branch with ``FovX = FovY = -1.0``, ``far``
-  rule, ``timestamp = frame['time']`` with the ``frame_ratio`` divide);
-* ``utils/camera_utils.py::loadCam`` (``resolution_scale = 1.0``,
-  ``scale = resolution_scale * ModelParams.resolution``, intrinsics divided by
-  ``scale``, ``resolution = (round(w/scale), round(h/scale))``,
-  ``meta_only = ModelParams.dataloader``);
+* ``scene/dataset_readers.py::readCamerasFromTransforms`` with the lane's
+  ``white_background``, ``extension``, ``time_duration``, ``frame_ratio`` and
+  ``dataloader`` settings -- the same call ``readNerfSyntheticInfo`` makes for
+  the ``Blender``/``transforms_train.json`` branch that ``Scene.__init__``
+  dispatches to for N3V;
+* ``utils/camera_utils.py::cameraList_from_camInfos(cam_infos, 1.0, args)``
+  with an args shim carrying the lane's ``resolution``, ``data_device`` and
+  ``dataloader`` -- the same call ``Scene.__init__`` makes at
+  ``resolution_scale = 1.0``. ``Scene``'s ``random.shuffle`` is skipped so the
+  camera order (and therefore ``uid``) is deterministic; ``uid`` does not reach
+  the rasterizer.
 * ``gaussian_renderer/__init__.py::render`` is called exactly as in
   ``main.py`` (``render(cam.cuda(), gaussians, pipe, background)`` with
   ``background`` from ``ModelParams.white_background``).
+
+The checkpoint is loaded with ``map_location`` set to the render device, not
+``"cpu"``. ``scripts/run_phase0_census2.py::load_model`` uses ``"cpu"`` because
+the census only does host-side maths, but ``gaussian_renderer.render`` feeds
+the model tensors straight into a CUDA extension that performs no device
+transfer, so a host-resident bank produces an illegal memory access inside
+``_C.rasterize_gaussians``. ``main.py`` restores with a bare
+``torch.load(checkpoint)``, which keeps the CUDA-saved storages on the GPU.
 
 This script needs a GPU: ``gaussian_renderer.render`` and ``GaussianModel``
 allocate on ``"cuda"`` unconditionally. Run it as a Slurm job. ``--help`` works
@@ -485,115 +497,85 @@ def resolve_window_frames(
     return resolved
 
 
-def build_camera(
-    entry: dict,
-    entry_index: int,
-    uid: int,
-    contents: dict,
-    lane: dict,
-    source_path: str,
-    image_size: tuple[int, int],
-    device: str,
-):
-    """Rebuild one training ``Camera`` for a transforms entry.
+def image_name_for(entry: dict) -> str:
+    """``Camera.image_name`` the loader will assign to a transforms entry.
 
-    Mirrors ``readCamerasFromTransforms`` (the ``fl_x`` intrinsics branch) and
-    ``loadCam`` (the integer-divisor resolution branch, ``meta_only`` path).
+    ``readCamerasFromTransforms`` sets ``image_name = Path(cam_name).stem`` for
+    ``cam_name = join(path, frame["file_path"] + extension)``, i.e. the plain
+    ``file_path`` basename. Derived from the entry rather than formatted from
+    ``(camera, frame)`` so no zero-padding convention is assumed.
     """
 
-    import numpy as np
+    return str(entry["file_path"]).rsplit("/", 1)[-1]
 
-    from scene.cameras import Camera
 
-    # -- readCamerasFromTransforms ------------------------------------------
-    timestamp = entry.get("time", 0.0)
-    frame_ratio = lane["frame_ratio"]
-    if frame_ratio > 1:
-        timestamp = timestamp / frame_ratio
-    time_duration = lane["model"]["time_duration"]
-    if "time" in entry and (timestamp < time_duration[0] or timestamp > time_duration[1]):
-        raise RenderPanelError(
-            f"timestamp {timestamp} for {entry['file_path']} falls outside the "
-            f"lane time_duration {time_duration}; the trainer would have dropped "
-            "this camera"
-        )
+def load_training_cameras(
+    source_path: str,
+    transforms_name: str,
+    lane: dict,
+    device: str,
+    wanted_names: list[str],
+) -> dict:
+    """Load the scene's cameras through the repo's own loader, then filter.
 
-    cam_name = os.path.join(source_path, entry["file_path"] + lane["extension"])
-    c2w = np.array(entry["transform_matrix"])
-    c2w[:3, 1:3] *= -1  # OpenGL/Blender -> COLMAP/OpenCV axes
-    w2c = np.linalg.inv(c2w)
-    R = np.transpose(w2c[:3, :3])  # stored transposed for the glm CUDA code
-    T = w2c[:3, 3]
+    This is the exact pair of calls ``Scene.__init__`` makes for the
+    ``transforms_train.json`` (``Blender``) branch at
+    ``resolution_scale = 1.0``: ``readCamerasFromTransforms`` followed by
+    ``cameraList_from_camInfos``. Nothing about the OpenGL->OpenCV flip, the
+    intrinsics branch, ``far``, ``timestamp``, the resolution divisor or the
+    ``meta_only`` path is re-implemented here, so the returned ``Camera``
+    objects cannot drift from what the trainer sees.
 
-    image_path = cam_name
-    image_name = Path(cam_name).stem
-    width, height = image_size
+    ``Scene``'s ``random.shuffle`` of the camera info list is deliberately not
+    reproduced: it only permutes ``uid``, which never reaches the rasterizer,
+    and skipping it keeps this tool deterministic.
+    """
 
-    far = 100
-    if "Birthday" in image_path or "Painter" in image_path or "Train" in image_path:
-        far = 300
+    from types import SimpleNamespace
 
-    if all(k in entry for k in ("fl_x", "fl_y", "cx", "cy")):
-        source = entry
-    elif all(k in contents for k in ("fl_x", "fl_y", "cx", "cy")):
-        source = contents
-    else:
-        raise RenderPanelError(
-            "transforms file has no fl_x/fl_y/cx/cy either per frame or at the "
-            "top level; this renderer only mirrors the pinhole-intrinsics branch"
-        )
-    fov_x = fov_y = -1.0
-    fl_x = float(source["fl_x"])
-    fl_y = float(source["fl_y"])
-    cx = float(source["cx"])
-    cy = float(source["cy"])
+    from scene.dataset_readers import readCamerasFromTransforms
+    from utils.camera_utils import cameraList_from_camInfos
 
-    # -- loadCam (resolution_scale = 1.0, integer divisor branch) -----------
-    resolution_scale = 1.0
-    scale = resolution_scale * lane["resolution"]
-    resolution = (
-        round(width / (resolution_scale * lane["resolution"])),
-        round(height / (resolution_scale * lane["resolution"])),
+    cam_infos = readCamerasFromTransforms(
+        source_path,
+        transforms_name,
+        lane["white_background"],
+        lane["extension"],
+        time_duration=lane["model"]["time_duration"],
+        frame_ratio=lane["frame_ratio"],
+        dataloader=lane["dataloader"],
     )
-    cx = cx / scale
-    cy = cy / scale
-    fl_x = fl_x / scale
-    fl_y = fl_y / scale
+    if not cam_infos:
+        raise RenderPanelError(
+            f"{transforms_name} yielded no cameras inside the lane time_duration "
+            f"{lane['model']['time_duration']}"
+        )
 
-    camera = Camera(
-        colmap_id=entry_index,
-        R=R,
-        T=T,
-        FoVx=fov_x,
-        FoVy=fov_y,
-        image=np.empty(0),
-        gt_alpha_mask=None,
-        image_name=image_name,
-        uid=uid,
+    # Only the three attributes loadCam reads off its args object.
+    loader_args = SimpleNamespace(
+        resolution=lane["resolution"],
         data_device=device,
-        timestamp=timestamp,
-        cx=cx,
-        cy=cy,
-        fl_x=fl_x,
-        fl_y=fl_y,
-        depth=None,
-        resolution=resolution,
-        image_path=image_path,
-        meta_only=True,
-        cxr=0.0,
-        cyr=0.0,
-        far=far,
+        dataloader=lane["dataloader"],
     )
-    return camera
+    cameras = cameraList_from_camInfos(cam_infos, 1.0, loader_args)
 
+    by_name: dict[str, object] = {}
+    for camera in cameras:
+        name = str(camera.image_name)
+        if name in by_name:
+            raise RenderPanelError(
+                f"{transforms_name} produced two cameras named {name!r}"
+            )
+        by_name[name] = camera
 
-def probe_image_size(path: str) -> tuple[int, int]:
-    """Original ``(width, height)``, as ``imagesize.get`` gives the trainer."""
-
-    from PIL import Image
-
-    with Image.open(path) as image:
-        return int(image.size[0]), int(image.size[1])
+    missing = [name for name in wanted_names if name not in by_name]
+    if missing:
+        raise RenderPanelError(
+            "the loader did not return cameras for "
+            f"{', '.join(missing)} (the lane time_duration filter may have "
+            "dropped them)"
+        )
+    return {name: by_name[name] for name in wanted_names}
 
 
 def load_gt_image(path: str, resolution: tuple[int, int]):
@@ -612,8 +594,53 @@ def load_gt_image(path: str, resolution: tuple[int, int]):
 # ---------------------------------------------------------------------------
 
 
-def load_gaussians(checkpoint_path: str, model_cfg: dict):
-    """Restore a GaussianModel the way ``run_phase0_census2.load_model`` does."""
+# Every GaussianModel attribute gaussian_renderer.render dereferences, directly
+# or through a property. All of them must be resident on the render device
+# because the rasterizer is a CUDA extension that performs no device transfer.
+RENDER_TENSOR_ATTRS = (
+    "_xyz",
+    "_features_dc",
+    "_features_rest",
+    "_scaling",
+    "_rotation",
+    "_rotation_r",
+    "_opacity",
+    "_t",
+    "_scaling_t",
+    "_route_logit",
+    "_motion_v",
+    "_motion_a",
+    "_motion_lora_coeff",
+    "_motion_lora_basis",
+    "_motion_scaffold_node_xyz",
+    "_motion_scaffold_coeff",
+    "_motion_scaffold_basis",
+    "_motion_scaffold_attach_idx",
+    "_motion_scaffold_attach_w",
+    "static_xyz",
+    "static_features_dc",
+    "static_features_rest",
+    "static_scaling",
+    "static_rotation",
+    "static_opacity",
+    "env_map",
+)
+
+
+def load_gaussians(checkpoint_path: str, model_cfg: dict, device: str):
+    """Restore a GaussianModel with the same constructor args as the census.
+
+    Constructor arguments and ``restore(model_params, None)`` follow
+    ``scripts/run_phase0_census2.py::load_model``. The ``map_location`` does
+    **not**: the census pins the bank to ``"cpu"`` because it only does
+    host-side maths, whereas ``gaussian_renderer.render`` hands the very same
+    tensors to ``_C.rasterize_gaussians``, a CUDA extension that takes raw
+    ``data_ptr()`` values and performs no device transfer. A host-resident bank
+    therefore aborts the first render with an illegal memory access. ``main.py``
+    restores with a bare ``torch.load(checkpoint)``, which leaves the
+    CUDA-saved storages on the GPU; mapping explicitly to the render device is
+    the same thing, and also copes with a checkpoint saved from CPU.
+    """
 
     import torch
 
@@ -627,9 +654,31 @@ def load_gaussians(checkpoint_path: str, model_cfg: dict):
         force_sh_3d=model_cfg["force_sh_3d"],
         sh_degree_t=model_cfg["sh_degree_t"],
     )
-    payload = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    payload = torch.load(checkpoint_path, map_location=device, weights_only=False)
     model_params, checkpoint_iteration = payload
     gaussians.restore(model_params, None)
+
+    target = torch.device(device)
+    relocated = []
+    for name in RENDER_TENSOR_ATTRS:
+        value = getattr(gaussians, name, None)
+        if isinstance(value, torch.Tensor) and value.device != target:
+            setattr(gaussians, name, value.to(target))
+            relocated.append(name)
+    if relocated:
+        print(
+            f"[warn] {checkpoint_path}: moved {', '.join(relocated)} onto "
+            f"{target}; the rasterizer cannot read host tensors",
+            flush=True,
+        )
+    # Compare device TYPES: torch normalizes "cuda" to "cuda:0" on tensors,
+    # so a string/device equality check would false-alarm after a successful
+    # relocation.
+    if gaussians._xyz.device.type != torch.device(target).type:
+        raise RenderPanelError(
+            f"restored bank is on {gaussians._xyz.device}, not {target}"
+        )
+
     static_count = (
         int(gaussians.static_xyz.shape[0]) if gaussians.static_xyz is not None else 0
     )
@@ -1026,7 +1075,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     lane = load_lane_config(resolved["lane_config"])
-    contents, index = read_transforms(resolved["transforms_path"])
+    _contents, index = read_transforms(resolved["transforms_path"])
     windows = resolve_window_frames(
         resolved["windows"], args.frames_around, index
     )
@@ -1044,35 +1093,35 @@ def main(argv: list[str] | None = None) -> int:
     )
     pipe = lane["pipe"]
 
-    # -- cameras, GT frames --------------------------------------------------
+    # -- cameras (via the repo's own loader), GT frames -----------------------
+    wanted: dict[tuple[str, int], str] = {}
+    for window in windows:
+        for frame in window["frames"]:
+            key = (window["camera"], frame)
+            wanted.setdefault(key, image_name_for(index[key][1]))
+    print(
+        f"[info] loading scene cameras from {args.transforms} "
+        f"(need {len(wanted)}: {', '.join(sorted(wanted.values()))})",
+        flush=True,
+    )
+    by_name = load_training_cameras(
+        resolved["source_path"],
+        args.transforms,
+        lane,
+        args.device,
+        sorted(set(wanted.values())),
+    )
+
     cameras: dict[tuple[str, int], object] = {}
     gt_cache: dict[tuple[str, int], object] = {}
-    uid = 0
-    for window in windows:
-        camera_id = window["camera"]
-        for frame in window["frames"]:
-            key = (camera_id, frame)
-            if key in cameras:
-                continue
-            entry_index, entry = index[key]
-            image_path = os.path.join(
-                resolved["source_path"], entry["file_path"] + lane["extension"]
+    for key, name in wanted.items():
+        camera = by_name[name]
+        cameras[key] = camera
+        if not os.path.isfile(camera.image_path):
+            raise RenderPanelError(
+                f"ground truth frame not found: {camera.image_path}"
             )
-            if not os.path.isfile(image_path):
-                raise RenderPanelError(f"ground truth frame not found: {image_path}")
-            image_size = probe_image_size(image_path)
-            cameras[key] = build_camera(
-                entry,
-                entry_index,
-                uid,
-                contents,
-                lane,
-                resolved["source_path"],
-                image_size,
-                args.device,
-            )
-            uid += 1
-            gt_cache[key] = load_gt_image(image_path, cameras[key].resolution)
+        gt_cache[key] = load_gt_image(camera.image_path, camera.resolution)
 
     for window in windows:
         camera_id = window["camera"]
@@ -1107,7 +1156,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for label, checkpoint in zip(resolved["checkpoint_labels"], resolved["checkpoints"]):
         print(f"[info] loading {label}: {checkpoint}", flush=True)
-        gaussians, iteration = load_gaussians(checkpoint, lane["model"])
+        gaussians, iteration = load_gaussians(checkpoint, lane["model"], args.device)
         num_primitives = int(gaussians._xyz.shape[0])
         checkpoint_records.append(
             {
