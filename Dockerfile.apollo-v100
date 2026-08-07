@@ -1,0 +1,67 @@
+FROM determinedai/environments:cuda-11.8-pytorch-2.0-gpu-0.31.1
+
+LABEL org.opencontainers.image.title="ADAGS Apollo V100 runtime" \
+      org.opencontainers.image.description="ADAGS runtime for the Apollo DGX/V100 pool" \
+      org.opencontainers.image.source="https://github.com/sudarshan-iyengar/adags" \
+      ai.determined.version="0.38.0" \
+      com.nvidia.cuda.architectures="7.0,8.9"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONNOUSERSITE=1 \
+    CUDA_HOME=/usr/local/cuda-11.8 \
+    PATH=/usr/local/cuda-11.8/bin:${PATH} \
+    LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64:${LD_LIBRARY_PATH} \
+    TORCH_CUDA_ARCH_LIST="7.0 8.9" \
+    TORCH_EXTENSIONS_DIR=/tmp/adags_torch_extensions \
+    XDG_CACHE_HOME=/tmp/adags_cache \
+    MAX_JOBS=4
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      ca-certificates \
+      colmap \
+      curl \
+      ffmpeg \
+      git \
+      libgl1 \
+      libglib2.0-0 \
+      libgomp1 \
+      ninja-build \
+      tar \
+      unzip \
+      wget \
+      zip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip install --no-cache-dir \
+      "numpy==1.24.4" \
+      "Pillow==10.4.0" \
+      "plyfile==0.8.1" \
+      "tqdm==4.66.5" \
+      "mediapy==1.1.2" \
+      "torchmetrics==0.11.4" \
+      "imagesize==1.4.1" \
+      "kornia==0.6.12" \
+      "omegaconf==2.3.0" \
+      "lpips==0.1.4" \
+      "opencv-python-headless==4.10.0.84" \
+      "matplotlib==3.7.5" \
+      "PyYAML==6.0.2" \
+      "tensorboard==2.15.2" \
+      "wandb==0.17.9"
+
+COPY simple-knn /opt/adags/extensions/simple-knn
+COPY pointops2 /opt/adags/extensions/pointops2
+COPY diff-gaussian-rasterization /opt/adags/extensions/diff-gaussian-rasterization
+
+RUN python -m pip install --no-cache-dir --no-build-isolation /opt/adags/extensions/simple-knn \
+    && python -m pip install --no-cache-dir --no-build-isolation /opt/adags/extensions/pointops2 \
+    && python -m pip install --no-cache-dir --no-build-isolation /opt/adags/extensions/diff-gaussian-rasterization
+
+RUN python -m pip install --no-cache-dir "determined==0.38.0"
+
+COPY scripts/validate_apollo_runtime.py /opt/adags/validate_apollo_runtime.py
+RUN python /opt/adags/validate_apollo_runtime.py --build-check
+
+WORKDIR /apollo/users/sri/proj_adags/repo/adags
