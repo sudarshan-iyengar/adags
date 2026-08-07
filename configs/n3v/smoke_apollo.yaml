@@ -1,0 +1,74 @@
+# Infrastructure-only ADAGS smoke profile. It deliberately uses a small point
+# budget and reduced frame/image resolution while exercising the real training
+# loop, renderer forward/backward, optimizer, evaluation, and final output.
+gaussian_dim: 4
+time_duration: [0.0, 10.0]
+num_pts: 50_000
+num_pts_ratio: 1.0
+rot_4d: false
+force_sh_3d: true
+batch_size: 1
+exhaust_test: false
+
+ModelParams:
+  sh_degree: 3
+  images: images
+  resolution: 4
+  white_background: false
+  data_device: cuda
+  eval: true
+  extension: .png
+  num_extra_pts: 0
+  loaded_pth: ""
+  frame_ratio: 8
+  dataloader: true
+
+PipelineParams:
+  convert_SHs_python: false
+  compute_cov3D_python: false
+  debug: false
+  env_map_res: 0
+  env_optimize_until: 200
+  env_optimize_from: 0
+  eval_shfs_4d: true
+
+OptimizationParams:
+  iterations: 200
+  position_lr_init: 0.00016
+  position_t_lr_init: -1.0
+  position_lr_final: 0.0000016
+  position_lr_delay_mult: 0.01
+  position_lr_max_steps: 200
+  feature_lr: 0.0025
+  opacity_lr: 0.05
+  scaling_lr: 0.005
+  rotation_lr: 0.001
+  percent_dense: 0.01
+  lambda_dssim: 0.2
+  thresh_opa_prune: 0.005
+  densification_interval: 50
+  opacity_reset_interval: 10_000
+  densify_from_iter: 50
+  densify_until_iter: 150
+  densify_grad_threshold: 0.0002
+  densify_grad_t_threshold: 0.000005
+  densify_until_num_points: -1
+  final_prune_from_iter: -1
+  sh_increase_interval: 100
+  lambda_opa_mask: 0.0
+  lambda_rigid: 0.0
+  enable_hard_static_conversion: false
+  lambda_sparsity: 0.0
+  lambda_motion_gate: 0.0
+  static_conversion_threshold: 0.99
+  gate_activation_iter: 100
+  gate_warmup_until_iter: 150
+  enable_soft_routing: true
+  route_logit_init: 4.0
+  route_lr: -1.0
+  motion_model: poly
+  motion_poly_order: 2
+  motion_lr_init: -1.0
+  motion_reg_lambda: 0.0
+  blur_until_iter: 150
+  blur_start_sigma: 4.0
