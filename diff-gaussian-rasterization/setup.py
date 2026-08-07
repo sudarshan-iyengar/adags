@@ -9,24 +9,30 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
-from setuptools import setup
-from torch.utils.cpp_extension import CUDAExtension, BuildExtension
 import os
-os.path.dirname(os.path.abspath(__file__))
+
+from setuptools import setup
+from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
 
 setup(
-    name="diff_gaussian_rasterization",
-    packages=['diff_gaussian_rasterization'],
+    name="adags-diff-gaussian-rasterization",
     ext_modules=[
         CUDAExtension(
-            name="diff_gaussian_rasterization._C",
+            name="_adags_diff_gaussian_rasterization",
             sources=[
-            "cuda_rasterizer/rasterizer_impl.cu",
-            "cuda_rasterizer/forward.cu",
-            "cuda_rasterizer/backward.cu",
-            "rasterize_points.cu",
-            "ext.cpp"],
-            extra_compile_args={"cxx":['-g'], "nvcc": ["-g", "-G", "-I" + os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/glm/")]})
+                "cuda_rasterizer/rasterizer_impl.cu",
+                "cuda_rasterizer/forward.cu",
+                "cuda_rasterizer/backward.cu",
+                "rasterize_points.cu",
+                "ext.cpp",
+            ],
+            extra_compile_args={
+                "cxx": ["-O3"],
+                "nvcc": ["-O3", "-I" + os.path.join(ROOT, "third_party/glm/")],
+            },
+        )
         ],
     cmdclass={
         'build_ext': BuildExtension

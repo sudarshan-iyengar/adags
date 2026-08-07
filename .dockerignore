@@ -1,0 +1,12 @@
+**
+!.dockerignore
+!Dockerfile.apollo-v100
+!Dockerfile.apollo-h100
+!scripts/
+!scripts/validate_apollo_runtime.py
+!simple-knn/
+!simple-knn/**
+!pointops2/
+!pointops2/**
+!diff-gaussian-rasterization/
+!diff-gaussian-rasterization/**
