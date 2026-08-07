@@ -1,0 +1,22 @@
+description: ADAGS Apollo Hopper/H100 smoke runtime
+work_dir: /apollo/users/sri/proj_adags/repo/adags
+resources:
+  resource_pool: hopper
+  slots: 1
+environment:
+  image: sudarshaniyengar/adags:apollo-h100-v1
+  force_pull_image: true
+  environment_variables:
+    - HOME=/apollo/users/sri
+    - CUDA_HOME=/usr/local/cuda-11.8
+    - PYTHONUNBUFFERED=1
+    - PYTHONNOUSERSITE=1
+    - TORCH_EXTENSIONS_DIR=/tmp
+    - XDG_CACHE_HOME=/tmp
+    - MPLCONFIGDIR=/tmp
+    - WANDB_MODE=disabled
+    - ADAGS_PROJECT_ROOT=/apollo/users/sri/proj_adags
+    - ADAGS_REPO_ROOT=/apollo/users/sri/proj_adags/repo/adags
+    - ADAGS_DATA_ROOT=/apollo/users/sri/proj_adags/data/n3v
+    - ADAGS_RUNS_ROOT=/apollo/users/sri/proj_adags/runs
+    - ADAGS_LOGS_ROOT=/apollo/users/sri/proj_adags/logs
