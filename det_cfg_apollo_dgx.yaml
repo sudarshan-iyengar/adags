@@ -11,9 +11,9 @@ environment:
     - CUDA_HOME=/usr/local/cuda-11.8
     - PYTHONUNBUFFERED=1
     - PYTHONNOUSERSITE=1
-    - TORCH_EXTENSIONS_DIR=/tmp
-    - XDG_CACHE_HOME=/tmp
-    - MPLCONFIGDIR=/tmp
+    - TORCH_EXTENSIONS_DIR=/tmp/adags_torch_extensions
+    - XDG_CACHE_HOME=/tmp/adags_cache
+    - MPLCONFIGDIR=/tmp/adags_mpl
     - WANDB_MODE=disabled
     - ADAGS_PROJECT_ROOT=/apollo/users/sri/proj_adags
     - ADAGS_REPO_ROOT=/apollo/users/sri/proj_adags/repo/adags
