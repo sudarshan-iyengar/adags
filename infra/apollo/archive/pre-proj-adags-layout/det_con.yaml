@@ -1,0 +1,10 @@
+work_dir: /apollo/users/sri/project_adags/experiments/temp_diag
+resources:
+  resource_pool: hopper
+  slots: 1
+environment:
+  image: sudarshaniyengar/adags:v4
+  environment_variables:
+    - HOME=/apollo/users/sri
+    - CUDA_HOME=/usr/local/cuda-11.8
+    - PYTHONUNBUFFERED=1
