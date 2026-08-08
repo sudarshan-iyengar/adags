@@ -1,9 +1,52 @@
 # Query Pack
 
-Compressed project memory for ideation. Updated 2026-07-29 after the Stage
-1/1B/1C no-gos and the approved [[operations/phase9-csvl-vpl-v2-direction]].
+Compressed project memory for ideation. Updated 2026-08-08 after the
+method-discovery run that produced [[operations/star-gs-v9-method]].
+User decision (2026-08-08): STAR-GS is PRESERVED as a training-side
+candidate (implementable/testable later via its preregistered plan) but
+is NOT the lead direction; the next research phase is representation-level
+method discovery (not yet begun). The 2026-07-29 section remains the last
+user-approved direction record and its discipline stays binding.
 
-## 2026-07-29 CSVL-VPL v2 direction (current)
+## 2026-08-08 STAR-GS candidate (preserved, not lead)
+
+- Method: STAR-GS v9 — budget-neutral correction of
+  depth-deficient dynamic Gaussian models via occlusion-aware multiview
+  residual-space carving (SRC): parent-free time-local births at carved
+  deficit sites, funded by audited donor retirement; model-internal only;
+  zero new trainable components. Full mechanism:
+  [[operations/star-gs-v9-method]]; test plan:
+  [[operations/star-gs-v9-experiment-plan]]; review substance:
+  [[operations/star-gs-v9-review-history]]; sweep findings:
+  [[operations/sota-sweep-2026-08]].
+- Provenance: 5-round research-refine + 5 fresh-context adversarial
+  rounds (4 SINKS resolved by redesign, final SURVIVES-WITH-RISKS) +
+  novelty check 5.5/10 PROCEED WITH CAUTION. Four rejected families
+  recorded in [[operations/rejected-approaches-2026-08]] (residual
+  routing; support-matched momentum; observation clocking; calibrated-
+  consensus claims) — claim inflation (exactness/calibration/priority)
+  was fatal every time; conservative proposer + causal validation
+  survived.
+- NEW closest work (mechanism-verified): [[papers/kang2025_cec_4dgs]]
+  (CEC-4DGS, SIGGRAPH Asia 2025) — error-clustered, cross-view-checked,
+  TIME-LOCAL 4D birth at single-view rendered depth, unbudgeted; the
+  mandatory primary baseline (faithful + budget-matched ports).
+  FreeTimeGS (CVPR 2025, N3V 33.19 avg SOTA peer-reviewed) does periodic
+  budget-neutral relocation (0.5·∇g+0.5·σ) — "budgeted reallocation is
+  occupied" now includes it; SharpTimeGS (arXiv 33.57) leads
+  self-reported. TAD-GS + 4D Scaffold-GS (AAAI 2026) both occupy
+  presence-weighted densification statistics.
+- Round-1 exploratory evidence reading (unchanged, load-bearing):
+  presence-weighted densification = the only contract-valid perceptual
+  win (dyn-mask +0.72 dB, LPIPS −5.2%); targeted birth > generic churn
+  at matched counts (+0.29 dB); generic capacity hurts; external
+  evidence alignment refuted (L5 ≥ L3) → mechanisms must be
+  model-internal.
+- Experiment plan: [[operations/star-gs-v9-experiment-plan]] (~405-460
+  GPU-h; Phase-A constructor gate kills cheaply; CEC ports mandatory;
+  localization evidence make-or-break; annotations evaluation-only).
+
+## 2026-07-29 CSVL-VPL v2 direction (last approved direction record)
 
 - Stage 1 of CSVL-VPL v1 (temporal surface association over sealed P03) was
   executed 2026-07-26 and returned three no-gos: association could not beat

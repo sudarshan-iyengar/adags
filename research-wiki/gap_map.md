@@ -1,8 +1,45 @@
 # Gap Map
 
-Updated 2026-07-29 after the Stage 1/1B/1C no-gos and the approved CSVL-VPL v2
-direction. The 2026-07-25 update below is retained for history but its central
-claim is falsified.
+Updated 2026-08-08 after the STAR-GS method-discovery run. The 2026-07-29
+update remains binding history.
+
+## Post-Method-Discovery Update - 2026-08-08
+
+Five verified literature sweeps + nine paper deep-dives + four
+fresh-context adversarial reviews substantially tightened the map:
+
+- **G5 (capacity allocation)**: [[operations/star-gs-v9-method]] is the
+  preserved training-side candidate on this axis (deficit-carved,
+  budget-neutral spacetime birth) — NOT the approved lead direction; the
+  next phase is representation-level discovery. Its test plan is
+  preserved at [[operations/star-gs-v9-experiment-plan]], review record
+  at [[operations/star-gs-v9-review-history]], sweep evidence at
+  [[operations/sota-sweep-2026-08]]. Occupied neighbors verified at mechanism level:
+  CEC-4DGS ([[papers/kang2025_cec_4dgs]]) = error-driven time-local 4D
+  birth at single-view rendered depth (unbudgeted); FreeTimeGS = periodic
+  budget-neutral relocation to existing high-score regions; SharpTimeGS
+  stage-2 = fixed-count error/motion densification; TAD-GS +
+  [[papers/cho2026_4d_scaffold_gs]] = presence-weighted statistics. The
+  residual open slice: depth-free multiview deficit localization +
+  audited budget accounting + causal/event validation.
+- **G13 (visibility events)**: WildRayZer (CVPR 2026 Highlight) occupies
+  learned transient-mask gradient gating; [[papers/mazur2026_4dpm]]
+  (CVPR 2026 Oral) occupies primitive permanence via motion extrapolation
+  (monocular, rigid). Optimizer-level "protection" approaches were
+  examined and rejected this run ([[operations/rejected-approaches-2026-08]]).
+- **G7 (evaluation)**: externally corroborated — ViDAR
+  ([[papers/nazarczuk2025_vidar]]) quantifies co-visibility-mask static
+  bias (mean 26% dynamic pixels) and establishes -D dynamic-mask metrics;
+  TAD-GS's M-PSNR is precedent. The field has no standard temporal
+  metric (tOF/tPSNR borrowed ad hoc) — adopt, don't invent.
+- **New negative knowledge** (review-derived, recorded in the rejected
+  ledger): per-primitive optimizer-timescale interventions are causally
+  unidentified pre-experiment and collide with sparse/selective-Adam
+  tooling; residual images carry no cross-view correspondence signal;
+  time-shift permutation nulls lack exchangeability for nonstationary
+  video; static-scene densification theory now has three distinct
+  accounts (SteepGS saddle points, GDAGS direction coherence,
+  Structure-Aware aliasing) — cite, don't re-derive.
 
 ## Post-Stage-1 Update - 2026-07-29
 
