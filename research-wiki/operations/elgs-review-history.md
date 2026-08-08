@@ -90,3 +90,42 @@ the same-thread 8.9 preceded five fresh SINKS. New lesson: hostile
 rounds converged monotonically (4→8) once each round's demands were
 adopted verbatim rather than argued with; the final gate is now
 mathematical composition, not design.
+
+## Gate rounds on the formal specification (2026-08-09)
+
+User approval received: complete the v8 write-out, run the final
+adversarial round, pass ⇒ implementation-ready.
+G1 (v8.0 → thread 019fe378-cf80-...): SINKS. Found: ε-bound false in
+the negative direction (correct two-sided M(ε) supplied); PROP 2 false
+unconditionally; PROP 1/3 missing tie-break/ownership conditions;
+chain parameterization incompatible with the bounded final endpoint;
+q not guaranteed ∈[0,1]; history charges not a state energy (ledger
+required); cap-operator/censored-reference semantics; SNIS-vs-exact
+language; hash-partition collision claim. Novelty 8/10 held;
+"repairable specification defects rather than evidence the
+representation idea is unsound."
+G2 (v8.1 → thread 019fe382-fde9-...): SINKS. Validated: likelihood
+algebra, two-sided ε-bound, PROP 1 (conditional), inactive-clipping.
+Found: softmax simplex cannot represent exact boundary/latched states
+(the substantive defect); family-to-evidence map missing; snapshot vs
+candidate-dependent q; per-case transition deltas; estimator
+conventions. Novelty 8/10 held.
+G3 (v8.2 → thread 019fe38c-dd6f-...): SINKS with exactly THREE
+category-A defects (latched-span budget definition; single-valued
+cluster binding via a canonical point; MERGE survivor identity), all
+else validated under the A/B/C rubric (A = material divergence between
+faithful implementations; B = preregistration conventions; C =
+empirical risks).
+G3-closure (same thread, v8.3): all three repairs verified closed, no
+new category-A defects — **SURVIVES-WITH-RISKS, hostile novelty 8/10:
+"the exact episodic latch representation, ownership-controlled censored
+evidence, and transaction-aware structural search form a distinctive
+and now implementable construction."** Category-B items (tie orders,
+derived p_floor/p_cap, latch-transition tables, bootstrap mechanics,
+thresholds) must be committed as preregistration tables with the
+implementation; category-C risks are exactly what the preregistered
+plan tests.
+
+GATE STATUS: **PASSED 2026-08-09.** The calibrated 8.0 condition is
+satisfied; EL-GS is implementation-ready under
+[[operations/elgs-experiment-plan]].

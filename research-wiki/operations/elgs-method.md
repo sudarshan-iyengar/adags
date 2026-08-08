@@ -2,11 +2,22 @@
 
 Date: 2026-08-08 (Loop 2, user-relaxed constraints: external priors
 allowed; any public dataset; per-scene optimization fixed).
-Status: **selected Loop-2 candidate at calibrated novelty 8.0/10
-(PROCEED WITH CAUTION), conditional. FORMAL GATE NOT YET PASSED: the
-v8 mathematical write-out (fix set below) must be completed and survive
-one further fresh-context adversarial round before implementation
-approval.** Nothing implemented/trained/submitted.
+Status: **GATE PASSED (2026-08-09) — IMPLEMENTATION-READY under the
+preregistered plan, per user approval of 2026-08-09.** The complete
+formal write-out is [[operations/elgs-v8-formal-spec]] (v8.3): after
+three gate-audit rounds (each defect list shrinking: 4 mathematical
+fatals → 3 category-A ambiguities → 0), the final verdict is
+**SURVIVES-WITH-RISKS, hostile novelty 8/10** — "the mathematical
+specification is closed enough that further objections are now
+primarily empirical; the preregistered experiment program is the
+appropriate next arbiter." Calibrated novelty 8.0/10 (PROCEED WITH
+CAUTION) with its condition (complete formal write-out surviving a
+fresh audit) now SATISFIED. Remaining defect classes are category-B
+(preregistration tables, to be committed with the implementation) and
+category-C (empirical risks, tested by the plan). Nothing yet
+implemented/trained/submitted — implementation may begin per
+[[operations/elgs-experiment-plan]] (M0 static checks first, which
+include the spec's invariance unit tests).
 Provenance: Loop-2 sweeps ([[operations/loop2-sweep-2026-08]]) →
 refine loop 5.7→8.2→8.9 → FIVE fresh-context adversarial rounds
 (hostile novelty 4→6→7→7→8) → calibrated referee 8.0
