@@ -1,7 +1,43 @@
 # Gap Map
 
-Updated 2026-08-08 after the STAR-GS method-discovery run. The 2026-07-29
-update remains binding history.
+Updated 2026-08-08 (evening) after the representation-first discovery
+run ([[operations/lgs-method]]). The earlier 2026-08-08 STAR-GS update
+and the 2026-07-29 update remain binding history.
+
+## Post-Representation-Run Update - 2026-08-08 (evening)
+
+Five verified representation-level sweeps + nine deep-dives + five
+fresh-context adversarial rounds + a calibrated novelty check
+([[operations/repr-sweep-2026-08]], [[operations/lgs-novelty-record]])
+tightened the map:
+
+- **G13 (visibility events)**: the representation-level boundary is now
+  precise: per-primitive multi-interval/reactivating presence, latched
+  presence, per-primitive changepoints, and exact compact-support
+  absence are VERIFIED UNOCCUPIED across all eight dynamic-GS families;
+  discrete lifecycle exists only in streaming methods and always births
+  NEW rows. [[operations/lgs-method]] occupies this slice (selected
+  candidate, 6.5/10 novelty, awaiting user decision). Near misses to
+  cite: Ex4DGS (single flat-top), CTRL-GS (scene-global segments),
+  TOM-GS (presence-only single bump), AD-GS/TRiGS (single window),
+  CLOTH-HUGS (order without memory), CIF (occupancy × semantic
+  identity), PersistGS/4DPM/MoPe (pose/log-odds permanence), CubifyGS
+  (frozen assets, discrete maintenance), TSA (2D slot activation).
+- **G14 (identity-conserving promotion)**: reactivation-with-own-content
+  is confirmed unoccupied AND mechanistically opposite to the entire
+  relocation/respawn family (3DGS-MCMC donor-clone overwrite verified
+  at code level; FreeTimeGS++ 2605.03337 ablates that family). LGS's
+  lineage tying + reactivation is the candidate occupant; its
+  irreversible-fragmentation limitation (no merge) is recorded.
+- **G5 (capacity)**: counterfactual trial-render structural acceptance
+  is unoccupied (closest: L2D2-GS 2606.29374, offline policy reward);
+  it enters LGS as supporting machinery only.
+- **New negative knowledge** ([[operations/rejected-representations-2026-08]]):
+  occlusion-order layer stacks are rig-hostile here (P03); ratio-based
+  description-cost economics is undefined/gameable as a principle; soft
+  content assignment over a candidate library has no coherent geometry
+  under migration and contradicts strict scalar caps; same-thread refine
+  approval again failed to predict fresh-context survival.
 
 ## Post-Method-Discovery Update - 2026-08-08
 

@@ -1,12 +1,56 @@
 # Query Pack
 
-Compressed project memory for ideation. Updated 2026-08-08 after the
-method-discovery run that produced [[operations/star-gs-v9-method]].
-User decision (2026-08-08): STAR-GS is PRESERVED as a training-side
-candidate (implementable/testable later via its preregistered plan) but
-is NOT the lead direction; the next research phase is representation-level
-method discovery (not yet begun). The 2026-07-29 section remains the last
-user-approved direction record and its discipline stays binding.
+Compressed project memory for ideation. Updated 2026-08-08 (evening)
+after the REPRESENTATION-FIRST method-discovery run that produced
+[[operations/lgs-method]] (LGS, selected candidate, awaiting user
+decision). STAR-GS remains PRESERVED as a training-side secondary
+candidate per the earlier 2026-08-08 user decision. The 2026-07-29
+section remains the last user-approved direction record and its
+discipline stays binding.
+
+## 2026-08-08 (evening) LGS — representation-level candidate (awaiting user decision)
+
+- Method: LGS (Lineage Gaussian Splatting) — the dynamic primitive
+  becomes a LINEAGE: tied radiance (world-frame SH + base opacity) +
+  ordered disjoint compact-support EPISODES (K≤4; per-episode
+  translation/rotation-offset/scale-offset; rank-8 motion coefficients
+  at immutable per-episode origins; EXACT-zero absence between episodes;
+  latched presence, chain-invariant intervals). Structural search
+  (supporting, not claimed): screening accumulators + counterfactual
+  micro-render acceptance (ΔL̂ + λ·ΔS < 0, codec-mode-decision
+  ancestry); reactivation = deterministic voxel-hash retrieval of
+  dormant lineages at predicted pose, re-enabling OWN trained content
+  (no merge — predictable-pose returns only, disclosed). Full spec:
+  [[operations/lgs-method]]; plan: [[operations/lgs-experiment-plan]]
+  (~350-420 GPU-h, activation-census gate kills cheaply); reviews:
+  [[operations/lgs-review-history]]; novelty:
+  [[operations/lgs-novelty-record]]; boundary:
+  [[operations/repr-sweep-2026-08]]; rejected candidates:
+  [[operations/rejected-representations-2026-08]].
+- Provenance: 5 verified sweeps + 9 deep-dives → 4-round refine loop
+  (9.2 READY) → 5 FRESH-context adversarial rounds (4 SINKS with full
+  redesigns: statistics-carving v5, ratio-economics v6, soft-assignment
+  v7 — each ledgered; v9 SURVIVES-WITH-RISKS, no unrepairable defect)
+  → calibrated novelty check **6.5/10 PROCEED WITH CAUTION** (same
+  scale as STAR-GS's 5.5; CC1 multi-episode latched presence HIGH; CC5
+  conjunction HIGH field-specific; referee: 8+ requires a new inference
+  principle/foundational primitive). Run target was 8.5+ → decision
+  escalated to user: approve LGS at 6.5, or direct another loop under
+  changed constraints.
+- Verified-unoccupied kernel (five sweeps + dedicated gap searches):
+  multi-interval/reactivating presence per primitive; latched presence;
+  per-primitive changepoints; exact compact-support absence;
+  counterfactual trial-render acceptance (closest: L2D2-GS 2606.29374 —
+  offline policy reward, not live acceptance); dormant reactivation
+  with OWN content (nearest family is the mechanistic OPPOSITE:
+  3DGS-MCMC code-verified donor-clone overwrite; FreeTimeGS++
+  2605.03337 ablates the donor-respawn family).
+- Largest risks (binding on any test): mechanism activation rarity on
+  N3V (B1 census gate); hard-sharing appearance bias (object-frame +
+  soft-share probes); no-merge irreversibility; search-cost ledger.
+- Wiki corrections recorded (not silent): 2606.23212 self-names VAD
+  (≠ VAD-GS 2510.09364); kang2025 "CEC-4DGS" actual title "Clustered
+  Error Correction with Grouped 4DGS" (2511.16112), repo CEM-4DGS.
 
 ## 2026-08-08 STAR-GS candidate (preserved, not lead)
 
