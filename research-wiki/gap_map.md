@@ -1,8 +1,31 @@
 # Gap Map
 
-Updated 2026-08-08 (evening) after the representation-first discovery
-run ([[operations/lgs-method]]). The earlier 2026-08-08 STAR-GS update
-and the 2026-07-29 update remain binding history.
+Updated 2026-08-08 (night) after Loop 2 ([[operations/elgs-method]]).
+Earlier updates remain binding history.
+
+## Loop-2 Update - 2026-08-08 (night)
+
+Under user-relaxed constraints (external priors; any public dataset;
+per-scene fixed), three verified sweeps ([[operations/loop2-sweep-2026-08]])
+found: (i) tracker visibility states have NEVER been consumed as
+representation-level presence/identity (MoSca/SoM loss masks only);
+(ii) no existence inference with an observation model exists in
+differentiable rendering (CIF nearest, segmentation-scoped); (iii) the
+occlusion-order+memory conjunction remains unoccupied even on
+surround/ego rigs (ST-NeRF verified to lack persistent hidden state;
+no GS successor); (iv) non-rigid permanence through occlusion on
+surround capture and egocentric hidden-state dynamic GS are open;
+(v) DiVa-360 is the event-dense benchmark with no GS baselines.
+EL-GS occupies (i)+(ii) with the LGS substrate — G13/G14 now have a
+candidate occupant with a calibrated 8.0 conditional novelty; the
+remaining gate is formal (v8 write-out + one fresh adversarial round).
+G9 (uncertainty/occlusion confidence) is directly addressed by the
+censored-evidence ontology (conditional claims, no calibration).
+New negative knowledge: track-state⇒existence naive mappings are
+invalid measurement semantics; e-process validity claims for adaptive
+structural acceptance are unsupportable; per-segment bridge selection
+creates chimera evidence (all ledgered in
+[[operations/elgs-review-history]]).
 
 ## Post-Representation-Run Update - 2026-08-08 (evening)
 

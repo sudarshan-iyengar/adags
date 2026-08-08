@@ -1,12 +1,52 @@
 # Query Pack
 
-Compressed project memory for ideation. Updated 2026-08-08 (evening)
-after the REPRESENTATION-FIRST method-discovery run that produced
-[[operations/lgs-method]] (LGS, selected candidate, awaiting user
-decision). STAR-GS remains PRESERVED as a training-side secondary
-candidate per the earlier 2026-08-08 user decision. The 2026-07-29
-section remains the last user-approved direction record and its
-discipline stays binding.
+Compressed project memory for ideation. Updated 2026-08-08 (night)
+after Loop 2 of the representation-first program produced
+[[operations/elgs-method]] (EL-GS, calibrated novelty 8.0/10
+conditional, formal gate pending — the current lead candidate). LGS
+([[operations/lgs-method]], 6.5) is the evidence-off substrate and
+internal baseline; STAR-GS remains a PRESERVED training-side secondary.
+The 2026-07-29 section remains the last user-approved direction record.
+
+## 2026-08-08 (night) EL-GS — Loop-2 lead candidate (gate pending)
+
+- User-relaxed constraints for Loop 2: external priors ALLOWED; any
+  public dataset ALLOWED; per-scene optimization FIXED.
+- Method: EL-GS = episodic lineage representation (LGS substrate in
+  family form) + RENDERER-CONDITIONED CENSORED EVIDENCE for
+  data-supported structural selection: frozen multi-view point tracks
+  interpreted through likelihood-ratio factors whose informativeness is
+  gated by counterfactual observability computed BY the current scene
+  model (family-present query-source-excluded transmittance, bridge
+  family, censoring equality ⇒ censored segments contribute exactly
+  zero); structural ops (fission/truncation/reactivation/birth/merge)
+  selected under one energy with disclosed permanence+complexity
+  priors; conditional claims only. Full spec + v8 fix set:
+  [[operations/elgs-method]]; reviews:
+  [[operations/elgs-review-history]] (refine 5.7→8.9; five fresh
+  adversarial rounds, hostile novelty 4→6→7→7→8); novelty:
+  [[operations/elgs-novelty-record]] (8.0 PROCEED WITH CAUTION,
+  conditional; fall-back 6.5-7.0 if q degrades to a confidence
+  weight); plan: [[operations/elgs-experiment-plan]] (~360-390 GPU-h,
+  gated); sweeps: [[operations/loop2-sweep-2026-08]].
+- Unoccupied cells occupied by EL-GS (verified): tracker visibility
+  states as representation-level presence/identity evidence;
+  measurement-model existence inference in differentiable rendering;
+  reactivation with OWN trained content (relocation family is the
+  mechanistic opposite).
+- Datasets: primary DiVa-360 (53-cam surround, 25 hand-object seqs,
+  MIT; GS baselines must be established); Ego-Exo4D cooking stress;
+  HOT3D/ADT pose GT for metric validation only; N3V/Technicolor
+  continuity.
+- GATE (before any implementation): complete the v8 formal write-out
+  (tempered-mixture bridge aggregation; ratio factors; one bridge
+  latent per decision; ε-bound derivation; full transition table) and
+  pass one further fresh-context adversarial round; then user approval.
+- Program trajectory on one referee scale: STAR-GS 5.5 → LGS 6.5 →
+  EL-GS 8.0 conditional. Target was 8.5+: the referee's stated ceiling
+  reasons are inherited statistical machinery, heuristic
+  search/acceptance, tracker/bridge dependence, and ported-baseline
+  benchmark risk.
 
 ## 2026-08-08 (evening) LGS — representation-level candidate (awaiting user decision)
 
