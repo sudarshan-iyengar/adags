@@ -219,6 +219,34 @@ class OptimizationParams(ParamGroup):
         self.lifecycle_backproject_sigma_max = 0.12
         self.lifecycle_ledger_interval = 100
 
+        # ---------------- EL-GS (evidence-lineage) ----------------
+        # Category-1 structural constants and the schedule anchors are
+        # NOT tunable here: they load from the hash-recorded prereg
+        # files under elgs_prereg_dir (preregistration integrity —
+        # research-wiki/operations/elgs-m0-m1-implementation-plan §7).
+        # The keys below are the master switch, artifact locations,
+        # and category-3 development hyperparameters (tunable only on
+        # declared dev scenes; -1.0 sentinel = unset, and the
+        # submission wrapper refuses evidence-bearing runs while any
+        # required prereg entry is unfrozen).
+        self.elgs_enable = False
+        self.elgs_prereg_dir = "configs/elgs"
+        self.elgs_tracks_dir = ""
+        self.elgs_smoke_schedule = False
+        self.elgs_beta = -1.0
+        self.elgs_kappa = -1.0
+        self.elgs_chi = -1.0
+        self.elgs_mu = -1.0
+        self.elgs_tau_b = -1.0
+        self.elgs_k_se = -1.0
+        self.elgs_lambda_u = -1.0
+        self.elgs_c_cap = -1
+        self.elgs_candidate_cap = -1
+        self.elgs_confirmation_samples = -1
+        self.elgs_a_lr = -1.0
+        self.elgs_r_site = -1.0
+        self.elgs_binding_threshold = -1.0
+
         super().__init__(parser, "Optimization Parameters")
 
 def get_combined_args(parser : ArgumentParser):
