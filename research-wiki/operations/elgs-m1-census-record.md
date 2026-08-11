@@ -196,17 +196,50 @@ re-run:
   section; the review records are quoted in the session artifacts
   and their verdict sentences here are verbatim.
 
+## Phase-1 validation COMPLETE; tracker run submitted (2026-08-11 late)
+
+- Fourth converter dry-run PASSED (det task `bc362063`, ctx `413c831`
+  with the resolution-probe rework `cd63973`): all 35 train + 6 test
+  cameras discovered for window [0,47] (1,680 + 288 pairs, 1:1
+  derived masks planned); the resolution probe uniquely selected
+  `frames_1` on real data.
+- REAL conversion executed (det task `1eb02c9e`):
+  `data/diva360_derived/unlock_w0_47/` holds temporal
+  transforms_train/test/val, `undist/` frames, `masks/` (48/camera,
+  frames_1-alpha-derived), `points3d.ply`, immutable provenance.
+- Tracks-builder dry-run in the Determined runtime PASSED (det task
+  `bc827435`): 26 tracking cameras (9 mod-4 held-out excluded), 48
+  common frames, 88 visual-hull surface seeds from real masks +
+  calibration with coherent per-camera query counts (28–88). A
+  non-empty multi-view-consistent hull is the reprojection
+  camera-convention check: wrong conventions carve an empty hull
+  (fail-closed). M1 phase-1 (data present + validated) is COMPLETE.
+- Submission-path extension landed at `413c831`: the experiment
+  template's entrypoint script is wrapper-controlled against a
+  fail-closed allowlist, so tracks/census cells flow through the
+  same provenance path as training runs; manifest records
+  `entrypoint_script`.
+- M1-A0 evaluator landed at `0ab6fb2` against the SIGNED revision-3
+  definitions (10 hand-derived-oracle tests; prereg revision/floor
+  drift fail-closed).
+- Frozen tracks artifact run SUBMITTED evidence-bearing: cell
+  `m1_tracks_unlock_w0_47` retry 2 = Determined experiment 8, commit
+  `413c831`, digest-pinned v2 image, hopper; out-dir
+  `data/diva360_derived/unlock_w0_47_tracks`; ledger category
+  annotation `preprocessing` (timing probe for full-sequence
+  extrapolation; reproducibility accounting only). Claims r0/r1 were
+  consumed by an aborted Git-Bash-mangled dry-run and a clean
+  PowerShell dry-run respectively — recorded, not deleted
+  (append-only discipline).
+
 ## Remaining M1 steps (per the plan)
 
-1. Converter dry-run PASS on unlock (in progress at ctx `4a85fc5`),
-   then real conversion + load smoke in the Determined runtime +
-   tracks-builder dry-run (the hull-seed construction doubles as the
-   reprojection camera-convention check: a consistent non-empty hull
-   requires correct conventions).
-2. Floor re-review SIGN, then the M1-A0 evaluator implementation
-   against the revision-2 frozen definitions.
-3. Frozen tracks artifact + shift/shuffle controls via the v2 image
-   (preprocessing GPU-h accounted for reproducibility only).
-4. Census cells M1-A0 → A0b → A → B → C/D (≤25 GPU-h ceiling);
-   independent recomputation; gate application; result recorded here
-   either way.
+1. Experiment 8 completion audit; tracks artifact + controls sealed;
+   preprocessing GPU-h recorded (projected 0.5).
+2. Census cells M1-A0 → A0b → A → B → C/D (≤25 GPU-h ceiling);
+   M1-A0 via the wrapper with entrypoint
+   `scripts/build_m1_census.py` and the signed prereg as the named
+   config; independent recomputation; gate application; result
+   recorded here either way.
+3. Remaining dev sequences (battery, flip_book) conversion + tracks
+   after the unlock chain validates end-to-end.
