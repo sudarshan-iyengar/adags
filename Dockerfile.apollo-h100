@@ -61,6 +61,14 @@ RUN python -m pip install --no-cache-dir --no-build-isolation /opt/adags/extensi
 
 RUN python -m pip install --no-cache-dir "determined==0.38.0"
 
+# M1 tracker stack (the ONE planned image revision — implementation
+# plan §11.1 item 7): CoTracker3-class tracker, commit-pinned for
+# reproducibility; imageio for frame IO. Weights are NOT baked — they
+# are a separately provenance-manifested artifact on Apollo storage.
+RUN python -m pip install --no-cache-dir "imageio==2.34.2" "imageio-ffmpeg==0.5.1" \
+    && python -m pip install --no-cache-dir \
+       "git+https://github.com/facebookresearch/co-tracker.git@82e02e8029753ad4ef13cf06be7f4fc5facdda4d"
+
 COPY scripts/validate_apollo_runtime.py /opt/adags/validate_apollo_runtime.py
 RUN python /opt/adags/validate_apollo_runtime.py --build-check
 

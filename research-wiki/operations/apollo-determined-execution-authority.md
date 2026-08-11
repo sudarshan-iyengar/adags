@@ -18,8 +18,14 @@ page is the operational summary implementers and auditors read.
 - Images: `sudarshaniyengar/adags:apollo-{v100,h100}-v1` (Docker Hub).
   EVIDENCE-BEARING runs reference images by DIGEST
   (`sudarshaniyengar/adags@sha256:...`) — mutable tags never pin bits.
-  One planned image revision at M1 start adds the tracker stack (new
-  tag, digest-pinned, `validate_apollo_runtime.py --build-check`).
+  The one planned M1 image revision was executed 2026-08-11:
+  `apollo-h100-v2` = the v1 Dockerfile + commit-pinned CoTracker3
+  (`facebookresearch/co-tracker@82e02e80`) + imageio 2.34.2 /
+  imageio-ffmpeg 0.5.1; built locally with the in-Dockerfile
+  `validate_apollo_runtime.py --build-check` gate; pushed; MANIFEST
+  DIGEST for all evidence-bearing M1 references:
+  `sha256:a2877f26cb8528454fe45e701ce638a6042dd68155fb5359cb7edc608a4a7816`.
+  Tracker weights are NOT baked — separately manifested artifact.
 - Storage roots (inside containers): project
   `/apollo/users/sri/proj_adags`, raw data `data/` (read-only),
   runs `runs/elgs/<run_id>/`, logs `logs/`. VERIFIED 2026-08-11 by
