@@ -327,6 +327,7 @@ class BuildManifestTests(_ScratchRepoTestCase):
         "seed",
         "dataset_manifest",
         "run_dir",
+        "entrypoint_script",
         "wrapper",
         "submitter_host",
         "utc_stamp",
@@ -517,6 +518,7 @@ class RenderTemplateTests(unittest.TestCase):
             "NAME": "m0-s1",
             "POOL": "hopper",
             "IMAGE_REF": "sudarshaniyengar/adags@sha256:" + "a" * 64,
+            "ENTRYPOINT_SCRIPT": "main.py",
             "ENTRYPOINT_ARGS": "--config configs/elgs/smoke.json --model_path /apollo/x",
             "RUN_DIR": "/apollo/users/sri/proj_adags/runs/elgs/x",
         }
@@ -525,9 +527,9 @@ class RenderTemplateTests(unittest.TestCase):
         # comments legitimately mention the literal string "{{...}}" while
         # explaining the substitution syntax -- that is prose, not a
         # placeholder, and render_template's own placeholder regex correctly
-        # ignores it; assert on the five real tokens instead of a blanket
+        # ignores it; assert on the six real tokens instead of a blanket
         # substring search.)
-        for key in ("NAME", "POOL", "IMAGE_REF", "ENTRYPOINT_ARGS", "RUN_DIR"):
+        for key in ("NAME", "POOL", "IMAGE_REF", "ENTRYPOINT_SCRIPT", "ENTRYPOINT_ARGS", "RUN_DIR"):
             self.assertNotIn("{{" + key + "}}", rendered)
         self.assertIn("m0-s1", rendered)
         self.assertIn("resource_pool: \"hopper\"", rendered)
@@ -619,6 +621,82 @@ class CanonicalHashRootIndependenceTests(unittest.TestCase):
                 [Path(b) / "configs" / "elgs" / "run.yaml"]
             )
             self.assertNotEqual(legacy_a, legacy_b)
+
+
+class EntrypointScriptTests(unittest.TestCase):
+    """M1 extension: wrapper-controlled entrypoint script (allowlisted)."""
+
+    def test_main_py_args_unchanged(self):
+        args = wrapper._build_entrypoint_args(
+            config_path="configs/elgs/x.yaml",
+            run_dir="/apollo/run",
+            extra_args=["--seed", "1"],
+        )
+        self.assertEqual(args, "--config configs/elgs/x.yaml --model_path /apollo/run --seed 1")
+
+    def test_non_main_entrypoint_takes_only_extra_args(self):
+        args = wrapper._build_entrypoint_args(
+            config_path="configs/elgs/prereg_m1_census_v1.json",
+            run_dir="/apollo/run",
+            extra_args=["--scene-dir", "/apollo/scene", "--out", "/apollo/run/census.json"],
+            entrypoint_script="scripts/build_m1_census.py",
+        )
+        self.assertEqual(args, "--scene-dir /apollo/scene --out /apollo/run/census.json")
+        self.assertNotIn("--config", args)
+        self.assertNotIn("--model_path", args)
+
+    def test_non_main_entrypoint_requires_extra_args(self):
+        with self.assertRaises(ContractError):
+            wrapper._build_entrypoint_args(
+                config_path="c.yaml",
+                run_dir="/r",
+                extra_args=[],
+                entrypoint_script="scripts/build_elgs_tracks.py",
+            )
+
+    def test_unlisted_entrypoint_script_is_rejected(self):
+        with self.assertRaises(ContractError):
+            wrapper._build_entrypoint_args(
+                config_path="c.yaml",
+                run_dir="/r",
+                extra_args=["--x"],
+                entrypoint_script="scripts/unknown.py",
+            )
+
+    def test_template_renders_with_census_entrypoint(self):
+        substitutions = {
+            "NAME": "m1_a0_unlock_0",
+            "POOL": "hopper",
+            "IMAGE_REF": "sudarshaniyengar/adags@sha256:" + "a" * 64,
+            "ENTRYPOINT_SCRIPT": "scripts/build_m1_census.py",
+            "ENTRYPOINT_ARGS": "--scene-dir /apollo/scene --out /apollo/run/census.json",
+            "RUN_DIR": "/apollo/users/sri/proj_adags/runs/elgs/x",
+        }
+        rendered = wrapper.render_template(REPO_ROOT / "det_exp_apollo.yaml", substitutions)
+        self.assertIn("exec python3 scripts/build_m1_census.py", rendered)
+
+    def test_manifest_records_entrypoint_script(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            config = repo / "configs" / "elgs"
+            config.mkdir(parents=True)
+            (config / "cell.json").write_text('{"a": 1}', encoding="utf-8")
+            manifest = wrapper.build_manifest(
+                repo_root=repo,
+                commit="c" * 40,
+                branch="b",
+                config_paths=[config / "cell.json"],
+                image_ref="img@sha256:" + "a" * 64,
+                pool="hopper",
+                slots=1,
+                seed=0,
+                run_dir="/r",
+                wrapper_argv=["x"],
+                evidence_bearing=True,
+                projected_gpu_hours=0.1,
+                entrypoint_script="scripts/build_m1_census.py",
+            )
+            self.assertEqual(manifest["entrypoint_script"], "scripts/build_m1_census.py")
 
 
 if __name__ == "__main__":

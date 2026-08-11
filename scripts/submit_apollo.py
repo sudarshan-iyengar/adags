@@ -86,6 +86,18 @@ EXECUTION_FILES: tuple[str, ...] = (
     "det_exp_apollo.yaml",
 )
 
+#: The only scripts the experiment template may exec (fail-closed allowlist;
+#: M1 adds the tracks-preprocessing and census-cell entrypoints alongside the
+#: trainer). Non-``main.py`` entrypoints receive ONLY the caller's
+#: ``--extra-arg`` tokens -- their CLIs are self-contained -- while the named
+#: ``--config`` still enters the closure set, the manifest, and the runtime
+#: config-hash contract (for census cells the config IS the frozen prereg).
+ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
+    "main.py",
+    "scripts/build_elgs_tracks.py",
+    "scripts/build_m1_census.py",
+)
+
 #: The one shared, mutable, historical worktree path. No evidence-bearing
 #: code is ever allowed to execute from here (S10.2 item 2).
 FORBIDDEN_WORKTREE = "/apollo/users/sri/proj_adags/repo/adags"
@@ -450,6 +462,7 @@ def build_manifest(
     submitter_host: str | None = None,
     utc_stamp: str | None = None,
     hash_root: os.PathLike[str] | str | None = None,
+    entrypoint_script: str = "main.py",
 ) -> dict[str, Any]:
     """Build the pre-submission run manifest (S10.2 item 4).
 
@@ -526,6 +539,7 @@ def build_manifest(
         "utc_stamp": utc_stamp or _utc_now_stamp(),
         "evidence_bearing": bool(evidence_bearing),
         "projected_gpu_hours": float(projected_gpu_hours),
+        "entrypoint_script": str(entrypoint_script),
     }
 
 
@@ -739,8 +753,27 @@ def _build_run_id(*, cell: str, seed: int, commit: str) -> str:
     return f"{stamp}_{cell}_{seed}_{commit[:7]}"
 
 
-def _build_entrypoint_args(*, config_path: str, run_dir: str, extra_args: Sequence[str]) -> str:
-    tokens = ["--config", config_path, "--model_path", run_dir, *extra_args]
+def _build_entrypoint_args(
+    *,
+    config_path: str,
+    run_dir: str,
+    extra_args: Sequence[str],
+    entrypoint_script: str = "main.py",
+) -> str:
+    if entrypoint_script not in ALLOWED_ENTRYPOINT_SCRIPTS:
+        raise ContractError(
+            f"entrypoint script {entrypoint_script!r} is not in the allowlist "
+            f"{ALLOWED_ENTRYPOINT_SCRIPTS}"
+        )
+    if entrypoint_script == "main.py":
+        tokens = ["--config", config_path, "--model_path", run_dir, *extra_args]
+    else:
+        tokens = list(extra_args)
+        if not tokens:
+            raise ContractError(
+                f"entrypoint {entrypoint_script!r} takes its whole CLI from "
+                "--extra-arg tokens; none were given"
+            )
     return " ".join(shlex.quote(str(token)) for token in tokens)
 
 
@@ -764,6 +797,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
         "NAME": args.cell,
         "POOL": args.pool,
         "IMAGE_REF": args.image_ref,
+        "ENTRYPOINT_SCRIPT": "main.py",
         "ENTRYPOINT_ARGS": "--config placeholder --model_path placeholder",
         "RUN_DIR": "placeholder",
     }
@@ -831,8 +865,12 @@ def cmd_submit(args: argparse.Namespace) -> int:
         "NAME": args.cell,
         "POOL": args.pool,
         "IMAGE_REF": args.image_ref,
+        "ENTRYPOINT_SCRIPT": args.entrypoint_script,
         "ENTRYPOINT_ARGS": _build_entrypoint_args(
-            config_path=config_relative, run_dir=run_dir, extra_args=args.extra_arg
+            config_path=config_relative,
+            run_dir=run_dir,
+            extra_args=args.extra_arg,
+            entrypoint_script=args.entrypoint_script,
         ),
         "RUN_DIR": run_dir,
     }
@@ -883,6 +921,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
             projected_gpu_hours=args.projected_gpu_hours,
             dataset_manifest_path=args.dataset_manifest,
             hash_root=context_dir,
+            entrypoint_script=args.entrypoint_script,
         )
         manifest["archive_sha256"] = archive_sha256
         manifest["rendered_config_sha256"] = sha256(rendered_config.encode("utf-8")).hexdigest()
@@ -1085,7 +1124,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     submit = subparsers.add_parser("submit", help="submit one EL-GS Determined experiment")
     _add_common_submission_args(submit, require_projected_hours=True)
-    submit.add_argument("--extra-arg", action="append", default=[], help="extra main.py CLI token (repeatable)")
+    submit.add_argument("--extra-arg", action="append", default=[], help="extra entrypoint CLI token (repeatable)")
+    submit.add_argument(
+        "--entrypoint-script",
+        default="main.py",
+        help=(
+            "script the experiment execs (allowlist: "
+            f"{', '.join(ALLOWED_ENTRYPOINT_SCRIPTS)}); non-main.py entrypoints "
+            "take their whole CLI from --extra-arg tokens"
+        ),
+    )
     submit.add_argument("--dry-run", action="store_true", help="stop before `det e create`; print the manifest")
     submit.set_defaults(func=cmd_submit)
 

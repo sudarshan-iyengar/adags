@@ -21,8 +21,13 @@
 #                         cannot substitute for that guarantee. A mutable tag
 #                         is tolerated only for a `--dirty-smoke`
 #                         (evidence_bearing: false) run.
+#   {{ENTRYPOINT_SCRIPT}} the wrapper-controlled script to exec (M1: main.py
+#                         for training cells, scripts/build_elgs_tracks.py /
+#                         scripts/build_m1_census.py for preprocessing and
+#                         census cells; validated against the wrapper's
+#                         ALLOWED_ENTRYPOINT_SCRIPTS allowlist, fail-closed)
 #   {{ENTRYPOINT_ARGS}}   the full CLI argument string appended after
-#                         `python3 main.py` (built by the wrapper from the
+#                         `python3 {{ENTRYPOINT_SCRIPT}}` (built by the wrapper from the
 #                         named run config, --model_path, and any passthrough
 #                         args; substituted inside a double-quoted `bash -c`
 #                         string -- see the `entrypoint:` note below).
@@ -170,4 +175,4 @@ environment:
     - ADAGS_RUN_DIR={{RUN_DIR}}
 entrypoint: >-
   bash -c "python3 -c 'from scripts.submit_apollo import runtime_assertions;
-  runtime_assertions()' && exec python3 main.py {{ENTRYPOINT_ARGS}}"
+  runtime_assertions()' && exec python3 {{ENTRYPOINT_SCRIPT}} {{ENTRYPOINT_ARGS}}"
