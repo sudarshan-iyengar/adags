@@ -1,0 +1,31 @@
+{
+  "schema_version": "elgs-prereg-evidence-heads-v1",
+  "authority": "spec section 2 + oracle ambiguity adjudications (tests/ref_impls/likelihood_reference.py A1-A7)",
+  "adjudicated_rulings": {
+    "g_pos_covariance": "isotropic sigma^2*I truncated to D_img with exact erf rectangle normalization (oracle A2; the minimal faithful reading — anisotropic propagation would be an uninstructed elaboration)",
+    "p_out_form": "structural form of p_cens with its own pi_m^o and value head over 1/|D_img| (oracle A3; a b-centred p_out would make L0 bridge-dependent and break the censoring equality's b-independence)",
+    "pi_m_v_floor": "the [pi_floor, 1-pi_floor] interval is applied to pi_m^v as well (oracle A4; disclosed extension of the literal clause)",
+    "floors_are_constraints": "floor/cap violations RAISE, never clamp (oracle A5)",
+    "off_domain_reports": "out-of-domain reports raise fail-closed in the pipeline (a preprocessing defect), while the frozen oracle's A6 reading assigns density 0; parity is defined on the valid domain",
+    "status": "frozen"
+  },
+  "head_families": {
+    "g_v": {"family": "beta(a,b) density on [v_min, v_max], monotone-increasing constraint a >= 1", "status": "unfrozen", "allowed_range": "a in [1, 8], b in [0.5, 4]", "authorized_data": "DiVa-360 calibration sequences ONLY (disjoint from dev/locked/held-out; named at inventory before any statistic is computed)", "criterion": "maximum likelihood on calibration visible-report values", "sensitivity": "refit on each calibration-sequence half; report parameter spread", "freeze_point": "before the first evidence-bearing job (B2)", "prohibited_data": "dev, locked, held-out scenes; any post-seeding model state"},
+    "h_c": {"family": "uniform or 8-bin histogram density on [v_min, v_max] with h_floor", "status": "unfrozen", "authorized_data": "same calibration sequences", "criterion": "MLE on censored-condition reports", "freeze_point": "before B2"},
+    "h_o": {"family": "uniform density on [v_min, v_max]", "status": "unfrozen", "authorized_data": "same", "freeze_point": "before B2"},
+    "pi_miss": {"status": "unfrozen", "allowed_range": "[pi_floor, 1-pi_floor] with pi_floor = 0.01", "criterion": "empirical miss rates per condition on calibration sequences", "freeze_point": "before B2"},
+    "g_pos_sigma": {"status": "unfrozen", "allowed_range": "[0.5, 8] px", "criterion": "MLE of report-to-bridge residuals on calibration sequences", "freeze_point": "before B2"}
+  },
+  "floors_caps": {
+    "h_floor": 0.01,
+    "pi_floor": 0.01,
+    "g_cap": "derived: max over the frozen g_v family on its allowed range",
+    "pos_cap": "derived: g_pos density at zero offset for the smallest allowed sigma with both erf normalizers at 1 => 1/(2*pi*sigma_min^2) = 0.6366 for sigma_min 0.5",
+    "p_floor": "derived: inf L0 = r_min*(pi_floor) at the miss token or r_min*(1-pi_m^c)*h_floor/|D_img| positionally, whichever is smaller for the frozen constants",
+    "status": "frozen formulas; numeric values derive from the frozen heads at B2"
+  },
+  "reliability": {
+    "r_u": {"definition": "preregistered tracker diagnostics mapped to [r_min, 1]", "r_min": 0.05, "diagnostics": "forward-backward track consistency + multi-camera reprojection agreement (exact mapping frozen with the tracker artifact manifest)", "status": "unfrozen", "freeze_point": "with the frozen tracks artifact (M1)"},
+    "d_u": {"definition": "pre-gap detectability: the cluster's visible-report rate in its anchor intervals, clipped to [0,1]", "status": "frozen formula"}
+  }
+}

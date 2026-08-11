@@ -1,0 +1,51 @@
+{
+  "schema_version": "elgs-prereg-m1-census-v1",
+  "authority": "implementation plan sections 7.2 item 6 and 11.2; experiment plan B1 with the recorded supersessions (wiki deviations 1-3)",
+  "status_note": "FROZEN structure and floors; the dev-sequence names are filled by the paper-table selection rule below BEFORE any DiVa-360 data is inspected, then this file is committed again and hash-recorded in every census manifest",
+  "cells": {
+    "M1-A0": {"kind": "model-free opportunity screen", "compute": "CPU", "gated": true, "statistics": ["occlusion_opportunity_upper_bound", "true_absence_candidate_count", "same_object_return_count", "track_coverage_upper_bound"], "inputs": "shipped fg/bg masks + 53-camera calibration + frozen tracks ONLY (no trained model anywhere)"},
+    "M1-A0b": {"kind": "audited true absence", "compute": "CPU", "gated": false, "diagnostic_only": true, "claim_limitation": "M1 cannot support a claim-grade estimate of true-event absence or false-positive prevalence; recorded on the result page"},
+    "M1-A": {"kind": "track-coverage census", "compute": "CPU/1-GPU short", "gated": true, "statistics": ["bound_fraction_of_dynamic_content", "coverage_by_camera_count_strata"]},
+    "M1-B": {"kind": "substrate trainability smoke", "compute": "GPU", "gated": false, "conditional_on": "M1-A0 pass"},
+    "M1-C": {"kind": "model-conditioned opportunity diagnostic", "compute": "GPU", "gated": false, "note": "q-tilde distributions under M1-B snapshots; secondary diagnostic only, never gated"},
+    "M1-D": {"kind": "shift/shuffle sanity", "compute": "CPU", "gated": false}
+  },
+  "submission_sequence": ["M1-A0", "M1-A0b", "M1-A", "M1-B", "M1-C", "M1-D"],
+  "floors": {
+    "derivation": "two-proportion power analysis performed at M0 (prereg_metrics_v1.json power_analysis): detecting an arm difference of 0.5 vs 0.8 in per-event operation success at alpha=0.05 two-sided with power 0.8 needs n = 35.76 => 36 events per class per arm; the census floor is therefore 36 model-free opportunities per gated class over the dev subset",
+    "occlusion_events_min": 36,
+    "same_object_returns_min": 36,
+    "true_absence_candidates_min": 36,
+    "track_coverage_min_fraction": 0.5,
+    "sensitivity_rows": {"moderate_effect_0.6_vs_0.85": 47, "small_effect_0.5_vs_0.75": 55},
+    "reviewer_signoff": "a fresh-context reviewer signs these floors BEFORE any DiVa-360 statistic is computed (plan 7.2 item 6)"
+  },
+  "eligibility_predicate": {
+    "true_absence_candidate": {
+      "duration_floor_frames": 8,
+      "min_positive_opportunity_cameras": 2,
+      "mask_disappearance": "the object's fg-mask component vanishes from ALL cameras whose frustum contains its last triangulated position",
+      "re_appearance_handling": "a candidate ends at re-appearance; re-appearance within the sequence marks a same-object-return candidate",
+      "status": "frozen"
+    },
+    "occlusion_event": {"definition": "fg-mask component present in >= min_cameras but absent in >= 1 camera whose frustum contains the triangulated position for >= duration_floor_frames", "duration_floor_frames": 8, "min_cameras": 2, "status": "frozen"},
+    "same_object_return": {"definition": "a true-absence candidate whose track identity re-appears within r_site of its disappearance position", "status": "frozen"}
+  },
+  "audit_protocol": {
+    "sample": "all candidates up to 60 per dev subset, else stratified random 60 (strata: sequence x duration tercile; seed 20260811)",
+    "auditors": "two independent fresh-context audits per candidate, blinded to census outputs, tracks, and each other",
+    "camera_rule": "the 3 training cameras of maximal pairwise angular separation (ties by ascending camera id)",
+    "frames_per_camera": 5,
+    "frame_stride": "uniform over the candidate window",
+    "verdict": "confirmed only if both audits agree ABSENT; disagreement counts as unconfirmed (conservative)",
+    "estimate": "audited-confirmed count extrapolated by the sampling fraction with the one-sided lower Clopper-Pearson 90% bound",
+    "status": "frozen"
+  },
+  "scene_selection": {
+    "rule": "dev subset = the first 3 hand-object interaction sequences in the official DiVa-360 paper sequence table (Table order, not data-inspected); calibration sequences = the next 2; held-out sequences and cameras never enter tracking, observability, or calibration",
+    "held_out_camera_rule": "every camera id congruent to 0 mod 4 is held out from tracking/observability and reserved for evaluation",
+    "status": "frozen rule; names filled at inventory from the paper table and committed before download completes"
+  },
+  "failure_retry_policy": "implementation plan 11.2: a scientifically valid failure against these floors is the FINAL M1 result; replacement only for a verified technical or protocol-execution defect (post-outcome invalidations need fresh-context confirmation, max two); no revision-cycle mechanism exists",
+  "ceilings": {"census_gpu_hours_max": 25, "preprocessing": "reproducibility accounting only - projected and actual GPU-h, hardware provenance, processed scope; no hard ceiling"}
+}

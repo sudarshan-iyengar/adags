@@ -1,0 +1,45 @@
+{
+  "schema_version": "elgs-prereg-acceptance-v1",
+  "authority": "spec section 7 + implementation plan section 3 register (sample unit) and 7.2 item 3",
+  "estimator": {
+    "form": "self-normalized importance sampling (SNIS): R_hat = sum a_i l(x_i) / sum a_i; consistent, finite-sample biased (ratio bias O(1/n)); NOT unbiased and never described as exact",
+    "weight_bound": "a_i = min{1/lambda_u, nu/m} with the clip provably inactive; implementations assert it never fires",
+    "status": "frozen"
+  },
+  "sample_unit": {
+    "definition": "one confirmation sample = one tile-cropped (camera, frame) render unit; the loss l(x_i) is the photometric loss (L1 + lambda_ssim*DSSIM at training weights) averaged over the tile, so the windowed DSSIM is always evaluated on a full tile, never per pixel",
+    "tile": "128x128 pixels, candidate-targeted placement (the candidate's affected footprint) mixed with uniform-support tiles per pi_D below",
+    "nu": "uniform over (training-camera, frame) pairs x tile grid positions",
+    "density_correction": "tile weighting is uniform, so nu and m densities are computed per unit under the mixture below; no additional Jacobian",
+    "status": "frozen (structural definition); tile size sensitivity is analyzed at M2 before any evidence-bearing comparison",
+    "smoke_note": "the M0 smoke uses whole-frame units with nu = m (weights exactly 1), a degenerate-valid SNIS case; disclosed, never evidence-bearing"
+  },
+  "mixture": {
+    "pi_d": "candidate-targeted rays/tiles (uniform over the candidate's affected (camera, frame) footprint)",
+    "lambda_u": {"status": "unfrozen", "allowed_range": [0.25, 1.0], "authorized_data": "dev scenes only (category 3)", "criterion": "smallest ESS-stable value in a preregistered sweep", "freeze_point": "before the first evidence-bearing B2 job", "prohibited_data": "locked transfer and held-out scenes"},
+    "freeze_rule": "pi_D and lambda_u frozen before ANY confirmation draw; enforced in code (FrozenSamplerParams.require_frozen)"
+  },
+  "acceptance_rule": {
+    "form": "accept iff Delta_E_hat + k*SE < 0, Delta_E_hat = paired SNIS render delta + exact closed-form deltas + transaction increment",
+    "k_se": {"status": "unfrozen", "allowed_range": [0.5, 3.0], "authorized_data": "dev scenes only", "criterion": "false-event rate on dose-matched shifted lanes below the prereg_metrics floor", "freeze_point": "before B3", "prohibited_data": "locked/held-out scenes"},
+    "n_per_decision": {"status": "unfrozen", "allowed_range": [16, 256], "authorized_data": "dev scenes", "criterion": "SE stability at matched compute", "freeze_point": "before B3"}
+  },
+  "bootstrap": {
+    "unit": "(camera, frame) cluster",
+    "replicates": 200,
+    "pairing": "same resample indices for candidate and incumbent; per-replicate SNIS renormalization; SE = sample sd of paired replicate differences",
+    "degeneracy": "<= 5 distinct units => reject; undefined SE => reject",
+    "status": "frozen"
+  },
+  "crn": {
+    "seed_derivation": "index arithmetic on (base_seed, round, pass, rank); no content hashing",
+    "status": "frozen"
+  },
+  "slot_grid": {
+    "sizing": "capacity = n_rounds x n_passes x candidate_cap slots, pre-partitioned at iteration 0 over the reserved pool",
+    "exhaustion": "rank >= candidate_cap => candidate rejected and logged (never silent)",
+    "confirmation_rule": "one confirmation per conflict component per pass; component rank = ascending min lineage id",
+    "reserved_exclusion": "refit sampling excludes every reserved (camera, frame) unit (SlotGrid.reserved_units feeds the trainer sampler)",
+    "status": "frozen"
+  }
+}

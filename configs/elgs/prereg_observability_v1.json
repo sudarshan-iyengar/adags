@@ -1,0 +1,37 @@
+{
+  "schema_version": "elgs-prereg-observability-v1",
+  "authority": "spec section 3 + implementation plan section 3 register (q decision, resolved)",
+  "q_decision": {
+    "chosen": "FRONT-SET COMPOSITING: T at a sigma point = product of (1 - alpha_i * G_i(pixel)) over Gaussians strictly in front along the pixel ray, query-track source excluded, candidate family counterfactually present; exact w.r.t. the rasterizer's compositing model; NO CUDA change",
+    "selection_criteria_applied": "closed-form 2-3-Gaussian fixture (tests/test_elgs_observability.py, 1e-15); accuracy (exact); query-source exclusion (verified on the fixture); gradient isolation (probe runs under no_grad, q is a frozen round snapshot); runtime/memory cost (spatially pruned per-query gather, profiled at S1 - see compute_estimate)",
+    "rejected_alternatives": [
+      "depth-thresholded front-subset alpha renders: an approximation with disclosed quantization that the exact option makes unnecessary",
+      "CUDA rasterizer addition returning depth-truncated T: not required while (a) meets the runtime budget; revisited only if S1 profiling fails it, then as a narrow reviewed change with reference-parity tests"
+    ],
+    "reference_parity": "the GPU implementation must match elgs.probe.AnalyticProbe on the closed-form fixture to 1e-6",
+    "approximation_limitation": "exactness is w.r.t. the compositing model (Gaussian footprint at the pixel center); sub-pixel footprint integration is not modeled - disclosed",
+    "compute_estimate": "per (bridge, track, camera, frame): sigma_points x pruned-gather; per-round budget bounded by C_cap x |tracks| x |frames in windows| x n_sigma; measured at S1 and entered into the census-cell projections",
+    "status": "frozen"
+  },
+  "sigma_points": {
+    "scheme": "deterministic 7-point grid: bridge point center (weight 0.4) + 6 axis offsets at +/- one bridge-covariance sigma per world axis (weight 0.1 each); nonnegative, sums to one; no negative-weight unscented transform",
+    "status": "frozen"
+  },
+  "kappa_res": {
+    "definition": "clipped area ratio: (projected footprint area within the image) / (full projected footprint area), clipped to [0,1]",
+    "status": "frozen formula"
+  },
+  "alpha_u": {
+    "family": "alpha_u = n_cam^(-rho) (correlated-camera discount)",
+    "rho": {"status": "unfrozen", "allowed_range": [0.5, 1.0], "authorized_data": "calibration sequences", "criterion": "match the empirical variance inflation of per-camera report agreement", "freeze_point": "before B2"}
+  },
+  "q_source_update_matrix_arms": {
+    "arms": ["geometry-only", "frozen", "refreshed", "camera-fold cross-fitted", "oracle"],
+    "note": "the decisive B3 contrasts (claim C2); definitions per the experiment plan; frozen here to prevent drift",
+    "status": "frozen"
+  },
+  "snapshot": {
+    "rule": "q is a round snapshot: written at round boundaries, frozen for the round (QSnapshot: double-write, post-freeze write, and missing-key reads raise); candidates scored under the snapshot with counterfactual insertion",
+    "status": "frozen"
+  }
+}

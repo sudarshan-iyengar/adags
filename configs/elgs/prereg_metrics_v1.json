@@ -1,0 +1,39 @@
+{
+  "schema_version": "elgs-prereg-metrics-v1",
+  "authority": "implementation plan 7.2 item 7; experiment plan B0 metric-spec freeze",
+  "power_analysis": {
+    "performed": true,
+    "date": "2026-08-11",
+    "method": "two-proportion z-test sample size: n per arm = (z_{alpha/2}+z_beta)^2 * (p1(1-p1)+p2(1-p2)) / (p1-p2)^2 with alpha=0.05 two-sided, power=0.8, (z_{alpha/2}+z_beta)^2 = 7.8489",
+    "rows": [
+      {"p1": 0.5, "p2": 0.8, "n_per_arm": 35.76, "floor": 36, "role": "primary: large detectable arm effect on per-event operation success"},
+      {"p1": 0.6, "p2": 0.85, "n_per_arm": 46.15, "floor": 47, "role": "sensitivity: moderate effect"},
+      {"p1": 0.5, "p2": 0.75, "n_per_arm": 54.94, "floor": 55, "role": "sensitivity: small effect"}
+    ],
+    "consequence": "the M1 census floors (prereg_m1_census_v1.json) adopt the primary row: 36 model-free opportunities per gated event class; the sensitivity rows are reported next to any near-floor census outcome",
+    "assumption_disclosure": "events are treated as independent Bernoulli units within an arm; per-scene clustering will inflate variance - the B3 analysis uses the cluster bootstrap, so the floor is a lower bound on adequacy, reported as such"
+  },
+  "operation_level_metrics": {
+    "return_timing_error": "abs(committed return episode start - annotated/GT return time), frames; reported per opportunity stratum",
+    "false_reactivation_rate": "reactivations committed where no same-object return exists / committed reactivations",
+    "false_birth_rate": "births at return sites where the return family existed / return-site births",
+    "identity_retention": "fraction of annotated same-object returns realized as REACTIVATE or MERGE onto the original family (survivor-id semantics)",
+    "strata": ["gap duration terciles", "opportunity (q-tilde) terciles", "camera-count strata"],
+    "status": "frozen"
+  },
+  "object_to_lineage_mapping": {
+    "protocol": "an annotated/GT object instance maps to the family whose primitives are nearest its triangulated centroid at each plateau, using the SAME preregistered binding threshold as cluster binding (elgs_binding_threshold); unmapped => reported unmatched, never silently dropped",
+    "status": "frozen"
+  },
+  "classification_data_term_floors": {
+    "definition": "a data term is 'below floor' for the EQUIVALENCE-CLASS label iff its removal changes Delta_E_hat by less than 0.25 * SE of the decision",
+    "status": "frozen"
+  },
+  "shift_shuffle_protocol": {
+    "shifts": "non-wrapping temporal shifts of the frozen track artifact by {+25, -25, +50, -50} frames; reports shifted outside the sequence are dropped and the effective factor mass reported",
+    "shuffles": "track-identity shuffles within validity windows (same camera, same frame support)",
+    "dose_matching": "each control lane consumes the same number of evidence factors as its aligned counterpart; the effective factor mass is reported per lane",
+    "status": "frozen"
+  },
+  "rendering_metrics": "PSNR/SSIM/LPIPS-Alex per the pinned N3V/DiVa protocol; dynamic-mask metrics via the existing MotionPriorCache path; no new photometric metrics invented (adopt, don't invent)"
+}

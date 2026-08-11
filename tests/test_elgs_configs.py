@@ -90,6 +90,37 @@ class PreregArtifactTests(unittest.TestCase):
         self.assertEqual(table["schema_version"], "elgs-latch-transition-table-v1")
         self.assertEqual(len(table["operations"]), 15)
 
+    def test_all_prereg_files_parse_with_expected_schemas(self):
+        expected = {
+            "prereg_structural_v1.json": "elgs-prereg-structural-v1",
+            "prereg_acceptance_v1.json": "elgs-prereg-acceptance-v1",
+            "prereg_evidence_heads_v1.json": "elgs-prereg-evidence-heads-v1",
+            "prereg_observability_v1.json": "elgs-prereg-observability-v1",
+            "prereg_m1_census_v1.json": "elgs-prereg-m1-census-v1",
+            "prereg_metrics_v1.json": "elgs-prereg-metrics-v1",
+        }
+        for name, schema in expected.items():
+            payload = json.loads(
+                (ROOT / "configs" / "elgs" / name).read_text(encoding="utf-8")
+            )
+            self.assertEqual(payload["schema_version"], schema, name)
+
+    def test_power_analysis_performed_and_feeds_census_floors(self):
+        metrics = json.loads(
+            (ROOT / "configs" / "elgs" / "prereg_metrics_v1.json").read_text(encoding="utf-8")
+        )
+        census = json.loads(
+            (ROOT / "configs" / "elgs" / "prereg_m1_census_v1.json").read_text(encoding="utf-8")
+        )
+        self.assertTrue(metrics["power_analysis"]["performed"])
+        primary = metrics["power_analysis"]["rows"][0]
+        self.assertEqual(primary["floor"], 36)
+        self.assertEqual(census["floors"]["occlusion_events_min"], primary["floor"])
+        self.assertEqual(census["floors"]["true_absence_candidates_min"], primary["floor"])
+        # Audited true absence is diagnostic-only and never gated.
+        self.assertTrue(census["cells"]["M1-A0b"]["diagnostic_only"])
+        self.assertFalse(census["cells"]["M1-A0b"]["gated"])
+
     def test_elgs_block_documented_as_non_tunable_for_category1(self):
         text = (ROOT / "arguments" / "__init__.py").read_text(encoding="utf-8")
         self.assertIn("Category-1 structural constants", text)
