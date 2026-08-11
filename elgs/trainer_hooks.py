@@ -177,6 +177,48 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         pi_d_identity="uniform-train-units-v1",
         frozen=True,
     )
+
+    # Reserved confirmation pool (spec §7): every 4th train unit index
+    # is reserved at iteration 0 and pre-partitioned into the slot
+    # grid; the trainer's refit dataset EXCLUDES these units
+    # (filter_elgs_reserved), so refits never see confirmation samples.
+    # Built BEFORE the trainer state that references it.
+    from .acceptance import SlotGrid
+
+    n_units_total = len(cameras)
+    reserved = tuple(
+        (i, float(getattr(cameras[i], "timestamp", 0.0)))
+        for i in range(0, n_units_total, 4)
+    )
+    n_rounds = len(schedule.round_iterations)
+    slots_per_pass = int(getattr(opt, "elgs_candidate_cap"))
+    # The configured confirmation-sample count IS the slot size (a
+    # declared value must never be silently overridden); the pool and
+    # the degeneracy rule bound it fail-closed.
+    units_per_slot = int(getattr(opt, "elgs_confirmation_samples"))
+    if units_per_slot < 6:
+        raise ContractError(
+            "elgs_confirmation_samples must be >= 6 (bootstrap degeneracy rule)"
+        )
+    needed = n_rounds * slots_per_pass * units_per_slot
+    if len(reserved) < needed:
+        raise ContractError(
+            f"reserved confirmation pool has {len(reserved)} units but the "
+            f"slot grid needs {needed} (= {n_rounds} rounds x "
+            f"{slots_per_pass} cap x {units_per_slot} samples); reduce "
+            "elgs_candidate_cap or elgs_confirmation_samples for this scene"
+        )
+    state_slot_grid = SlotGrid(
+        n_rounds=n_rounds,
+        n_passes=1,
+        slots_per_pass=slots_per_pass,
+        units_per_slot=units_per_slot,
+        reserved_pool=reserved,
+    )
+    if pending is not None:
+        for consumed in loaded["slot_grid"].get("consumed", []):
+            state_slot_grid._consumed.add(int(consumed))
+
     state = ElgsTrainerState(
         runtime=runtime,
         bundle=bundle,
@@ -190,11 +232,18 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         a_lr=float(getattr(opt, "elgs_a_lr")),
         k_se=float(getattr(opt, "elgs_k_se")),
         candidate_cap=slots_per_pass,
-        confirmation_samples=int(getattr(opt, "elgs_confirmation_samples")),
+        confirmation_samples=units_per_slot,
         base_seed=int(getattr(opt, "seed", 0) or 0),
         slot_grid=state_slot_grid,
         reserved_indices=frozenset(u[0] for u in reserved),
     )
+    if pending is not None:
+        state.committed_decisions = list(
+            loaded["round_bookkeeping"].get("committed_decisions", [])
+        )
+        state.post_refit_done = bool(
+            loaded["round_bookkeeping"].get("post_refit_done", False)
+        )
     # Dual caps (substrate): the scalar budget derives from the
     # baseline per-row scalar count at setup times the row cap, with
     # 1.5x headroom for global tensors and the a-logits (recorded).
@@ -207,37 +256,6 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         bundle.search_cost.scalar_budget = int(
             (scalars_now / rows_now) * bundle.search_cost.row_cap * 1.5
         )
-    # Reserved confirmation pool (spec §7): every 4th train unit index
-    # is reserved at iteration 0 and pre-partitioned into the slot
-    # grid; the trainer's refit dataset EXCLUDES these units
-    # (filter_elgs_reserved), so refits never see confirmation samples.
-    from .acceptance import SlotGrid
-
-    n_units_total = len(cameras)
-    reserved = tuple(
-        (i, float(getattr(cameras[i], "timestamp", 0.0)))
-        for i in range(0, n_units_total, 4)
-    )
-    n_rounds = len(schedule.round_iterations)
-    slots_per_pass = int(getattr(opt, "elgs_candidate_cap"))
-    units_per_slot = max(6, len(reserved) // max(1, n_rounds * slots_per_pass))
-    needed = n_rounds * slots_per_pass * units_per_slot
-    if len(reserved) < needed:
-        raise ContractError(
-            f"reserved confirmation pool has {len(reserved)} units but the "
-            f"slot grid needs {needed}; reduce elgs_candidate_cap or the "
-            "schedule for this scene"
-        )
-    state_slot_grid = SlotGrid(
-        n_rounds=n_rounds,
-        n_passes=1,
-        slots_per_pass=slots_per_pass,
-        units_per_slot=units_per_slot,
-        reserved_pool=reserved,
-    )
-    if pending is not None:
-        for consumed in loaded["slot_grid"].get("consumed", []):
-            state_slot_grid._consumed.add(int(consumed))
 
     # Family creation happens at SETUP (spanning-then-carve: the
     # initial cloud starts as K=1 spanning families — substrate).
@@ -261,7 +279,12 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         },
         "confirmation_refs": {},
         "moment_reset_log": [],
-        "round_bookkeeping": {"seeded": seeded, "rounds_run": rounds_run},
+        "round_bookkeeping": {
+            "seeded": seeded,
+            "rounds_run": rounds_run,
+            "committed_decisions": state.committed_decisions,
+            "post_refit_done": state.post_refit_done,
+        },
     }
     if not state.seeded:
         seed_families(state, gaussians, iteration=0)
@@ -426,9 +449,14 @@ def maybe_run_elgs_schedule(state, gaussians, scene, opt, iteration, render_unit
 def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
     import time
 
+    # Planners must see the LIVE interval state (the optimizer has
+    # been stepping the a-logits since the last flush); without this,
+    # proposals validate against stale spans and commits discard the
+    # learned interval movement.
+    state.runtime.flush_to_registry()
     round_index = len(state.rounds_run)
     proposals = _propose_smoke_candidates(state, iteration)
-    items = list(scene.getTrainCameras())
+    dataset = scene.getTrainCameras()  # indexed lazily, never listed
     incumbent_snapshot = {
         fid: state.runtime.registry.get(fid).interval
         for p in proposals
@@ -447,7 +475,7 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
         samples = []
         started = time.time()
         for index, timestamp in units:
-            item = items[index]
+            item = dataset[index]
             loss_inc = float(render_unit_loss(item, None))
             loss_cand = float(render_unit_loss(item, overrides))
             state.bundle.search_cost.candidate_renders += 2
@@ -523,43 +551,67 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
 def filter_elgs_reserved(training_dataset, state):
     """Exclude the reserved confirmation units from the refit
     training data (spec §7: refits never see confirmation samples).
-    Returns a plain list the DataLoader consumes identically."""
+
+    Index-based Subset — NEVER materializes items, so the dataloader
+    path's lazy image decoding is preserved (a CameraDataset decodes
+    on __getitem__)."""
     if state is None:
         return training_dataset
-    return [
-        item for index, item in enumerate(training_dataset)
+    from torch.utils.data import Subset
+
+    kept = [
+        index for index in range(len(training_dataset))
         if index not in state.reserved_indices
     ]
+    return Subset(training_dataset, kept)
 
 
 def _refresh_routing_pins(state, gaussians) -> None:
     """Routing pinning (substrate): rows of families with K > 1 get a
-    frozen route logit — realized as a gradient mask applied before
-    every optimizer step (apply_elgs_routing_pins)."""
-    pinned = {
+    frozen route logit. Only the pinned FAMILY SET is cached — the
+    row mask is rebuilt on every application from the live family-id
+    column, so densification can never silently unpin rows."""
+    gaussians._elgs_pinned_families = {
         fid for fid in state.runtime.registry.active_ids()
         if state.runtime.registry.get(fid).routing_pinned
     }
-    if pinned:
-        ids = gaussians._elgs_family_ids
-        mask = torch.zeros(ids.shape[0], dtype=torch.bool)
-        for fid in pinned:
-            mask |= ids == fid
-        gaussians._elgs_routing_pin_mask = mask
-    else:
-        gaussians._elgs_routing_pin_mask = None
 
 
 def apply_elgs_routing_pins(gaussians) -> None:
     """Zero the route-logit gradients of pinned rows (called after
-    every backward, before optimizer.step — the freeze that makes the
-    registry's pin log true in the optimizer)."""
-    mask = getattr(gaussians, "_elgs_routing_pin_mask", None)
-    if mask is None:
+    every backward, before optimizer.step). The mask is derived from
+    the CURRENT family-id column each call, so row-count changes
+    (densify/prune) are always reflected; a column/grad length
+    mismatch is a wiring bug and fails closed."""
+    pinned = getattr(gaussians, "_elgs_pinned_families", None)
+    if not pinned:
         return
     grad = getattr(gaussians._route_logit, "grad", None)
-    if grad is not None and grad.shape[0] == mask.shape[0]:
-        grad[mask.to(grad.device)] = 0.0
+    if grad is None:
+        return
+    ids = gaussians._elgs_family_ids
+    if ids.shape[0] != grad.shape[0]:
+        raise ContractError(
+            f"routing-pin mask desync: family column has {ids.shape[0]} rows, "
+            f"route-logit grad has {grad.shape[0]}"
+        )
+    mask = torch.zeros(ids.shape[0], dtype=torch.bool)
+    for fid in pinned:
+        mask |= ids == fid
+    grad[mask.to(grad.device)] = 0.0
+
+
+def crn_seed_for_decision(state, decision) -> int:
+    """Deterministic post-refit bootstrap seed from the decision's
+    slot coordinates (index arithmetic, no hashing — spec §7)."""
+    from .acceptance import crn_seed
+
+    return crn_seed(
+        state.base_seed + 1_000_000,  # disjoint from decision-time seeds
+        int(decision["round_index"]),
+        0,
+        int(decision["iteration"]) % 1_000_003,
+    )
 
 
 def run_post_refit_classification(state, gaussians, scene, iteration, render_unit_loss) -> None:
@@ -568,11 +620,11 @@ def run_post_refit_classification(state, gaussians, scene, iteration, render_uni
     wired path there is no tracker term: the render-only flag equals
     test (a) and the tracker-only flag is vacuously False (disclosed);
     the data floor uses the preregistered 0.25*SE rule."""
-    from .acceptance import paired_snis_delta
+    from .acceptance import paired_cluster_bootstrap_se, paired_snis_delta
     from .classification import DecisionFlags, classify, printable_label
     from .intervals import deserialize_state
 
-    items = list(scene.getTrainCameras())
+    dataset = scene.getTrainCameras()  # indexed lazily, never listed
     results = {}
     for decision in state.committed_decisions:
         overrides = {
@@ -581,7 +633,7 @@ def run_post_refit_classification(state, gaussians, scene, iteration, render_uni
         }
         samples = []
         for index, timestamp in decision["units"]:
-            item = items[int(index)]
+            item = dataset[int(index)]
             loss_now = float(render_unit_loss(item, None))
             loss_incumbent = float(render_unit_loss(item, overrides))
             samples.append(SnisSample(
@@ -592,9 +644,15 @@ def run_post_refit_classification(state, gaussians, scene, iteration, render_uni
                 loss_candidate=loss_now,
             ))
         delta = paired_snis_delta(samples, state.sampler_params.lambda_u)
-        se = max(float(decision["se"]), 1e-12)
+        # §8 evaluates ON the post-refit samples: the SE is
+        # re-bootstrapped from them (units_per_slot >= 6 satisfies the
+        # degeneracy rule), never reused from decision time.
+        se = paired_cluster_bootstrap_se(
+            samples, state.sampler_params.lambda_u,
+            seed=crn_seed_for_decision(state, decision),
+        )
         passes_a = (delta + state.k_se * se) < 0.0  # prior+ledger removed
-        below_floor = abs(delta) < 0.25 * se  # prereg_metrics rule
+        below_floor = abs(delta) < 0.25 * max(se, 1e-12)  # prereg_metrics rule
         flags = DecisionFlags(
             passes_prior_removed=passes_a,
             render_only_flag=passes_a,   # no tracker term in this path
@@ -604,10 +662,13 @@ def run_post_refit_classification(state, gaussians, scene, iteration, render_uni
         label = printable_label(classify(flags))
         results[decision["candidate_id"]] = {
             "delta_post_refit": delta,
+            "se_post_refit": se,
             "class": label,
         }
     state.post_refit_done = True
-    gaussians._elgs_checkpoint_extras["round_bookkeeping"]["post_refit_classification"] = results
+    bookkeeping = gaussians._elgs_checkpoint_extras["round_bookkeeping"]
+    bookkeeping["post_refit_classification"] = results
+    bookkeeping["post_refit_done"] = True
     print(json.dumps({"elgs_post_refit_classification": {
         "iteration": iteration,
         "decisions": results,

@@ -42,8 +42,8 @@ OptimizationParams:
   # (uniform units, weights exactly 1); prereg_acceptance smoke_note.
   elgs_lambda_u: 1.0
   elgs_c_cap: 4
-  elgs_candidate_cap: 8
-  elgs_confirmation_samples: 16
+  elgs_candidate_cap: 2
+  elgs_confirmation_samples: 8
   elgs_a_lr: 0.002
   elgs_r_site: 0.5
   elgs_binding_threshold: 0.25
