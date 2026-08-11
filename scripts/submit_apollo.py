@@ -372,7 +372,11 @@ def materialize_context(
 # ---------------------------------------------------------------------------
 
 
-def canonical_config_hash(paths: Iterable[os.PathLike[str] | str]) -> str:
+def canonical_config_hash(
+    paths: Iterable[os.PathLike[str] | str],
+    *,
+    relative_to: os.PathLike[str] | str | None = None,
+) -> str:
     """Return a stable SHA-256 identity over a set of config files.
 
     JSON files are parsed and re-encoded with
@@ -404,7 +408,17 @@ def canonical_config_hash(paths: Iterable[os.PathLike[str] | str]) -> str:
             body = source.read_bytes()
         else:
             raise ContractError(f"unsupported config extension for canonical hashing: {source}")
-        entries.append((Path(raw).as_posix(), sha256(body).hexdigest()))
+        # The entry KEY must be root-independent, or a submission-time
+        # hash under a temp context dir can never match the runtime
+        # re-hash under /run/determined/workdir (the second S1 smoke
+        # caught exactly this: identical bytes, different absolute
+        # path strings, different combined hash).
+        key = (
+            source.resolve().relative_to(Path(relative_to).resolve()).as_posix()
+            if relative_to is not None
+            else Path(raw).as_posix()
+        )
+        entries.append((key, sha256(body).hexdigest()))
     entries.sort(key=lambda item: item[0])
     combined = canonical_json_bytes(
         {"config_files": [{"path": path, "sha256": digest} for path, digest in entries]}
@@ -494,7 +508,8 @@ def build_manifest(
         "branch": str(branch),
         "config_files": config_entries,
         "config_canonical_hash": canonical_config_hash(
-            files_root / entry["path"] for entry in config_entries
+            (files_root / entry["path"] for entry in config_entries),
+            relative_to=files_root,
         ),
         "prereg_files": prereg_entries,
         "image_ref": str(image_ref),
@@ -688,7 +703,8 @@ def runtime_assertions(*, cwd: str | None = None, manifest_filename: str = MANIF
     config_files = manifest.get("config_files") or []
     if recorded_hash and config_files:
         recomputed = canonical_config_hash(
-            Path(current_dir) / entry["path"] for entry in config_files
+            (Path(current_dir) / entry["path"] for entry in config_files),
+            relative_to=current_dir,
         )
         if recomputed != recorded_hash:
             raise ContractError(

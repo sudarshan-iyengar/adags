@@ -582,5 +582,39 @@ class RuntimeAssertionsPureHelperTests(unittest.TestCase):
                 wrapper._assert_path_within_root(outside_file, Path(tmp_a), "main.__file__")
 
 
+class CanonicalHashRootIndependenceTests(unittest.TestCase):
+    """Regression for the second S1 smoke catch: identical bytes under
+    different absolute roots (temp context dir on the submitter vs
+    /run/determined/workdir in-container) must hash identically when
+    relative_to is given — the entry key is the relative path, never
+    the absolute string."""
+
+    def test_same_bytes_different_roots_same_hash(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+            for root in (a, b):
+                target = Path(root) / "configs" / "elgs"
+                target.mkdir(parents=True)
+                (target / "run.yaml").write_bytes(b"iterations: 600\n")
+            hash_a = wrapper.canonical_config_hash(
+                [Path(a) / "configs" / "elgs" / "run.yaml"], relative_to=a
+            )
+            hash_b = wrapper.canonical_config_hash(
+                [Path(b) / "configs" / "elgs" / "run.yaml"], relative_to=b
+            )
+            self.assertEqual(hash_a, hash_b)
+            # Without relative_to the absolute strings differ: the
+            # legacy behavior that produced the mismatch.
+            legacy_a = wrapper.canonical_config_hash(
+                [Path(a) / "configs" / "elgs" / "run.yaml"]
+            )
+            legacy_b = wrapper.canonical_config_hash(
+                [Path(b) / "configs" / "elgs" / "run.yaml"]
+            )
+            self.assertNotEqual(legacy_a, legacy_b)
+
+
 if __name__ == "__main__":
     unittest.main()
