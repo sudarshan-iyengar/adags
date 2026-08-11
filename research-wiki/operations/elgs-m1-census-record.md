@@ -1,4 +1,9 @@
-# EL-GS M1 — Census Record (IN PROGRESS)
+# EL-GS M1 — Census Record (CLOSED: gate FAILED; see result page)
+
+**FINAL RESULT: [[operations/elgs-m1-census-result]] — the M1-A0 gate
+FAILED on `same_object_returns_min` (23–30 pooled vs floor 36),
+confirmed by independent recomputation; a permanently preserved
+negative under the frozen policy. What follows is a user decision.**
 
 Date started: 2026-08-11, immediately after
 [[operations/elgs-m0-implementation-record]] (M0 PASSED). Governing
