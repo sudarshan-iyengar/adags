@@ -260,6 +260,42 @@ def _iter_tar_relative_paths(archive_path: Path):
                 yield member.name
 
 
+def _archive_member_is_binary_mask(
+    archive_path: Path, top_level_dir: str, rest: str
+) -> bool:
+    """Decode ONE member and classify it: binary mask vs photographic frame.
+
+    Real DiVa-360 mask archives (``segmented_ngp``/``segmented_gt``) mirror
+    the frame archives' exact ``camNN/<index>.png`` member layout (measured
+    on Apollo ``unlock``, det task 72bf9fd6), so path matching alone cannot
+    separate a frame source from a mask source. A decoded mask collapses to
+    at most 2 distinct grayscale values; a photographic frame does not.
+    Undecodable members classify as NOT-mask (the caller then fails closed
+    on any remaining ambiguity rather than guessing).
+    """
+
+    import io
+
+    from PIL import Image
+
+    member_name = f"{top_level_dir}/{rest}"
+    with tarfile.open(archive_path, "r:*") as tar:
+        try:
+            handle = tar.extractfile(member_name)
+        except KeyError:
+            return False
+        if handle is None:
+            return False
+        payload = handle.read()
+    try:
+        with Image.open(io.BytesIO(payload)) as image:
+            grayscale = image.convert("L")
+            colors = grayscale.getcolors(maxcolors=3)
+    except Exception:
+        return False
+    return colors is not None and len(colors) <= 2
+
+
 def select_archive_for_split(
     candidates: Sequence[Path], wanted_relative_paths: Sequence[str]
 ) -> ArchiveMatch:
@@ -269,12 +305,18 @@ def select_archive_for_split(
     top-level directory stripped) -- never on the archive's filename or an
     assumed internal directory name. Scanning a candidate stops as soon as
     every wanted path has been found in it.
+
+    When MORE than one candidate fully covers the wanted set (real DiVa-360:
+    the per-frame mask archive mirrors the frame archive's member layout),
+    candidates whose decoded pixel content is binary-mask-like are excluded
+    by ``_archive_member_is_binary_mask``; exactly one photographic
+    candidate must remain, else this fails closed.
     """
 
     wanted = set(wanted_relative_paths)
     if not wanted:
         raise ContractError("cannot select an archive for zero wanted frame paths")
-    best: ArchiveMatch | None = None
+    covering: list[ArchiveMatch] = []
     for archive_path in candidates:
         found: set[str] = set()
         top_dirs: set[str] = set()
@@ -294,22 +336,34 @@ def select_archive_for_split(
                     f"{archive_path}: members span more than one top-level "
                     f"directory in the scanned prefix: {sorted(top_dirs)}"
                 )
-            match = ArchiveMatch(
-                archive_path=archive_path.name, top_level_dir=next(iter(top_dirs))
+            covering.append(
+                ArchiveMatch(archive_path=archive_path.name, top_level_dir=next(iter(top_dirs)))
             )
-            if best is not None:
-                raise ContractError(
-                    f"ambiguous frame source: both {best.archive_path!r} and "
-                    f"{archive_path.name!r} contain every referenced frame -- "
-                    "cannot discover a unique archive"
-                )
-            best = match
-    if best is None:
+    if not covering:
         raise ContractError(
             f"no candidate archive contains every referenced frame path "
             f"({len(wanted)} wanted); candidates: {[c.name for c in candidates]}"
         )
-    return best
+    if len(covering) > 1:
+        probe_rest = sorted(wanted)[0]
+        by_name = {c.name: c for c in candidates}
+        photographic = [
+            match
+            for match in covering
+            if not _archive_member_is_binary_mask(
+                by_name[match.archive_path], match.top_level_dir, probe_rest
+            )
+        ]
+        if len(photographic) != 1:
+            raise ContractError(
+                "ambiguous frame source: "
+                f"{sorted(m.archive_path for m in covering)} all contain every "
+                f"referenced frame and the binary-mask content probe left "
+                f"{sorted(m.archive_path for m in photographic)} photographic "
+                "candidate(s) -- cannot discover a unique archive"
+            )
+        return photographic[0]
+    return covering[0]
 
 
 # ---------------------------------------------------------------------------
@@ -395,7 +449,7 @@ def select_mask_archive(
     probe = set(any_relative_paths)
     if not probe:
         raise ContractError("cannot select a mask archive for zero relative paths")
-    best: ArchiveMatch | None = None
+    hitters: list[tuple[Path, ArchiveMatch]] = []
     for archive_path in candidates:
         top_dirs: set[str] = set()
         hit = False
@@ -409,19 +463,35 @@ def select_mask_archive(
                 hit = True
                 break
         if hit:
-            match = ArchiveMatch(archive_path=archive_path.name, top_level_dir=next(iter(top_dirs)))
-            if best is not None:
-                raise ContractError(
-                    f"ambiguous mask source: both {best.archive_path!r} and "
-                    f"{archive_path.name!r} plausibly hold the requested masks"
-                )
-            best = match
-    if best is None:
+            hitters.append(
+                (archive_path, ArchiveMatch(archive_path=archive_path.name, top_level_dir=next(iter(top_dirs))))
+            )
+    if not hitters:
         raise ContractError(
             "no candidate archive plausibly holds any requested mask path; "
             f"candidates: {[c.name for c in candidates]}"
         )
-    return best
+    if len(hitters) > 1:
+        # Real DiVa-360: the sparse GT mask archive (segmented_gt) can hit a
+        # window that includes its few indices while only the per-frame mask
+        # archive (segmented_ngp) covers the whole window. Disambiguate by
+        # FULL coverage of the requested set; exactly one full-coverage
+        # candidate must remain, else fail closed.
+        full: list[ArchiveMatch] = []
+        for archive_path, match in hitters:
+            try:
+                verify_members_present(archive_path, match.top_level_dir, sorted(probe))
+            except ContractError:
+                continue
+            full.append(match)
+        if len(full) != 1:
+            raise ContractError(
+                f"ambiguous mask source: {sorted(m.archive_path for _, m in hitters)} "
+                f"all hit the requested masks and {sorted(m.archive_path for m in full)} "
+                "cover the full request -- cannot discover a unique mask archive"
+            )
+        return full[0]
+    return hitters[0][1]
 
 
 def verify_members_present(

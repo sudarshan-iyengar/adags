@@ -96,6 +96,31 @@ WINDOW_STRIDE = 20
 WINDOW_INDICES = tuple(range(WINDOW_START, WINDOW_END + 1, WINDOW_STRIDE))  # (0, 20, 40, 60)
 
 
+def _photographic_png_bytes() -> bytes:
+    """A tiny genuinely-decodable RGB PNG with >2 distinct grayscale values
+    (the frame-vs-mask content probe classifies it as photographic)."""
+
+    from PIL import Image
+
+    image = Image.new("RGB", (4, 4))
+    image.putdata([(16 * i, 8 * i, 4 * i) for i in range(16)])
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _binary_mask_png_bytes() -> bytes:
+    """A tiny genuinely-decodable {0,255} mask PNG (probe: binary mask)."""
+
+    from PIL import Image
+
+    image = Image.new("L", (4, 4))
+    image.putdata([255 if i % 2 else 0 for i in range(16)])
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def _write_multi_index_archive(
     path: Path,
     camera_frame_indices: dict,
@@ -103,14 +128,25 @@ def _write_multi_index_archive(
     top_dir: str,
     extension: str = ".png",
     content_prefix: str = "fake-bytes",
+    content_bytes: bytes | None = None,
 ) -> None:
-    """camera_frame_indices: {camera_id: [frame_index, ...]}."""
+    """camera_frame_indices: {camera_id: [frame_index, ...]}.
+
+    ``content_bytes``, when given, is written verbatim for EVERY member
+    (used to make members genuinely decodable for the content probe);
+    otherwise members carry unique ascii placeholders.
+    """
 
     with tarfile.open(path, "w:gz") as tar:
         for cid, indices in camera_frame_indices.items():
             for idx in indices:
                 name = f"{top_dir}/cam{cid:02d}/{idx:08d}{extension}"
-                _add_tar_member(tar, name, f"{content_prefix}-cam{cid}-{idx}".encode("ascii"))
+                payload = (
+                    content_bytes
+                    if content_bytes is not None
+                    else f"{content_prefix}-cam{cid}-{idx}".encode("ascii")
+                )
+                _add_tar_member(tar, name, payload)
 
 
 class Diva360FixtureCase(unittest.TestCase):
@@ -169,6 +205,10 @@ class WindowFixtureCase(Diva360FixtureCase):
         # single-instant index -- proves --window discovery doesn't
         # depend on the archive being window-only, and that the same
         # sequence dir still supports single-instant mode unchanged.
+        # Members are genuinely decodable photographic PNGs because the
+        # real mask archive below MIRRORS the frame layout (as on real
+        # Apollo data, det task 72bf9fd6), so frame-source discovery must
+        # disambiguate by decoded pixel content, not by path matching.
         frame_indices = {
             cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS
         }
@@ -177,16 +217,19 @@ class WindowFixtureCase(Diva360FixtureCase):
             self.sequence_dir / "frames_1.tar.gz",
             frame_indices,
             top_dir="frames_1",
-            content_prefix="frame",
+            content_bytes=_photographic_png_bytes(),
         )
         # The real per-frame fg/bg masks the census consumes (per the M1
-        # census record's "INPUT MAPPING" note) -- full window coverage.
-        mask_indices = {cid: list(WINDOW_INDICES) for cid in self.ALL_CAMERA_IDS}
+        # census record's "INPUT MAPPING" note) -- full coverage of the
+        # window AND the single-instant index, mirroring real data.
+        mask_indices = {
+            cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS
+        }
         _write_multi_index_archive(
             self.sequence_dir / "segmented_ngp.tar.gz",
             mask_indices,
             top_dir="segmented_ngp",
-            content_prefix="mask",
+            content_bytes=_binary_mask_png_bytes(),
         )
 
     def build_window_plan(self, start=WINDOW_START, end=WINDOW_END, stride=WINDOW_STRIDE, **overrides):
@@ -412,7 +455,7 @@ class WindowModeTests(WindowFixtureCase):
         # single-instant mode uses -- not a window-specific directory.
         relocated = self.output_dir / "undist" / "cam00" / f"{WINDOW_INDICES[0]:08d}.png"
         self.assertTrue(relocated.is_file())
-        self.assertEqual(relocated.read_bytes(), f"frame-cam0-{WINDOW_INDICES[0]}".encode("ascii"))
+        self.assertEqual(relocated.read_bytes(), _photographic_png_bytes())
 
     def test_window_time_values(self):
         plan, payloads = self.build_window_plan()
@@ -431,7 +474,7 @@ class WindowModeTests(WindowFixtureCase):
             for index in WINDOW_INDICES:
                 mask_path = masks_dir / f"cam{cam_id:02d}" / f"{index:08d}.png"
                 self.assertTrue(mask_path.is_file(), mask_path)
-                self.assertEqual(mask_path.read_bytes(), f"mask-cam{cam_id}-{index}".encode("ascii"))
+                self.assertEqual(mask_path.read_bytes(), _binary_mask_png_bytes())
         expected_mask_count = len(self.ALL_CAMERA_IDS) * len(WINDOW_INDICES)
         provenance = json.loads(Path(result["provenance"]).read_text(encoding="utf-8"))
         total_masks = sum(s["mask_count"] for s in provenance["window"]["splits"].values())
@@ -818,6 +861,38 @@ class RealSchemaHelperTests(unittest.TestCase):
         stamped = schema.stamp_frame_time(frame, fps=FPS)
         self.assertEqual(stamped["file_path"], _make_frame(1)["file_path"])
         self.assertAlmostEqual(stamped["time"], FRAME_INDEX / FPS)
+
+
+class MirroredMaskAmbiguityTests(WindowFixtureCase):
+    """Real-data condition (det task 72bf9fd6): the per-frame mask archive
+    mirrors the frame archive's member layout exactly, so BOTH fully cover
+    the single-instant referenced paths and the content probe must decide."""
+
+    def test_single_instant_discovery_resolves_via_content_probe(self):
+        plan, _ = self.build_plan()
+        self.assertEqual(plan.archive_selection["train"].archive_path, "frames_1.tar.gz")
+        self.assertEqual(plan.archive_selection["test"].archive_path, "frames_1.tar.gz")
+
+    def test_window_frame_discovery_resolves_via_content_probe(self):
+        plan, _ = self.build_window_plan()
+        self.assertEqual(plan.archive_selection["train"].archive_path, "frames_1.tar.gz")
+        for window_split in plan.window_splits.values():
+            self.assertEqual(window_split.mask_archive.archive_path, "segmented_ngp.tar.gz")
+
+    def test_sparse_gt_hit_disambiguated_by_full_coverage(self):
+        # segmented_gt holding ONE window index (a real sparse-GT overlap)
+        # hits the mask probe but cannot cover the window; segmented_ngp
+        # must still be selected, by full coverage.
+        (self.sequence_dir / "segmented_gt.tar.gz").unlink()
+        _write_multi_index_archive(
+            self.sequence_dir / "segmented_gt.tar.gz",
+            {cid: [WINDOW_INDICES[0]] for cid in self.ALL_CAMERA_IDS},
+            top_dir="segmented_gt",
+            content_bytes=_binary_mask_png_bytes(),
+        )
+        plan, _ = self.build_window_plan()
+        for window_split in plan.window_splits.values():
+            self.assertEqual(window_split.mask_archive.archive_path, "segmented_ngp.tar.gz")
 
 
 class RealSchemaSingleInstantTests(Diva360FixtureCase):
