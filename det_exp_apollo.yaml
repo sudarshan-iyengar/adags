@@ -1,0 +1,173 @@
+# det_exp_apollo.yaml
+# =============================================================================
+# EL-GS Apollo/Determined EXPERIMENT template (DRAFT).
+#
+# Authority: research-wiki/operations/elgs-m0-m1-implementation-plan.md S10.2
+# ("Execution design", item 6: "ONE template ... with pool + image injected
+# by the wrapper"). Rendered by scripts/submit_apollo.py::render_template()
+# before every `det e create <rendered_config> <context_dir>`; that function
+# refuses to proceed if any {{...}} marker below survives substitution.
+# Never invoke `det` against this file directly -- it is not valid YAML for
+# a placeholder-shaped image/pool/name.
+#
+# Placeholders (filled by scripts/submit_apollo.py, one value per key):
+#   {{NAME}}             experiment/cell name (also the ledger cell_name and
+#                         the O_EXCL claim-file stem, S10.2 item 5)
+#   {{POOL}}              resource pool: "hopper" or "dgx"
+#   {{IMAGE_REF}}         image reference. For every EVIDENCE-BEARING run this
+#                         MUST be a digest reference, `<repo>@sha256:<64 hex>`
+#                         (S10.2 item 6) -- mutable tags cannot pin bits, and
+#                         `det_cfg_apollo_*.yaml`'s `force_pull_image: true`
+#                         cannot substitute for that guarantee. A mutable tag
+#                         is tolerated only for a `--dirty-smoke`
+#                         (evidence_bearing: false) run.
+#   {{ENTRYPOINT_ARGS}}   the full CLI argument string appended after
+#                         `python3 main.py` (built by the wrapper from the
+#                         named run config, --model_path, and any passthrough
+#                         args; substituted inside a double-quoted `bash -c`
+#                         string -- see the `entrypoint:` note below).
+#   {{RUN_DIR}}           absolute run output directory on shared Apollo
+#                         storage, e.g.
+#                         /apollo/users/sri/proj_adags/runs/elgs/<run_id>
+#
+# -----------------------------------------------------------------------
+# Deviations from det_cfg_apollo_{dgx,hopper}.yaml (recorded here per the
+# S10.2 item 6 instruction to explain every deviation from the historical
+# configs; field names below were verified against the Determined v0.38.0
+# expconf JSON schema and docs/reference/experiment-config-reference.rst,
+# not assumed):
+#
+#   1. `work_dir` is DROPPED, not merely repointed. The historical command
+#      configs set `work_dir: /apollo/users/sri/proj_adags/repo/adags` (the
+#      shared mutable worktree). `work_dir` is not even a valid key in a
+#      Determined 0.38 EXPERIMENT config (it only applies to `det cmd run`
+#      / notebook / shell task configs) -- so there is nothing to repoint;
+#      the isolation instead comes from submitting the git-archive context
+#      scripts/submit_apollo.py::materialize_context() produces (Determined
+#      uploads it and runs the entrypoint with it as the working directory
+#      by construction) plus runtime_assertions()'s explicit refusal to run
+#      from that worktree path (S10.2 item 2, requirement 3).
+#
+#   2. `ADAGS_REPO_ROOT` is DROPPED from `environment.environment_variables`.
+#      Its historical value is the same forbidden shared-worktree path,
+#      and nothing in this template may resolve EL-GS code from it. The
+#      other four `ADAGS_*_ROOT` variables are kept unchanged: they name
+#      read-only data, run-output, and log roots outside the code tree and
+#      play no part in "which commit ran". `ADAGS_RUN_DIR` is ADDED (set to
+#      {{RUN_DIR}}) so in-container code has this run's own output root
+#      without re-deriving it from `--model_path`.
+#
+#   3. `resources.slots` (the key the historical CMD configs use) is
+#      deliberately NOT used here even though the literal string "slots: 1"
+#      is common shorthand for this idea. Verified against
+#      schemas/expconf/v0/resources.json and the reference doc: `slots` is
+#      accepted by the experiment-config schema "for historical reasons"
+#      but "has no practical effect when present in experiment config."
+#      `slots_per_trial` (default 1) is the field that actually controls
+#      per-trial GPU count for `det e create` tasks, so this template sets
+#      `slots_per_trial: 1` instead.
+#
+#   4. `entrypoint:` uses the modern Determined Core API "arbitrary script"
+#      form (a plain command string), not a legacy `<module>:<TrialClass>`
+#      reference. It is wrapped in an explicit `bash -c "..."` so the two
+#      chained steps (self-check, then train) are unambiguous regardless of
+#      how Determined tokenizes a bare entrypoint string. Step 1 calls
+#      `scripts.submit_apollo.runtime_assertions()`, which ABORTS the task
+#      before any training code runs if: the process is executing from the
+#      forbidden shared worktree; `elgs.__file__` / `main.__file__` do not
+#      resolve under the uploaded context; or the merged run config's
+#      canonical hash disagrees with the manifest written into the context
+#      at submission time (S10.2 items 2-3). Only on success does step 2
+#      exec `main.py`. NOTE: {{ENTRYPOINT_ARGS}} is substituted inside this
+#      double-quoted string, so it must not itself contain unescaped `"`,
+#      `` ` ``, `$`, or `\` -- the wrapper only ever places plain config
+#      paths and `--flag value` pairs there (flagged for reviewer attention
+#      in the implementation report; not exercised by attacker-controlled
+#      input in this pipeline).
+#
+#   5. `searcher.max_length` is OMITTED. Verified against
+#      schemas/expconf/v0/searcher-single.json and the reference doc: for
+#      the `single` searcher this field is DEPRECATED in this Determined
+#      version -- "all training lengths should be specified directly in
+#      training code" -- which is exactly what main.py's own iteration
+#      guard (`DEFAULT_MAX_TRAIN_ITERATIONS` / `ADAGS_MAX_ITERATIONS`, see
+#      the merged run config) already does. `searcher.name: single` and
+#      `searcher.metric` are kept because `metric` is `eventuallyRequired`
+#      by the schema even though this template runs exactly one trial and
+#      performs no hyperparameter search.
+#
+#   6. `max_restarts: 0` (the historical CMD configs have no restart policy
+#      field at all -- `det cmd run` tasks are not restarted the way
+#      experiments are; the schema default for experiments is 5). If
+#      Determined nevertheless restarts or re-runs a task, the entrypoint
+#      is REQUIRED to detect an existing manifest/checkpoint under
+#      {{RUN_DIR}} and either resume explicitly or abort -- never a silent
+#      second run under the same experiment ID (S10.2 item 6).
+#
+#   7. `environment.force_pull_image` is DROPPED (historical configs set it
+#      `true`, to counteract their mutable image tags). An `@sha256:...`
+#      digest reference is already content-addressed and immutable, so
+#      forcing a re-pull on every task start buys nothing for evidence-
+#      bearing runs and only adds registry latency. A future `--dirty-smoke`
+#      path that falls back to a mutable tag should set this explicitly if
+#      that path is ever exercised routinely; it is intentionally not wired
+#      into this template because the evidence-bearing digest-pinned case
+#      is the default posture (item 6 above).
+#
+#   8. `name`/`description`/`resources`/`searcher`/`environment` are an
+#      EXPERIMENT config (`det e create <config> <context>`), not a COMMAND
+#      config (`det cmd run --config-file`) like det_cfg_apollo_*.yaml.
+#      Fields absent from det_cfg_apollo_*.yaml but present here
+#      (`name`, `searcher`, `max_restarts`) are experiment-only fields with
+#      no command-config analog; this is a difference of task TYPE, not a
+#      deliberate divergence from a shared contract.
+#
+#   9. `workspace: adags` / `project: elgs` are SET (owner decision,
+#      resolving the S17 open item; recorded in the Apollo execution-
+#      authority wiki page). scripts/submit_apollo.py's preflight
+#      creates both if absent (`ensure_workspace_and_project()`), so a
+#      submission never lands in "Uncategorized" and experiment listing
+#      queries have a stable scope.
+#
+# Not templated (unchanged from the historical configs / repo defaults):
+# `resources.resource_pool` (still injected, just via a placeholder now
+# because the value differs by pool); `bind_mounts` (omitted, matching the
+# historical configs -- /apollo project storage is assumed agent-automounted
+# per S10.1's UNVERIFIED item, checked once per session by the wrapper's
+# preflight mount probe, never templated here); `checkpoint_storage`,
+# `hyperparameters`, `reproducibility` (all `eventuallyRequired` only after
+# cluster-side defaults merge in -- the Determined master's configured
+# default checkpoint storage backend applies; nothing scene/model-specific
+# needs to live in this template).
+# =============================================================================
+name: "{{NAME}}"
+description: "EL-GS Apollo/Determined run ({{NAME}}); rendered from det_exp_apollo.yaml -- see header for every deviation from det_cfg_apollo_*.yaml"
+workspace: adags
+project: elgs
+resources:
+  resource_pool: "{{POOL}}"
+  slots_per_trial: 1
+searcher:
+  name: single
+  metric: loss
+  smaller_is_better: true
+max_restarts: 0
+environment:
+  image: "{{IMAGE_REF}}"
+  environment_variables:
+    - HOME=/apollo/users/sri
+    - CUDA_HOME=/usr/local/cuda-11.8
+    - PYTHONUNBUFFERED=1
+    - PYTHONNOUSERSITE=1
+    - TORCH_EXTENSIONS_DIR=/tmp/adags_torch_extensions
+    - XDG_CACHE_HOME=/tmp/adags_cache
+    - MPLCONFIGDIR=/tmp/adags_mpl
+    - WANDB_MODE=disabled
+    - ADAGS_PROJECT_ROOT=/apollo/users/sri/proj_adags
+    - ADAGS_DATA_ROOT=/apollo/users/sri/proj_adags/data/n3v
+    - ADAGS_RUNS_ROOT=/apollo/users/sri/proj_adags/runs
+    - ADAGS_LOGS_ROOT=/apollo/users/sri/proj_adags/logs
+    - ADAGS_RUN_DIR={{RUN_DIR}}
+entrypoint: >-
+  bash -c "python3 -c 'from scripts.submit_apollo import runtime_assertions;
+  runtime_assertions()' && exec python3 main.py {{ENTRYPOINT_ARGS}}"
