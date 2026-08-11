@@ -64,27 +64,38 @@ and ``"time": i / fps``. Only ``(camera, index)`` pairs whose image
 actually exists in the discovered frame archive are emitted (``frames_1``
 does not necessarily hold every camera or every index); a camera that
 contributes zero frames to the requested window is a fail-closed
-``ContractError``, never a silently smaller scene. The matching
-``segmented_ngp`` per-frame fg/bg masks (the census's actual mask input --
-see the M1 census record's "INPUT MAPPING" note; ``segmented_gt`` is a
-6-file sparse audit reference and is never touched by this mode) are
-extracted for the exact same ``(camera, index)`` set into a ``masks/``
-subdirectory; any mask missing for a kept frame is a fail-closed
-``ContractError`` that lists every missing path, verified during planning
-(so ``--dry-run`` catches a mask gap before any bytes are extracted) and
-re-verified during extraction.
+``ContractError``, never a silently smaller scene.
+
+Masks are DERIVED, not extracted from a separate archive (real-data finding,
+det tasks 405a7a8d/c662fadf on ``unlock``): ``frames_1``'s members are RGBA
+at exactly the transforms' declared calibration resolution, and their ALPHA
+channel already IS the per-frame fg matte (continuous alpha, 99.9%
+concentrated at the extremes) -- ``segmented_ngp``/``segmented_gt`` carry
+the same segmentation but in the DIFFERENT, ORIGINAL pre-undistortion pixel
+space (measured 1280x720 vs. the calibration space's 1160x550), so they are
+never extracted by this converter. For every extracted window frame, this
+mode opens the PNG, takes its alpha channel, binarizes it strictly ``> 127``
+into an L-mode ``{0, 255}`` mask, and writes it to ``masks/camNN/<8-digit>``
+under the SAME filename the frame used -- one mask per extracted
+``(camera, index)`` pair. A frame with no alpha channel is a fail-closed
+``ContractError`` naming the file, never a silently blank mask.
 
 Fail-closed: every schema/contract surprise raises a
 ``depth_visibility.errors.ContractError`` (or a typed subclass -- see
 ``elgs/diva360_schema.py``); nothing here silently degrades or guesses.
 
-Runtime constraint (Apollo Determined container): stdlib + numpy only.
-Never import torch (or anything that imports torch) at module level.
+Runtime constraint (Apollo Determined container): stdlib + numpy + Pillow
+(PIL). Never import torch (or anything that imports torch) at module level.
 ``depth_visibility.errors``, ``depth_visibility.canonical``,
 ``depth_visibility.artifacts``, and ``elgs.diva360_schema`` are all
 verified torch-free at import time (see their own module docstrings /
 ``depth_visibility/__init__.py``'s own no-Torch guarantee) and are the only
-non-stdlib, non-numpy imports here.
+module-level, non-stdlib, non-numpy imports here. PIL is a legitimate
+dependency now (baked into the Apollo images and present in the CPU test
+venv) for two things -- the archive-selection resolution probe and window
+mode's alpha-to-mask derivation -- but every PIL (and ``io``) import stays
+LOCAL to the function that needs it, so importing this module never touches
+PIL and module import stays exactly as cheap as before.
 
 Known performance characteristic (documented, not a defect): tar is a
 sequential format with no central index, so content-addressed archive
@@ -114,6 +125,16 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+#: --window mode provenance/plan note (see the module docstring's --window
+#: section and select_archive_for_split's resolution-probe docstring for
+#: the full measured-on-Apollo evidence this summarizes).
+WINDOW_MASK_SOURCE = "frames_1 alpha channel, binarized >127, calibration-aligned"
+WINDOW_MASK_NOTE = (
+    "segmented_ngp/segmented_gt are original pre-undistortion space "
+    "(1280x720 measured on Apollo unlock, vs. frames_1's calibration-space "
+    "1160x550) and are deliberately NOT extracted by this path"
+)
 
 from depth_visibility.artifacts import atomic_write_json_immutable  # noqa: E402
 from depth_visibility.canonical import sha256_file  # noqa: E402
@@ -156,14 +177,14 @@ class WindowSplitPlan:
     (archive-top-dir-stripped, e.g. ``"cam01/00000060.png"``) confirmed
     present in the split's frame archive within the requested window.
     Every camera key is guaranteed non-empty (build_plan fails closed
-    otherwise). ``mask_relative_paths`` is the exact flattened union of
-    those paths, confirmed present in ``mask_archive`` too.
+    otherwise). Masks are no longer discovered as a separate archive --
+    they are DERIVED at execution time from each extracted frame's own
+    alpha channel (see the module docstring's ``--window`` section), so
+    there is no mask-archive field here to plan.
     """
 
     split: str
     camera_relative_paths: dict[int, tuple[str, ...]]
-    mask_archive: ArchiveMatch
-    mask_relative_paths: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -260,19 +281,11 @@ def _iter_tar_relative_paths(archive_path: Path):
                 yield member.name
 
 
-def _archive_member_is_binary_mask(
+def _probe_member_size(
     archive_path: Path, top_level_dir: str, rest: str
-) -> bool:
-    """Decode ONE member and classify it: binary mask vs photographic frame.
-
-    Real DiVa-360 mask archives (``segmented_ngp``/``segmented_gt``) mirror
-    the frame archives' exact ``camNN/<index>.png`` member layout (measured
-    on Apollo ``unlock``, det task 72bf9fd6), so path matching alone cannot
-    separate a frame source from a mask source. A decoded mask collapses to
-    at most 2 distinct grayscale values; a photographic frame does not.
-    Undecodable members classify as NOT-mask (the caller then fails closed
-    on any remaining ambiguity rather than guessing).
-    """
+) -> tuple[int, int] | None:
+    """Decode ONE member and return its ``(width, height)``, or ``None`` if
+    the member is absent or undecodable."""
 
     import io
 
@@ -283,21 +296,21 @@ def _archive_member_is_binary_mask(
         try:
             handle = tar.extractfile(member_name)
         except KeyError:
-            return False
+            return None
         if handle is None:
-            return False
+            return None
         payload = handle.read()
     try:
         with Image.open(io.BytesIO(payload)) as image:
-            grayscale = image.convert("L")
-            colors = grayscale.getcolors(maxcolors=3)
+            return image.size
     except Exception:
-        return False
-    return colors is not None and len(colors) <= 2
+        return None
 
 
 def select_archive_for_split(
-    candidates: Sequence[Path], wanted_relative_paths: Sequence[str]
+    candidates: Sequence[Path],
+    wanted_relative_paths: Sequence[str],
+    declared_sizes: Mapping[str, tuple[int, int]] | None = None,
 ) -> ArchiveMatch:
     """Content-addressed discovery of the archive that has every wanted frame.
 
@@ -307,10 +320,27 @@ def select_archive_for_split(
     every wanted path has been found in it.
 
     When MORE than one candidate fully covers the wanted set (real DiVa-360:
-    the per-frame mask archive mirrors the frame archive's member layout),
-    candidates whose decoded pixel content is binary-mask-like are excluded
-    by ``_archive_member_is_binary_mask``; exactly one photographic
-    candidate must remain, else this fails closed.
+    the per-frame mask archive (``segmented_ngp``) MIRRORS the frame
+    archive's exact member layout -- measured on Apollo ``unlock``, det
+    tasks 405a7a8d/c662fadf), candidates are disambiguated by a RESOLUTION
+    probe, not content classification: DiVa-360's calibration
+    (``transforms_*.json`` ``fl_x``/``fl_y``/``cx``/``cy``/``w``/``h``) is
+    fit in the UNDISTORTED calibration space ``frames_1`` ships (measured
+    1160x550, exactly the transforms' declared ``w``/``h``); the mask
+    archives ship the ORIGINAL pre-undistortion space instead (measured
+    1280x720) -- a resolution the declared intrinsics could never have been
+    computed against. So: decode one probe member from each covering
+    candidate and keep only the candidate(s) whose decoded ``(width,
+    height)`` equals the declared ``(w, h)`` for that exact probe frame
+    (``declared_sizes``, keyed by the same "rest" relative path); exactly
+    one candidate must remain, else this fails closed. (A prior
+    content-based probe -- classifying decoded pixel values as
+    binary-mask-like -- was tried and failed on real data: the mask
+    archive's RGB channel is zeroed only OUTSIDE the foreground and carries
+    real photographic color INSIDE it, so luminance-based classification
+    could not tell it apart from ``frames_1``'s own photographic RGB; the
+    real, exact, a-priori signal lives in the declared resolution, not in
+    pixel values.)
     """
 
     wanted = set(wanted_relative_paths)
@@ -346,23 +376,31 @@ def select_archive_for_split(
         )
     if len(covering) > 1:
         probe_rest = sorted(wanted)[0]
-        by_name = {c.name: c for c in candidates}
-        photographic = [
-            match
-            for match in covering
-            if not _archive_member_is_binary_mask(
-                by_name[match.archive_path], match.top_level_dir, probe_rest
-            )
-        ]
-        if len(photographic) != 1:
+        declared = (declared_sizes or {}).get(probe_rest)
+        if declared is None:
             raise ContractError(
                 "ambiguous frame source: "
                 f"{sorted(m.archive_path for m in covering)} all contain every "
-                f"referenced frame and the binary-mask content probe left "
-                f"{sorted(m.archive_path for m in photographic)} photographic "
+                f"referenced frame, and no declared (w, h) is available for the "
+                f"probe frame {probe_rest!r} to run the resolution probe -- "
+                "cannot discover a unique archive"
+            )
+        by_name = {c.name: c for c in candidates}
+        matching = [
+            match
+            for match in covering
+            if _probe_member_size(by_name[match.archive_path], match.top_level_dir, probe_rest)
+            == declared
+        ]
+        if len(matching) != 1:
+            raise ContractError(
+                "ambiguous frame source: "
+                f"{sorted(m.archive_path for m in covering)} all contain every "
+                f"referenced frame; the resolution probe (declared {declared} for "
+                f"{probe_rest!r}) left {sorted(m.archive_path for m in matching)} "
                 "candidate(s) -- cannot discover a unique archive"
             )
-        return photographic[0]
+        return matching[0]
     return covering[0]
 
 
@@ -426,101 +464,6 @@ def discover_window_frames_for_split(
     return found
 
 
-def select_mask_archive(
-    candidates: Sequence[Path], any_relative_paths: Sequence[str]
-) -> ArchiveMatch:
-    """Lightweight content sniff for the mask archive.
-
-    Unlike ``select_archive_for_split`` this does NOT require full
-    coverage as the selection criterion (a real mask archive covering only
-    part of a wide window is still the right archive; the gap is a
-    verification failure, not a discovery failure) -- it only requires
-    that a candidate contain AT LEAST ONE of the given relative paths, and
-    that exactly one candidate does. Full coverage is verified separately
-    (``verify_members_present``), which fails closed with an itemized
-    missing list.
-
-    Callers must exclude any archive already selected as a frame source
-    from ``candidates`` -- a frame archive trivially contains 100% of its
-    own window paths and would otherwise be indistinguishable from the
-    real mask archive by content alone.
-    """
-
-    probe = set(any_relative_paths)
-    if not probe:
-        raise ContractError("cannot select a mask archive for zero relative paths")
-    hitters: list[tuple[Path, ArchiveMatch]] = []
-    for archive_path in candidates:
-        top_dirs: set[str] = set()
-        hit = False
-        for member_name in _iter_tar_relative_paths(archive_path):
-            try:
-                top, rest = schema.split_top_level_dir(member_name)
-            except SchemaError:
-                continue
-            top_dirs.add(top)
-            if rest in probe:
-                hit = True
-                break
-        if hit:
-            hitters.append(
-                (archive_path, ArchiveMatch(archive_path=archive_path.name, top_level_dir=next(iter(top_dirs))))
-            )
-    if not hitters:
-        raise ContractError(
-            "no candidate archive plausibly holds any requested mask path; "
-            f"candidates: {[c.name for c in candidates]}"
-        )
-    if len(hitters) > 1:
-        # Real DiVa-360: the sparse GT mask archive (segmented_gt) can hit a
-        # window that includes its few indices while only the per-frame mask
-        # archive (segmented_ngp) covers the whole window. Disambiguate by
-        # FULL coverage of the requested set; exactly one full-coverage
-        # candidate must remain, else fail closed.
-        full: list[ArchiveMatch] = []
-        for archive_path, match in hitters:
-            try:
-                verify_members_present(archive_path, match.top_level_dir, sorted(probe))
-            except ContractError:
-                continue
-            full.append(match)
-        if len(full) != 1:
-            raise ContractError(
-                f"ambiguous mask source: {sorted(m.archive_path for _, m in hitters)} "
-                f"all hit the requested masks and {sorted(m.archive_path for m in full)} "
-                "cover the full request -- cannot discover a unique mask archive"
-            )
-        return full[0]
-    return hitters[0][1]
-
-
-def verify_members_present(
-    archive_path: Path, archive_top_level_dir: str, wanted_relative_paths: Sequence[str]
-) -> None:
-    """Read-only: raise a fail-closed, itemized ``ContractError`` if any
-    wanted relative path is absent from the archive. Used so ``--dry-run``
-    catches an incomplete mask archive before any extraction is attempted.
-    """
-
-    wanted = set(wanted_relative_paths)
-    with tarfile.open(archive_path, "r:*") as tar:
-        for member in tar:
-            if not member.isfile() or not wanted:
-                continue
-            try:
-                top, rest = schema.split_top_level_dir(member.name)
-            except SchemaError:
-                continue
-            if top == archive_top_level_dir and rest in wanted:
-                wanted.discard(rest)
-                if not wanted:
-                    break
-    if wanted:
-        raise ContractError(
-            f"{archive_path}: expected member(s) not found: {sorted(wanted)}"
-        )
-
-
 def build_plan(
     sequence_dir: Path,
     output_dir: Path,
@@ -552,14 +495,17 @@ def build_plan(
     payloads: dict[str, dict] = {}
     split_plans: list[SplitPlan] = []
     scene_top_dirs: set[str] = set()
+    declared_sizes: dict[str, tuple[int, int]] = {}
     for split, path in transform_files.items():
         split_plan, payload = build_split_plan(split, path, extension=extension)
         payloads[split] = payload
         split_plans.append(split_plan)
         for frame in payload["frames"]:
             relative = schema.frame_relative_path(frame["file_path"], extension)
-            top, _ = schema.split_top_level_dir(relative)
+            top, rest = schema.split_top_level_dir(relative)
             scene_top_dirs.add(top)
+            if "w" in frame and "h" in frame:
+                declared_sizes[rest] = (int(frame["w"]), int(frame["h"]))
     if len(scene_top_dirs) != 1:
         raise ContractError(
             f"{sequence_dir}: transforms files disagree on the frame "
@@ -571,7 +517,7 @@ def build_plan(
     archive_selection: dict[str, ArchiveMatch] = {}
     for split_plan in split_plans:
         archive_selection[split_plan.split] = select_archive_for_split(
-            candidates, split_plan.wanted_relative_paths
+            candidates, split_plan.wanted_relative_paths, declared_sizes
         )
 
     resolved_manifest_path = manifest_path or (sequence_dir.parent / "MANIFEST.sha256")
@@ -592,8 +538,6 @@ def build_plan(
         schema.window_indices(start, end, stride)  # validates start/end/stride
         window_spec = WindowSpec(start=start, end=end, stride=stride)
         window_splits = {}
-        used_frame_archives = {match.archive_path for match in archive_selection.values()}
-        mask_candidates = [c for c in candidates if c.name not in used_frame_archives]
         for split_plan in split_plans:
             payload = payloads[split_plan.split]
             camera_templates: dict[int, tuple[str, int]] = {}
@@ -619,24 +563,13 @@ def build_plan(
                     f"in window [{start}, {end}] stride {stride} inside "
                     f"{frame_archive.archive_path!r}"
                 )
-            flattened = tuple(sorted(p for paths in found.values() for p in paths))
 
-            if not mask_candidates:
-                raise ContractError(
-                    f"{split_plan.split}: no archive candidates remain for mask "
-                    f"discovery after excluding the frame archive(s) "
-                    f"{sorted(used_frame_archives)}"
-                )
-            mask_archive = select_mask_archive(mask_candidates, flattened)
-            verify_members_present(
-                sequence_dir / mask_archive.archive_path, mask_archive.top_level_dir, flattened
-            )
-
+            # No mask-archive discovery: masks are DERIVED at execution
+            # time from each extracted frame's own alpha channel (see the
+            # module docstring's --window section).
             window_splits[split_plan.split] = WindowSplitPlan(
                 split=split_plan.split,
                 camera_relative_paths={cid: tuple(paths) for cid, paths in found.items()},
-                mask_archive=mask_archive,
-                mask_relative_paths=flattened,
             )
 
     plan = ConversionPlan(
@@ -691,15 +624,17 @@ def plan_to_json(plan: ConversionPlan) -> dict:
             "start": plan.window.start,
             "end": plan.window.end,
             "stride": plan.window.stride,
+            "masks_dir": "masks",
+            "mask_source": WINDOW_MASK_SOURCE,
+            "mask_note": WINDOW_MASK_NOTE,
             "splits": {
                 split: {
                     "per_camera_frame_counts": {
                         str(cid): len(paths) for cid, paths in ws.camera_relative_paths.items()
                     },
                     "total_frame_count": sum(len(p) for p in ws.camera_relative_paths.values()),
-                    "mask_archive": ws.mask_archive.archive_path,
-                    "mask_archive_top_level_dir": ws.mask_archive.top_level_dir,
-                    "mask_count": len(ws.mask_relative_paths),
+                    # One derived mask per kept frame -- see mask_source above.
+                    "mask_count": sum(len(p) for p in ws.camera_relative_paths.values()),
                 }
                 for split, ws in plan.window_splits.items()
             },
@@ -754,6 +689,41 @@ def extract_wanted_members(
             f"{sorted(wanted)}"
         )
     return written
+
+
+# ---------------------------------------------------------------------------
+# --window mask derivation (frames_1's own alpha channel -- see the module
+# docstring's --window section; segmented_ngp/segmented_gt are never used)
+# ---------------------------------------------------------------------------
+
+
+def derive_mask_from_frame(frame_path: Path, mask_path: Path, *, threshold: int = 127) -> None:
+    """Derive a binary fg/bg mask from an already-extracted frame's own
+    alpha channel: L-mode, ``{0, 255}``, strictly ``> threshold``.
+
+    Real-data finding (Apollo ``unlock``, det tasks 405a7a8d/c662fadf):
+    ``frames_1``'s alpha channel IS the per-frame fg matte, already in the
+    calibration-aligned pixel space -- continuous alpha, 99.9% concentrated
+    at the extremes, same per-frame fg fraction as ``segmented_ngp``'s
+    binary alpha at the (wrong, original) resolution. A frame with no
+    alpha channel at all is a fail-closed ``ContractError`` naming the
+    file, never a silently blank/opaque mask (``Image.convert("RGBA")``
+    would otherwise fabricate one).
+    """
+
+    from PIL import Image
+
+    with Image.open(frame_path) as image:
+        if "A" not in image.getbands():
+            raise ContractError(
+                f"{frame_path}: extracted frame has no alpha channel -- cannot derive "
+                "a mask from it (frames_1's alpha channel is the per-frame fg matte "
+                "this converter relies on for --window masks)"
+            )
+        alpha = image.getchannel("A")
+        binary = alpha.point(lambda value: 255 if value > threshold else 0)
+    mask_path.parent.mkdir(parents=True, exist_ok=True)
+    binary.save(mask_path, format="PNG")
 
 
 # ---------------------------------------------------------------------------
@@ -966,14 +936,16 @@ def build_provenance(
             "end": plan.window.end,
             "stride": plan.window.stride,
             "masks_dir": "masks",
+            "mask_source": WINDOW_MASK_SOURCE,
+            "mask_note": WINDOW_MASK_NOTE,
             "splits": {
                 split: {
                     "per_camera_frame_counts": {
                         str(cid): len(paths) for cid, paths in ws.camera_relative_paths.items()
                     },
                     "total_frame_count": sum(len(p) for p in ws.camera_relative_paths.values()),
-                    "mask_archive": ws.mask_archive.archive_path,
-                    "mask_count": len(ws.mask_relative_paths),
+                    # One derived mask per kept frame -- see mask_source above.
+                    "mask_count": sum(len(p) for p in ws.camera_relative_paths.values()),
                 }
                 for split, ws in plan.window_splits.items()
             },
@@ -1064,8 +1036,9 @@ def _execute_windowed_plan(
 ) -> dict:
     """The ``--window`` execution path: crosses each camera's static
     single-instant calibration with the requested frame-index window,
-    extracts the matching frames AND masks, then proceeds exactly like the
-    single-instant path for ``points3d.ply`` and provenance."""
+    extracts the matching frames, DERIVES a mask per frame from its own
+    alpha channel, then proceeds exactly like the single-instant path for
+    ``points3d.ply`` and provenance."""
 
     assert plan.window is not None and plan.window_splits is not None
     written_transforms: dict[str, Path] = {}
@@ -1113,20 +1086,18 @@ def _execute_windowed_plan(
         flattened = tuple(
             sorted(p for paths in window_split.camera_relative_paths.values() for p in paths)
         )
-        extract_wanted_members(
+        written_frames = extract_wanted_members(
             sequence_dir / frame_archive.archive_path,
             frame_archive.top_level_dir,
             flattened,
             output_dir,
             scene_top_dir=plan.scene_top_dir,
         )
-        extract_wanted_members(
-            sequence_dir / window_split.mask_archive.archive_path,
-            window_split.mask_archive.top_level_dir,
-            window_split.mask_relative_paths,
-            output_dir,
-            scene_top_dir="masks",
-        )
+
+        scene_root = output_dir / plan.scene_top_dir
+        for frame_path in written_frames:
+            mask_path = output_dir / "masks" / frame_path.relative_to(scene_root)
+            derive_mask_from_frame(frame_path, mask_path)
 
     bbox_min, bbox_max = frustum_union_bounding_box(all_stamped_frames)
     points, colors = sample_random_points(bbox_min, bbox_max, plan.num_random_points, seed=plan.seed)
@@ -1185,8 +1156,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             "Activate temporal mode (owner decision D-M1-1): emit one frame per "
             "(camera, index) for index in [START, END] inclusive, stepped by "
             "--stride, crossing each camera's static single-instant calibration "
-            "with the requested frame indices, plus the matching segmented_ngp "
-            "masks under masks/. Default: single-instant mode (unchanged)."
+            "with the requested frame indices, plus a mask per frame derived "
+            "from its own alpha channel under masks/. Default: single-instant "
+            "mode (unchanged)."
         ),
     )
     parser.add_argument(

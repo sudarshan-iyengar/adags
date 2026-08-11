@@ -19,6 +19,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -59,8 +61,8 @@ def _make_frame(camera_id: int, frame_index: int = FRAME_INDEX, *, top_dir: str 
         "is_fisheye": False,
         "cx": 580.0,
         "cy": 275.0,
-        "w": 1160,
-        "h": 550,
+        "w": FRAME_W,
+        "h": FRAME_H,
         "aabb_scale": 4,
     }
 
@@ -95,30 +97,80 @@ WINDOW_END = 60
 WINDOW_STRIDE = 20
 WINDOW_INDICES = tuple(range(WINDOW_START, WINDOW_END + 1, WINDOW_STRIDE))  # (0, 20, 40, 60)
 
+# Real-schema resolutions (Apollo unlock, det tasks 405a7a8d/c662fadf):
+# frames_1 ships RGBA at exactly the transforms' declared calibration (w, h);
+# segmented_ngp/segmented_gt ship RGBA at the DIFFERENT, ORIGINAL
+# pre-undistortion resolution, offset from the calibration size by exactly
+# this much. _make_frame below declares (FRAME_W, FRAME_H).
+FRAME_W = 1160
+FRAME_H = 550
+DECOY_W = FRAME_W + 120  # 1280 -- matches the real segmented_ngp/segmented_gt width
+DECOY_H = FRAME_H + 170  # 720
 
-def _photographic_png_bytes() -> bytes:
-    """A tiny genuinely-decodable RGB PNG with >2 distinct grayscale values
-    (the frame-vs-mask content probe classifies it as photographic)."""
+FG_ALPHA = 255
+BG_ALPHA = 0
+ALPHA_THRESHOLD = 127
+
+
+def _rgba_png_bytes(
+    width: int, height: int, *, fg_alpha: int = FG_ALPHA, bg_alpha: int = BG_ALPHA
+) -> bytes:
+    """A real RGBA PNG at (width, height): top half alpha=fg_alpha (fg),
+    bottom half alpha=bg_alpha (bg) -- a known, reproducible alpha pattern
+    that exercises BOTH the archive-selection resolution probe (decoded
+    size must equal the transforms entry's declared w/h) and mask
+    derivation (alpha -> binarized mask)."""
 
     from PIL import Image
 
-    image = Image.new("RGB", (4, 4))
-    image.putdata([(16 * i, 8 * i, 4 * i) for i in range(16)])
+    array = np.zeros((height, width, 4), dtype=np.uint8)
+    array[:, :, 0] = 60
+    array[:, :, 1] = 90
+    array[:, :, 2] = 120
+    half = height // 2
+    array[:half, :, 3] = fg_alpha
+    array[half:, :, 3] = bg_alpha
+    image = Image.fromarray(array, mode="RGBA")
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
 
 
-def _binary_mask_png_bytes() -> bytes:
-    """A tiny genuinely-decodable {0,255} mask PNG (probe: binary mask)."""
+def _frame_rgba_png_bytes() -> bytes:
+    """frames_1's real shape: RGBA at the transforms' declared (w, h)."""
+
+    return _rgba_png_bytes(FRAME_W, FRAME_H)
+
+
+def _decoy_rgba_png_bytes() -> bytes:
+    """segmented_ngp/segmented_gt's real shape: RGBA at the ORIGINAL
+    pre-undistortion resolution -- never selected by the resolution probe."""
+
+    return _rgba_png_bytes(DECOY_W, DECOY_H)
+
+
+def _rgb_no_alpha_png_bytes(width: int = FRAME_W, height: int = FRAME_H) -> bytes:
+    """A real PNG with NO alpha channel at all -- exercises mask
+    derivation's fail-closed path (a frame that cannot supply a matte)."""
 
     from PIL import Image
 
-    image = Image.new("L", (4, 4))
-    image.putdata([255 if i % 2 else 0 for i in range(16)])
+    image = Image.new("RGB", (width, height), color=(10, 20, 30))
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
+
+
+def _binarize_alpha_reference(png_path: Path, *, threshold: int = ALPHA_THRESHOLD) -> np.ndarray:
+    """Independent reference implementation of alpha binarization, used by
+    tests to verify converter.derive_mask_from_frame's output without
+    calling the same code under test."""
+
+    from PIL import Image
+
+    with Image.open(png_path) as image:
+        alpha = np.array(image.convert("RGBA"))[:, :, 3]
+    return np.where(alpha > threshold, 255, 0).astype(np.uint8)
 
 
 def _write_multi_index_archive(
@@ -194,8 +246,9 @@ class Diva360FixtureCase(unittest.TestCase):
 
 
 class WindowFixtureCase(Diva360FixtureCase):
-    """Adds a temporal frame archive + segmented_ngp mask archive on top of
-    the base single-instant fixture, for --window mode coverage."""
+    """Adds a temporal frame archive + a mirrored-layout, wrong-resolution
+    decoy archive on top of the base single-instant fixture, for --window
+    mode coverage."""
 
     ALL_CAMERA_IDS = TRAIN_CAMERA_IDS + TEST_CAMERA_IDS
 
@@ -205,10 +258,10 @@ class WindowFixtureCase(Diva360FixtureCase):
         # single-instant index -- proves --window discovery doesn't
         # depend on the archive being window-only, and that the same
         # sequence dir still supports single-instant mode unchanged.
-        # Members are genuinely decodable photographic PNGs because the
-        # real mask archive below MIRRORS the frame layout (as on real
-        # Apollo data, det task 72bf9fd6), so frame-source discovery must
-        # disambiguate by decoded pixel content, not by path matching.
+        # Members are real RGBA PNGs at the transforms' declared (w, h)
+        # with a known alpha pattern (top half fg, bottom half bg) --
+        # frames_1's alpha channel IS the per-frame fg matte this
+        # converter derives masks from.
         frame_indices = {
             cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS
         }
@@ -217,11 +270,14 @@ class WindowFixtureCase(Diva360FixtureCase):
             self.sequence_dir / "frames_1.tar.gz",
             frame_indices,
             top_dir="frames_1",
-            content_bytes=_photographic_png_bytes(),
+            content_bytes=_frame_rgba_png_bytes(),
         )
-        # The real per-frame fg/bg masks the census consumes (per the M1
-        # census record's "INPUT MAPPING" note) -- full coverage of the
-        # window AND the single-instant index, mirroring real data.
+        # Real Apollo data: segmented_ngp MIRRORS frames_1's exact
+        # per-camera-per-index member layout (det tasks 405a7a8d/c662fadf)
+        # but at the DIFFERENT, original pre-undistortion resolution. It is
+        # present here purely as an archive-selection distractor -- this
+        # converter never extracts it; masks are derived from frames_1's
+        # own alpha channel instead (see derive_mask_from_frame).
         mask_indices = {
             cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS
         }
@@ -229,7 +285,7 @@ class WindowFixtureCase(Diva360FixtureCase):
             self.sequence_dir / "segmented_ngp.tar.gz",
             mask_indices,
             top_dir="segmented_ngp",
-            content_bytes=_binary_mask_png_bytes(),
+            content_bytes=_decoy_rgba_png_bytes(),
         )
 
     def build_window_plan(self, start=WINDOW_START, end=WINDOW_END, stride=WINDOW_STRIDE, **overrides):
@@ -455,7 +511,7 @@ class WindowModeTests(WindowFixtureCase):
         # single-instant mode uses -- not a window-specific directory.
         relocated = self.output_dir / "undist" / "cam00" / f"{WINDOW_INDICES[0]:08d}.png"
         self.assertTrue(relocated.is_file())
-        self.assertEqual(relocated.read_bytes(), _photographic_png_bytes())
+        self.assertEqual(relocated.read_bytes(), _frame_rgba_png_bytes())
 
     def test_window_time_values(self):
         plan, payloads = self.build_window_plan()
@@ -466,19 +522,36 @@ class WindowModeTests(WindowFixtureCase):
             self.assertAlmostEqual(by_index[index], index / FPS)
 
     def test_window_mask_extraction(self):
+        # Masks are DERIVED from each extracted frame's own alpha channel
+        # (frames_1), never extracted from segmented_ngp.
+        from PIL import Image
+
         plan, payloads = self.build_window_plan()
         result = converter.execute_plan(plan, payloads)
         masks_dir = Path(result["masks_dir"])
         self.assertTrue(masks_dir.is_dir())
         for cam_id in self.ALL_CAMERA_IDS:
             for index in WINDOW_INDICES:
+                frame_path = self.output_dir / "undist" / f"cam{cam_id:02d}" / f"{index:08d}.png"
                 mask_path = masks_dir / f"cam{cam_id:02d}" / f"{index:08d}.png"
                 self.assertTrue(mask_path.is_file(), mask_path)
-                self.assertEqual(mask_path.read_bytes(), _binary_mask_png_bytes())
+                with Image.open(mask_path) as mask_image:
+                    self.assertEqual(mask_image.mode, "L")
+                    mask_array = np.array(mask_image)
+                # Values must be strictly binary...
+                self.assertTrue(set(np.unique(mask_array).tolist()) <= {0, 255})
+                # ...and must equal an INDEPENDENT binarization of the
+                # corresponding extracted frame's alpha channel (not the
+                # same code path derive_mask_from_frame itself uses).
+                expected = _binarize_alpha_reference(frame_path)
+                np.testing.assert_array_equal(mask_array, expected)
         expected_mask_count = len(self.ALL_CAMERA_IDS) * len(WINDOW_INDICES)
         provenance = json.loads(Path(result["provenance"]).read_text(encoding="utf-8"))
         total_masks = sum(s["mask_count"] for s in provenance["window"]["splits"].values())
         self.assertEqual(total_masks, expected_mask_count)
+        self.assertEqual(provenance["window"]["mask_source"], converter.WINDOW_MASK_SOURCE)
+        self.assertIn("segmented_ngp", provenance["window"]["mask_note"])
+        self.assertIn("1280x720", provenance["window"]["mask_note"])
 
     def test_window_provenance_gains_bounds_and_counts(self):
         plan, payloads = self.build_window_plan()
@@ -488,11 +561,13 @@ class WindowModeTests(WindowFixtureCase):
         self.assertEqual(window["start"], WINDOW_START)
         self.assertEqual(window["end"], WINDOW_END)
         self.assertEqual(window["stride"], WINDOW_STRIDE)
+        self.assertEqual(window["masks_dir"], "masks")
         train_split = window["splits"]["train"]
         self.assertEqual(train_split["total_frame_count"], len(TRAIN_CAMERA_IDS) * len(WINDOW_INDICES))
         for cam_id in TRAIN_CAMERA_IDS:
             self.assertEqual(train_split["per_camera_frame_counts"][str(cam_id)], len(WINDOW_INDICES))
         self.assertEqual(train_split["mask_count"], len(TRAIN_CAMERA_IDS) * len(WINDOW_INDICES))
+        self.assertNotIn("mask_archive", train_split)
 
     def test_window_dry_run_touches_nothing(self):
         buffer = io.StringIO()
@@ -545,54 +620,53 @@ class WindowModeTests(WindowFixtureCase):
 class WindowFailClosedTests(WindowFixtureCase):
     def test_camera_with_zero_window_frames_is_rejected(self):
         # cam02 (a train camera) gets NO entries at all in the requested
-        # window -- every other camera keeps full coverage.
+        # window -- every other camera keeps full coverage. Real RGBA
+        # content at the declared resolution keeps archive SELECTION
+        # unambiguous so this test isolates the zero-frames check.
         frame_indices = {
             cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS if cid != 2
         }
         frame_indices[2] = [FRAME_INDEX]  # present at the single instant only
         (self.sequence_dir / "frames_1.tar.gz").unlink()
         _write_multi_index_archive(
-            self.sequence_dir / "frames_1.tar.gz", frame_indices, top_dir="frames_1"
+            self.sequence_dir / "frames_1.tar.gz",
+            frame_indices,
+            top_dir="frames_1",
+            content_bytes=_frame_rgba_png_bytes(),
         )
         with self.assertRaisesRegex(ContractError, r"\[2\]|\b2\b"):
             self.build_window_plan()
 
-    def test_missing_mask_for_a_kept_frame_is_rejected_with_itemized_list(self):
-        # frames_1 has full window coverage, but segmented_ngp is missing
-        # exactly one (camera, index) pair the frame archive kept.
-        mask_indices = {cid: list(WINDOW_INDICES) for cid in self.ALL_CAMERA_IDS}
-        mask_indices[0] = [i for i in WINDOW_INDICES if i != WINDOW_INDICES[-1]]
-        (self.sequence_dir / "segmented_ngp.tar.gz").unlink()
+    def test_frame_without_alpha_channel_fails_closed_during_execution(self):
+        # frames_1 members with NO alpha channel at all -- mask derivation
+        # must fail closed naming the offending file, never fabricate a
+        # blank/opaque mask (Image.convert("RGBA") would otherwise do so
+        # silently).
+        frame_indices = {cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS}
+        (self.sequence_dir / "frames_1.tar.gz").unlink()
         _write_multi_index_archive(
-            self.sequence_dir / "segmented_ngp.tar.gz", mask_indices, top_dir="segmented_ngp"
+            self.sequence_dir / "frames_1.tar.gz",
+            frame_indices,
+            top_dir="frames_1",
+            content_bytes=_rgb_no_alpha_png_bytes(),
         )
-        expected_missing = f"cam00/{WINDOW_INDICES[-1]:08d}.png"
-        with self.assertRaisesRegex(ContractError, "expected member.*not found"):
-            self.build_window_plan()
-        # Confirm the itemized message really names the missing pair.
-        try:
-            self.build_window_plan()
-            self.fail("expected ContractError")
-        except ContractError as exc:
-            self.assertIn(expected_missing, str(exc))
+        plan, payloads = self.build_window_plan()  # planning succeeds (paths exist)
+        with self.assertRaises(ContractError):
+            converter.execute_plan(plan, payloads)
 
-    def test_ambiguous_mask_archive_is_rejected(self):
-        # A second archive, distinct from frames_1, that ALSO plausibly
-        # holds the requested masks -- must fail closed rather than guess.
-        mask_indices = {cid: list(WINDOW_INDICES) for cid in self.ALL_CAMERA_IDS}
+    def test_true_resolution_ambiguity_is_rejected(self):
+        # A second archive at frames_1's SAME correct declared resolution,
+        # also covering every referenced path -- resolution alone cannot
+        # disambiguate two candidates that both match; must fail closed
+        # rather than guess.
         _write_multi_index_archive(
-            self.sequence_dir / "segmented_ngp_dup.tar.gz", mask_indices, top_dir="segmented_ngp_dup"
+            self.sequence_dir / "frames_1_same_res_dup.tar.gz",
+            {cid: [FRAME_INDEX] for cid in self.ALL_CAMERA_IDS},
+            top_dir="frames_1_same_res_dup",
+            content_bytes=_frame_rgba_png_bytes(),
         )
         with self.assertRaises(ContractError):
-            self.build_window_plan()
-
-    def test_no_mask_candidates_after_excluding_frame_archive_is_rejected(self):
-        # Remove every archive except the one already used as the frame
-        # source -- nothing is left to plausibly serve as the mask source.
-        (self.sequence_dir / "segmented_gt.tar.gz").unlink()
-        (self.sequence_dir / "segmented_ngp.tar.gz").unlink()
-        with self.assertRaises(ContractError):
-            self.build_window_plan()
+            self.build_plan()
 
     def test_invalid_window_bounds_are_rejected(self):
         with self.assertRaises(SchemaError):
@@ -863,36 +937,31 @@ class RealSchemaHelperTests(unittest.TestCase):
         self.assertAlmostEqual(stamped["time"], FRAME_INDEX / FPS)
 
 
-class MirroredMaskAmbiguityTests(WindowFixtureCase):
-    """Real-data condition (det task 72bf9fd6): the per-frame mask archive
-    mirrors the frame archive's member layout exactly, so BOTH fully cover
-    the single-instant referenced paths and the content probe must decide."""
+class MirroredArchiveAmbiguityTests(WindowFixtureCase):
+    """Real-data condition (Apollo unlock, det tasks 405a7a8d/c662fadf):
+    segmented_ngp mirrors frames_1's member layout exactly (same
+    camera/index paths), so path coverage alone cannot separate them --
+    only the resolution probe can, because segmented_ngp ships the
+    original pre-undistortion resolution while frames_1 ships the
+    calibration resolution the transforms' declared (w, h) describes."""
 
-    def test_single_instant_discovery_resolves_via_content_probe(self):
+    def test_single_instant_discovery_resolves_via_resolution_probe(self):
         plan, _ = self.build_plan()
         self.assertEqual(plan.archive_selection["train"].archive_path, "frames_1.tar.gz")
         self.assertEqual(plan.archive_selection["test"].archive_path, "frames_1.tar.gz")
 
-    def test_window_frame_discovery_resolves_via_content_probe(self):
+    def test_window_frame_discovery_resolves_via_resolution_probe(self):
         plan, _ = self.build_window_plan()
         self.assertEqual(plan.archive_selection["train"].archive_path, "frames_1.tar.gz")
+        self.assertEqual(plan.archive_selection["test"].archive_path, "frames_1.tar.gz")
         for window_split in plan.window_splits.values():
-            self.assertEqual(window_split.mask_archive.archive_path, "segmented_ngp.tar.gz")
+            self.assertTrue(all(paths for paths in window_split.camera_relative_paths.values()))
 
-    def test_sparse_gt_hit_disambiguated_by_full_coverage(self):
-        # segmented_gt holding ONE window index (a real sparse-GT overlap)
-        # hits the mask probe but cannot cover the window; segmented_ngp
-        # must still be selected, by full coverage.
-        (self.sequence_dir / "segmented_gt.tar.gz").unlink()
-        _write_multi_index_archive(
-            self.sequence_dir / "segmented_gt.tar.gz",
-            {cid: [WINDOW_INDICES[0]] for cid in self.ALL_CAMERA_IDS},
-            top_dir="segmented_gt",
-            content_bytes=_binary_mask_png_bytes(),
-        )
-        plan, _ = self.build_window_plan()
-        for window_split in plan.window_splits.values():
-            self.assertEqual(window_split.mask_archive.archive_path, "segmented_ngp.tar.gz")
+    def test_execution_extracts_from_frames_1_not_the_mirrored_decoy(self):
+        plan, payloads = self.build_window_plan()
+        result = converter.execute_plan(plan, payloads)
+        relocated = self.output_dir / "undist" / "cam00" / f"{WINDOW_INDICES[0]:08d}.png"
+        self.assertEqual(relocated.read_bytes(), _frame_rgba_png_bytes())
 
 
 class RealSchemaSingleInstantTests(Diva360FixtureCase):
@@ -934,6 +1003,148 @@ class RealSchemaWindowTests(WindowFixtureCase):
             for idx in WINDOW_INDICES:
                 mask = self.output_dir / "masks" / f"cam{cid:02d}" / f"{idx:08d}.png"
                 self.assertTrue(mask.is_file(), mask)
+
+
+# ---------------------------------------------------------------------------
+# select_archive_for_split's resolution probe (pure function, direct)
+# ---------------------------------------------------------------------------
+
+
+class ArchiveSelectionResolutionProbeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    def test_unambiguous_single_candidate_never_decodes_content(self):
+        # Only one candidate covers the wanted set -- the resolution probe
+        # must never even run (content here is not a decodable image).
+        archive = self.root / "only.tar.gz"
+        _write_multi_index_archive(
+            archive, {0: [0]}, top_dir="undist", content_bytes=b"not-a-real-png"
+        )
+        match = converter.select_archive_for_split(
+            [archive], ["cam00/00000000.png"]
+        )
+        self.assertEqual(match.archive_path, "only.tar.gz")
+
+    def test_two_covering_candidates_resolved_by_matching_resolution(self):
+        correct = self.root / "correct.tar.gz"
+        wrong = self.root / "wrong.tar.gz"
+        _write_multi_index_archive(
+            correct, {0: [0]}, top_dir="undist_a", content_bytes=_frame_rgba_png_bytes()
+        )
+        _write_multi_index_archive(
+            wrong, {0: [0]}, top_dir="undist_b", content_bytes=_decoy_rgba_png_bytes()
+        )
+        declared = {"cam00/00000000.png": (FRAME_W, FRAME_H)}
+        match = converter.select_archive_for_split(
+            [correct, wrong], ["cam00/00000000.png"], declared
+        )
+        self.assertEqual(match.archive_path, "correct.tar.gz")
+
+    def test_missing_declared_size_fails_closed(self):
+        a = self.root / "a.tar.gz"
+        b = self.root / "b.tar.gz"
+        _write_multi_index_archive(
+            a, {0: [0]}, top_dir="undist_a", content_bytes=_frame_rgba_png_bytes()
+        )
+        _write_multi_index_archive(
+            b, {0: [0]}, top_dir="undist_b", content_bytes=_decoy_rgba_png_bytes()
+        )
+        with self.assertRaises(ContractError):
+            converter.select_archive_for_split([a, b], ["cam00/00000000.png"])  # no declared_sizes
+
+    def test_both_candidates_matching_resolution_is_ambiguous(self):
+        a = self.root / "a.tar.gz"
+        b = self.root / "b.tar.gz"
+        _write_multi_index_archive(
+            a, {0: [0]}, top_dir="undist_a", content_bytes=_frame_rgba_png_bytes()
+        )
+        _write_multi_index_archive(
+            b, {0: [0]}, top_dir="undist_b", content_bytes=_frame_rgba_png_bytes()
+        )
+        declared = {"cam00/00000000.png": (FRAME_W, FRAME_H)}
+        with self.assertRaises(ContractError):
+            converter.select_archive_for_split([a, b], ["cam00/00000000.png"], declared)
+
+    def test_neither_candidate_matching_resolution_is_ambiguous(self):
+        a = self.root / "a.tar.gz"
+        b = self.root / "b.tar.gz"
+        _write_multi_index_archive(
+            a, {0: [0]}, top_dir="undist_a", content_bytes=_decoy_rgba_png_bytes()
+        )
+        _write_multi_index_archive(
+            b, {0: [0]}, top_dir="undist_b", content_bytes=_decoy_rgba_png_bytes()
+        )
+        declared = {"cam00/00000000.png": (FRAME_W, FRAME_H)}
+        with self.assertRaises(ContractError):
+            converter.select_archive_for_split([a, b], ["cam00/00000000.png"], declared)
+
+
+# ---------------------------------------------------------------------------
+# derive_mask_from_frame (pure function, direct)
+# ---------------------------------------------------------------------------
+
+
+class MaskDerivationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+
+    def test_derives_binarized_alpha_mask(self):
+        from PIL import Image
+
+        frame_path = self.root / "frame.png"
+        frame_path.write_bytes(_frame_rgba_png_bytes())
+        mask_path = self.root / "masks" / "mask.png"
+        converter.derive_mask_from_frame(frame_path, mask_path)
+        self.assertTrue(mask_path.is_file())
+        with Image.open(mask_path) as mask_image:
+            self.assertEqual(mask_image.mode, "L")
+            values = set(np.array(mask_image).flatten().tolist())
+        # Top half (fg_alpha=255) and bottom half (bg_alpha=0) must both
+        # survive binarization distinctly.
+        self.assertEqual(values, {0, 255})
+
+    def test_threshold_is_strict_greater_than(self):
+        from PIL import Image
+
+        frame_path = self.root / "boundary.png"
+        # alpha exactly AT the threshold must binarize to 0 (strictly >);
+        # alpha one above it must binarize to 255.
+        frame_path.write_bytes(_rgba_png_bytes(4, 4, fg_alpha=127, bg_alpha=128))
+        mask_path = self.root / "mask.png"
+        converter.derive_mask_from_frame(frame_path, mask_path)
+        with Image.open(mask_path) as mask_image:
+            array = np.array(mask_image)
+        half = array.shape[0] // 2
+        self.assertTrue((array[:half, :] == 0).all())
+        self.assertTrue((array[half:, :] == 255).all())
+
+    def test_custom_threshold(self):
+        from PIL import Image
+
+        frame_path = self.root / "custom.png"
+        frame_path.write_bytes(_rgba_png_bytes(4, 4, fg_alpha=200, bg_alpha=50))
+        mask_path = self.root / "mask.png"
+        converter.derive_mask_from_frame(frame_path, mask_path, threshold=210)
+        with Image.open(mask_path) as mask_image:
+            values = set(np.array(mask_image).flatten().tolist())
+        # Both halves now fall at-or-below the raised threshold -> all 0.
+        self.assertEqual(values, {0})
+
+    def test_frame_without_alpha_channel_fails_closed_naming_the_file(self):
+        frame_path = self.root / "no_alpha.png"
+        frame_path.write_bytes(_rgb_no_alpha_png_bytes(4, 4))
+        mask_path = self.root / "mask.png"
+        try:
+            converter.derive_mask_from_frame(frame_path, mask_path)
+            self.fail("expected ContractError")
+        except ContractError as exc:
+            self.assertIn("no_alpha.png", str(exc))
+        self.assertFalse(mask_path.exists())
 
 
 if __name__ == "__main__":
