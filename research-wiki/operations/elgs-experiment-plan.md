@@ -22,9 +22,18 @@ cameras never enter tracking or observability.
 
 B0 Static checks + formal-spec unit tests (~5 GPU-h): energy/invariance
 tests (censored-segment zero across ops; clone/merge invariance;
-censoring equality), transition-table property tests, winner-lookup,
-importance-weight sanity, tracker-pipeline dry run, metric spec freeze
-(incl. object-to-lineage mapping protocol; power analysis).
+censoring equality), transition-table property tests incl.
+latch-inheritance over every op and serialization load-validation,
+latch/simplex round-trip tests (forward∘inverse identity across all
+four latch patterns and K=1..4; dim(a) = 2K+1−n_lat; Ω-sum identity;
+strict positivity of unlatched slacks; exact-floor targets rejected),
+winner-lookup, SNIS/importance-weight sanity (weights ≤ 1/λ_u with
+clip-inactivity; empirical bias → 0 with n vs a closed-form ν-mean;
+CRN pairing determinism; per-replicate bootstrap renormalization;
+cluster-degeneracy rejection — the estimator is finite-sample biased
+SNIS per spec §7, no unbiasedness asserted), tracker-pipeline dry run,
+metric spec freeze (incl. object-to-lineage mapping protocol; power
+analysis). Details: [[operations/elgs-implementation-readiness-errata]].
 B1 EVIDENCE + ACTIVATION CENSUS GATE (~25 GPU-h; kills cheaply):
 DiVa-360 dev subset: track coverage (bound fraction of dynamic
 content), opportunity distributions, event-class counts vs preregistered

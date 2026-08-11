@@ -129,3 +129,19 @@ plan tests.
 GATE STATUS: **PASSED 2026-08-09.** The calibrated 8.0 condition is
 satisfied; EL-GS is implementation-ready under
 [[operations/elgs-experiment-plan]].
+
+## Post-gate implementation-readiness errata (2026-08-11)
+
+Targeted closure, NOT a gate round: two implementation-affecting
+inconsistencies inside the committed v8.3 spec were confirmed and
+resolved as spec revision 4 — (E1) the unconditional a ∈ R^{2K+1}
+interval vector and BIRTH's "slack_post = 0" encoding contradicted the
+rev-2/rev-3 latch-bit semantics (canonical now: a ∈ R^{2K+1−n_lat};
+exact boundaries are latch bits only; full forward/inverse maps,
+inheritance, moments, serialization in §1); (E2) "estimator exact /
+ordinary IS ⇒ unbiased" contradicted the defined self-normalized
+formula (canonical now: SNIS, consistent, finite-sample biased,
+disclosed heuristic). Dependency cones checked; no scientific claim
+changed; one fresh-context mathematical review of the repaired
+sections passed. Record:
+[[operations/elgs-implementation-readiness-errata]].

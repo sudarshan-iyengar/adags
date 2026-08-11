@@ -1,4 +1,27 @@
-# EL-GS v8.3 — Formal Specification (gate document, revision 3)
+# EL-GS v8.3 — Formal Specification (gate document, revision 4)
+
+REVISION 4 (2026-08-11, implementation-readiness errata; NOT a new
+gate round — the gate result of commit 519626d stands): two
+implementation-affecting inconsistencies were confirmed against this
+document and closed. E1 — LATCH/SIMPLEX: §1 is now the SINGLE
+CANONICAL interval-state definition (admissible latch patterns,
+per-pattern vector dimension 2K+1−n_lat, forward and inverse maps,
+K=0, exact-boundary rule, latch inheritance across K-changing ops,
+optimizer-moment resets, serialization). The unconditional
+a ∈ R^{2K_f+1} of revisions ≤3 and BIRTH's "slack_post = 0 at init"
+encoding are SUPERSEDED: an exact boundary is a latch bit, never a
+zero simplex coordinate (softmax coordinates are strictly positive).
+E2 — ESTIMATOR: the acceptance render estimator is canonically
+SELF-NORMALIZED importance sampling (§7): strongly consistent,
+bounded-weight, but not unbiased in general at finite sample size
+(ratio-estimator bias O(1/n)); every
+"ordinary/unnormalized", "unbiased", or "estimator exact" description
+in earlier revision headers is superseded. No scientific claim
+strengthens — acceptance was already a non-claimed preregistered
+heuristic (§9). Superseded sentences below are tagged
+[SUPERSEDED → §1] / [SUPERSEDED → §7] and are retained only as
+revision history. Errata record and M0 test additions:
+[[operations/elgs-implementation-readiness-errata]].
 
 REVISION 3 (closes the three category-A defects of gate round 3):
 A1 — LATCHED SPANS DEFINED: latch bits exist ONLY on b_1 (latched ⇒
@@ -30,7 +53,9 @@ Date: 2026-08-09. Revision 2 after gate round 2. NEW IN v8.2:
 d_K = T+w_m; b_1 = −w_m) are represented by DISCRETE per-endpoint latch
 flags toggled only by structural ops — a latched endpoint is exact and
 carries no logit; unlatched interior endpoints use the softmax simplex
-over the remaining budget (Ω_free computed excluding latched spans).
+over the remaining budget [SUPERSEDED → §1: Ω_free NEVER depends on
+latches — a latched slack is identically zero; the phrase "Ω_free
+computed excluding latched spans" is void].
 "Len at floor" predicates are replaced by len ≤ floor + δ_tol
 (preregistered tolerance). K=0 is a defined state (empty program:
 renders nothing; prune-pending). Exact inverse maps for K-changes are
@@ -72,8 +97,9 @@ streams); PROP 3 concludes "exactly one ownership cluster" (the term
 stated in the bound; the ε-aggregation bound holds AT FIXED capped
 sets A (stated; cap-set changes are handled by the two-sided
 Lipschitz argument applied to both streams).
-(6) Acceptance estimator: ORDINARY (unnormalized) importance sampling
-for the ν-mean (ν is normalized ⇒ unbiased), weights exact and
+(6) Acceptance estimator: [SUPERSEDED → §7: the adopted estimator is
+SELF-NORMALIZED importance sampling — consistent, finite-sample
+biased; "ordinary (unnormalized) ⇒ unbiased" is void] weights exact and
 ≤ 1/λ_u; paired (CRN) samples; bootstrap: paired cluster resampling of
 (camera,frame) units with the SAME resample indices for candidate and
 incumbent, B=200, SE = sd of paired replicate differences; degeneracy
@@ -90,16 +116,81 @@ labels always printed with the qualifier "(fixed-path decision
 decomposition, not statistical support)".
 Prose: [[operations/elgs-method]].
 
-## 1. State space
+## 1. State space (CANONICAL interval-state definition, rev 4)
 
-Families f ∈ F with presence program P_f of K_f ≤ 4 episodes. INTERVAL
-PARAMETERIZATION (simplex form; replaces the chain): let Ω = T + 2w_m
-and Ω_free = Ω − K_f·floor_len − (K_f−1)·floor_gap (an op is admissible
-only if Ω_free > 0). Raw vector a ∈ R^{2K_f+1} → σ = softmax(a) →
-slack_pre = Ω_free·σ_0; len_k = floor_len + Ω_free·σ_{2k−1};
-gap_k = floor_gap + Ω_free·σ_{2k}; b_1 = −w_m + slack_pre; endpoints
-follow by summation, and d_{K_f} ≤ T + w_m holds IDENTICALLY under any
-optimizer step. Floors: floor_len = 2w + δ_len, floor_gap = 2w + δ_gap.
+Families f ∈ F with presence program P_f of K_f ≤ 4 episodes. This
+section is the single source of truth for the interval state; it
+consolidates the rev-2/rev-3 latch-bit and simplex fragments and
+supersedes every earlier dimension or encoding statement.
+
+LATCH BITS. Each family with K_f ≥ 1 carries exactly two latch bits
+(ℓ_pre, ℓ_post) ∈ {0,1}²: ℓ_pre = 1 ⇔ b_1 = −w_m exactly;
+ℓ_post = 1 ⇔ d_{K_f} = T + w_m exactly. All four patterns (0,0),
+(1,0), (0,1), (1,1) are admissible; a latch anywhere else (interior
+endpoints) is inadmissible. Latch bits are toggled ONLY by structural
+ops (§5), never by gradient steps, and carry no optimizer state.
+
+VECTOR DIMENSION. n_lat := ℓ_pre + ℓ_post. Raw vector
+a ∈ R^{2K_f+1−n_lat}, i.e. (2 − n_lat) unlatched outer slacks + K_f
+lengths + (K_f−1) gaps. Canonical coordinate order (also the
+serialization order): [slack_pre iff ℓ_pre=0], len_1, gap_1, …,
+gap_{K_f−1}, len_{K_f}, [slack_post iff ℓ_post=0].
+
+FORWARD MAP. Ω = T + 2w_m; Ω_free = Ω − K_f·floor_len −
+(K_f−1)·floor_gap (an op is admissible only if Ω_free > 0; Ω_free
+NEVER depends on the latch pattern — a latched slack is identically
+zero and simply has no coordinate). σ = softmax(a); each unlatched
+slack = Ω_free·σ_(its coord); each latched slack ≡ 0; len_k =
+floor_len + Ω_free·σ_(len_k); gap_k = floor_gap + Ω_free·σ_(gap_k).
+b_1 = −w_m + slack_pre; endpoints follow by summation. Identity:
+slack_pre + Σ_k len_k + Σ_k gap_k + slack_post = Ω for every latch
+pattern (softmax sums to one over the remaining coordinates), so
+d_{K_f} ≤ T + w_m holds IDENTICALLY under any optimizer step, with
+equality iff ℓ_post = 1.
+
+EXACT BOUNDARY RULE. Softmax coordinates are strictly positive, so
+every unlatched slack is strictly > 0: exact boundary contact is
+representable ONLY by a latch bit. A "zero slack coordinate" does not
+exist in this parameterization and no op may target one.
+
+INVERSE MAP (used by every structural op to write the child state).
+Given an admissible target (latch pattern; every unlatched slack > 0
+strictly; every len_k > floor_len and gap_k > floor_gap strictly):
+σ_i = (value_i − floor_i)/Ω_free (floor_i = 0 for slacks), then
+a_i = log σ_i − max_j log σ_j (gauge fixed so max a_i = 0;
+deterministic). An op whose target would put an unlatched coordinate
+exactly at its floor is inadmissible as stated; a target with an
+outer slack exactly 0 must set the corresponding latch instead.
+
+K_f = 0: defined state (empty program) — no latch bits, no vector a;
+renders nothing; prune-pending (unchanged from v8.2).
+
+LATCH INHERITANCE (canonical rule; expands rev-3 A1, consistent with
+it): latches live on the family's outer endpoints. An op that
+preserves an outer endpoint preserves its latch; an op that deletes
+the outermost episode on a side DISCARDS that side's latch (the new
+outer slack enters as an unlatched coordinate via the inverse map);
+TRUNCATE-shorten applied to a latched outer endpoint CLEARS that
+latch; REACTIVATE insertion outside a latched outer endpoint is
+inadmissible (zero room); MERGE: ℓ_pre is taken from the parent
+owning the globally earliest b_1, ℓ_post from the parent owning the
+globally latest d_K; BIRTH sets (ℓ_pre, ℓ_post) = (0,1) (§5);
+interior ops (interior fission/truncation/reactivation/prune) never
+touch latches.
+
+OPTIMIZER MOMENTS. Every structural op rewrites a through the inverse
+map (dimension and/or values change), so the family's simplex-logit
+moment state is RESET and the reset logged (rev-3 A1 unchanged).
+Latch bits never carry moments.
+
+SERIALIZATION / CHECKPOINTS. Persist per family: (K_f, ℓ_pre, ℓ_post,
+a) in the canonical coordinate order; the loader MUST validate
+dim(a) = 2K_f + 1 − n_lat (K_f = 0 persists as the empty program with
+no latch bits). No checkpoints predate this errata (nothing has been
+implemented), so no migration path exists or is needed; the dimension
+check is mandatory from the first implementation.
+
+Floors: floor_len = 2w + δ_len, floor_gap = 2w + δ_gap.
 z_f(t) = 1 iff t in a plateau [b_k+w, d_k−w]; discrete edge bands
 X_f = {t : |t − nearest edge| < w in frame units, strict}. Rendering,
 pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].
@@ -205,8 +296,13 @@ aggregation rules of §2. ∎
   predicate below) AND K_f < 4 AND floors fit. Post: +κ + Δψ; pose
   init = spline-bridge mean at episode center; fresh coefficients and
   origin; fresh moments.
-- BIRTH(f′): K=1 latched-open: episode = (t_birth, T + w_m] in simplex
-  form (slack_post = 0 at init). Δ = +κ + ψ + LEDGER χ if at a return
+- BIRTH(f′): K=1 with (ℓ_pre, ℓ_post) = (0, 1) — terminal latch:
+  d_1 = T + w_m EXACT, represented by the latch bit, NOT by a zero
+  slack coordinate (supersedes "slack_post = 0 at init"). State
+  a ∈ R^2 = (slack_pre, len_1) via the §1 inverse map with targets
+  slack_pre = t_birth + w_m, len_1 = T + w_m − t_birth (admissible iff
+  len_1 > floor_len strictly AND t_birth > −w_m, i.e. slack_pre > 0;
+  §1 admissibility governs). Δ = +κ + ψ + LEDGER χ if at a return
   site. Admissible under caps; cap-saturated ⇒ INADMISSIBLE this
   round, re-eligible next (logged).
 - MERGE(f_old, f_new): pre: return-family predicate holds; episode
@@ -220,6 +316,11 @@ aggregation rules of §2. ∎
 - PRUNE (episode: len at floor AND micro-render confirms; family:
   episodeless or lifetime-unsupported): Δstate per deletions; ledger
   untouched.
+ALL OPS (rev 4): every op writes its child interval state through the
+§1 inverse map (child dimension 2K′+1−n_lat′ per the child latch
+pattern); latch inheritance, exact-boundary handling, target
+admissibility, and moment resets are governed by §1 alone — no op
+table entry may encode a boundary as a zero coordinate.
 RETURN-FAMILY PREDICATE (deterministic): a family born within radius
 r_site of the site with birth time inside W; ties → earliest birth,
 then lowest family ID. REACTIVATE/MERGE mutual exclusivity follows.
@@ -239,20 +340,36 @@ reports of cluster u in the window with q̃_b ≤ ε (finite: ≤ C_cap ×
 ‖∇F‖₁ = 1; τ_B > 0), |Φ shift| ≤ max_b Σ_u α_u·n_{u,b,ε}·M(ε). ∎
 Reported with the empirical power curve vs oracle opportunity.
 
-## 7. Acceptance (heuristic; estimator exact)
+## 7. Acceptance (heuristic; SNIS estimator — consistent, finite-sample biased)
 
-Estimator: R̂ = Σ_i a_i·ℓ(x_i) / Σ_i a_i with samples x_i from the
-mixture λ_u·ν + (1−λ_u)·π_D (0 < λ_u ≤ 1), and
-a_i = min{ w_max, ν(x_i)/(λ_u·ν(x_i) + (1−λ_u)·π_D(x_i)) } with
-w_max := 1/λ_u — the true weight is ≤ 1/λ_u ALWAYS, so clipping is
-PROVABLY INACTIVE (retained as a formal guard); the estimator is
-self-normalized importance sampling for the declared ν-target. Exact
-(non-sampled) tracker and prior deltas are added outside the sampled
-render estimate. COMMON RANDOM NUMBERS: identical {x_i} for incumbent
-and candidate. SE: cluster bootstrap over (camera, frame) units, B=200
-replicates, weights renormalized within each replicate; SE undefined ⇒
-reject. Accept iff ΔÊ + k·SE < 0 (ΔÊ includes the transaction
-increment). Rejected candidates: all refit state DISCARDED (incumbent
+CANONICAL ESTIMATOR (self-normalized importance sampling; supersedes
+every "ordinary/unnormalized", "unbiased", or "estimator exact"
+description of the sampled render estimate in earlier revisions):
+R̂ = Σ_i a_i·ℓ(x_i) / Σ_i a_i with samples x_i drawn from the mixture
+m = λ_u·ν + (1−λ_u)·π_D (0 < λ_u ≤ 1), and
+a_i = min{ w_max, ν(x_i)/m(x_i) } with w_max := 1/λ_u — the true
+weight is ≤ 1/λ_u ALWAYS, so clipping is PROVABLY INACTIVE (retained
+as a formal guard). GUARANTEES (all that is claimed): R̂ is a ratio
+estimator — strongly consistent for the ν-mean E_ν[ℓ] as n → ∞ and
+bounded-weight stable, but NOT unbiased in general at finite sample
+size (ratio-estimator bias O(1/n); it vanishes only in degenerate
+cases, e.g. λ_u = 1 or constant ℓ); no unbiasedness or exactness of
+the sampled estimate is
+claimed or used anywhere — acceptance is a preregistered heuristic
+(§9), and the paired CRN design cancels the shared normalization
+noise between candidate and incumbent without eliminating the bias.
+(The unnormalized alternative (1/n)·Σ_i a_i·ℓ(x_i) would be unbiased
+for the normalized ν but is NOT the adopted estimator; SNIS is
+adopted for weight-noise cancellation under CRN.) Exact (non-sampled)
+tracker and prior deltas — computed in closed form, not estimated —
+are added outside the sampled render estimate. COMMON RANDOM NUMBERS:
+identical {x_i} for incumbent and candidate; ΔÊ is the paired SNIS
+difference plus the exact deltas. SE: cluster bootstrap over
+(camera, frame) units, B=200 replicates, weights renormalized within
+each replicate (the renormalization is exactly the self-normalized
+form applied per replicate); SE = sd of paired replicate differences;
+SE undefined ⇒ reject. Accept iff ΔÊ + k·SE < 0 (ΔÊ includes the
+transaction increment). Rejected candidates: all refit state DISCARDED (incumbent
 snapshot restored). Sample partitioning: NO hashing — the reserved
 pool is pre-partitioned at iteration 0 into an indexed grid of slots
 (round, pass, rank) with rank = the deterministic ordering of conflict
@@ -271,9 +388,11 @@ passes (a), no single-term flag; EQUIVALENCE-CLASS = all data terms
 below preregistered floors. ITT logs every screened candidate;
 risk-coverage over the full event inventory.
 
-## 9. Non-claims (unchanged)
+## 9. Non-claims (extended rev 4)
 
-No statistical validity of acceptance; no calibrated posteriors; no
+No statistical validity of acceptance; no unbiasedness or exactness
+of the sampled acceptance estimator (SNIS: consistent, finite-sample
+biased, §7); no calibrated posteriors; no
 physical absence; no identifiability; no global optimality; "tempered
 bridge aggregation" ≠ marginalization (stated). The ten viability
 conditions of [[operations/elgs-novelty-record]] bind implementation.

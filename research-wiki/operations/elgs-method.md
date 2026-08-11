@@ -17,7 +17,11 @@ fresh audit) now SATISFIED. Remaining defect classes are category-B
 category-C (empirical risks, tested by the plan). Nothing yet
 implemented/trained/submitted — implementation may begin per
 [[operations/elgs-experiment-plan]] (M0 static checks first, which
-include the spec's invariance unit tests).
+include the spec's invariance unit tests). 2026-08-11: two
+implementation-affecting spec inconsistencies (latch/simplex encoding;
+estimator unbiased-vs-SNIS language) were confirmed and closed by a
+targeted post-gate errata — spec revision 4, no claim or mechanism
+change ([[operations/elgs-implementation-readiness-errata]]).
 Provenance: Loop-2 sweeps ([[operations/loop2-sweep-2026-08]]) →
 refine loop 5.7→8.2→8.9 → FIVE fresh-context adversarial rounds
 (hostile novelty 4→6→7→7→8) → calibrated referee 8.0
@@ -81,8 +85,10 @@ merge; proposed by per-lineage constrained semi-Markov interval engines
 inside an approximate global structural search (conflict graphs on
 current∪bridge footprints; Gauss-Seidel; priority queue with
 per-component confirmation); accepted by a preregistered HEURISTIC on
-reserved fresh render samples (hash-partition rule from iteration 0;
-candidate-targeted rays + uniform-support mixture; accept iff
+reserved fresh render samples (pre-partitioned indexed slot grid from
+iteration 0 — no hashing, per spec §7; candidate-targeted rays +
+uniform-support mixture; self-normalized importance-sampling estimate,
+consistent but finite-sample biased, disclosed; accept iff
 ΔÊ < −k·SE); validated empirically by dose-matched shifted/shuffled
 lanes (stress tests, not causal validation of natural-data
 correctness). Schedule: warm-up→2.5k; seeding 2.5k; audit 2.8k; rounds
