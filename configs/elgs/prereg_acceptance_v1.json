@@ -12,7 +12,7 @@
     "nu": "uniform over (training-camera, frame) pairs x tile grid positions",
     "density_correction": "tile weighting is uniform, so nu and m densities are computed per unit under the mixture below; no additional Jacobian",
     "status": "frozen (structural definition); tile size sensitivity is analyzed at M2 before any evidence-bearing comparison",
-    "smoke_note": "the M0 smoke uses whole-frame units with nu = m (weights exactly 1), a degenerate-valid SNIS case; disclosed, never evidence-bearing"
+    "smoke_note": "the M0 smoke uses whole-frame units with lambda_u = 1.0, so the declared mixture is literally m = nu and weights are exactly 1 - the degenerate-valid SNIS case; disclosed, never evidence-bearing"
   },
   "mixture": {
     "pi_d": "candidate-targeted rays/tiles (uniform over the candidate's affected (camera, frame) footprint)",

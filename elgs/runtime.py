@@ -54,7 +54,7 @@ class ScheduleAnchors:
 
 
 class ElgsRuntime:
-    """Owns the padded a-logits and the presence computation."""
+    """Owns the per-family exact-dimension a-logits and presence."""
 
     def __init__(
         self,

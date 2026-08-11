@@ -409,9 +409,12 @@ def plan_reactivate(
         trailing_gap = b[0] - insert_end
         if trailing_gap <= config.floor_gap:
             raise ContractError("REACTIVATE would violate the gap floor")
-        if new_slack_pre < -_EPS:
+        if new_slack_pre < 0.0:
             raise ContractError("insertion extends beyond the margin")
-        set_latch = abs(new_slack_pre) <= _EPS
+        # Exact-boundary rule (§1 + errata): ONLY an exactly-zero
+        # target slack sets the latch — no epsilon thresholding; a
+        # tiny strictly-positive slack stays an unlatched coordinate.
+        set_latch = new_slack_pre == 0.0
         child = _rebuild(
             K + 1, set_latch or latch_pre, latch_post,
             0.0 if set_latch else new_slack_pre,
@@ -429,9 +432,9 @@ def plan_reactivate(
         new_slack_post = hi_bound - insert_end
         if leading_gap <= config.floor_gap:
             raise ContractError("REACTIVATE would violate the gap floor")
-        if new_slack_post < -_EPS:
+        if new_slack_post < 0.0:
             raise ContractError("insertion extends beyond the margin")
-        set_latch = abs(new_slack_post) <= _EPS
+        set_latch = new_slack_post == 0.0  # exact only, never epsilon (§1)
         child = _rebuild(
             K + 1, latch_pre, set_latch or latch_post,
             slack_pre, lens + [new_len], gaps + [leading_gap],
@@ -474,7 +477,21 @@ def plan_reactivate(
                         {"position": position}),
         ),
         moment_resets=(family_id,),
-        detail={"insert": (insert_start, insert_end)},
+        detail={
+            "insert": (insert_start, insert_end),
+            # §5: "pose init = spline-bridge mean at episode center;
+            # fresh coefficients and origin; fresh moments." Fresh tau
+            # is applied now; the pose/coefficient init acts on the
+            # episode-local tensors that land with M1 — the directive
+            # is carried so the consumer applies it then. DISCLOSED.
+            "parameter_init": {
+                "pose": "spline-bridge mean at episode center",
+                "coefficients": "fresh",
+                "origin": "fresh (tau applied now)",
+                "moments": "fresh",
+                "status": "M1-gated (episode-local pose/motion tensors not yet present)",
+            },
+        },
     )
 
 
@@ -545,7 +562,24 @@ def plan_merge(
         binding_redirect=(retired_id, survivor_id),
         retire_family=retired_id,
         survivor_identity=survivor_id,
-        detail={"radiance_from": survivor_id},
+        detail={
+            "radiance_from": survivor_id,
+            # §5: exact gauge re-anchoring to the older family's first
+            # episode. The transport acts on EPISODE-LOCAL pose/motion
+            # parameters, which land with the M1 evidence artifacts —
+            # the directive is carried now so the consumer applies it
+            # the moment those tensors exist. DISCLOSED M1-gated gap.
+            "gauge_reanchor": {
+                "reference_family": survivor_id,
+                "transport": (
+                    "q_can' = q_can∘q_ref; s' = s + l_ref; "
+                    "q_j' = q_ref^-1∘q_j; l_j' = l_j - l_ref; "
+                    "x_j re-expressed; world-frame SH untouched; "
+                    "moments of re-expressed parameters reset (logged)"
+                ),
+                "status": "M1-gated (episode-local pose/motion tensors not yet present)",
+            },
+        },
     )
 
 
@@ -554,20 +588,28 @@ def plan_prune_episode(
     family_id: int,
     episode_index: int,
     *,
-    len_at_floor: bool,
     micro_render_confirms: bool,
     round_index: int,
     iteration: int,
     config: IntervalConfig,
     dtype: torch.dtype = torch.float32,
 ) -> TransactionPlan:
-    """PRUNE-episode: len <= floor + delta_tol AND micro-render
-    confirmation required; interval mechanics equal TRUNCATE-delete at
-    the position (latches per §1's general delete rule)."""
-    if not (len_at_floor and micro_render_confirms):
+    """PRUNE-episode: len <= floor_len + delta_tol (COMPUTED here from
+    the realization and the preregistered tolerance, header item (7))
+    AND micro-render confirmation required; interval mechanics equal
+    TRUNCATE-delete at the position (latches per §1's delete rule)."""
+    record = registry.require_active(family_id)
+    if not (0 <= episode_index < record.interval.K):
+        raise ContractError(f"episode index {episode_index} out of range")
+    realization = forward(record.interval, config)
+    episode_len = float(realization.lens[episode_index])
+    if episode_len > config.floor_len + config.delta_tol:
         raise ContractError(
-            "PRUNE-episode requires len at floor AND micro-render confirmation"
+            f"PRUNE-episode requires len <= floor + delta_tol: "
+            f"{episode_len} > {config.floor_len} + {config.delta_tol}"
         )
+    if not micro_render_confirms:
+        raise ContractError("PRUNE-episode requires micro-render confirmation")
     plan = plan_truncate_delete(
         registry, family_id, episode_index,
         round_index=round_index, iteration=iteration, config=config, dtype=dtype,

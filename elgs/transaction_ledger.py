@@ -34,6 +34,7 @@ LEDGER_EVENT_KINDS = (
     "moment_reset",
     "k_overflow_reject",
     "slot_exhausted_reject",
+    "inadmissible_reject",
 )
 
 

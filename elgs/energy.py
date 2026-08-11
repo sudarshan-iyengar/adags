@@ -120,6 +120,21 @@ class EvidenceBatch:
             raise ContractError("evidence batch carries no bridges")
         return tuple(sorted(self.q_tilde))
 
+    def validate_bridge_independent_eligibility(self) -> None:
+        """Report ELIGIBILITY must be bridge-independent by
+        construction (spec §4; PROP 1 condition (i)): every bridge's
+        q map covers exactly the report key set."""
+        report_keys = set(self.reports)
+        for bridge_id in self.bridges():
+            keys = set(self.q_tilde[bridge_id])
+            if keys != report_keys:
+                missing = sorted(report_keys - keys)[:3]
+                extra = sorted(keys - report_keys)[:3]
+                raise ContractError(
+                    f"bridge {bridge_id} q map breaks bridge-independent "
+                    f"eligibility (missing~{missing}, extra~{extra})"
+                )
+
 
 def _capped_keys_for(
     batch: EvidenceBatch,
@@ -181,6 +196,7 @@ def stream_log_likelihoods(
     omitted from BOTH streams (their contribution is exactly the same
     constant in each — see module docstring), which realizes PROP 1
     as an exact 0.0 rather than a float cancellation."""
+    batch.validate_bridge_independent_eligibility()
     scored: dict[int, float] = {}
     censored: dict[int, float] = {}
     for bridge_id in batch.bridges():
@@ -190,7 +206,10 @@ def stream_log_likelihoods(
             track_ids = tuple(tracks_of_cluster.get(cluster.cluster_id, ()))
             if not track_ids:
                 continue
-            r_u = max(cluster.r_u, heads.params.r_min)
+            # r_u is validated at SeedCluster construction; a value
+            # below r_min fails closed in the likelihood call — no
+            # silent clamping (spec §2 range is a constraint).
+            r_u = cluster.r_u
             for segment in segments:
                 if segment_is_censored(batch, track_ids, segment):
                     continue

@@ -49,9 +49,10 @@ class IntervalConfig:
     w: float
     floor_len: float
     floor_gap: float
+    delta_tol: float = 0.0
 
     def __post_init__(self) -> None:
-        for name in ("T", "w_m", "w", "floor_len", "floor_gap"):
+        for name in ("T", "w_m", "w", "floor_len", "floor_gap", "delta_tol"):
             value = getattr(self, name)
             if not math.isfinite(value):
                 raise ContractError(f"interval config {name} must be finite")
@@ -59,6 +60,8 @@ class IntervalConfig:
             raise ContractError("interval config requires T > 0, w_m >= 0, w > 0")
         if self.floor_len <= 0 or self.floor_gap <= 0:
             raise ContractError("interval floors must be strictly positive")
+        if self.delta_tol < 0:
+            raise ContractError("delta_tol must be non-negative")
 
     @property
     def omega(self) -> float:

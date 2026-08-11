@@ -63,7 +63,9 @@ class DecisionFlags:
 
 
 def classify(flags: DecisionFlags) -> DecisionClass:
-    """The §8 precedence, exactly."""
+    """The §8 labels under the recorded precedence ruling (§8 defines
+    the four labels; equivalence-class-first ordering is the code
+    adjudication disclosed in the module docstring)."""
     if flags.all_data_terms_below_floors:
         return DecisionClass.EQUIVALENCE_CLASS
     if not flags.passes_prior_removed:

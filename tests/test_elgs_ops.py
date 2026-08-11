@@ -369,17 +369,25 @@ class MergeTests(unittest.TestCase):
 
 
 class PruneTests(unittest.TestCase):
-    def test_prune_episode_requires_both_gates(self):
+    def test_prune_episode_computes_floor_gate_and_requires_confirmation(self):
+        # delta_tol = 0.5: an episode of len 2.4 is prunable, 6.0 is not.
+        cfg_tol = IntervalConfig(T=30.0, w_m=1.0, w=1.0, floor_len=2.0,
+                                 floor_gap=2.0, delta_tol=0.5)
         reg = FamilyRegistry()
-        rec = _family(reg, slack_pre=2.0, lens=[6.0, 5.0], gaps=[7.0],
-                      slack_post=12.0, tau=(0.0, 1.0))
+        rec = _family(reg, slack_pre=2.0, lens=[2.4, 6.0], gaps=[7.0],
+                      slack_post=14.6, tau=(0.0, 1.0))
+        # The at-floor predicate is COMPUTED, not caller-asserted:
         with self.assertRaises(ContractError):
-            plan_prune_episode(reg, rec.family_id, 0, len_at_floor=True,
+            plan_prune_episode(reg, rec.family_id, 1,
+                               micro_render_confirms=True, round_index=1,
+                               iteration=1, config=cfg_tol, dtype=DT)
+        with self.assertRaises(ContractError):
+            plan_prune_episode(reg, rec.family_id, 0,
                                micro_render_confirms=False, round_index=1,
-                               iteration=1, config=CFG, dtype=DT)
-        plan = plan_prune_episode(reg, rec.family_id, 0, len_at_floor=True,
+                               iteration=1, config=cfg_tol, dtype=DT)
+        plan = plan_prune_episode(reg, rec.family_id, 0,
                                   micro_render_confirms=True, round_index=1,
-                                  iteration=1, config=CFG, dtype=DT)
+                                  iteration=1, config=cfg_tol, dtype=DT)
         self.assertEqual(plan.op, "PRUNE_EPISODE")
         self.assertEqual(plan.child_intervals[rec.family_id].K, 1)
 

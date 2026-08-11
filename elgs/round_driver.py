@@ -37,7 +37,11 @@ from .runtime import ElgsRuntime
 from .search import Candidate, plan_pass
 from .transactions import StateBundle, apply_plan
 
-SampleBuilder = Callable[[TransactionPlan, int], Sequence[SnisSample]]
+# (plan, crn_seed, slot_rank) -> paired samples. The rank is the
+# conflict component's deterministic slot-grid rank, so builders that
+# draw from the pre-partitioned reserved pool consume exactly their
+# slot (spec §7).
+SampleBuilder = Callable[[TransactionPlan, int, int], Sequence[SnisSample]]
 
 
 @dataclass(frozen=True)
@@ -114,7 +118,7 @@ def run_pass(
         plan = proposal.plan
         seed = crn_seed(base_seed, round_index, pass_index, rank)
         try:
-            samples = sample_builder(plan, seed)
+            samples = sample_builder(plan, seed, rank)
             record: AcceptanceRecord = decide(
                 samples,
                 sampler_params,

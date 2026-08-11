@@ -1112,7 +1112,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     lifecycle_manager = setup_lifecycle(gaussians, scene, dataset, opt)
     # EL-GS: same placement rationale; mutually exclusive with the
     # lifecycle (elgs.trainer_hooks fails closed on both enabled).
-    from elgs.trainer_hooks import maybe_run_elgs_schedule, setup_elgs, elgs_summary
+    from elgs.trainer_hooks import (
+        apply_elgs_routing_pins,
+        elgs_summary,
+        filter_elgs_reserved,
+        maybe_run_elgs_schedule,
+        setup_elgs,
+    )
     elgs_trainer_state = setup_elgs(gaussians, scene, dataset, opt)
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
@@ -1146,6 +1152,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     gaussians.env_map = env_map
 
     training_dataset = scene.getTrainCameras()
+    # EL-GS: the reserved confirmation units never enter training
+    # (spec §7 "refits never see confirmation samples"); a no-op for
+    # non-EL-GS lanes.
+    training_dataset = filter_elgs_reserved(training_dataset, elgs_trainer_state)
     training_dataloader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True,
                                      num_workers=0 if dataset.dataloader else 0,
                                      collate_fn=identity_collate, drop_last=True)
@@ -1195,7 +1205,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     try:
                         with torch.no_grad():
                             pkg = render(unit_cam, gaussians, pipe, background)
-                            return float(l1_loss(pkg["render"], gt))
+                            # L_render = the backbone loss (spec §4):
+                            # L1 + lambda_dssim * DSSIM at training weights.
+                            unit_l1 = l1_loss(pkg["render"], gt)
+                            unit_dssim = 1.0 - ssim(pkg["render"], gt)
+                            return float(
+                                (1.0 - opt.lambda_dssim) * unit_l1
+                                + opt.lambda_dssim * unit_dssim
+                            )
                     finally:
                         gaussians._elgs_presence_override = None
                 maybe_run_elgs_schedule(
@@ -1616,6 +1633,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
                 # ================= optimizer step =================
                 if iteration < opt.iterations:
+                    if elgs_trainer_state is not None:
+                        # Routing pinning (substrate): frozen route
+                        # logits for K>1 families, applied as a grad
+                        # mask right before the step.
+                        apply_elgs_routing_pins(gaussians)
                     gaussians.optimizer.step()
                     gaussians.optimizer.zero_grad(set_to_none=True)
                     if pipe.env_map_res and iteration < pipe.env_optimize_until and env_map_optimizer is not None:

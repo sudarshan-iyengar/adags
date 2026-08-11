@@ -50,6 +50,12 @@ class SeedCluster:
             raise ContractError("a cluster must own at least one seed")
         if list(self.seed_ids) != sorted(self.seed_ids):
             raise ContractError("cluster seed_ids must be sorted ascending")
+        if not 0.0 < self.r_u <= 1.0:
+            raise ContractError(
+                f"r_u={self.r_u} outside (0,1] (spec §2: r_u in [r_min,1]; "
+                "the head-level r_min bound is enforced at likelihood "
+                "evaluation, never by clamping)"
+            )
         if not 0.0 <= self.d_u <= 1.0:
             raise ContractError(f"d_u={self.d_u} outside [0,1]")
         if not 0.0 < self.alpha_u <= 1.0:
@@ -137,7 +143,14 @@ def merge_clusters(
     *,
     cluster_id: int,
 ) -> SeedCluster:
-    """Re-form one cluster from merged components (spec §2 rules)."""
+    """Re-form one cluster from merged components (spec §2 rules).
+
+    Recorded reading: §2 says alpha_u is "recomputed from the merged
+    n_cam"; the merged n_cam here is the MAX over member n_cam (the
+    cameras that can see any member can see the merged cluster's
+    canonical region at least as well as its best-covered member) —
+    disclosed, same rule form_clusters uses.
+    """
     if len(members) < 2:
         raise ContractError("merge_clusters needs at least two clusters")
     seed_ids = tuple(sorted(sid for c in members for sid in c.seed_ids))

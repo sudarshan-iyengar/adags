@@ -230,10 +230,12 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             cov3D_precomp = pc.get_covariance(scaling_modifier)
         if pc.gaussian_dim == 4:
             if elgs_active:
-                opacity = opacity * pc.get_elgs_presence(viewpoint_camera.timestamp)
+                # Bind marginal_t to the presence tensor so downstream
+                # consumers (the cov3D prefilter mask) stay defined.
+                marginal_t = pc.get_elgs_presence(viewpoint_camera.timestamp)
             else:
                 marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
-                opacity = opacity * marginal_t
+            opacity = opacity * marginal_t
     else:
         scales = pc.get_scaling
         rotations = pc.get_rotation
@@ -244,10 +246,10 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
                 rotations_r = pc.get_rotation_r
 
             if elgs_active:
-                opacity = opacity * pc.get_elgs_presence(viewpoint_camera.timestamp)
+                marginal_t = pc.get_elgs_presence(viewpoint_camera.timestamp)
             else:
                 marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
-                opacity = opacity * marginal_t
+            opacity = opacity * marginal_t
 
     opacity, runtime_hide_reveal_stats = _apply_runtime_hide_reveal_gate(
         opacity,

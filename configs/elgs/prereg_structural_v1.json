@@ -14,7 +14,7 @@
   "softmax_gauge": "max a_i = 0 (spec section 1 inverse map)",
   "canonical_coordinate_order": "slack_pre-iff-unlatched, len_1, gap_1, ..., gap_{K-1}, len_K, slack_post-iff-unlatched",
   "family_seeding": {
-    "rule": "voxel-grid clustering of the initial cloud at seed_iteration; each nonempty voxel cell is one family with a K=1 spanning program, latch pattern (1,1), dim(a)=1",
+    "rule": "voxel-grid clustering of the initial cloud AT SETUP (iteration 0; spanning-then-carve — families exist from initialization, while the schedule's seed/audit anchors gate the EVIDENCE machinery); each nonempty voxel cell is one family with a K=1 spanning program, latch pattern (1,1), dim(a)=1",
     "voxel_grid_cells_per_axis": 8,
     "max_families": 512,
     "note": "spanning-then-carve default route (lgs-method); family granularity at init is an implementation choice disclosed here — clone/split descendants inherit the family id thereafter"

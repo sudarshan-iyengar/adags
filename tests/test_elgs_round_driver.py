@@ -72,7 +72,7 @@ class RunPassTests(unittest.TestCase):
         proposal = _proposal(reg, 1, 1.0)
         outcome = run_pass(
             [proposal], runtime, bundle,
-            sample_builder=lambda plan, seed: _samples(-0.5),
+            sample_builder=lambda plan, seed, rank: _samples(-0.5),
             sampler_params=PARAMS, k_se=1.0, base_seed=7,
             round_index=0, pass_index=0, iteration=3000, candidate_cap=4,
         )
@@ -94,7 +94,7 @@ class RunPassTests(unittest.TestCase):
         proposal = _proposal(reg, 1, 1.0)
         outcome = run_pass(
             [proposal], runtime, bundle,
-            sample_builder=lambda plan, seed: _samples(+0.5),  # worsens
+            sample_builder=lambda plan, seed, rank: _samples(+0.5),  # worsens
             sampler_params=PARAMS, k_se=1.0, base_seed=7,
             round_index=0, pass_index=0, iteration=3000, candidate_cap=4,
         )
@@ -120,7 +120,7 @@ class RunPassTests(unittest.TestCase):
         proposal = _proposal(reg, 1, 1.0)
         outcome = run_pass(
             [proposal], runtime, bundle,
-            sample_builder=lambda plan, seed: _samples(-0.5, n=4),  # 4 units
+            sample_builder=lambda plan, seed, rank: _samples(-0.5, n=4),  # 4 units
             sampler_params=PARAMS, k_se=1.0, base_seed=7,
             round_index=0, pass_index=0, iteration=3000, candidate_cap=4,
         )
@@ -144,7 +144,7 @@ class RunPassTests(unittest.TestCase):
         )
         outcome = run_pass(
             [low, high], runtime, bundle,
-            sample_builder=lambda plan, seed: _samples(-0.5),
+            sample_builder=lambda plan, seed, rank: _samples(-0.5),
             sampler_params=PARAMS, k_se=1.0, base_seed=7,
             round_index=0, pass_index=0, iteration=3000, candidate_cap=4,
         )
@@ -157,7 +157,7 @@ class RunPassTests(unittest.TestCase):
         with self.assertRaises(Exception):
             run_pass(
                 [_proposal(reg, 1, 1.0)], runtime, bundle,
-                sample_builder=lambda plan, seed: _samples(-0.5),
+                sample_builder=lambda plan, seed, rank: _samples(-0.5),
                 sampler_params=FrozenSamplerParams(0.5, "pi", frozen=False),
                 k_se=1.0, base_seed=7, round_index=0, pass_index=0,
                 iteration=3000, candidate_cap=4,

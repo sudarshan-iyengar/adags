@@ -37,7 +37,10 @@ OptimizationParams:
   elgs_mu: 0.01
   elgs_tau_b: 1.0
   elgs_k_se: 1.0
-  elgs_lambda_u: 0.5
+  # lambda_u = 1.0 makes the declared mixture literally m = nu — the
+  # degenerate-valid SNIS case the smoke sampler actually implements
+  # (uniform units, weights exactly 1); prereg_acceptance smoke_note.
+  elgs_lambda_u: 1.0
   elgs_c_cap: 4
   elgs_candidate_cap: 8
   elgs_confirmation_samples: 16
