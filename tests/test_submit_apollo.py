@@ -371,8 +371,13 @@ class BuildManifestTests(_ScratchRepoTestCase):
         self.assertEqual(manifest["projected_gpu_hours"], 2.0)
 
     def test_config_canonical_hash_matches_direct_call(self):
+        # The manifest keys entries on the RELATIVE path (the
+        # root-independence contract the S1 smokes forced), so the
+        # direct call must use the same relative_to root.
         manifest = self._build()
-        expected = wrapper.canonical_config_hash([self.config_path])
+        expected = wrapper.canonical_config_hash(
+            [self.config_path], relative_to=self.repo_root
+        )
         self.assertEqual(manifest["config_canonical_hash"], expected)
 
     def test_config_files_entry_has_path_and_sha256(self):
