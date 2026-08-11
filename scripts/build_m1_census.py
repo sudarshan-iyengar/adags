@@ -57,7 +57,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from depth_visibility.artifacts import atomic_write_json  # noqa: E402
+from depth_visibility.artifacts import atomic_write_bytes  # noqa: E402
 from depth_visibility.camera import camera_center  # noqa: E402
 from depth_visibility.canonical import canonical_json_bytes, sha256_file  # noqa: E402
 from depth_visibility.errors import ContractError, SchemaError  # noqa: E402
@@ -594,7 +594,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     result["config_sha256"] = hashlib.sha256(
         canonical_json_bytes({"argv": list(argv) if argv else sys.argv[1:]})
     ).hexdigest()
-    atomic_write_json(args.out, result)
+    # Plain strict JSON (floats as JSON numbers) -- the canonical writer's
+    # binary64_hex tokens are an identity convention with no repo decoder
+    # (same defect class as the tracks-artifact fix at 9faa14b; the gate
+    # comparisons are computed in-memory and were never affected).
+    body = json.dumps(result, allow_nan=False, sort_keys=True, separators=(",", ":"))
+    atomic_write_bytes(args.out, body.encode("utf-8") + b"\n")
     print(json.dumps({"out": str(args.out), "statistics": result["statistics"]}))
     return 0
 
