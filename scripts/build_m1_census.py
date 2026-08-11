@@ -429,15 +429,9 @@ def load_prereg(prereg_path: Path) -> tuple[dict[str, Any], str]:
     return payload, sha256_file(prereg_path)
 
 
-def run_census(
-    scene_dir: Path,
-    tracks_path: Path,
-    prereg_path: Path,
-    *,
-    apply_gate: bool,
-) -> dict[str, Any]:
-    started = time.monotonic()
-    prereg, prereg_sha = load_prereg(prereg_path)
+def _census_one_sequence(scene_dir: Path, tracks_path: Path) -> dict[str, Any]:
+    """The single-sequence census core; the gate binds to POOLED values."""
+
     scene = load_temporal_scene(scene_dir)
     artifact = json.loads(tracks_path.read_text(encoding="utf-8"))
     index = index_tracks(artifact, scene)
@@ -449,45 +443,22 @@ def run_census(
     candidates, pos_undef, ret_undef, returns = true_absence_and_returns(
         scene, index, associated, r_site
     )
-
     if coverage["components_total"] == 0:
-        raise ContractError("zero eligible fg components over the census window")
-    statistics = {
-        "occlusion_opportunity_upper_bound": len(occlusions),
-        "true_absence_candidate_count": len(candidates),
-        "same_object_return_count": returns,
-        "track_coverage_upper_bound": coverage["components_covered"]
-        / coverage["components_total"],
-    }
-
-    result: dict[str, Any] = {
-        "schema_version": CENSUS_SCHEMA,
-        "cell": "M1-A0",
-        "statistics": statistics,
-        "floors": {
-            key: prereg["floors"][key]
-            for key in (
-                "occlusion_events_min",
-                "same_object_returns_min",
-                "true_absence_candidates_min",
-                "track_coverage_min_fraction",
-            )
+        raise ContractError(f"{scene_dir}: zero eligible fg components over the census window")
+    return {
+        "statistics": {
+            "occlusion_opportunity_upper_bound": len(occlusions),
+            "true_absence_candidate_count": len(candidates),
+            "same_object_return_count": returns,
+            "track_coverage_upper_bound": coverage["components_covered"]
+            / coverage["components_total"],
         },
         "window": {
             "first_frame": int(scene.frame_indices[0]),
             "last_frame": int(scene.frame_indices[-1]),
             "n_frames": len(scene.frame_indices),
         },
-        "constants": {
-            "r_site_census": r_site,
-            "rig_radius": rig_radius(scene),
-            "vis_threshold": VIS_THRESHOLD,
-            "min_component_px": MIN_COMPONENT_PX,
-            "duration_floor_frames": DURATION_FLOOR,
-            "flicker_bridge_below_frames": FLICKER_MAX,
-            "mask_binarize_threshold": MASK_THRESHOLD,
-            "pixel_rounding": "round-half-up floor(x+0.5)",
-        },
+        "constants": {"r_site_census": r_site, "rig_radius": rig_radius(scene)},
         "exclusions": {
             "position_undefined_exclusions": pos_undef,
             "return_position_undefined": ret_undef,
@@ -501,10 +472,78 @@ def run_census(
         "provenance": {
             "scene_dir": str(scene_dir),
             "tracks_sha256": sha256_file(tracks_path),
-            "prereg_sha256": prereg_sha,
-            "prereg_revision": PREREG_REVISION_REQUIRED,
             "training_cameras": [int(c) for c in scene.tracking_ids],
             "held_out_cameras": [int(c) for c in scene.held_out_ids],
+        },
+    }
+
+
+def run_census(
+    pairs: Sequence[tuple[Path, Path]],
+    prereg_path: Path,
+    *,
+    apply_gate: bool,
+) -> dict[str, Any]:
+    """Pooled M1-A0 census over the dev subset.
+
+    The frozen floors bind to counts summed OVER THE DEV SUBSET (prereg:
+    "36 model-free opportunities per gated class over the dev subset");
+    coverage pools numerator/denominator. Per-sequence breakdowns are
+    retained for the traceability requirement; r_site_census is computed
+    per sequence from its own calibration (frozen rule).
+    """
+
+    if not pairs:
+        raise ContractError("at least one (scene, tracks) pair is required")
+    started = time.monotonic()
+    prereg, prereg_sha = load_prereg(prereg_path)
+
+    per_sequence: dict[str, dict[str, Any]] = {}
+    counts = {
+        "occlusion_opportunity_upper_bound": 0,
+        "true_absence_candidate_count": 0,
+        "same_object_return_count": 0,
+    }
+    covered = total = 0
+    for scene_dir, tracks_path in pairs:
+        name = Path(scene_dir).name
+        if name in per_sequence:
+            raise ContractError(f"duplicate sequence name in census input: {name}")
+        result = _census_one_sequence(Path(scene_dir), Path(tracks_path))
+        per_sequence[name] = result
+        for key in counts:
+            counts[key] += result["statistics"][key]
+        covered += result["coverage_tallies"]["components_covered"]
+        total += result["coverage_tallies"]["components_total"]
+
+    statistics = {**counts, "track_coverage_upper_bound": covered / total}
+
+    result: dict[str, Any] = {
+        "schema_version": CENSUS_SCHEMA,
+        "cell": "M1-A0",
+        "statistics": statistics,
+        "per_sequence": per_sequence,
+        "floors": {
+            key: prereg["floors"][key]
+            for key in (
+                "occlusion_events_min",
+                "same_object_returns_min",
+                "true_absence_candidates_min",
+                "track_coverage_min_fraction",
+            )
+        },
+        "constants": {
+            "vis_threshold": VIS_THRESHOLD,
+            "min_component_px": MIN_COMPONENT_PX,
+            "duration_floor_frames": DURATION_FLOOR,
+            "flicker_bridge_below_frames": FLICKER_MAX,
+            "mask_binarize_threshold": MASK_THRESHOLD,
+            "pixel_rounding": "round-half-up floor(x+0.5)",
+        },
+        "coverage_tallies": {"components_covered": covered, "components_total": total},
+        "provenance": {
+            "prereg_sha256": prereg_sha,
+            "prereg_revision": PREREG_REVISION_REQUIRED,
             "wall_seconds": time.monotonic() - started,
         },
     }
@@ -534,15 +573,24 @@ def run_census(
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--scene-dir", type=Path, required=True)
-    parser.add_argument("--tracks", type=Path, required=True)
+    parser.add_argument(
+        "--scene-dir", type=Path, action="append", required=True,
+        help="repeatable; paired positionally with --tracks (the dev subset)",
+    )
+    parser.add_argument("--tracks", type=Path, action="append", required=True)
     parser.add_argument(
         "--prereg", type=Path, default=REPO_ROOT / "configs" / "elgs" / "prereg_m1_census_v1.json"
     )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--apply-gate", action="store_true")
     args = parser.parse_args(argv)
-    result = run_census(args.scene_dir, args.tracks, args.prereg, apply_gate=args.apply_gate)
+    if len(args.scene_dir) != len(args.tracks):
+        raise ContractError(
+            f"{len(args.scene_dir)} --scene-dir vs {len(args.tracks)} --tracks; must pair 1:1"
+        )
+    result = run_census(
+        list(zip(args.scene_dir, args.tracks)), args.prereg, apply_gate=args.apply_gate
+    )
     result["config_sha256"] = hashlib.sha256(
         canonical_json_bytes({"argv": list(argv) if argv else sys.argv[1:]})
     ).hexdigest()

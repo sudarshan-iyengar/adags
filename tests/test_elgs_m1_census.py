@@ -164,8 +164,7 @@ class CensusStatisticsTest(unittest.TestCase):
             Path(cls._tmp.name), return_offset=0.1
         )
         cls.result = census.run_census(
-            cls.scene_dir,
-            cls.tracks_path,
+            [(cls.scene_dir, cls.tracks_path)],
             REPO_ROOT / "configs" / "elgs" / "prereg_m1_census_v1.json",
             apply_gate=True,
         )
@@ -174,9 +173,12 @@ class CensusStatisticsTest(unittest.TestCase):
     def tearDownClass(cls):
         cls._tmp.cleanup()
 
+    def _sequence(self):
+        return self.result["per_sequence"]["scene"]
+
     def test_true_absence_candidate(self):
         self.assertEqual(self.result["statistics"]["true_absence_candidate_count"], 1)
-        record = self.result["records"]["true_absence_candidates"][0]
+        record = self._sequence()["records"]["true_absence_candidates"][0]
         self.assertEqual(record["first_frame"], 10)
         self.assertEqual(record["last_frame"], 24)
         self.assertEqual(record["n_frames"], 15)  # includes the bridged 15..16
@@ -185,15 +187,15 @@ class CensusStatisticsTest(unittest.TestCase):
 
     def test_same_object_return_within_r_site(self):
         self.assertEqual(self.result["statistics"]["same_object_return_count"], 1)
-        record = self.result["records"]["true_absence_candidates"][0]
+        record = self._sequence()["records"]["true_absence_candidates"][0]
         self.assertEqual(record["return"], "same_object_return")
         self.assertEqual(record["return_frame"], 25)
         self.assertAlmostEqual(record["return_distance"], 0.1, places=9)
-        self.assertGreater(self.result["constants"]["r_site_census"], 0.1)
+        self.assertGreater(self._sequence()["constants"]["r_site_census"], 0.1)
 
     def test_occlusion_event(self):
         self.assertEqual(self.result["statistics"]["occlusion_opportunity_upper_bound"], 1)
-        event = self.result["records"]["occlusion_events"][0]
+        event = self._sequence()["records"]["occlusion_events"][0]
         self.assertEqual(event["seed_id"], 0)
         self.assertEqual(event["absent_camera"], 1)
         self.assertEqual(event["first_frame"], 30)
@@ -222,9 +224,9 @@ class CensusStatisticsTest(unittest.TestCase):
         self.assertFalse(gate["pass"])
 
     def test_window_and_provenance(self):
-        self.assertEqual(self.result["window"], {"first_frame": 0, "last_frame": 39, "n_frames": 40})
-        self.assertEqual(self.result["provenance"]["training_cameras"], [1, 2, 3])
-        self.assertEqual(self.result["provenance"]["held_out_cameras"], [0])
+        self.assertEqual(self._sequence()["window"], {"first_frame": 0, "last_frame": 39, "n_frames": 40})
+        self.assertEqual(self._sequence()["provenance"]["training_cameras"], [1, 2, 3])
+        self.assertEqual(self._sequence()["provenance"]["held_out_cameras"], [0])
         self.assertEqual(self.result["provenance"]["prereg_revision"], 3)
 
 
@@ -233,16 +235,50 @@ class ReturnBeyondRSiteTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             scene_dir, tracks_path = _write_scene(Path(tmp), return_offset=1.0)
             result = census.run_census(
-                scene_dir,
-                tracks_path,
+                [(scene_dir, tracks_path)],
                 REPO_ROOT / "configs" / "elgs" / "prereg_m1_census_v1.json",
                 apply_gate=False,
             )
             self.assertEqual(result["statistics"]["true_absence_candidate_count"], 1)
             self.assertEqual(result["statistics"]["same_object_return_count"], 0)
-            record = result["records"]["true_absence_candidates"][0]
+            record = result["per_sequence"]["scene"]["records"]["true_absence_candidates"][0]
             self.assertEqual(record["return"], "beyond_r_site")
             self.assertNotIn("gate", result)
+
+
+class PooledCensusTest(unittest.TestCase):
+    def test_two_sequences_pool_counts_and_coverage(self):
+        # Two copies of the same fixture (distinct sequence names): every
+        # event count doubles; the coverage FRACTION is invariant; the gate
+        # binds to the pooled values (prereg: "over the dev subset").
+        with tempfile.TemporaryDirectory() as tmp_a, tempfile.TemporaryDirectory() as tmp_b:
+            scene_a, tracks_a = _write_scene(Path(tmp_a), return_offset=0.1)
+            scene_b, tracks_b = _write_scene(Path(tmp_b), return_offset=0.1)
+            renamed = scene_b.parent / "scene_b"
+            scene_b.rename(renamed)
+            pooled = census.run_census(
+                [(scene_a, tracks_a), (renamed, tracks_b)],
+                REPO_ROOT / "configs" / "elgs" / "prereg_m1_census_v1.json",
+                apply_gate=True,
+            )
+            stats = pooled["statistics"]
+            self.assertEqual(stats["true_absence_candidate_count"], 2)
+            self.assertEqual(stats["same_object_return_count"], 2)
+            self.assertEqual(stats["occlusion_opportunity_upper_bound"], 2)
+            self.assertAlmostEqual(stats["track_coverage_upper_bound"], 71 / 191, places=12)
+            self.assertEqual(pooled["coverage_tallies"]["components_total"], 2 * 191)
+            self.assertEqual(sorted(pooled["per_sequence"]), ["scene", "scene_b"])
+            self.assertFalse(pooled["gate"]["pass"])
+
+    def test_duplicate_sequence_names_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            scene, tracks = _write_scene(Path(tmp), return_offset=0.1)
+            with self.assertRaises(ContractError):
+                census.run_census(
+                    [(scene, tracks), (scene, tracks)],
+                    REPO_ROOT / "configs" / "elgs" / "prereg_m1_census_v1.json",
+                    apply_gate=False,
+                )
 
 
 class FrozenGuardTests(unittest.TestCase):
