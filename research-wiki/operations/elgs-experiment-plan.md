@@ -40,6 +40,7 @@ content), opportunity distributions, event-class counts vs preregistered
 floors (full training-view occlusion; audited true absence;
 same-object return); baseline 4DGS/STG port smoke. FAIL ⇒ recorded
 negative; one preregistered revision cycle.
+(2026-08-11: B1 execution is governed by the approved [[operations/elgs-m0-m1-implementation-plan]], which SUPERSEDES the "one preregistered revision cycle" with a stricter failure/retry policy, makes audited true absence diagnostic-only, and moves the baseline port smoke to M2.)
 B2 Backbone + substrate establishment (~80 GPU-h): ported external
 baselines (documented tuning, compute-matched); LGS substrate
 (evidence-off) lanes; oracle-structure probes (C1).
