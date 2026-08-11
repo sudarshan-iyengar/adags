@@ -1196,11 +1196,16 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if elgs_trainer_state is not None:
                 def _elgs_render_unit_loss(item, override):
                     if isinstance(item, (tuple, list)) and len(item) == 2:
-                        gt_image, unit_cam = item
-                        gt = gt_image.cuda() if gt_image is not None else unit_cam.original_image.cuda()
+                        unit_gt, unit_cam = item
+                        gt = unit_gt.cuda() if unit_gt is not None else unit_cam.original_image.cuda()
                     else:
                         unit_cam = item
                         gt = unit_cam.original_image.cuda()
+                    # Mirror the training loop's camera prep exactly:
+                    # the rasterizer needs the view tensors on device
+                    # (a CPU camera raised an illegal memory access in
+                    # the first full S1 attempt).
+                    unit_cam = unit_cam.cuda()
                     gaussians._elgs_presence_override = override
                     try:
                         with torch.no_grad():
