@@ -63,15 +63,30 @@ reader changes expected, as planned.
   `undist/` layout, verify by reprojection; no `scene/` reader
   changes expected.
 
+## Image revision — COMPLETE (2026-08-11)
+
+`apollo-h100-v2` = v1 + commit-pinned CoTracker3
+(`co-tracker@82e02e80`) + imageio; built locally over the cached v1
+layers with the in-Dockerfile build-check gate; pushed; manifest
+digest `sha256:a2877f26cb8528…` recorded in
+[[operations/apollo-determined-execution-authority]] — every
+evidence-bearing M1 run pins it.
+
+## Tracker weights — COMPLETE (2026-08-11)
+
+Official CoTracker3 offline checkpoint from
+`huggingface.co/facebook/cotracker3` (public, no registration):
+`/apollo/users/sri/proj_adags/data/tracker_weights/cotracker3/scaled_offline.pth`
+(101,890,938 bytes, sha256 `2670d4562ed69326dda775a26e54883925cd11b6…`,
+MANIFEST.sha256 beside it, tree read-only; task `a5979f4c`).
+
 ## Remaining M1 steps (per the plan)
 
-1. Un-tar + layout validation on the Apollo host AND inside the
-   Determined runtime; reprojection camera-convention checks.
-2. The one budgeted image revision (tracker stack), new tag pinned
-   by digest, build-checked.
-3. Tracker weights acquisition (same provenance treatment) + frozen
-   tracks artifact + shift/shuffle controls (preprocessing GPU-h
-   accounted for reproducibility only).
-4. Census cells M1-A0 → A0b → A → B → C/D (≤25 GPU-h ceiling);
+1. Converter landing (Sonnet draft under owner review) + un-tar/
+   layout validation on the Apollo host AND inside the Determined
+   runtime; reprojection camera-convention checks.
+2. Frozen tracks artifact + shift/shuffle controls via the v2 image
+   (preprocessing GPU-h accounted for reproducibility only).
+3. Census cells M1-A0 → A0b → A → B → C/D (≤25 GPU-h ceiling);
    independent recomputation; gate application; result recorded here
    either way.
