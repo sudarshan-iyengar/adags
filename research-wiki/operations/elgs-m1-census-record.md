@@ -43,6 +43,26 @@ frame un-tarring into the layout the transforms reference plus the
 camera-convention verification (reprojection checks) — no `scene/`
 reader changes expected, as planned.
 
+## Schema findings for the converter (2026-08-11)
+
+- `transforms_train.json` (unlock inspected): NeRF-style `frames`
+  entries with `file_path: "undist/camXX/NNNNNNNN.png"` (per-camera,
+  per-frame undistorted images), `sharpness`, and a 4x4
+  `transform_matrix`; the intrinsics-key block and frame count need
+  the full schema dump (the raw JSON is single-line — line-grep
+  counts are useless; parse it).
+- `segmented_gt.tar.gz`: per-camera mask PNGs
+  (`segmented_gt/camNN/NNNNNNNN.png`) — the fg/bg masks the
+  model-free census statistics consume.
+- Per-sequence structural variation: battery ships `image.tar` +
+  `frames_1.tar.gz`; unlock has NO `image.tar` — the converter must
+  discover each sequence's frame tarball(s) rather than assume one
+  name.
+- Converter scope confirmed: map DiVa transforms/intrinsics into the
+  ADAGS Blender-reader convention, un-tar frames to the referenced
+  `undist/` layout, verify by reprojection; no `scene/` reader
+  changes expected.
+
 ## Remaining M1 steps (per the plan)
 
 1. Un-tar + layout validation on the Apollo host AND inside the
