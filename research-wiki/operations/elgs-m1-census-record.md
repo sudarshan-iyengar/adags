@@ -173,9 +173,28 @@ re-run:
 - Repair: `prereg_m1_census_v1.json` revision 2 at `ef3252f` — all
   four findings repaired by pre-data amendment with the integrity
   statement recorded in the file (all repairs text-derived; no
-  DiVa-360 measurement; floors unchanged). A fresh-context re-review
-  of the amended text is REQUIRED to SIGN before any census statistic
-  is computed (in progress).
+  DiVa-360 measurement; floors unchanged).
+- Re-review of revision 2 (fresh context): REJECTED narrow — findings
+  1/5/6 confirmed repaired completely and mechanically; ONE blocking
+  residual (the `same_object_return` re-appearance position anchor
+  and undefined-consensus handling were never frozen) + four
+  one-clause NOTEs (estimate-clarification enumeration, flicker
+  scope, pixel-rounding ties, census-window default).
+- Revision 3 at `72ff97e`: return_position frozen (consensus point at
+  the earliest in-run frame where defined; undefined throughout ⇒
+  true-absence but NOT return, tallied `return_position_undefined`);
+  all four NOTEs absorbed; floors unchanged.
+- **Revision-3 scoped fresh-context review: SIGNED** (2026-08-11).
+  Mechanical no-other-change diff check passed (`17dbdd1..72ff97e`
+  touches only the permitted amendment surface; floors block absent
+  from the diff); all five amended items judged mechanical. Verdict:
+  "the revision-3 gate stands; the floors (36/36/36/0.5) may be
+  applied and census statistics may be computed, subject to
+  hash-recording in every census manifest." The plan-7.2-item-6
+  floor sign-off precondition is SATISFIED at prereg revision 3,
+  commit `72ff97e`. Full three-round review chain preserved in this
+  section; the review records are quoted in the session artifacts
+  and their verdict sentences here are verbatim.
 
 ## Remaining M1 steps (per the plan)
 
