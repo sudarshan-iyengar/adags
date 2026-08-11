@@ -1,0 +1,1468 @@
+{
+  "schema_version": "elgs-latch-transition-table-v1",
+  "source": {
+    "file": "research-wiki/operations/elgs-v8-formal-spec.md",
+    "sections": [
+      "1",
+      "5"
+    ],
+    "commit_note": "spec revision 4",
+    "spec_title": "EL-GS v8.3 — Formal Specification (gate document, revision 4)",
+    "auxiliary_sections_cited": [
+      "header rev-4 (supersession-tag convention only)",
+      "header rev-3 A1/A2/A3",
+      "header v8.2 items (1)(2)(3)(4)(7)",
+      "2",
+      "3",
+      "4"
+    ],
+    "auxiliary_citation_policy": "Sections 1 and 5 are the normative source. Text outside 1 and 5 is cited only where sections 1/5 explicitly delegate (evidence ownership, ledger constants, gauge re-anchoring, per-case delta-psi) and is always tagged with its own section label.",
+    "quote_policy": "Every field named \"quote\", \"quote_N\", \"*_quote\" or \"verbatim\" is a verbatim substring of the source file after whitespace normalization (source line wraps joined with a single space after stripping leading indentation); no other edit. Fields named \"rule\", \"formula\", \"text\" or \"note\" may paraphrase and are anchored by a neighbouring quote.",
+    "transcription_note": "This file is an independent transcription intended as a unit-test oracle. Cells the spec does not fix are marked with \"spec_silent\": true and a note; no semantics were invented.",
+    "precedence_note": "§1 is the canonical interval-state definition and overrides every earlier dimension or encoding statement in the same file; earlier-revision sentences survive only as history.",
+    "precedence_quote": "This section is the single source of truth for the interval state; it consolidates the rev-2/rev-3 latch-bit and simplex fragments and supersedes every earlier dimension or encoding statement.",
+    "precedence_quote_section": "§1",
+    "supersession_tag_quote": "Superseded sentences below are tagged [SUPERSEDED → §1] / [SUPERSEDED → §7] and are retained only as revision history.",
+    "supersession_tag_quote_section": "header rev-4",
+    "supersession_tag_note": "Any sentence carrying a [SUPERSEDED → §1] / [SUPERSEDED → §7] tag was NOT transcribed as normative; nothing in this table is sourced from a tagged sentence."
+  },
+  "state_definition": {
+    "state_tuple": {
+      "components": [
+        "K_f",
+        "l_pre",
+        "l_post",
+        "a"
+      ],
+      "notation": "l_pre = ℓ_pre, l_post = ℓ_post (ASCII aliases used in JSON keys only; the spec writes ℓ)",
+      "quote": "Persist per family: (K_f, ℓ_pre, ℓ_post, a) in the canonical coordinate order",
+      "quote_section": "§1 SERIALIZATION / CHECKPOINTS"
+    },
+    "episode_cap": {
+      "rule": "K_f ≤ 4",
+      "quote": "Families f ∈ F with presence program P_f of K_f ≤ 4 episodes.",
+      "quote_section": "§1"
+    },
+    "admissible_latch_patterns": {
+      "patterns": [
+        "(0,0)",
+        "(1,0)",
+        "(0,1)",
+        "(1,1)"
+      ],
+      "semantics": "ℓ_pre = 1 ⇔ b_1 = −w_m exactly; ℓ_post = 1 ⇔ d_{K_f} = T + w_m exactly",
+      "interior_latch": "inadmissible",
+      "toggling": "toggled ONLY by structural ops (§5), never by gradient steps; carry no optimizer state",
+      "quote": "All four patterns (0,0), (1,0), (0,1), (1,1) are admissible; a latch anywhere else (interior endpoints) is inadmissible.",
+      "quote_section": "§1 LATCH BITS",
+      "quote_2": "Latch bits are toggled ONLY by structural ops (§5), never by gradient steps, and carry no optimizer state.",
+      "quote_2_section": "§1 LATCH BITS",
+      "domain": "K_f ≥ 1 (a K_f = 0 family carries no latch bits at all)",
+      "quote_3": "Each family with K_f ≥ 1 carries exactly two latch bits (ℓ_pre, ℓ_post) ∈ {0,1}²",
+      "quote_3_section": "§1 LATCH BITS"
+    },
+    "dimension_formula": {
+      "n_lat": "n_lat := ℓ_pre + ℓ_post",
+      "dim_a": "dim(a) = 2·K_f + 1 − n_lat",
+      "composition": "(2 − n_lat) unlatched outer slacks + K_f lengths + (K_f−1) gaps",
+      "loader_check": "the loader MUST validate dim(a) = 2K_f + 1 − n_lat (K_f = 0 persists as the empty program with no latch bits)",
+      "quote": "n_lat := ℓ_pre + ℓ_post. Raw vector a ∈ R^{2K_f+1−n_lat}, i.e. (2 − n_lat) unlatched outer slacks + K_f lengths + (K_f−1) gaps.",
+      "quote_section": "§1 VECTOR DIMENSION",
+      "loader_check_quote": "the loader MUST validate dim(a) = 2K_f + 1 − n_lat (K_f = 0 persists as the empty program with no latch bits)",
+      "loader_check_quote_section": "§1 SERIALIZATION / CHECKPOINTS"
+    },
+    "canonical_coordinate_order": {
+      "rule": "[slack_pre iff ℓ_pre=0], len_1, gap_1, …, gap_{K_f−1}, len_{K_f}, [slack_post iff ℓ_post=0]",
+      "is_also_serialization_order": true,
+      "quote": "Canonical coordinate order (also the serialization order): [slack_pre iff ℓ_pre=0], len_1, gap_1, …, gap_{K_f−1}, len_{K_f}, [slack_post iff ℓ_post=0].",
+      "quote_section": "§1 VECTOR DIMENSION"
+    },
+    "omega": {
+      "Omega": "Ω = T + 2w_m",
+      "Omega_free": "Ω_free = Ω − K_f·floor_len − (K_f−1)·floor_gap",
+      "admissibility": "an op is admissible only if Ω_free > 0",
+      "latch_independence": "Ω_free NEVER depends on the latch pattern — a latched slack is identically zero and simply has no coordinate",
+      "quote": "Ω = T + 2w_m; Ω_free = Ω − K_f·floor_len − (K_f−1)·floor_gap (an op is admissible only if Ω_free > 0; Ω_free NEVER depends on the latch pattern — a latched slack is identically zero and simply has no coordinate).",
+      "quote_section": "§1 FORWARD MAP"
+    },
+    "forward_map": {
+      "sigma": "σ = softmax(a)",
+      "unlatched_slack": "slack = Ω_free·σ_(its coord)",
+      "latched_slack": "each latched slack ≡ 0",
+      "len": "len_k = floor_len + Ω_free·σ_(len_k)",
+      "gap": "gap_k = floor_gap + Ω_free·σ_(gap_k)",
+      "left_endpoint": "b_1 = −w_m + slack_pre; endpoints follow by summation",
+      "budget_identity": "slack_pre + Σ_k len_k + Σ_k gap_k + slack_post = Ω for every latch pattern",
+      "right_endpoint_bound": "d_{K_f} ≤ T + w_m holds IDENTICALLY under any optimizer step, with equality iff ℓ_post = 1",
+      "quote": "σ = softmax(a); each unlatched slack = Ω_free·σ_(its coord); each latched slack ≡ 0; len_k = floor_len + Ω_free·σ_(len_k); gap_k = floor_gap + Ω_free·σ_(gap_k).",
+      "quote_section": "§1 FORWARD MAP",
+      "quote_2": "d_{K_f} ≤ T + w_m holds IDENTICALLY under any optimizer step, with equality iff ℓ_post = 1.",
+      "quote_2_section": "§1 FORWARD MAP"
+    },
+    "inverse_map": {
+      "used_by": "every structural op, to write the child state",
+      "target_admissibility": "admissible target = (latch pattern; every unlatched slack > 0 strictly; every len_k > floor_len and gap_k > floor_gap strictly)",
+      "sigma_from_value": "σ_i = (value_i − floor_i)/Ω_free (floor_i = 0 for slacks)",
+      "logits": "a_i = log σ_i − max_j log σ_j",
+      "gauge": "gauge fixed so max a_i = 0; deterministic",
+      "floor_targets_inadmissible": "An op whose target would put an unlatched coordinate exactly at its floor is inadmissible as stated",
+      "zero_outer_slack_target": "a target with an outer slack exactly 0 must set the corresponding latch instead",
+      "quote": "Given an admissible target (latch pattern; every unlatched slack > 0 strictly; every len_k > floor_len and gap_k > floor_gap strictly): σ_i = (value_i − floor_i)/Ω_free (floor_i = 0 for slacks), then a_i = log σ_i − max_j log σ_j (gauge fixed so max a_i = 0; deterministic).",
+      "quote_section": "§1 INVERSE MAP",
+      "quote_2": "An op whose target would put an unlatched coordinate exactly at its floor is inadmissible as stated; a target with an outer slack exactly 0 must set the corresponding latch instead.",
+      "quote_2_section": "§1 INVERSE MAP"
+    },
+    "exact_boundary_rule": {
+      "rule": "Exact boundary contact is representable ONLY by a latch bit; a zero slack coordinate does not exist and no op may target one.",
+      "quote": "Softmax coordinates are strictly positive, so every unlatched slack is strictly > 0: exact boundary contact is representable ONLY by a latch bit.",
+      "quote_section": "§1 EXACT BOUNDARY RULE",
+      "quote_2": "A \"zero slack coordinate\" does not exist in this parameterization and no op may target one.",
+      "quote_2_section": "§1 EXACT BOUNDARY RULE"
+    },
+    "k_zero_convention": {
+      "rule": "K_f = 0 is a defined state (empty program): no latch bits, no vector a; renders nothing; prune-pending.",
+      "quote": "K_f = 0: defined state (empty program) — no latch bits, no vector a; renders nothing; prune-pending (unchanged from v8.2).",
+      "quote_section": "§1",
+      "serialization": "K_f = 0 persists as the empty program with no latch bits"
+    },
+    "latch_inheritance_summary": {
+      "rules": [
+        "an op that preserves an outer endpoint preserves its latch",
+        "an op that deletes the outermost episode on a side DISCARDS that side's latch (the new outer slack enters as an unlatched coordinate via the inverse map)",
+        "TRUNCATE-shorten applied to a latched outer endpoint CLEARS that latch",
+        "REACTIVATE insertion outside a latched outer endpoint is inadmissible (zero room)",
+        "MERGE: ℓ_pre is taken from the parent owning the globally earliest b_1, ℓ_post from the parent owning the globally latest d_K",
+        "BIRTH sets (ℓ_pre, ℓ_post) = (0,1) (§5)",
+        "interior ops (interior fission/truncation/reactivation/prune) never touch latches"
+      ],
+      "quote": "An op that preserves an outer endpoint preserves its latch; an op that deletes the outermost episode on a side DISCARDS that side's latch (the new outer slack enters as an unlatched coordinate via the inverse map); TRUNCATE-shorten applied to a latched outer endpoint CLEARS that latch; REACTIVATE insertion outside a latched outer endpoint is inadmissible (zero room); MERGE: ℓ_pre is taken from the parent owning the globally earliest b_1, ℓ_post from the parent owning the globally latest d_K; BIRTH sets (ℓ_pre, ℓ_post) = (0,1) (§5); interior ops (interior fission/truncation/reactivation/prune) never touch latches.",
+      "quote_section": "§1 LATCH INHERITANCE",
+      "quote_2": "children of terminal ops inherit the parent's outer latch on the surviving side; interior ops never touch latches",
+      "quote_2_section": "header rev-3 A1"
+    },
+    "all_ops_rule": {
+      "rule": "Every op writes its child interval state through the §1 inverse map; §1 alone governs latch inheritance, exact-boundary handling, target admissibility, and moment resets.",
+      "quote": "every op writes its child interval state through the §1 inverse map (child dimension 2K′+1−n_lat′ per the child latch pattern); latch inheritance, exact-boundary handling, target admissibility, and moment resets are governed by §1 alone — no op table entry may encode a boundary as a zero coordinate.",
+      "quote_section": "§5 ALL OPS (rev 4)"
+    },
+    "optimizer_moments": {
+      "rule": "Every structural op rewrites a through the inverse map, so the family's simplex-logit moment state is RESET and the reset logged; latch bits never carry moments.",
+      "quote": "Every structural op rewrites a through the inverse map (dimension and/or values change), so the family's simplex-logit moment state is RESET and the reset logged (rev-3 A1 unchanged). Latch bits never carry moments.",
+      "quote_section": "§1 OPTIMIZER MOMENTS"
+    },
+    "floors_and_symbols": {
+      "floor_len": "floor_len = 2w + δ_len",
+      "floor_gap": "floor_gap = 2w + δ_gap",
+      "plateau_indicator": "z_f(t) = 1 iff t in a plateau [b_k+w, d_k−w]",
+      "edge_bands": "X_f = {t : |t − nearest edge| < w in frame units, strict}",
+      "len_at_floor_predicate": "\"Len at floor\" predicates are replaced by len ≤ floor + δ_tol (preregistered tolerance)",
+      "len_at_floor_predicate_section": "header v8.2 item (1)",
+      "numeric_values": {
+        "spec_silent": true,
+        "note": "T, w, w_m, δ_len, δ_gap, δ_tol, r_site, κ, χ, μ, β, τ_B are symbolic/preregistered; no numeric values appear in §1 or §5."
+      },
+      "quote": "Floors: floor_len = 2w + δ_len, floor_gap = 2w + δ_gap.",
+      "quote_section": "§1"
+    },
+    "ledger_constants": {
+      "kappa": "κ is charged PER EPISODE via κ·K_f (state term: refunded automatically when episodes are deleted)",
+      "chi_mu": "χ and μ are ledgered and never refunded; C(H) = χ·N_returnbirth(H) + μ·N_merge(H)",
+      "quote": "κ is charged PER EPISODE via κ·K_f (state term: refunded automatically when episodes are deleted); χ and μ are ledgered and never refunded.",
+      "quote_section": "§4 (cited because §5 uses κ, χ, μ without redefining them)"
+    },
+    "global_notes": [
+      "K-change target allocation: the file states that K-change inverse maps come from \"allocating the affected spans and re-normalizing the remaining simplex (deterministic formulas in the op table)\" (header v8.2 item (1)), but the referenced deterministic per-op target formulas are NOT present in this document except for BIRTH, FISSION, and MERGE (operations[11] does state its child targets: the concatenated ordered episode intervals of both parents). For every other K-changing op the target VALUES handed to the §1 inverse map (i.e. where the freed or borrowed span goes) are spec_silent; the only binding constraint transcribed here is the §1 budget identity slack_pre + Σ len_k + Σ gap_k + slack_post = Ω.",
+      "Clone/split is not a §5 structural op: header v8.2 item (2) states it does not alter bind, and PROP 2 (§4) treats it as a family-membership change only. It therefore has no entry in this table.",
+      "DERIVED (arithmetic consequence of Ω_free = Ω − K·floor_len − (K−1)·floor_gap, not a spec sentence): ops that change K also change Ω_free, so all surviving coordinates are re-derived through the §1 inverse map even when their interval values are unchanged.",
+      "\"derived\": true marks arithmetic consequences of transcribed formulas, included for oracle convenience; they are not additional spec statements."
+    ],
+    "path_dependence": {
+      "rule": "Structural-op outcomes are path dependent; predicates are re-tested every round and there is no undo.",
+      "quote": "Path-dependence disclosed; re-tested each round; no undo.",
+      "quote_section": "§5"
+    },
+    "field_dictionary": {
+      "op": "the §5 operation name.",
+      "case": "short slug for one latch-distinguishable case of that op.",
+      "k_change": "integer ΔK_f of the single family whose interval state is rewritten; null when no single-family ΔK is defined — BIRTH (family creation, see child_K), MERGE (two families fuse, see k_change_note), PRUNE-family (family removal), and inadmissible candidates (no transition).",
+      "child_K": "absolute K of the child, given where k_change is null but a child family exists.",
+      "latch_effect.pattern_map": "parent (ℓ_pre,ℓ_post) → child (ℓ_pre,ℓ_post); keyed by which side the op touches when the transition is side-dependent; valid only over the sibling \"domain\".",
+      "domain": "the K_f range over which the neighbouring pattern_map / dimension formula holds; outside it, see k_equals_one_row.",
+      "k_equals_one_row": "the K_f = 1 boundary row: the child is the §1 K=0 empty program (no latch bits, dim(a) = 0).",
+      "spec_silent": "true ⇒ the spec does not fix this cell; the sibling note states what is missing. A test oracle must not fill these in.",
+      "derived": "true ⇒ arithmetic or logical consequence of transcribed statements, supplied for oracle convenience; NOT a spec sentence.",
+      "quote / quote_N / *_quote / verbatim": "verbatim spec substrings; see source.quote_policy."
+    }
+  },
+  "operations": [
+    {
+      "op": "BIRTH",
+      "case": "birth_new_family",
+      "case_description": "Creation of a new family f′ with a single episode and a latched terminal endpoint.",
+      "preconditions": [
+        "len_1 > floor_len strictly",
+        "t_birth > −w_m, i.e. slack_pre > 0",
+        "§1 admissibility governs (in particular Ω_free > 0; at K=1, Ω_free = Ω − floor_len)",
+        "Admissible under caps; cap-saturated ⇒ INADMISSIBLE this round, re-eligible next (logged)"
+      ],
+      "k_change": null,
+      "k_change_note": "No parent family exists, so ΔK is undefined (k_change = null); the child is created at K = 1 (child_K).",
+      "latch_effect": {
+        "parent_pattern": "n/a (no parent family)",
+        "child_pattern": "(0,1)",
+        "n_lat_child": 1,
+        "rule": "BIRTH sets (ℓ_pre, ℓ_post) = (0,1): terminal latch, d_1 = T + w_m EXACT, represented by the latch bit, NOT by a zero slack coordinate (supersedes \"slack_post = 0 at init\")."
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′",
+        "child_dim_value": 2,
+        "child_coordinate_order": [
+          "slack_pre",
+          "len_1"
+        ],
+        "targets": {
+          "slack_pre": "t_birth + w_m",
+          "len_1": "T + w_m − t_birth"
+        },
+        "omega_free_child": "Ω_free = Ω − 1·floor_len (K′=1 ⇒ no gap floors)",
+        "derived_consistency_check": {
+          "derived": true,
+          "statement": "slack_pre + len_1 = T + 2w_m = Ω, and σ_slack_pre + σ_len_1 = (slack_pre + len_1 − floor_len)/Ω_free = 1, so the §1 inverse map is well posed on the stated targets."
+        }
+      },
+      "parameter_init": {
+        "interval": "targets slack_pre = t_birth + w_m, len_1 = T + w_m − t_birth (§5 BIRTH)",
+        "pose_motion_appearance": {
+          "spec_silent": true,
+          "note": "§5 BIRTH specifies only the interval targets and the latch; no pose, motion-coefficient, origin, or radiance initialization is stated in §1/§5.",
+          "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+          "delegation_quote_section": "§1 (closing sentence)",
+          "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+        }
+      },
+      "evidence_ownership": {
+        "rule": "BIRTH starts unbound (or late-seeded)",
+        "source": "header v8.2 item (2)",
+        "detail": "clusters are ASSIGNED at binding by the single-valued map bind(u); U(f) := bind⁻¹(f); ℓ_b(P_f) sums ONLY over u ∈ U(f) (header v8.2 item (2))",
+        "note": "No cluster binding is created by the BIRTH op itself."
+      },
+      "delta_state": {
+        "formula": "Δ = +κ + ψ",
+        "verbatim": "Δ = +κ + ψ + LEDGER χ if at a return site.",
+        "expansion": {
+          "derived": true,
+          "text": "ψ = ψ_dur(len_1); no ψ_gap term exists at K=1 because §4 sums Σ_{k<K_f} ψ_gap."
+        }
+      },
+      "delta_ledger": {
+        "chi": "+χ if at a return site (increments N_returnbirth(H))",
+        "mu": "none",
+        "refundable": false
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (vacuous for a newly created family); latch bits never carry moments",
+        "note": "§1 OPTIMIZER MOMENTS general rule; the §5 BIRTH entry does not restate it."
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 BIRTH",
+          "quote": "BIRTH(f′): K=1 with (ℓ_pre, ℓ_post) = (0, 1) — terminal latch: d_1 = T + w_m EXACT, represented by the latch bit, NOT by a zero slack coordinate (supersedes \"slack_post = 0 at init\")."
+        },
+        {
+          "section": "§5 BIRTH",
+          "quote": "State a ∈ R^2 = (slack_pre, len_1) via the §1 inverse map with targets slack_pre = t_birth + w_m, len_1 = T + w_m − t_birth (admissible iff len_1 > floor_len strictly AND t_birth > −w_m, i.e. slack_pre > 0; §1 admissibility governs)."
+        },
+        {
+          "section": "§5 BIRTH",
+          "quote": "Δ = +κ + ψ + LEDGER χ if at a return site. Admissible under caps; cap-saturated ⇒ INADMISSIBLE this round, re-eligible next (logged)."
+        }
+      ],
+      "child_K": 1
+    },
+    {
+      "op": "FISSION",
+      "case": "fission_interior_episode_split",
+      "case_description": "FISSION(f,k,gap): episode k is split into two children by removing an interior gap (g0,g1] contained in the episode plateau.",
+      "preconditions": [
+        "K_f < 4",
+        "floors fit in Ω_free",
+        "gap ⊆ plateau with margins",
+        "§1 admissibility: Ω_free > 0 must hold for the child, i.e. Ω − (K_f+1)·floor_len − K_f·floor_gap > 0 (derived instantiation of the §1 rule)"
+      ],
+      "precondition_gaps": {
+        "spec_silent": true,
+        "note": "The numeric \"margins\" in \"gap ⊆ plateau with margins\" are not given in §1/§5; the plateau itself is [b_k+w, d_k−w] per §1."
+      },
+      "k_change": 1,
+      "latch_effect": {
+        "rule": "Interior op: latches are never touched.",
+        "pattern_map": {
+          "(0,0)": "(0,0)",
+          "(1,0)": "(1,0)",
+          "(0,1)": "(0,1)",
+          "(1,1)": "(1,1)"
+        },
+        "rule_quote": "interior ops (interior fission/truncation/reactivation/prune) never touch latches",
+        "rule_quote_section": "§1 LATCH INHERITANCE",
+        "endpoint_note": {
+          "derived": true,
+          "text": "Because the split gap lies inside the plateau of episode k, both outer endpoints b_1 and d_{K_f} are preserved, consistent with \"an op that preserves an outer endpoint preserves its latch\"."
+        }
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f+1) + 1 − n_lat = 2K_f + 3 − n_lat",
+        "child_dim_delta_vs_parent": 2,
+        "child_intervals": "children intervals (b_k,g0], (g1,d_k]",
+        "coordinate_edit": "the parent coordinate len_k is replaced, in canonical order, by len(child_1), gap_new, len(child_2); all other coordinates keep their interval values but are re-derived because Ω_free changes",
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free − floor_len − floor_gap"
+        },
+        "targets": {
+          "len_child_1": "g0 − b_k",
+          "len_child_2": "d_k − g1",
+          "gap_new": "g1 − g0",
+          "source": "header v8.2 item (4) children intervals (b_k,g0], (g1,d_k]",
+          "other_spans": {
+            "spec_silent": true,
+            "note": "The file does not state explicitly whether unaffected episodes/gaps keep their absolute values or their simplex proportions on a K-change; only the affected spans are specified."
+          },
+          "derived": true,
+          "derived_note": "len_child_1, len_child_2 and gap_new are the arithmetic lengths of the quoted children intervals (b_k,g0], (g1,d_k]; the spec states the intervals, not these three scalars."
+        }
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "§1/§5 and the headers specify the child INTERVALS only; no pose, motion-coefficient, origin, or radiance initialization for the two fission children is stated.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "rule": "fission/truncate keep bind",
+        "source": "header v8.2 item (2)",
+        "detail": "The family's cluster set U(f) := bind⁻¹(f) is unchanged; only S(P_f, W) (the segment set derived from P_f) moves."
+      },
+      "delta_state": {
+        "formula": "Δstate = +κ + Δψ_dur + ψ_gap(new gap)",
+        "expanded_formula": "Δψ = ψ_dur(len_1')+ψ_dur(len_2')−ψ_dur(len_k) + ψ_gap(g1−g0)",
+        "expanded_formula_section": "header v8.2 item (4)",
+        "double_counting_note": "The header's expanded_formula IS the whole Δψ of §5's \"+κ + Δψ_dur + ψ_gap(new gap)\" — ψ_gap(g1−g0) is already inside it. Δstate = +κ + Δψ; do not add ψ_gap(new gap) a second time."
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none",
+        "note": "§5 FISSION lists no ledger term; per §4 the ledger C(H) contains only χ·N_returnbirth and μ·N_merge."
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (dimension changes by +2)",
+        "note": "§1 OPTIMIZER MOMENTS; the §5 FISSION entry does not restate it."
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 FISSION",
+          "quote": "FISSION(f,k,gap): one episode → two (ΔK = +1): Δstate = +κ + Δψ_dur + ψ_gap(new gap); admissible iff K_f < 4, floors fit in Ω_free, gap ⊆ plateau with margins."
+        },
+        {
+          "section": "header v8.2 item (4)",
+          "quote": "FISSION(f,k,(g0,g1]): children intervals (b_k,g0], (g1,d_k]; Δψ = ψ_dur(len_1')+ψ_dur(len_2')− ψ_dur(len_k) + ψ_gap(g1−g0)",
+          "quote_note": "the space before ψ_dur(len_k) is a source line wrap, joined per the quote policy"
+        },
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "interior ops (interior fission/truncation/reactivation/prune) never touch latches"
+        }
+      ]
+    },
+    {
+      "op": "TRUNCATE-shorten",
+      "case": "truncate_shorten_outer_unlatched_endpoint",
+      "case_description": "An outer endpoint (b_1 or d_{K_f}) on a side whose latch is 0 is moved inward; the episode shortens and that side's unlatched slack grows.",
+      "preconditions": [
+        "ΔK = 0: edge moved",
+        "§1 target admissibility: the resulting len_k > floor_len strictly and the resulting unlatched slack > 0 strictly",
+        "An op whose target would put an unlatched coordinate exactly at its floor is inadmissible as stated"
+      ],
+      "precondition_gaps": {
+        "spec_silent": true,
+        "note": "§5 states no eligibility/trigger predicate for TRUNCATE-shorten (unlike PRUNE and REACTIVATE); only the state-delta and ΔK are given."
+      },
+      "k_change": 0,
+      "latch_effect": {
+        "rule": "The moved side is already unlatched (ℓ=0) and stays 0; the opposite side's latch is preserved (the op preserves that outer endpoint).",
+        "pattern_map": {
+          "side_pre_moved": {
+            "(0,0)": "(0,0)",
+            "(0,1)": "(0,1)"
+          },
+          "side_post_moved": {
+            "(0,0)": "(0,0)",
+            "(1,0)": "(1,0)"
+          }
+        },
+        "n_lat_change": 0
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2K_f + 1 − n_lat (unchanged)",
+        "child_dim_delta_vs_parent": 0,
+        "omega_free_child": "unchanged (Ω_free depends on K only)",
+        "targets": "the moved endpoint's new position determines the affected len_k and the adjacent outer slack; all other interval values unchanged"
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "§5 gives only Δstate = Δψ for TRUNCATE-shorten; no re-initialization of pose, motion coefficients, or origin is stated.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "rule": "fission/truncate keep bind",
+        "source": "header v8.2 item (2)"
+      },
+      "delta_state": {
+        "formula": "Δstate = Δψ only",
+        "delta_psi_expansion": {
+          "spec_silent": true,
+          "note": "The file does not expand Δψ per TRUNCATE-shorten case; for an outer-endpoint move only ψ_dur of the affected episode changes (derived, not stated)."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (values change even though the dimension does not)",
+        "note": "§1 OPTIMIZER MOMENTS: \"dimension and/or values change\"."
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 TRUNCATE-shorten",
+          "quote": "TRUNCATE-shorten (ΔK = 0: edge moved): Δstate = Δψ only."
+        },
+        {
+          "section": "§1 OPTIMIZER MOMENTS",
+          "quote": "Every structural op rewrites a through the inverse map (dimension and/or values change), so the family's simplex-logit moment state is RESET and the reset logged (rev-3 A1 unchanged)."
+        }
+      ]
+    },
+    {
+      "op": "TRUNCATE-shorten",
+      "case": "truncate_shorten_latched_outer_endpoint",
+      "case_description": "An outer endpoint that is latched (b_1 = −w_m or d_{K_f} = T + w_m exactly) is moved inward; the latch is CLEARED and a new unlatched outer slack coordinate enters.",
+      "preconditions": [
+        "ΔK = 0: edge moved",
+        "the target side's latch bit is 1",
+        "§1 target admissibility: resulting len_k > floor_len strictly and the newly unlatched slack > 0 strictly"
+      ],
+      "k_change": 0,
+      "latch_effect": {
+        "rule": "TRUNCATE-shorten applied to a latched outer endpoint CLEARS that latch.",
+        "pattern_map": {
+          "side_pre_moved": {
+            "(1,0)": "(0,0)",
+            "(1,1)": "(0,1)"
+          },
+          "side_post_moved": {
+            "(0,1)": "(0,0)",
+            "(1,1)": "(1,0)"
+          }
+        },
+        "n_lat_change": -1,
+        "rule_quote": "TRUNCATE-shorten applied to a latched outer endpoint CLEARS that latch",
+        "rule_quote_section": "§1 LATCH INHERITANCE"
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map; the cleared side's slack enters as a new unlatched coordinate in canonical position ([slack_pre] first, [slack_post] last)",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2K_f + 1 − (n_lat − 1)",
+        "child_dim_delta_vs_parent": 1,
+        "omega_free_child": "unchanged (K unchanged)",
+        "targets": {
+          "new_outer_slack": {
+            "derived": true,
+            "text": "slack_post = T + w_m − d_{K_f}(new) (resp. slack_pre = b_1(new) + w_m); strictly > 0 because the endpoint moved strictly inward"
+          },
+          "affected_len": "the shortened episode's new length"
+        }
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "Same as the unlatched-endpoint case: §5 gives only Δstate = Δψ.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "rule": "fission/truncate keep bind",
+        "source": "header v8.2 item (2)"
+      },
+      "delta_state": {
+        "formula": "Δstate = Δψ only",
+        "delta_psi_expansion": {
+          "spec_silent": true,
+          "note": "Not expanded per case in the file; the latch clearing itself carries no energy term in §4."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (dimension increases by 1); latch bits never carry moments"
+      },
+      "spec_quotes": [
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "TRUNCATE-shorten applied to a latched outer endpoint CLEARS that latch"
+        },
+        {
+          "section": "§5 TRUNCATE-shorten",
+          "quote": "TRUNCATE-shorten (ΔK = 0: edge moved): Δstate = Δψ only."
+        },
+        {
+          "section": "§1 LATCH BITS",
+          "quote": "Latch bits are toggled ONLY by structural ops (§5), never by gradient steps, and carry no optimizer state."
+        }
+      ]
+    },
+    {
+      "op": "TRUNCATE-shorten",
+      "case": "truncate_shorten_interior_edge",
+      "case_description": "An interior endpoint (d_k for k < K_f, or b_k for k > 1) is moved; the episode shortens and the adjacent gap lengthens.",
+      "preconditions": [
+        "ΔK = 0: edge moved",
+        "§1 target admissibility: resulting len_k > floor_len strictly and adjacent gap_k > floor_gap strictly"
+      ],
+      "k_change": 0,
+      "latch_effect": {
+        "rule": "Interior op: latches never touched.",
+        "pattern_map": {
+          "(0,0)": "(0,0)",
+          "(1,0)": "(1,0)",
+          "(0,1)": "(0,1)",
+          "(1,1)": "(1,1)"
+        },
+        "n_lat_change": 0
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2K_f + 1 − n_lat (unchanged)",
+        "child_dim_delta_vs_parent": 0,
+        "omega_free_child": "unchanged (K unchanged)",
+        "targets": "the affected len_k and the adjacent gap_k; all other interval values unchanged"
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "§5 gives only Δstate = Δψ.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "rule": "fission/truncate keep bind",
+        "source": "header v8.2 item (2)"
+      },
+      "delta_state": {
+        "formula": "Δstate = Δψ only",
+        "delta_psi_expansion": {
+          "spec_silent": true,
+          "note": "Not expanded in the file; an interior edge move changes both ψ_dur(len_k) and ψ_gap(gap_k) (derived from §4's terms, not stated per case)."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (values change)"
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 TRUNCATE-shorten",
+          "quote": "TRUNCATE-shorten (ΔK = 0: edge moved): Δstate = Δψ only."
+        },
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "interior ops (interior fission/truncation/reactivation/prune) never touch latches"
+        }
+      ]
+    },
+    {
+      "op": "TRUNCATE-delete",
+      "case": "truncate_delete_terminal_episode_latched_side",
+      "case_description": "The outermost episode on a side whose latch is 1 is deleted (episode K_f with ℓ_post = 1, or episode 1 with ℓ_pre = 1).",
+      "preconditions": [
+        "terminal episode removed, ΔK = −1",
+        "§1 admissibility for the child: Ω_free′ > 0 with K′ = K_f − 1"
+      ],
+      "k_change": -1,
+      "latch_effect": {
+        "rule": "The deleted side's latch is DISCARDED; the surviving side inherits the parent's outer latch.",
+        "pattern_map": {
+          "delete_at_post_side": {
+            "(0,1)": "(0,0)",
+            "(1,1)": "(1,0)"
+          },
+          "delete_at_pre_side": {
+            "(1,0)": "(0,0)",
+            "(1,1)": "(0,1)"
+          }
+        },
+        "n_lat_change": -1,
+        "rule_quote": "an op that deletes the outermost episode on a side DISCARDS that side's latch (the new outer slack enters as an unlatched coordinate via the inverse map)",
+        "rule_quote_section": "§1 LATCH INHERITANCE",
+        "domain": "K_f ≥ 2 — the pattern_map presupposes a surviving episode. At K_f = 1 the child has no latch bits at all (see child_state_write.k_equals_one_row)."
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map; the new outer slack on the deleted side enters as an unlatched coordinate",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f−1) + 1 − (n_lat − 1)",
+        "child_dim_delta_vs_parent": -1,
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free + floor_len + floor_gap (K decreases by one episode and one gap, for K_f ≥ 2)"
+        },
+        "targets": {
+          "spec_silent": true,
+          "note": "The target value of the newly created outer slack (i.e. how the deleted episode's span plus the removed adjacent gap are reallocated) is not stated; the file defers to \"deterministic formulas in the op table\" that are not present here. The only binding constraint is the §1 budget identity summing to Ω."
+        },
+        "k_equals_one_subcase": {
+          "spec_silent": true,
+          "note": "Deleting the sole episode would give K′ = 0 (per §1: no latch bits, no vector a, prune-pending); the file does not state whether K=1 → 0 is reached by TRUNCATE-delete or only by PRUNE."
+        },
+        "domain": "K_f ≥ 2 — child_dim_formula, child_dim_delta_vs_parent and omega_free_child hold only while a child episode survives.",
+        "k_equals_one_row": {
+          "parent_K": 1,
+          "child_K": 0,
+          "child_latch_bits": "none",
+          "child_dim_a": 0,
+          "child_state": "the §1 empty program: renders nothing; prune-pending",
+          "quote": "K_f = 0: defined state (empty program) — no latch bits, no vector a; renders nothing; prune-pending (unchanged from v8.2).",
+          "quote_section": "§1",
+          "route_note": "The file does not state whether K=1 → 0 is reached by TRUNCATE-delete or only by PRUNE (see child_state_write.k_equals_one_subcase); the child STATE, if reached, is fixed by §1."
+        }
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "§5 states no re-initialization for surviving episodes on delete.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "rule": "fission/truncate keep bind",
+        "source": "header v8.2 item (2)"
+      },
+      "delta_state": {
+        "formula": "Δstate = −κ + Δψ (κ auto-refunded: state term)",
+        "kappa_note": "κ is charged PER EPISODE via κ·K_f and is refunded automatically when episodes are deleted (§4)",
+        "delta_psi_expansion": "terminal delete removes one gap (header v8.2 item (4)); Δψ therefore drops ψ_dur of the deleted episode and ψ_gap of the single removed adjacency (K_f ≥ 2; at K_f = 1 there is no adjacency to remove and the child is the K=0 empty program)"
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none",
+        "note": "no ledger term is stated for TRUNCATE-delete; χ and μ are never refunded (§4)"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (dimension decreases by 1)"
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 TRUNCATE-delete",
+          "quote": "TRUNCATE-delete (terminal episode removed, ΔK = −1): Δstate = −κ + Δψ (κ auto-refunded: state term)."
+        },
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "an op that deletes the outermost episode on a side DISCARDS that side's latch (the new outer slack enters as an unlatched coordinate via the inverse map)"
+        },
+        {
+          "section": "header v8.2 item (4)",
+          "quote": "interior TRUNCATE-delete removes two adjacent gaps and creates one (Δψ accordingly); terminal delete removes one"
+        }
+      ]
+    },
+    {
+      "op": "TRUNCATE-delete",
+      "case": "truncate_delete_terminal_episode_unlatched_side",
+      "case_description": "The outermost episode on a side whose latch is 0 is deleted; that side's outer slack coordinate already exists (it is not created).",
+      "preconditions": [
+        "terminal episode removed, ΔK = −1",
+        "§1 admissibility for the child: Ω_free′ > 0 with K′ = K_f − 1"
+      ],
+      "k_change": -1,
+      "latch_effect": {
+        "rule": "The deleted side has no latch to discard (the discard rule is vacuous); the surviving side inherits the parent's outer latch.",
+        "pattern_map": {
+          "delete_at_post_side": {
+            "(0,0)": "(0,0)",
+            "(1,0)": "(1,0)"
+          },
+          "delete_at_pre_side": {
+            "(0,0)": "(0,0)",
+            "(0,1)": "(0,1)"
+          }
+        },
+        "n_lat_change": 0,
+        "domain": "K_f ≥ 2 — the pattern_map presupposes a surviving episode. At K_f = 1 the child has no latch bits at all (see child_state_write.k_equals_one_row)."
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f−1) + 1 − n_lat",
+        "child_dim_delta_vs_parent": -2,
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free + floor_len + floor_gap (for K_f ≥ 2)"
+        },
+        "targets": {
+          "spec_silent": true,
+          "note": "Same gap as the latched case: the reallocation of the deleted episode's span and its removed adjacent gap into the surviving outer slack (or elsewhere) is not written out in this document."
+        },
+        "k_equals_one_subcase": {
+          "spec_silent": true,
+          "note": "K=1 → K′=0 (empty program per §1) is not explicitly enumerated as a TRUNCATE-delete outcome."
+        },
+        "domain": "K_f ≥ 2 — child_dim_formula, child_dim_delta_vs_parent and omega_free_child hold only while a child episode survives.",
+        "k_equals_one_row": {
+          "parent_K": 1,
+          "child_K": 0,
+          "child_latch_bits": "none",
+          "child_dim_a": 0,
+          "child_state": "the §1 empty program: renders nothing; prune-pending",
+          "quote": "K_f = 0: defined state (empty program) — no latch bits, no vector a; renders nothing; prune-pending (unchanged from v8.2).",
+          "quote_section": "§1",
+          "route_note": "The file does not state whether K=1 → 0 is reached by TRUNCATE-delete or only by PRUNE (see child_state_write.k_equals_one_subcase); the child STATE, if reached, is fixed by §1."
+        }
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "§5 states no re-initialization for surviving episodes on delete.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "rule": "fission/truncate keep bind",
+        "source": "header v8.2 item (2)"
+      },
+      "delta_state": {
+        "formula": "Δstate = −κ + Δψ (κ auto-refunded: state term)",
+        "delta_psi_expansion": "terminal delete removes one gap (header v8.2 item (4)) (K_f ≥ 2; at K_f = 1 there is no adjacency to remove and the child is the K=0 empty program)"
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (dimension decreases by 2)"
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 TRUNCATE-delete",
+          "quote": "TRUNCATE-delete (terminal episode removed, ΔK = −1): Δstate = −κ + Δψ (κ auto-refunded: state term)."
+        },
+        {
+          "section": "header rev-3 A1",
+          "quote": "children of terminal ops inherit the parent's outer latch on the surviving side; interior ops never touch latches"
+        }
+      ],
+      "freed_span_absorption": {
+        "spec_silent": true,
+        "derived": true,
+        "note": "That the existing outer slack absorbs the freed span is a DERIVED reading, consistent with the §1 budget identity summing to Ω; the file does not state the allocation (see child_state_write.targets)."
+      }
+    },
+    {
+      "op": "TRUNCATE-delete",
+      "case": "truncate_delete_interior_episode",
+      "case_description": "An interior episode (1 < k < K_f) is deleted; the two adjacent gaps are removed and one merged gap is created.",
+      "preconditions": [
+        "ΔK = −1",
+        "§1 admissibility for the child: Ω_free′ > 0 with K′ = K_f − 1",
+        "the merged gap must satisfy gap > floor_gap strictly (§1 inverse-map target admissibility)"
+      ],
+      "spec_tension": {
+        "note": "§5 parenthesizes TRUNCATE-delete as \"terminal episode removed\", while header v8.2 item (4) explicitly enumerates \"interior TRUNCATE-delete\". Both sentences are transcribed; the file does not reconcile them.",
+        "quote_a": "TRUNCATE-delete (terminal episode removed, ΔK = −1)",
+        "quote_a_section": "§5",
+        "quote_b": "interior TRUNCATE-delete removes two adjacent gaps and creates one (Δψ accordingly)",
+        "quote_b_section": "header v8.2 item (4)"
+      },
+      "k_change": -1,
+      "latch_effect": {
+        "rule": "Interior op: latches never touched (both outer endpoints are preserved).",
+        "pattern_map": {
+          "(0,0)": "(0,0)",
+          "(1,0)": "(1,0)",
+          "(0,1)": "(0,1)",
+          "(1,1)": "(1,1)"
+        },
+        "n_lat_change": 0
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f−1) + 1 − n_lat",
+        "child_dim_delta_vs_parent": -2,
+        "coordinate_edit": "the triple (gap_{k−1}, len_k, gap_k) is replaced by a single merged gap coordinate",
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free + floor_len + floor_gap"
+        },
+        "targets": {
+          "spec_silent": true,
+          "note": "The merged gap's target value (whether it equals gap_{k−1} + len_k + gap_k, i.e. neighbouring episodes are held fixed) is not stated in this document."
+        }
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "§5 states no re-initialization for surviving episodes on delete.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "rule": "fission/truncate keep bind",
+        "source": "header v8.2 item (2)"
+      },
+      "delta_state": {
+        "formula": "Δstate = −κ + Δψ (κ auto-refunded: state term)",
+        "delta_psi_expansion": "interior delete removes two adjacent gaps and creates one (Δψ accordingly), and removes ψ_dur of the deleted episode"
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (dimension decreases by 2)"
+      },
+      "spec_quotes": [
+        {
+          "section": "header v8.2 item (4)",
+          "quote": "interior TRUNCATE-delete removes two adjacent gaps and creates one (Δψ accordingly); terminal delete removes one"
+        },
+        {
+          "section": "§5 TRUNCATE-delete",
+          "quote": "TRUNCATE-delete (terminal episode removed, ΔK = −1): Δstate = −κ + Δψ (κ auto-refunded: state term)."
+        },
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "interior ops (interior fission/truncation/reactivation/prune) never touch latches"
+        }
+      ]
+    },
+    {
+      "op": "REACTIVATE",
+      "case": "reactivate_interior_between_episodes",
+      "case_description": "REACTIVATE(f,e) inserts one episode strictly between two existing consecutive episodes; the flanking adjacency is replaced by two adjacencies.",
+      "preconditions": [
+        "pre = NO return family at the site (deterministic predicate below)",
+        "K_f < 4",
+        "floors fit",
+        "§1 admissibility: Ω_free > 0 for the child, i.e. Ω − (K_f+1)·floor_len − K_f·floor_gap > 0 (derived instantiation)"
+      ],
+      "return_family_predicate": {
+        "text": "a family born within radius r_site of the site with birth time inside W; ties → earliest birth, then lowest family ID. REACTIVATE/MERGE mutual exclusivity follows.",
+        "section": "§5 RETURN-FAMILY PREDICATE"
+      },
+      "k_change": 1,
+      "latch_effect": {
+        "rule": "Interior op: latches never touched.",
+        "pattern_map": {
+          "(0,0)": "(0,0)",
+          "(1,0)": "(1,0)",
+          "(0,1)": "(0,1)",
+          "(1,1)": "(1,1)"
+        },
+        "n_lat_change": 0
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f+1) + 1 − n_lat",
+        "child_dim_delta_vs_parent": 2,
+        "coordinate_edit": "the flanking gap coordinate is replaced, in canonical order, by (gap_a, len_new, gap_b)",
+        "adjacency_count": "two adjacencies after insertion at an interior position",
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free − floor_len − floor_gap"
+        },
+        "targets": {
+          "spec_silent": true,
+          "note": "The inserted episode's interval endpoints and the two resulting gap values are not given; the file says only that the episode is inserted \"by position\" and that the K-change inverse maps come from op-table formulas not present in this document."
+        }
+      },
+      "parameter_init": {
+        "pose": "pose init = spline-bridge mean at episode center",
+        "coefficients_and_origin": "fresh coefficients and origin",
+        "moments": "fresh moments",
+        "source": "§5 REACTIVATE"
+      },
+      "evidence_ownership": {
+        "spec_silent": true,
+        "note": "The bind-inheritance list (header v8.2 item (2)) covers fission/truncate, MERGE, BIRTH, and clone/split, but not REACTIVATE; §5 REACTIVATE says nothing about cluster bindings.",
+        "derived_reading": {
+          "derived": true,
+          "text": "bind is a cluster→FAMILY map (\"U(f) := bind⁻¹(f)\", header v8.2 item (2)), so a purely episode-level op inside one family cannot change any binding: U(f) is unchanged and only S(P_f, W) moves. The spec_silent marker is retained because no sentence in the file states this for this op."
+        }
+      },
+      "delta_state": {
+        "formula": "Post: +κ + Δψ",
+        "delta_psi_expansion": {
+          "spec_silent": true,
+          "note": "The file states \"REACTIVATE inserts one episode creating one or two adjacencies by position (both cases enumerated)\" but the per-case Δψ formulas are not written out in §1, §5, or the headers."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none",
+        "note": "§5 REACTIVATE lists no ledger term; χ attaches to BIRTH at a return site and μ to MERGE (§4, §5)."
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (§1) and, for the inserted episode, \"fresh moments\" on pose/coefficients/origin (§5)"
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 REACTIVATE",
+          "quote": "REACTIVATE(f, e): pre = NO return family at the site (deterministic predicate below) AND K_f < 4 AND floors fit. Post: +κ + Δψ; pose init = spline-bridge mean at episode center; fresh coefficients and origin; fresh moments."
+        },
+        {
+          "section": "header v8.2 item (4)",
+          "quote": "REACTIVATE inserts one episode creating one or two adjacencies by position (both cases enumerated)"
+        },
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "interior ops (interior fission/truncation/reactivation/prune) never touch latches"
+        }
+      ],
+      "k_change_derived": {
+        "derived": true,
+        "text": "§5 REACTIVATE states the precondition K_f < 4 and the +κ charge but never writes ΔK; ΔK = +1 follows from \"REACTIVATE inserts one episode\" (header v8.2 item (4)) together with κ being charged per episode (§4)."
+      }
+    },
+    {
+      "op": "REACTIVATE",
+      "case": "reactivate_outside_unlatched_outer_endpoint",
+      "case_description": "REACTIVATE(f,e) inserts one episode beyond the outermost episode on a side whose latch is 0 (room exists in that outer slack); one new adjacency is created.",
+      "preconditions": [
+        "pre = NO return family at the site (deterministic predicate below)",
+        "K_f < 4",
+        "floors fit",
+        "the insertion side is unlatched (a latched side is inadmissible — see case reactivate_outside_latched_outer_endpoint)",
+        "§1 admissibility: the remaining outer slack must stay > 0 strictly and the new gap > floor_gap strictly"
+      ],
+      "k_change": 1,
+      "latch_effect": {
+        "rule": "The insertion side's latch is 0 by admissibility and remains 0; the opposite outer endpoint is preserved, so its latch is preserved.",
+        "pattern_map": {
+          "insert_beyond_post_side": {
+            "(0,0)": "(0,0)",
+            "(1,0)": "(1,0)"
+          },
+          "insert_beyond_pre_side": {
+            "(0,0)": "(0,0)",
+            "(0,1)": "(0,1)"
+          }
+        },
+        "n_lat_change": {
+          "derived": true,
+          "value": 0,
+          "text": "0 under the transcribed reading (the insertion side is unlatched by admissibility and the opposite outer endpoint is preserved). CONDITIONAL on latch_set_on_outer_insertion, which is spec_silent: if an outer-side insertion whose target consumes the whole outer slack must set that latch, n_lat_change would be +1 and the child dimension one lower."
+        },
+        "latch_set_on_outer_insertion": {
+          "spec_silent": true,
+          "note": "§1's latch-inheritance list does not enumerate outer-side REACTIVATE; whether an insertion whose target consumes the whole outer slack (new endpoint exactly at −w_m / T+w_m) may SET that latch is not stated. The generic §1 rule reads: \"a target with an outer slack exactly 0 must set the corresponding latch instead\"."
+        }
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f+1) + 1 − n_lat",
+        "child_dim_delta_vs_parent": 2,
+        "coordinate_edit": "one new gap coordinate and one new len coordinate are inserted between the former outermost len and the outer slack, in canonical order",
+        "adjacency_count": "one new adjacency",
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free − floor_len − floor_gap"
+        },
+        "targets": {
+          "spec_silent": true,
+          "note": "Neither the inserted episode's endpoints nor the split of the consumed outer slack into (gap_new, len_new, remaining slack) is written out in this document."
+        }
+      },
+      "parameter_init": {
+        "pose": "pose init = spline-bridge mean at episode center",
+        "coefficients_and_origin": "fresh coefficients and origin",
+        "moments": "fresh moments",
+        "source": "§5 REACTIVATE"
+      },
+      "evidence_ownership": {
+        "spec_silent": true,
+        "note": "REACTIVATE does not appear in the bind-inheritance list (header v8.2 item (2)) and §5 REACTIVATE says nothing about cluster bindings.",
+        "derived_reading": {
+          "derived": true,
+          "text": "bind is a cluster→FAMILY map (\"U(f) := bind⁻¹(f)\", header v8.2 item (2)), so a purely episode-level op inside one family cannot change any binding: U(f) is unchanged and only S(P_f, W) moves. The spec_silent marker is retained because no sentence in the file states this for this op."
+        }
+      },
+      "delta_state": {
+        "formula": "Post: +κ + Δψ",
+        "delta_psi_expansion": {
+          "spec_silent": true,
+          "note": "One-adjacency case is named (\"one or two adjacencies by position\") but the explicit Δψ formula is absent from this document."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (§1) plus fresh moments for the inserted episode's parameters (§5)"
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 REACTIVATE",
+          "quote": "Post: +κ + Δψ; pose init = spline-bridge mean at episode center; fresh coefficients and origin; fresh moments."
+        },
+        {
+          "section": "header v8.2 item (4)",
+          "quote": "REACTIVATE inserts one episode creating one or two adjacencies by position (both cases enumerated)"
+        },
+        {
+          "section": "§1 INVERSE MAP",
+          "quote": "a target with an outer slack exactly 0 must set the corresponding latch instead"
+        }
+      ]
+    },
+    {
+      "op": "REACTIVATE",
+      "case": "reactivate_outside_latched_outer_endpoint",
+      "case_description": "Attempted insertion of an episode outside a latched outer endpoint (beyond b_1 when ℓ_pre = 1, or beyond d_{K_f} when ℓ_post = 1).",
+      "preconditions": [
+        "the insertion side's latch bit is 1"
+      ],
+      "admissibility": "INADMISSIBLE (zero room)",
+      "k_change": null,
+      "k_change_note": "No transition occurs; the candidate is rejected.",
+      "latch_effect": {
+        "rule": "No effect: the op is inadmissible.",
+        "pattern_map": {
+          "insert_beyond_pre_side": {
+            "(1,0)": "INADMISSIBLE",
+            "(1,1)": "INADMISSIBLE"
+          },
+          "insert_beyond_post_side": {
+            "(0,1)": "INADMISSIBLE",
+            "(1,1)": "INADMISSIBLE"
+          }
+        },
+        "rule_quote": "REACTIVATE insertion outside a latched outer endpoint is inadmissible (zero room)",
+        "rule_quote_section": "§1 LATCH INHERITANCE"
+      },
+      "child_state_write": {
+        "rule": "none — no child state is written",
+        "child_dim_formula": "n/a"
+      },
+      "parameter_init": {
+        "applies": false,
+        "note": "no transition"
+      },
+      "evidence_ownership": {
+        "applies": false,
+        "note": "no transition"
+      },
+      "delta_state": {
+        "formula": "none (rejected candidate)"
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none"
+      },
+      "moment_reset": {
+        "value": false,
+        "what_resets": "nothing — no state is rewritten"
+      },
+      "spec_quotes": [
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "REACTIVATE insertion outside a latched outer endpoint is inadmissible (zero room)"
+        },
+        {
+          "section": "§1 EXACT BOUNDARY RULE",
+          "quote": "Softmax coordinates are strictly positive, so every unlatched slack is strictly > 0: exact boundary contact is representable ONLY by a latch bit."
+        }
+      ]
+    },
+    {
+      "op": "MERGE",
+      "case": "merge_return_family_pair",
+      "case_description": "MERGE(f_old, f_new): two families are merged into one surviving family; episodes are concatenated in order and the family is re-anchored to the older family's first episode.",
+      "preconditions": [
+        "return-family predicate holds",
+        "episode unions disjoint with floors",
+        "K_old + K_new ≤ 4",
+        "else INADMISSIBLE",
+        "return-family predicate: a family born within radius r_site of the site with birth time inside W; ties → earliest birth, then lowest family ID",
+        "REACTIVATE/MERGE mutual exclusivity follows (from the return-family predicate)"
+      ],
+      "k_change": null,
+      "k_change_note": "Two families become one: K′ = K_old + K_new ≤ 4; \"episodes concatenated (κ·K unchanged in total)\"; the family count decreases by 1.",
+      "latch_effect": {
+        "rule": "ℓ_pre is taken from the parent owning the globally earliest b_1; ℓ_post from the parent owning the globally latest d_K.",
+        "pattern_map": "rule-based, not a static table: ℓ_pre′ = ℓ_pre(argmin over parents of b_1); ℓ_post′ = ℓ_post(argmax over parents of d_K)",
+        "n_lat_child": "n_lat′ = ℓ_pre′ + ℓ_post′",
+        "rule_quote": "MERGE: ℓ_pre is taken from the parent owning the globally earliest b_1, ℓ_post from the parent owning the globally latest d_K",
+        "rule_quote_section": "§1 LATCH INHERITANCE",
+        "boolean_form": {
+          "derived": true,
+          "formula": "ℓ_pre′ = ℓ_pre(parent A) OR ℓ_pre(parent B); ℓ_post′ = ℓ_post(parent A) OR ℓ_post(parent B)",
+          "reasoning": "A pre-latched parent has b_1 = −w_m exactly, the minimum of the admissible range, so it necessarily owns the globally earliest b_1 and its ℓ_pre is the bit inherited; if neither parent is pre-latched the inherited bit is 0 either way. Both parents cannot be pre-latched at once — they would share the endpoint −w_m, contradicting the \"episode unions disjoint with floors\" precondition. Symmetrically for ℓ_post at T + w_m. The OR form is therefore equivalent to the spec's owner-of-the-extreme-endpoint rule.",
+          "normative_form": "see latch_effect.rule / rule_quote — the OR form is a derived convenience for unit tests, not a spec sentence."
+        }
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map on the concatenated ordered episode sequence",
+        "child_dim_formula": "2K′ + 1 − n_lat′ with K′ = K_old + K_new",
+        "omega_free_child": "Ω_free′ = Ω − K′·floor_len − (K′−1)·floor_gap",
+        "targets": "the concatenated ordered episode intervals of both parents (episode unions disjoint with floors); gaps are the adjacencies of the concatenated sequence",
+        "targets_gap": {
+          "spec_silent": true,
+          "note": "The file gives the merged Δψ_gap formula but does not restate that each parent's episode interval values are carried over unchanged into the child targets; it says only \"episodes concatenated\" and \"pose/motion retained per episode\"."
+        }
+      },
+      "survivor_identity": {
+        "rule": "the merged family RETAINS the older parent's family ID, birth time, birth site, and lineage key; both parents' cluster bindings are redirected to the surviving ID; the younger parent's ID is retired and never reused",
+        "predicates": "All predicates (return-family, tie-breaks, exclusivity) operate on surviving IDs.",
+        "source": "header rev-3 A3"
+      },
+      "parameter_init": {
+        "radiance": "radiance from the OLDER family (disclosed convention + symmetric ablation)",
+        "pose_motion": "pose/motion retained per episode",
+        "re_anchoring": "merged family re-anchored to the older family's first episode (exact reparameterization; moments reset; unit-tested)",
+        "gauge_equations": "q_can' = q_can ∘ q_ref; s' = s + ℓ_ref; per-episode offsets re-expressed q_j' = q_ref⁻¹ ∘ q_j, ℓ_j' = ℓ_j − ℓ_ref, x_j re-expressed in the new frame; world-frame SH untouched; moments of re-expressed parameters reset (logged)",
+        "gauge_equations_section": "header v8.2 item (4)"
+      },
+      "evidence_ownership": {
+        "bind_rule": "MERGE unions (bind inheritance; header v8.2 item (2))",
+        "cluster_reformation": "clusters re-formed per §2 (§5 MERGE)",
+        "canonical_point": "component re-formation at MERGE recomputes x_u by the same lowest-ID rule over the merged component (header rev-3 A2)",
+        "cluster_parameters": "merged clusters take r_u = min over members, d_u = min over members, α_u recomputed from the merged n_cam and the preregistered correlation model (§2)",
+        "windows": "windows re-derived next round (§5); merged families re-derive windows from the union anchor set at the next round (§3); MERGE candidates evaluated this round use the union anchor set to derive windows immediately — the \"next round\" re-derivation applies only to post-commit bookkeeping (header v8.2 item (3))",
+        "disjointness": "PROP 3: J(u) are pairwise disjoint before and after cluster re-formation (§4)"
+      },
+      "delta_state": {
+        "kappa": "κ·K unchanged in total (episodes concatenated)",
+        "gap_terms": "MERGE gap terms recomputed on the concatenated ordered episode sequence (formula: Σψ_gap over new adjacencies − old adjacencies of both parents)",
+        "gap_terms_section": "header v8.2 item (4)",
+        "psi_dur_change": {
+          "spec_silent": true,
+          "note": "No ψ_dur change is stated; episodes are concatenated and retained, so ψ_dur is presumably unchanged, but the file does not say so."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "+μ (LEDGER +μ; increments N_merge(H); never refunded)"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (§1, dimension/values change) and the moments of all re-expressed pose/motion parameters under the re-anchoring gauge (§5 \"moments reset; unit-tested\"; header v8.2 item (4) \"moments of re-expressed parameters reset (logged)\"); world-frame SH untouched"
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 MERGE",
+          "quote": "MERGE(f_old, f_new): pre: return-family predicate holds; episode unions disjoint with floors; K_old + K_new ≤ 4; else INADMISSIBLE."
+        },
+        {
+          "section": "§5 MERGE",
+          "quote": "Post: episodes concatenated (κ·K unchanged in total); radiance from the OLDER family (disclosed convention + symmetric ablation); pose/motion retained per episode; merged family re-anchored to the older family's first episode (exact reparameterization; moments reset; unit-tested); clusters re-formed per §2; windows re-derived next round; LEDGER +μ."
+        },
+        {
+          "section": "header rev-3 A3",
+          "quote": "the merged family RETAINS the older parent's family ID, birth time, birth site, and lineage key; both parents' cluster bindings are redirected to the surviving ID; the younger parent's ID is retired and never reused"
+        }
+      ]
+    },
+    {
+      "op": "PRUNE-episode",
+      "case": "prune_episode_interior",
+      "case_description": "An interior episode (1 < k < K_f) is pruned because its length sits at the floor and micro-render confirms.",
+      "preconditions": [
+        "episode: len at floor AND micro-render confirms",
+        "\"Len at floor\" predicates are replaced by len ≤ floor + δ_tol (preregistered tolerance) (header v8.2 item (1))"
+      ],
+      "precondition_gaps": {
+        "spec_silent": true,
+        "note": "The executable definition of \"micro-render confirms\" is delegated: \"dual-cap predicates, micro-render confirmation, and lifetime-support given executable definitions in the op table\" (header v8.2 item (7)); that op table is not in this document. δ_tol is preregistered, value not given."
+      },
+      "k_change": -1,
+      "latch_effect": {
+        "rule": "Interior op: latches never touched.",
+        "pattern_map": {
+          "(0,0)": "(0,0)",
+          "(1,0)": "(1,0)",
+          "(0,1)": "(0,1)",
+          "(1,1)": "(1,1)"
+        },
+        "n_lat_change": 0,
+        "rule_quote": "interior ops (interior fission/truncation/reactivation/prune) never touch latches",
+        "rule_quote_section": "§1 LATCH INHERITANCE"
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map (ALL OPS rev 4)",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f−1) + 1 − n_lat",
+        "child_dim_delta_vs_parent": -2,
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free + floor_len + floor_gap"
+        },
+        "targets": {
+          "spec_silent": true,
+          "note": "§5 gives only \"Δstate per deletions\"; the interior gap arithmetic (\"removes two adjacent gaps and creates one\") is stated for interior TRUNCATE-delete, and the file does not say whether PRUNE reuses it or how the freed span is allocated."
+        }
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "No re-initialization of surviving episodes is stated for PRUNE.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "spec_silent": true,
+        "note": "PRUNE does not appear in the bind-inheritance list (header v8.2 item (2)); §5 PRUNE says nothing about cluster bindings.",
+        "derived_reading": {
+          "derived": true,
+          "text": "bind is a cluster→FAMILY map (\"U(f) := bind⁻¹(f)\", header v8.2 item (2)), so a purely episode-level op inside one family cannot change any binding: U(f) is unchanged and only S(P_f, W) moves. The spec_silent marker is retained because no sentence in the file states this for this op."
+        }
+      },
+      "delta_state": {
+        "formula": "Δstate per deletions",
+        "expansion": {
+          "derived": true,
+          "text": "By §4, deleting one episode removes κ (κ charged per episode via κ·K_f, refunded automatically when episodes are deleted), its ψ_dur term, and the ψ_gap terms of the adjacencies it removes."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none",
+        "verbatim": "ledger untouched"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state (dimension decreases by 2)",
+        "note": "§1 OPTIMIZER MOMENTS applies to every structural op."
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 PRUNE",
+          "quote": "PRUNE (episode: len at floor AND micro-render confirms; family: episodeless or lifetime-unsupported): Δstate per deletions; ledger untouched."
+        },
+        {
+          "section": "header v8.2 item (1)",
+          "quote": "\"Len at floor\" predicates are replaced by len ≤ floor + δ_tol (preregistered tolerance)."
+        },
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "interior ops (interior fission/truncation/reactivation/prune) never touch latches"
+        }
+      ],
+      "k_change_derived": {
+        "derived": true,
+        "text": "§5 PRUNE states only \"Δstate per deletions\" and never writes ΔK; ΔK = −1 per pruned episode follows from the op deleting one episode together with κ being charged per episode (§4)."
+      }
+    },
+    {
+      "op": "PRUNE-episode",
+      "case": "prune_episode_terminal",
+      "case_description": "The outermost episode on one side is pruned (len at floor AND micro-render confirms).",
+      "preconditions": [
+        "episode: len at floor AND micro-render confirms",
+        "\"Len at floor\" predicates are replaced by len ≤ floor + δ_tol (preregistered tolerance) (header v8.2 item (1))"
+      ],
+      "precondition_gaps": {
+        "spec_silent": true,
+        "note": "Executable definition of micro-render confirmation is delegated to an op table not present in this document (header v8.2 item (7))."
+      },
+      "k_change": -1,
+      "latch_effect": {
+        "rule": "Governed by the §1 general delete rule: an op that deletes the outermost episode on a side DISCARDS that side's latch; the surviving side keeps its latch. §1 lists only INTERIOR prune among the latch-preserving interior ops.",
+        "pattern_map": {
+          "prune_at_post_side": {
+            "(0,1)": "(0,0)",
+            "(1,1)": "(1,0)",
+            "(0,0)": "(0,0)",
+            "(1,0)": "(1,0)"
+          },
+          "prune_at_pre_side": {
+            "(1,0)": "(0,0)",
+            "(1,1)": "(0,1)",
+            "(0,0)": "(0,0)",
+            "(0,1)": "(0,1)"
+          }
+        },
+        "n_lat_change": "−1 if the pruned side was latched, else 0",
+        "rule_quote": "an op that deletes the outermost episode on a side DISCARDS that side's latch (the new outer slack enters as an unlatched coordinate via the inverse map)",
+        "rule_quote_section": "§1 LATCH INHERITANCE",
+        "attribution_note": {
+          "spec_silent": true,
+          "note": "§5's PRUNE entry does not itself mention latches; the mapping above is the §1 general delete rule applied to PRUNE, which §1's ALL-OPS clause makes governing, but no PRUNE-specific latch sentence exists."
+        },
+        "domain": "K_f ≥ 2 — the pattern_map presupposes a surviving episode. At K_f = 1 the child has no latch bits at all (see child_state_write.k_equals_one_row)."
+      },
+      "child_state_write": {
+        "rule": "via the §1 inverse map (ALL OPS rev 4)",
+        "child_dim_formula": "2K′ + 1 − n_lat′ = 2(K_f−1) + 1 − n_lat′",
+        "child_dim_delta_vs_parent": "−1 if the pruned side was latched (a new unlatched outer slack coordinate appears), else −2",
+        "omega_free_child": {
+          "derived": true,
+          "text": "Ω_free′ = Ω_free + floor_len + floor_gap (K_f ≥ 2; Ω_free depends on K only)"
+        },
+        "targets": {
+          "spec_silent": true,
+          "note": "Allocation of the freed span into the (new or existing) outer slack is not written out."
+        },
+        "k_equals_one_subcase": {
+          "derived": true,
+          "text": "if K_f = 1 the child is the K=0 empty program (no latch bits, no vector a; prune-pending), which is also the PRUNE-family precondition \"episodeless\""
+        },
+        "domain": "K_f ≥ 2 — child_dim_formula, child_dim_delta_vs_parent and omega_free_child hold only while a child episode survives.",
+        "k_equals_one_row": {
+          "parent_K": 1,
+          "child_K": 0,
+          "child_latch_bits": "none",
+          "child_dim_a": 0,
+          "child_state": "the §1 empty program: renders nothing; prune-pending",
+          "quote": "K_f = 0: defined state (empty program) — no latch bits, no vector a; renders nothing; prune-pending (unchanged from v8.2).",
+          "quote_section": "§1",
+          "route_note": "At K_f = 1 the pruned episode is the only one, so the child is the empty program — which is itself the PRUNE-family precondition \"episodeless\"."
+        }
+      },
+      "parameter_init": {
+        "spec_silent": true,
+        "note": "No re-initialization of surviving episodes is stated for PRUNE.",
+        "delegation_quote": "Rendering, pose/motion, gauge, pruning, caps: as [[operations/elgs-method]].",
+        "delegation_quote_section": "§1 (closing sentence)",
+        "delegation_note": "The silence is a DELEGATION to the prose method page, not freedom: §1 routes rendering, pose/motion, gauge, pruning and caps out of the formal spec. A test oracle must not invent an initializer here."
+      },
+      "evidence_ownership": {
+        "spec_silent": true,
+        "note": "PRUNE does not appear in the bind-inheritance list (header v8.2 item (2)).",
+        "derived_reading": {
+          "derived": true,
+          "text": "bind is a cluster→FAMILY map (\"U(f) := bind⁻¹(f)\", header v8.2 item (2)), so a purely episode-level op inside one family cannot change any binding: U(f) is unchanged and only S(P_f, W) moves. The spec_silent marker is retained because no sentence in the file states this for this op."
+        }
+      },
+      "delta_state": {
+        "formula": "Δstate per deletions",
+        "expansion": {
+          "derived": true,
+          "text": "Removes κ for the deleted episode, its ψ_dur term, and the ψ_gap term of the single removed adjacency (terminal deletions remove one adjacency, header v8.2 item (4)) (K_f ≥ 2; at K_f = 1 there is no adjacency to remove and the child is the K=0 empty program)."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none",
+        "verbatim": "ledger untouched"
+      },
+      "moment_reset": {
+        "value": true,
+        "what_resets": "the family's simplex-logit moment state"
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 PRUNE",
+          "quote": "PRUNE (episode: len at floor AND micro-render confirms; family: episodeless or lifetime-unsupported): Δstate per deletions; ledger untouched."
+        },
+        {
+          "section": "§1 LATCH INHERITANCE",
+          "quote": "an op that deletes the outermost episode on a side DISCARDS that side's latch (the new outer slack enters as an unlatched coordinate via the inverse map)"
+        },
+        {
+          "section": "§5 ALL OPS (rev 4)",
+          "quote": "latch inheritance, exact-boundary handling, target admissibility, and moment resets are governed by §1 alone"
+        }
+      ],
+      "k_change_derived": {
+        "derived": true,
+        "text": "§5 PRUNE states only \"Δstate per deletions\" and never writes ΔK; ΔK = −1 per pruned episode follows from the op deleting one episode together with κ being charged per episode (§4)."
+      }
+    },
+    {
+      "op": "PRUNE-family",
+      "case": "prune_family",
+      "case_description": "The whole family is pruned because it is episodeless (K_f = 0) or lifetime-unsupported.",
+      "preconditions": [
+        "family: episodeless or lifetime-unsupported",
+        "K_f = 0 is the defined empty program and is prune-pending (§1)"
+      ],
+      "precondition_gaps": {
+        "spec_silent": true,
+        "note": "The executable definition of \"lifetime-unsupported\" is delegated to the op table (header v8.2 item (7): \"lifetime-support given executable definitions in the op table\"), which is not present in this document."
+      },
+      "k_change": null,
+      "k_change_note": "The family is removed entirely; there is no child K. If the family still holds episodes, all K_f of them are deleted.",
+      "latch_effect": {
+        "rule": "n/a — the family is removed; K=0 states carry no latch bits in the first place.",
+        "pattern_map": {
+          "(0,0)": "removed",
+          "(1,0)": "removed",
+          "(0,1)": "removed",
+          "(1,1)": "removed"
+        },
+        "quote": "K_f = 0: defined state (empty program) — no latch bits, no vector a; renders nothing; prune-pending (unchanged from v8.2).",
+        "quote_section": "§1"
+      },
+      "child_state_write": {
+        "rule": "none — no surviving family state, so the §1 inverse map does not apply",
+        "child_dim_formula": "n/a"
+      },
+      "parameter_init": {
+        "applies": false,
+        "note": "the family and all its parameters are removed"
+      },
+      "evidence_ownership": {
+        "spec_silent": true,
+        "note": "The file does not state what happens to clusters bound to a pruned family (bind(u) targets a removed ID); the bind-inheritance list does not cover PRUNE."
+      },
+      "delta_state": {
+        "formula": "Δstate per deletions",
+        "expansion": {
+          "derived": true,
+          "text": "By §4 the family's state terms are removed: −κ·K_f − Σ_k ψ_dur(len_k) − Σ_{k<K_f} ψ_gap(gap_k), plus the family's contributions to L_render and to β·Σ_W Φ_{f,W}."
+        }
+      },
+      "delta_ledger": {
+        "chi": "none",
+        "mu": "none",
+        "verbatim": "ledger untouched",
+        "note": "χ and μ already accrued in C(H) are never refunded (§4)."
+      },
+      "moment_reset": {
+        "value": false,
+        "what_resets": "nothing survives — the family and its optimizer state are removed",
+        "spec_silent": true,
+        "note": "§1's moment-reset rule is written for ops that rewrite a; the file states no moment behaviour for PRUNE-family."
+      },
+      "spec_quotes": [
+        {
+          "section": "§5 PRUNE",
+          "quote": "PRUNE (episode: len at floor AND micro-render confirms; family: episodeless or lifetime-unsupported): Δstate per deletions; ledger untouched."
+        },
+        {
+          "section": "§1",
+          "quote": "K_f = 0: defined state (empty program) — no latch bits, no vector a; renders nothing; prune-pending (unchanged from v8.2)."
+        },
+        {
+          "section": "header v8.2 item (7)",
+          "quote": "dual-cap predicates, micro-render confirmation, and lifetime-support given executable definitions in the op table"
+        }
+      ]
+    }
+  ]
+}

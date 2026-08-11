@@ -343,22 +343,38 @@ def birth_interval_state(
     )
 
 
+_DTYPE_NAMES = {torch.float32: "float32", torch.float64: "float64"}
+_DTYPES_BY_NAME = {name: dt for dt, name in _DTYPE_NAMES.items()}
+
+
 def serialize_state(state: IntervalState) -> dict:
-    """Canonical serialization: (K, latch_pre, latch_post, a)."""
+    """Canonical serialization: (K, latch_pre, latch_post, a).
+
+    The dtype is persisted so a round-trip is bit-exact: python floats
+    are doubles, so float32 AND float64 logits survive serialization
+    losslessly as long as the loader restores the original dtype.
+    """
     if state.K == 0:
         return {"schema_version": INTERVAL_STATE_SCHEMA, "K": 0}
     assert state.a is not None
+    if state.a.dtype not in _DTYPE_NAMES:
+        raise ContractError(f"unsupported interval dtype {state.a.dtype}")
     return {
         "schema_version": INTERVAL_STATE_SCHEMA,
         "K": state.K,
         "latch_pre": bool(state.latch_pre),
         "latch_post": bool(state.latch_post),
         "a": [float(v) for v in state.a.tolist()],
+        "dtype": _DTYPE_NAMES[state.a.dtype],
     }
 
 
-def deserialize_state(payload: dict, *, dtype: torch.dtype = torch.float32) -> IntervalState:
-    """Loader with the MANDATORY dimension and validity checks."""
+def deserialize_state(payload: dict, *, dtype: torch.dtype | None = None) -> IntervalState:
+    """Loader with the MANDATORY dimension and validity checks.
+
+    dtype=None restores the persisted dtype (bit-exact round trip);
+    passing a dtype overrides it explicitly.
+    """
     if not isinstance(payload, dict):
         raise SchemaError("interval-state payload must be a dict")
     if payload.get("schema_version") != INTERVAL_STATE_SCHEMA:
@@ -384,6 +400,11 @@ def deserialize_state(payload: dict, *, dtype: torch.dtype = torch.float32) -> I
         isinstance(v, (int, float)) and not isinstance(v, bool) for v in raw
     ):
         raise SchemaError("interval vector a must be a list of numbers")
+    if dtype is None:
+        name = payload.get("dtype", "float32")
+        if name not in _DTYPES_BY_NAME:
+            raise SchemaError(f"unsupported interval dtype {name!r}")
+        dtype = _DTYPES_BY_NAME[name]
     a = torch.tensor([float(v) for v in raw], dtype=dtype)
     # IntervalState.__post_init__ enforces dim(a) = 2K+1-n_lat.
     return IntervalState(K=K, latch_pre=latch_pre, latch_post=latch_post, a=a)
