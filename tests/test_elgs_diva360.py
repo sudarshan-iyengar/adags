@@ -762,5 +762,104 @@ class PointCloudSynthesisTests(unittest.TestCase):
             self.assertEqual(lines[-1].count(" "), 8)  # x y z nx ny nz r g b
 
 
+# ---------------------------------------------------------------------------
+# Real-schema convention: shipped file_path INCLUDES the extension
+# (measured on Apollo unlock 2026-08-11, det task 85424662:
+# "undist/cam01/00000000.png") while the ADAGS reader contract requires
+# extension-LESS converted output. These tests pin the normalization fix.
+# ---------------------------------------------------------------------------
+
+
+def _append_extension_to_transforms(sequence_dir: Path, extension: str = ".png") -> None:
+    for name in ("transforms_train.json", "transforms_test.json"):
+        path = sequence_dir / name
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        for frame in payload["frames"]:
+            frame["file_path"] = frame["file_path"] + extension
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+class RealSchemaHelperTests(unittest.TestCase):
+    def test_normalize_strips_extension_and_passes_canonical(self):
+        self.assertEqual(
+            schema.normalize_source_file_path("undist/cam01/00000000.png"),
+            "undist/cam01/00000000",
+        )
+        self.assertEqual(
+            schema.normalize_source_file_path("undist/cam01/00000000"),
+            "undist/cam01/00000000",
+        )
+
+    def test_frame_relative_path_identical_for_both_conventions(self):
+        self.assertEqual(
+            schema.frame_relative_path("undist/cam01/00000000.png"),
+            schema.frame_relative_path("undist/cam01/00000000"),
+        )
+        self.assertEqual(
+            schema.frame_relative_path("undist/cam01/00000000.png"),
+            "undist/cam01/00000000.png",
+        )
+
+    def test_parse_frame_index_both_conventions(self):
+        self.assertEqual(schema.parse_frame_index("undist/cam01/00000123.png"), 123)
+        self.assertEqual(schema.parse_frame_index("undist/cam01/00000123"), 123)
+
+    def test_camera_path_template_both_conventions(self):
+        self.assertEqual(
+            schema.camera_path_template("undist/cam01/00000000.png"), ("undist", "cam01", 8)
+        )
+        self.assertEqual(
+            schema.camera_path_template("undist/cam01/00000000"), ("undist", "cam01", 8)
+        )
+
+    def test_stamp_frame_time_emits_extension_less_output(self):
+        frame = _make_frame(1)
+        frame["file_path"] = frame["file_path"] + ".png"
+        stamped = schema.stamp_frame_time(frame, fps=FPS)
+        self.assertEqual(stamped["file_path"], _make_frame(1)["file_path"])
+        self.assertAlmostEqual(stamped["time"], FRAME_INDEX / FPS)
+
+
+class RealSchemaSingleInstantTests(Diva360FixtureCase):
+    def setUp(self) -> None:
+        super().setUp()
+        _append_extension_to_transforms(self.sequence_dir)
+
+    def test_discovery_and_conversion_with_extension_included_source(self):
+        plan, payloads = self.build_plan()
+        self.assertEqual(plan.archive_selection["train"].archive_path, "frames_1.tar.gz")
+        result = converter.execute_plan(plan, payloads)
+        train_payload = json.loads(Path(result["transforms"]["train"]).read_text(encoding="utf-8"))
+        for frame in train_payload["frames"]:
+            self.assertFalse(
+                frame["file_path"].endswith(".png"),
+                msg=f"converted output must be extension-less: {frame['file_path']!r}",
+            )
+        for cid in TRAIN_CAMERA_IDS:
+            relocated = self.output_dir / "undist" / f"cam{cid:02d}" / f"{FRAME_INDEX:08d}.png"
+            self.assertTrue(relocated.is_file(), relocated)
+
+
+class RealSchemaWindowTests(WindowFixtureCase):
+    def setUp(self) -> None:
+        super().setUp()
+        _append_extension_to_transforms(self.sequence_dir)
+
+    def test_window_mode_with_extension_included_source(self):
+        plan, payloads = self.build_window_plan()
+        result = converter.execute_plan(plan, payloads)
+        train_payload = json.loads(Path(result["transforms"]["train"]).read_text(encoding="utf-8"))
+        emitted = {frame["file_path"] for frame in train_payload["frames"]}
+        for cid in TRAIN_CAMERA_IDS:
+            for idx in WINDOW_INDICES:
+                self.assertIn(f"undist/cam{cid:02d}/{idx:08d}", emitted)
+        for frame in train_payload["frames"]:
+            self.assertFalse(frame["file_path"].endswith(".png"))
+        for cid in TRAIN_CAMERA_IDS:
+            for idx in WINDOW_INDICES:
+                mask = self.output_dir / "masks" / f"cam{cid:02d}" / f"{idx:08d}.png"
+                self.assertTrue(mask.is_file(), mask)
+
+
 if __name__ == "__main__":
     unittest.main()

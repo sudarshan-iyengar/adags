@@ -117,11 +117,16 @@ def split_filename(split: str) -> str:
     return _SPLIT_FILENAMES[split]
 
 
-def frame_relative_path(file_path: str, extension: str = DEFAULT_EXTENSION) -> str:
-    """The on-disk relative path a frame entry resolves to.
+def normalize_source_file_path(file_path: str, extension: str = DEFAULT_EXTENSION) -> str:
+    """Normalize a frame ``file_path`` to the extension-LESS canonical form.
 
-    Reader contract (``scene/dataset_readers.py::readCamerasFromTransforms``,
-    line ~387): ``os.path.join(path, frame["file_path"] + extension)``.
+    Real DiVa-360 transforms ship ``file_path`` WITH the image extension
+    (``"undist/cam01/00000000.png"`` -- measured on Apollo ``unlock``,
+    2026-08-11, det task 85424662), while the ADAGS Blender reader contract
+    appends the extension at read time and therefore requires an
+    extension-less ``file_path`` in CONVERTED output. A path already in
+    canonical form passes through unchanged, so every consumer of a frame
+    entry (shipped or converted) can normalize unconditionally.
     """
 
     if not isinstance(file_path, str) or not file_path:
@@ -130,7 +135,21 @@ def frame_relative_path(file_path: str, extension: str = DEFAULT_EXTENSION) -> s
         raise SchemaError(f"frame file_path must use POSIX separators: {file_path!r}")
     if file_path.startswith("/") or ".." in file_path.split("/"):
         raise SchemaError(f"frame file_path must be a safe relative path: {file_path!r}")
-    return file_path + extension
+    if extension and file_path.endswith(extension):
+        return file_path[: -len(extension)]
+    return file_path
+
+
+def frame_relative_path(file_path: str, extension: str = DEFAULT_EXTENSION) -> str:
+    """The on-disk relative path a frame entry resolves to.
+
+    Reader contract (``scene/dataset_readers.py::readCamerasFromTransforms``,
+    line ~387): ``os.path.join(path, frame["file_path"] + extension)``.
+    Tolerates both shipped (extension-included) and canonical
+    (extension-less) forms via ``normalize_source_file_path``.
+    """
+
+    return normalize_source_file_path(file_path, extension) + extension
 
 
 def split_top_level_dir(relative_path: str) -> tuple[str, str]:
@@ -153,9 +172,15 @@ def parse_camera_id(text: str) -> int:
     return int(match.group(1))
 
 
-def parse_frame_index(file_path: str) -> int:
-    """Extract the embedded DiVa-360 frame index from a ``file_path`` stem."""
+def parse_frame_index(file_path: str, extension: str = DEFAULT_EXTENSION) -> int:
+    """Extract the embedded DiVa-360 frame index from a ``file_path`` stem.
 
+    Tolerates shipped (extension-included) paths -- see
+    ``normalize_source_file_path``.
+    """
+
+    if extension and file_path.endswith(extension):
+        file_path = file_path[: -len(extension)]
     stem = file_path.rsplit("/", 1)[-1]
     match = _FRAME_INDEX_RE.search(stem)
     if match is None:
@@ -214,7 +239,9 @@ def window_indices(start: int, end: int, stride: int = 1) -> tuple[int, ...]:
     return tuple(range(start, end + 1, stride))
 
 
-def camera_path_template(file_path: str) -> tuple[str, str, int]:
+def camera_path_template(
+    file_path: str, extension: str = DEFAULT_EXTENSION
+) -> tuple[str, str, int]:
     """Derive ``(top_dir, camera_dir, frame_index_width)`` from one shipped
     single-instant ``file_path``, e.g. ``"undist/cam01/00001000"`` ->
     ``("undist", "cam01", 8)``.
@@ -222,9 +249,11 @@ def camera_path_template(file_path: str) -> tuple[str, str, int]:
     Used by ``--window`` mode to generate per-index frame/mask paths
     without assuming a fixed camera-id or frame-index zero-pad width --
     both are read back from the rig's own shipped calibration frame.
+    Tolerates shipped (extension-included) paths -- see
+    ``normalize_source_file_path``.
     """
 
-    top_dir, rest = split_top_level_dir(file_path)
+    top_dir, rest = split_top_level_dir(normalize_source_file_path(file_path, extension))
     if "/" not in rest:
         raise SchemaError(f"expected 'camera_dir/frame_stem' in file_path: {file_path!r}")
     camera_dir, index_stem = rest.rsplit("/", 1)
@@ -343,8 +372,12 @@ def stamp_frame_time(
     """
 
     validated = validate_frame_entry(frame, index=index, extension=extension, allow_time=False)
-    frame_index = parse_frame_index(validated["file_path"])
+    frame_index = parse_frame_index(validated["file_path"], extension)
     stamped = dict(validated)
+    # Output contract: the ADAGS reader appends the extension at read time,
+    # so converted output must carry the extension-LESS canonical form even
+    # when the shipped source path included the extension (real DiVa-360).
+    stamped["file_path"] = normalize_source_file_path(validated["file_path"], extension)
     stamped["time"] = frame_index_to_time(frame_index, fps)
     return stamped
 
