@@ -259,6 +259,24 @@ class BindingTable:
     def mutation_log(self) -> tuple[dict, ...]:
         return tuple(self._mutation_log)
 
+    # -- serialization (composed by elgs.state_io) ------------------------
+
+    def to_state(self) -> dict:
+        return {
+            "binding": {str(c): f for c, f in sorted(self._binding.items())},
+            "frozen": self._frozen,
+            "mutation_log": list(self._mutation_log),
+        }
+
+    @classmethod
+    def from_state(cls, payload: dict) -> "BindingTable":
+        table = cls()
+        for cluster_str, family in payload["binding"].items():
+            table._binding[int(cluster_str)] = None if family is None else int(family)
+        table._frozen = bool(payload["frozen"])
+        table._mutation_log = [dict(e) for e in payload.get("mutation_log", [])]
+        return table
+
 
 __all__ = [
     "BindingTable",

@@ -192,5 +192,57 @@ class FamilyRegistry:
     def pin_log(self) -> tuple[dict, ...]:
         return tuple(self._pin_log)
 
+    # -- serialization (composed by elgs.state_io) ------------------------
+
+    def to_state(self) -> dict:
+        from .intervals import serialize_state
+
+        return {
+            "next_family_id": self._next_family_id,
+            "records": [
+                {
+                    "family_id": r.family_id,
+                    "birth_time": r.birth_time,
+                    "birth_site": list(r.birth_site),
+                    "lineage_key": r.lineage_key,
+                    "interval": serialize_state(r.interval),
+                    "tau": list(r.tau),
+                    "retired": r.retired,
+                    "rows": self._row_counts[r.family_id],
+                }
+                for _, r in sorted(self._records.items())
+            ],
+            "pin_log": list(self._pin_log),
+        }
+
+    @classmethod
+    def from_state(cls, payload: dict) -> "FamilyRegistry":
+        from .intervals import deserialize_state
+
+        registry = cls()
+        for entry in payload["records"]:
+            record = FamilyRecord(
+                family_id=int(entry["family_id"]),
+                birth_time=float(entry["birth_time"]),
+                birth_site=tuple(float(v) for v in entry["birth_site"]),
+                lineage_key=str(entry["lineage_key"]),
+                interval=deserialize_state(entry["interval"]),
+                tau=tuple(float(v) for v in entry["tau"]),
+                retired=bool(entry["retired"]),
+            )
+            if record.family_id in registry._records:
+                raise ContractError(f"duplicate family_id {record.family_id} in state")
+            registry._records[record.family_id] = record
+            registry._row_counts[record.family_id] = int(entry["rows"])
+        watermark = int(payload["next_family_id"])
+        if registry._records and watermark <= max(registry._records):
+            raise ContractError(
+                "family-id watermark below an existing id: retired ids "
+                "would be reused"
+            )
+        registry._next_family_id = watermark
+        registry._pin_log = [dict(e) for e in payload.get("pin_log", [])]
+        return registry
+
 
 __all__ = ["FamilyRecord", "FamilyRegistry"]
