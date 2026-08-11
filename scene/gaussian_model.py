@@ -236,6 +236,20 @@ class GaussianModel:
             self._elgs_family_ids, float(timestamp), overrides=override
         ).to(self._opacity.device, self._opacity.dtype)
 
+    def _optimizer_state_for_capture(self):
+        """The optimizer state to checkpoint. Under EL-GS the elgs_a
+        group is stripped: on restore the base-group optimizer exists
+        BEFORE setup_elgs re-adds the group, so a persisted extra
+        group can never load (the S2 resume smoke caught this). The
+        a-logit values persist in elgs_state; their moments reset on
+        restore (disclosed, mirrored into moment_reset_log)."""
+        state = self.optimizer.state_dict()
+        if getattr(self, "elgs_runtime", None) is None:
+            return state
+        from elgs.state_io import strip_optimizer_group
+
+        return strip_optimizer_group(state)
+
     def _capture_elgs_state(self):
         """Build the schema-versioned elgs_state for capture(), or None."""
         if self.elgs_runtime is None or self._elgs_checkpoint_extras is None:
@@ -332,7 +346,7 @@ class GaussianModel:
                 self.xyz_gradient_accum,
                 self.t_gradient_accum,
                 self.denom,
-                self.optimizer.state_dict(),
+                self._optimizer_state_for_capture(),
                 self.spatial_lr_scale,
                 self._t,
                 self._scaling_t,

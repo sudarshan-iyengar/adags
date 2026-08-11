@@ -111,4 +111,34 @@ def load_elgs_state(payload: dict) -> dict:
     }
 
 
-__all__ = ["ELGS_STATE_SCHEMA", "build_elgs_state", "load_elgs_state"]
+def strip_optimizer_group(state_dict: dict, *, name: str = "elgs_a") -> dict:
+    """Remove one named param group (and its per-param state) from an
+    optimizer state_dict copy.
+
+    The a-logit group is NOT persisted inside the model's optimizer
+    state: on restore, training_setup builds the base-group optimizer
+    BEFORE setup_elgs exists to re-add the group, so a checkpoint
+    carrying the extra group can never load (the S2 resume smoke
+    caught exactly this ValueError). The a-logit VALUES persist
+    exactly in elgs_state; their Adam moments reset on restore —
+    disclosed and mirrored into moment_reset_log by setup.
+    """
+    groups = list(state_dict.get("param_groups", []))
+    kept_groups = [g for g in groups if g.get("name") != name]
+    if len(kept_groups) == len(groups):
+        return state_dict
+    kept_ids = {pid for g in kept_groups for pid in g.get("params", [])}
+    return {
+        "state": {
+            k: v for k, v in state_dict.get("state", {}).items() if k in kept_ids
+        },
+        "param_groups": kept_groups,
+    }
+
+
+__all__ = [
+    "ELGS_STATE_SCHEMA",
+    "build_elgs_state",
+    "load_elgs_state",
+    "strip_optimizer_group",
+]

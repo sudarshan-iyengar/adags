@@ -207,5 +207,38 @@ class ElgsStateTests(unittest.TestCase):
         self.assertEqual(_state()["schema_version"], ELGS_STATE_SCHEMA)
 
 
+class OptimizerGroupStripTests(unittest.TestCase):
+    """S2 regression: a checkpointed optimizer state carrying the
+    elgs_a group can never load into the base-group optimizer that
+    exists at restore time — capture strips it."""
+
+    def _state_dict(self):
+        return {
+            "state": {0: {"exp_avg": [1]}, 1: {"exp_avg": [2]}, 2: {"exp_avg": [3]}},
+            "param_groups": [
+                {"name": "xyz", "params": [0]},
+                {"name": "opacity", "params": [1]},
+                {"name": "elgs_a", "params": [2]},
+            ],
+        }
+
+    def test_strips_group_and_its_state(self):
+        from elgs.state_io import strip_optimizer_group
+
+        stripped = strip_optimizer_group(self._state_dict())
+        names = [g["name"] for g in stripped["param_groups"]]
+        self.assertEqual(names, ["xyz", "opacity"])
+        self.assertEqual(sorted(stripped["state"]), [0, 1])
+
+    def test_noop_without_the_group(self):
+        from elgs.state_io import strip_optimizer_group
+
+        base = {
+            "state": {0: {}},
+            "param_groups": [{"name": "xyz", "params": [0]}],
+        }
+        self.assertIs(strip_optimizer_group(base), base)
+
+
 if __name__ == "__main__":
     unittest.main()

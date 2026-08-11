@@ -327,6 +327,13 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         seed_families(state, gaussians, iteration=0)
     else:
         _refresh_logit_param_group(state, gaussians)
+        # The captured optimizer state strips the elgs_a group (see
+        # elgs.state_io.strip_optimizer_group), so restored a-logits
+        # start with fresh Adam moments — disclosed and logged.
+        gaussians._elgs_checkpoint_extras["moment_reset_log"].append(
+            {"iteration": 0, "op": "restore",
+             "tensors_reset": len(state.runtime.logit_parameters())}
+        )
     _refresh_routing_pins(state, gaussians)
     print(json.dumps({"elgs_setup": {
         "schedule": schedule_key,
