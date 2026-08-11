@@ -54,10 +54,24 @@ reader changes expected, as planned.
 - `segmented_gt.tar.gz`: per-camera mask PNGs
   (`segmented_gt/camNN/NNNNNNNN.png`) — the fg/bg masks the
   model-free census statistics consume.
-- Per-sequence structural variation: battery ships `image.tar` +
-  `frames_1.tar.gz`; unlock has NO `image.tar` — the converter must
-  discover each sequence's frame tarball(s) rather than assume one
-  name.
+- Per-sequence structural variation: tarball names/compression vary
+  (battery `image.tar`+`segmented_ngp.tar.gz`; pour_salt
+  `image.tar.gz`+`segmented_ngp.tar`) — the landed converter
+  discovers frame archives by CONTENT, never by name.
+- TEMPORAL WIRING measured (unlock): the shipped transforms are
+  single-instant snapshots, but `frames_1.tar.gz` holds the full
+  undistorted video (12,751 PNGs; ~312/camera over ~41 cameras) and
+  `segmented_ngp.tar.gz` holds 16,483 PER-FRAME masks
+  (`segmented_ngp/camNN/00000000.png…`, all cameras incl. test/val).
+  INPUT MAPPING for the frozen census statistics: "fg/bg masks" =
+  segmented_ngp (per-frame); segmented_gt (6 files) is the sparse
+  ground-truth reference for auditing those masks. The gate's
+  eligibility definitions stand exactly as frozen — no amendment.
+- Required converter extension (owner decision D-M1-1): a --window
+  mode crossing the STATIC rig calibration with frame indices
+  (time = index/120 fps) to emit genuine temporal transforms for
+  M1-B and the tracker; the landed single-instant mode remains for
+  quick smokes.
 - Converter scope confirmed: map DiVa transforms/intrinsics into the
   ADAGS Blender-reader convention, un-tar frames to the referenced
   `undist/` layout, verify by reprojection; no `scene/` reader
