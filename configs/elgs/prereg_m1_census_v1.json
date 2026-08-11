@@ -1,35 +1,77 @@
 {
   "schema_version": "elgs-prereg-m1-census-v1",
+  "revision": 2,
   "authority": "implementation plan sections 7.2 item 6 and 11.2; experiment plan B1 with the recorded supersessions (wiki deviations 1-3)",
-  "status_note": "FROZEN structure and floors; the dev-sequence names are filled by the paper-table selection rule below BEFORE any DiVa-360 data is inspected, then this file is committed again and hash-recorded in every census manifest",
+  "status_note": "FROZEN structure and floors; revision 2 repairs the four blocking definitional findings of the 2026-08-11 fresh-context floor review (see amendment_2026_08_11_floor_review) BEFORE any DiVa-360 census statistic was computed; hash-recorded in every census manifest",
+  "amendment_2026_08_11_floor_review": {
+    "trigger": "the preregistered fresh-context reviewer sign-off (plan 7.2 item 6) returned REJECTED (pre-data, repairable): floors 36/36/36 and sensitivity rows 47/55 independently recomputed and verified correct, but four blocking definitional gaps made the gate non-mechanical",
+    "integrity_statement": "all repairs below derive from frozen-text review findings, not from any DiVa-360 measurement; at amendment time no census statistic had been computed on DiVa-360 data (only structural schema probes -- file counts, layouts, camera lists -- recorded openly in the M1 census record); floors are UNCHANGED",
+    "repairs": [
+      "finding 1: r_site frozen as a calibration-only derivation rule (see r_site_census)",
+      "finding 4: component/identity association, position derivation, duration binding, frustum rule, and flicker handling frozen (see association_rules)",
+      "finding 5: track_coverage_upper_bound statistic defined; its 0.5 floor recorded as an evidence-adequacy criterion, NOT power-derived (divergence from the plan's literal 'derived from the power analysis' clause disclosed here)",
+      "finding 6: M1-A set gated:false, conforming to plan 11.2's 'floors apply to the model-free statistics (M1-A0) ONLY'; the coverage floor is bound to M1-A0's track_coverage_upper_bound"
+    ],
+    "re_review": "a fresh-context re-review of the amended text is required and must SIGN before any DiVa-360 census statistic is computed"
+  },
   "cells": {
     "M1-A0": {"kind": "model-free opportunity screen", "compute": "CPU", "gated": true, "statistics": ["occlusion_opportunity_upper_bound", "true_absence_candidate_count", "same_object_return_count", "track_coverage_upper_bound"], "inputs": "shipped fg/bg masks + 53-camera calibration + frozen tracks ONLY (no trained model anywhere)"},
     "M1-A0b": {"kind": "audited true absence", "compute": "CPU", "gated": false, "diagnostic_only": true, "claim_limitation": "M1 cannot support a claim-grade estimate of true-event absence or false-positive prevalence; recorded on the result page"},
-    "M1-A": {"kind": "track-coverage census", "compute": "CPU/1-GPU short", "gated": true, "statistics": ["bound_fraction_of_dynamic_content", "coverage_by_camera_count_strata"]},
+    "M1-A": {"kind": "track-coverage census", "compute": "CPU/1-GPU short", "gated": false, "statistics": ["bound_fraction_of_dynamic_content", "coverage_by_camera_count_strata"], "note": "diagnostic; revision 2 corrected gated:true to gated:false per plan 11.2 (floors apply to M1-A0 ONLY)"},
     "M1-B": {"kind": "substrate trainability smoke", "compute": "GPU", "gated": false, "conditional_on": "M1-A0 pass"},
     "M1-C": {"kind": "model-conditioned opportunity diagnostic", "compute": "GPU", "gated": false, "note": "q-tilde distributions under M1-B snapshots; secondary diagnostic only, never gated"},
     "M1-D": {"kind": "shift/shuffle sanity", "compute": "CPU", "gated": false}
   },
   "submission_sequence": ["M1-A0", "M1-A0b", "M1-A", "M1-B", "M1-C", "M1-D"],
   "floors": {
-    "derivation": "two-proportion power analysis performed at M0 (prereg_metrics_v1.json power_analysis): detecting an arm difference of 0.5 vs 0.8 in per-event operation success at alpha=0.05 two-sided with power 0.8 needs n = 35.76 => 36 events per class per arm; the census floor is therefore 36 model-free opportunities per gated class over the dev subset",
+    "derivation": "two-proportion power analysis performed at M0 (prereg_metrics_v1.json power_analysis): detecting an arm difference of 0.5 vs 0.8 in per-event operation success at alpha=0.05 two-sided with power 0.8 needs n = 35.76 => 36 events per class per arm; the three EVENT floors below are exactly this 36. track_coverage_min_fraction is NOT power-derived: it is an evidence-adequacy criterion (if a majority of foreground components carry no track evidence, evidence-driven structural selection cannot reach most content) -- recorded as a disclosed divergence from the plan's literal 'floors are derived from the power analysis' clause (revision 2, finding 5)",
     "occlusion_events_min": 36,
     "same_object_returns_min": 36,
     "true_absence_candidates_min": 36,
     "track_coverage_min_fraction": 0.5,
+    "floor_to_statistic": {
+      "occlusion_events_min": "M1-A0.occlusion_opportunity_upper_bound",
+      "same_object_returns_min": "M1-A0.same_object_return_count",
+      "true_absence_candidates_min": "M1-A0.true_absence_candidate_count",
+      "track_coverage_min_fraction": "M1-A0.track_coverage_upper_bound"
+    },
+    "necessary_condition_note": "M1-A0 statistics are model-free candidate-opportunity UPPER BOUNDS on true events; meeting a floor is a necessary condition for adequacy, not evidence that that many true events exist -- to be restated on the M1 result page",
     "sensitivity_rows": {"moderate_effect_0.6_vs_0.85": 47, "small_effect_0.5_vs_0.75": 55},
-    "reviewer_signoff": "a fresh-context reviewer signs these floors BEFORE any DiVa-360 statistic is computed (plan 7.2 item 6)"
+    "reviewer_signoff": "first review 2026-08-11: REJECTED pre-data with floors verified correct (see amendment block); re-review of the amended text required to SIGN before any DiVa-360 statistic is computed (plan 7.2 item 6)"
+  },
+  "r_site_census": {
+    "definition": "r_site for the census same_object_return predicate is frozen as 0.05 * rig_radius, where rig_radius = max Euclidean distance of any training-camera center from the mean training-camera center, computed per sequence from the shipped calibration ONLY",
+    "rationale": "unit-free (DiVa-360 world scale is not documented a priori), deterministic, computable from calibration alone, independent of event content",
+    "tuning_exemption": "this census copy is FROZEN and exempt from the plan 7.1 Category-3 classification of r_site as a development hyperparameter; any later Category-3 tuning of the training-side r_site never touches this value",
+    "status": "frozen (revision 2, finding 1)"
+  },
+  "association_rules": {
+    "mask_binarization": "grayscale value strictly greater than 127 is foreground",
+    "component_definition": "8-connected foreground components; components smaller than 64 pixels are ignored everywhere (mask-noise floor)",
+    "identity_association": "track identity j is associated at (camera c, frame t) with the eligible component that contains j's report pixel rounded to the nearest integer, iff j has an in-domain visible report there (v >= 0.5); no visible report => no association at (c, t)",
+    "object_position": "'triangulated position' = the frozen tracks artifact's consensus point for the identity at the reference frame; 'last triangulated position' = the consensus point at the latest frame at or before the event start where it is defined; identities with no defined consensus point before the event are INELIGIBLE and counted in the census artifact as position_undefined_exclusions",
+    "frustum_containment": "a point is inside a camera's frustum iff it projects with positive camera-frame depth to a pixel inside [0, W-1] x [0, H-1]",
+    "occlusion_duration_binding": "an occlusion event requires >= duration_floor_frames CONSECUTIVE frames on which BOTH hold with ONE FIXED absent camera: (a) the identity is associated with a component in >= min_cameras training cameras, and (b) that same fixed training camera, whose frustum contains the per-frame triangulated position, has no associated component",
+    "min_positive_opportunity_cameras_role": "a true_absence_candidate additionally requires >= 2 training cameras whose frustums contain the last triangulated position at every frame of the candidate window",
+    "flicker_rule": "a re-appearance (mask-presence interruption) shorter than 4 consecutive frames (= duration_floor_frames / 2) does not terminate a candidate window; bridged interruptions are counted per candidate and disclosed in the census artifact",
+    "status": "frozen (revision 2, finding 4)"
   },
   "eligibility_predicate": {
     "true_absence_candidate": {
       "duration_floor_frames": 8,
       "min_positive_opportunity_cameras": 2,
-      "mask_disappearance": "the object's fg-mask component vanishes from ALL cameras whose frustum contains its last triangulated position",
-      "re_appearance_handling": "a candidate ends at re-appearance; re-appearance within the sequence marks a same-object-return candidate",
+      "mask_disappearance": "the object's fg-mask component vanishes from ALL cameras whose frustum contains its last triangulated position (per association_rules)",
+      "re_appearance_handling": "a candidate ends at re-appearance lasting >= 4 consecutive frames (flicker_rule); re-appearance within the sequence marks a same-object-return candidate",
       "status": "frozen"
     },
-    "occlusion_event": {"definition": "fg-mask component present in >= min_cameras but absent in >= 1 camera whose frustum contains the triangulated position for >= duration_floor_frames", "duration_floor_frames": 8, "min_cameras": 2, "status": "frozen"},
-    "same_object_return": {"definition": "a true-absence candidate whose track identity re-appears within r_site of its disappearance position", "status": "frozen"}
+    "occlusion_event": {"definition": "fg-mask component present in >= min_cameras but absent in >= 1 camera whose frustum contains the triangulated position for >= duration_floor_frames (per association_rules occlusion_duration_binding)", "duration_floor_frames": 8, "min_cameras": 2, "status": "frozen"},
+    "same_object_return": {"definition": "a true-absence candidate whose track identity re-appears within r_site_census of its disappearance position (both positions per association_rules object_position)", "status": "frozen"}
+  },
+  "track_coverage_statistic": {
+    "definition": "track_coverage_upper_bound = (number of eligible fg-mask components over training cameras x window frames containing >= 1 in-domain visible report pixel of any track) / (total number of eligible fg-mask components), eligible per association_rules component_definition",
+    "dynamic_content_proxy": "every eligible fg component counts as dynamic content: DiVa-360 fg masks segment the manipulated foreground by dataset construction (model-free proxy, disclosed)",
+    "cell": "M1-A0",
+    "status": "frozen (revision 2, finding 5)"
   },
   "audit_protocol": {
     "sample": "all candidates up to 60 per dev subset, else stratified random 60 (strata: sequence x duration tercile; seed 20260811)",
@@ -38,7 +80,7 @@
     "frames_per_camera": 5,
     "frame_stride": "uniform over the candidate window",
     "verdict": "confirmed only if both audits agree ABSENT; disagreement counts as unconfirmed (conservative)",
-    "estimate": "audited-confirmed count extrapolated by the sampling fraction with the one-sided lower Clopper-Pearson 90% bound",
+    "estimate": "the one-sided lower Clopper-Pearson 90% bound is taken on the confirmed/sampled binomial proportion, then multiplied by the total candidate count (revision 2 clarification)",
     "status": "frozen"
   },
   "scene_selection": {
