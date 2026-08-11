@@ -261,10 +261,45 @@ re-run:
   full-window conversions + tracks for unlock, battery, flip_book
   precede M1-A0.
 
-## Remaining M1 steps (per the plan)
+## Dev-subset preprocessing COMPLETE (2026-08-11/12 night)
 
-1. Full-window conversions + tracker runs for the three dev
-   sequences (unlock w0_310 in progress).
+All three dev sequences converted full-window and tracked; every
+artifact sealed, hash-verified, and ledger-audited:
+
+- unlock w0_310 (exp 10): 88 seeds, 2,100 tracks; mean_v 0.245 over
+  the manipulation (vs 0.98 static prelude); consensus 64.8%
+  defined — the occlusion/absence-rich regime the census measures.
+- flip_book w0_497 (exp 11): 512 seeds (max_seeds cap), 10,914
+  tracks; mean_v 0.584; consensus 98.7% defined; fb median 5.2 px.
+- battery w0_1518 (exp 12 CUDA OOM → `infra_failure` ledgered; code
+  fix `49b5e5e`: deterministic temporal chunking chunk_len 512 /
+  overlap 64 with re-query stitching, disclosed in the artifact
+  identity; ≤512-frame sequences bit-identical to the unchunked
+  path → exp 13 COMPLETED): 512 seeds, 11,844 tracks over 1,519
+  frames; 17.6M positional reports; consensus 82.7% defined; fb
+  median 107.7 px (long-sequence tail → r_min under the frozen r_u
+  mapping; the model-free census consumes reports/consensus/masks,
+  never r_u).
+- Preprocessing GPU-h actual ≈ 0.1 total across all four runs
+  (44 s + ~3 min + ~10 min wall) vs 1.75 projected — recorded for
+  reproducibility only.
+- Evaluator extension `ec284e1`: the gate binds to counts POOLED
+  over the dev subset (prereg wording), so run_census now takes
+  (scene, tracks) pairs, pools counts and coverage, and applies the
+  gate to pooled values with per-sequence traceability retained.
+
+## M1-A0 gate cell SUBMITTED (2026-08-11 22:40 UTC)
+
+Cell `m1_a0_dev_census` = Determined experiment 14, commit
+`ec284e1`, digest-pinned v2 image, hopper; the SIGNED revision-3
+prereg is the named config (hash-recorded in the manifest and
+re-verified in-container); inputs = the three sealed tracks
+artifacts + converted masks + calibration; `--apply-gate`; output
+`runs/elgs/m1_a0_dev_census_r0/census.json`. This is the FIRST
+computation of any DiVa-360 census statistic. A valid failure
+against the floors is the FINAL M1 result (frozen policy).
+
+## Remaining M1 steps (per the plan)
 2. Census cells M1-A0 → A0b → A → B → C/D (≤25 GPU-h ceiling);
    M1-A0 via the wrapper with entrypoint
    `scripts/build_m1_census.py` and the signed prereg as the named
