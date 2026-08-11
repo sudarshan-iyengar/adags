@@ -158,6 +158,76 @@ def _rigid_motion_tracker(scene: builder.SceneBundle, seeds, velocity: np.ndarra
     return motion
 
 
+class ChunkedTrackTests(unittest.TestCase):
+    """Pure chunking logic (experiment 12 CUDA OOM fix), against an exact
+    linear-motion oracle: point p moves +1 px/frame in x, tracked exactly
+    by a fake per-chunk tracker that continues from whatever query it gets."""
+
+    @staticmethod
+    def _exact_linear_tracker(image_paths, queries):
+        # frame index encoded as the path stem; position = x0 + (f - f_q)
+        frames = [int(Path(p).stem) for p in image_paths]
+        xy = np.zeros((len(frames), len(queries), 2))
+        vis = np.ones((len(frames), len(queries)))
+        for column, (t_local, x, y) in enumerate(np.asarray(queries)):
+            f_query = frames[int(round(t_local))]
+            for local, frame in enumerate(frames):
+                xy[local, column] = (x + (frame - f_query), y)
+        return xy, vis
+
+    def _paths(self, n):
+        return [Path(f"{i:08d}.png") for i in range(n)]
+
+    def test_short_sequence_is_single_call_passthrough(self):
+        calls = []
+
+        def spy(paths, queries):
+            calls.append(len(paths))
+            return self._exact_linear_tracker(paths, queries)
+
+        queries = np.array([[0.0, 10.0, 5.0]])
+        xy, vis = builder.chunked_track(spy, self._paths(50), queries, chunk_len=64, overlap=8)
+        self.assertEqual(calls, [50])
+        np.testing.assert_allclose(xy[:, 0, 0], 10.0 + np.arange(50))
+
+    def test_long_sequence_chunks_and_stitches_exactly(self):
+        calls = []
+
+        def spy(paths, queries):
+            calls.append((int(Path(paths[0]).stem), len(paths)))
+            return self._exact_linear_tracker(paths, queries)
+
+        queries = np.array([[0.0, 10.0, 5.0], [0.0, 3.0, 4.0]])
+        n = 150
+        xy, vis = builder.chunked_track(spy, self._paths(n), queries, chunk_len=64, overlap=16)
+        # chunks: [0,64), [48,112), [96,150)
+        self.assertEqual(calls, [(0, 64), (48, 64), (96, 54)])
+        np.testing.assert_allclose(xy[:, 0, 0], 10.0 + np.arange(n))
+        np.testing.assert_allclose(xy[:, 1, 0], 3.0 + np.arange(n))
+        np.testing.assert_allclose(xy[:, 0, 1], 5.0)
+        self.assertTrue((vis == 1.0).all())
+
+    def test_overlap_keeps_earlier_chunk_outputs(self):
+        def biased(paths, queries):
+            xy, vis = self._exact_linear_tracker(paths, queries)
+            # later chunks (starting past frame 0) report a recognizable bias
+            if int(Path(paths[0]).stem) > 0:
+                xy = xy + 1000.0
+            return xy, vis
+
+        queries = np.array([[0.0, 10.0, 5.0]])
+        xy, _ = builder.chunked_track(biased, self._paths(100), queries, chunk_len=64, overlap=16)
+        # frames [48,64) are covered by both chunk 0 and chunk 1: chunk 0 wins
+        self.assertLess(float(xy[63, 0, 0]), 500.0)
+        self.assertGreater(float(xy[64, 0, 0]), 500.0)
+
+    def test_invalid_geometry_rejected(self):
+        with self.assertRaises(ContractError):
+            builder.chunked_track(
+                self._exact_linear_tracker, self._paths(10), np.zeros((1, 3)), chunk_len=8, overlap=8
+            )
+
+
 class SyntheticSceneTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

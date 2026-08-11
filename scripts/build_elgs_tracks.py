@@ -430,12 +430,87 @@ class FakeTracker:
         return np.asarray(xy, dtype=np.float64), np.asarray(vis, dtype=np.float64)
 
 
+def chunked_track(
+    track_fn: Callable[[Sequence[Path], np.ndarray], tuple[np.ndarray, np.ndarray]],
+    image_paths: Sequence[Path],
+    queries: np.ndarray,
+    *,
+    chunk_len: int,
+    overlap: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Deterministic temporal chunking with overlap re-query stitching.
+
+    The offline tracker's memory is O(T); battery's 1,519 frames exceed one
+    H100 (experiment 12 CUDA OOM: 69.7 GiB allocated + 7.27 GiB request)
+    while <= 512 frames fit (flip_book, experiment 11). Sequences with
+    T <= chunk_len take the single-call path UNCHANGED (bit-identical to
+    the unchunked backend); longer sequences are processed in overlapping
+    chunks, each chunk's queries re-anchored at the chunk's first frame
+    using the PREVIOUS chunk's tracked positions at that same global frame
+    (which lies inside the previous chunk's tail, overlap >= 1). Overlapped
+    frames keep the EARLIER chunk's outputs (first-writer wins,
+    deterministic). Disclosed in the backend identity and therefore in the
+    sealed artifact manifest.
+    """
+
+    n_frames, n_queries = len(image_paths), len(queries)
+    if chunk_len <= overlap:
+        raise ContractError("chunk_len must exceed overlap")
+    if n_frames <= chunk_len:
+        return track_fn(image_paths, queries)
+
+    xy = np.zeros((n_frames, n_queries, 2))
+    vis = np.zeros((n_frames, n_queries))
+    written = np.zeros(n_frames, dtype=bool)
+    stride = chunk_len - overlap
+    start = 0
+    previous_queries = np.asarray(queries, dtype=np.float64)
+    while start < n_frames:
+        stop = min(start + chunk_len, n_frames)
+        chunk_paths = image_paths[start:stop]
+        if start == 0:
+            chunk_queries = previous_queries.copy()
+        else:
+            # Re-anchor every query at the chunk's first frame using the
+            # previous chunk's tracked position at that global frame.
+            chunk_queries = np.zeros((n_queries, 3))
+            chunk_queries[:, 1:] = anchor_positions
+            # t_local = 0: all queries anchored at the chunk's first frame.
+        chunk_xy, chunk_vis = track_fn(chunk_paths, chunk_queries)
+        expected = (stop - start, n_queries)
+        if chunk_xy.shape != (*expected, 2) or chunk_vis.shape != expected:
+            raise ContractError(
+                f"chunked track_fn returned shapes {chunk_xy.shape}/{chunk_vis.shape}, "
+                f"expected {(*expected, 2)}/{expected}"
+            )
+        for local in range(stop - start):
+            frame = start + local
+            if not written[frame]:
+                xy[frame] = chunk_xy[local]
+                vis[frame] = chunk_vis[local]
+                written[frame] = True
+        if stop >= n_frames:
+            break
+        next_start = start + stride
+        # The next chunk's first frame lies inside this chunk (overlap >= 1).
+        anchor_positions = chunk_xy[next_start - start].copy()
+        start = next_start
+    return xy, vis
+
+
 class CoTracker3Backend:
     """Offline CoTracker3 (commit-pinned in the apollo-h100-v2 image)."""
 
     name = "cotracker3"
 
-    def __init__(self, weights: Path, device: str = "cuda", window_len: int = 60) -> None:
+    def __init__(
+        self,
+        weights: Path,
+        device: str = "cuda",
+        window_len: int = 60,
+        chunk_len: int = 512,
+        chunk_overlap: int = 64,
+    ) -> None:
         import torch
         from cotracker.predictor import CoTrackerPredictor
 
@@ -443,6 +518,8 @@ class CoTracker3Backend:
         self.weights = Path(weights)
         self.device = device
         self.window_len = window_len
+        self.chunk_len = chunk_len
+        self.chunk_overlap = chunk_overlap
         self.weights_sha256 = sha256_file(self.weights)
         self.predictor = CoTrackerPredictor(
             checkpoint=str(self.weights), v2=False, offline=True, window_len=window_len
@@ -456,6 +533,12 @@ class CoTracker3Backend:
             "weights_path": str(self.weights),
             "weights_sha256": self.weights_sha256,
             "constructor": {"v2": False, "offline": True, "window_len": self.window_len},
+            "temporal_chunking": {
+                "chunk_len": self.chunk_len,
+                "chunk_overlap": self.chunk_overlap,
+                "applies_when": f"T > {self.chunk_len}",
+                "stitching": "overlap re-query at chunk first frame; first-writer-wins overlap outputs",
+            },
             "device": self.device,
         }
 
@@ -469,14 +552,27 @@ class CoTracker3Backend:
         video = self._torch.from_numpy(np.stack(frames)).permute(0, 3, 1, 2)[None]
         return video.to(self.device)
 
-    def track(self, image_paths: Sequence[Path], queries: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _track_single_chunk(
+        self, image_paths: Sequence[Path], queries: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
         video = self._load_video(image_paths)
         query_tensor = self._torch.from_numpy(np.asarray(queries, dtype=np.float32))[None].to(self.device)
         with self._torch.no_grad():
             pred_tracks, pred_visibility = self.predictor(video, queries=query_tensor)
         xy = pred_tracks[0].detach().cpu().numpy().astype(np.float64)
         vis = pred_visibility[0].detach().cpu().numpy().astype(np.float64)
+        del video, query_tensor, pred_tracks, pred_visibility
+        self._torch.cuda.empty_cache()
         return xy, np.clip(vis, 0.0, 1.0)
+
+    def track(self, image_paths: Sequence[Path], queries: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        return chunked_track(
+            self._track_single_chunk,
+            image_paths,
+            queries,
+            chunk_len=self.chunk_len,
+            overlap=self.chunk_overlap,
+        )
 
 
 # ---------------------------------------------------------------------------
