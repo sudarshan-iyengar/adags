@@ -1,6 +1,6 @@
 {
   "schema_version": "elgs-prereg-m1-census-v1",
-  "revision": 2,
+  "revision": 3,
   "authority": "implementation plan sections 7.2 item 6 and 11.2; experiment plan B1 with the recorded supersessions (wiki deviations 1-3)",
   "status_note": "FROZEN structure and floors; revision 2 repairs the four blocking definitional findings of the 2026-08-11 fresh-context floor review (see amendment_2026_08_11_floor_review) BEFORE any DiVa-360 census statistic was computed; hash-recorded in every census manifest",
   "amendment_2026_08_11_floor_review": {
@@ -13,6 +13,18 @@
       "finding 6: M1-A set gated:false, conforming to plan 11.2's 'floors apply to the model-free statistics (M1-A0) ONLY'; the coverage floor is bound to M1-A0's track_coverage_upper_bound"
     ],
     "re_review": "a fresh-context re-review of the amended text is required and must SIGN before any DiVa-360 census statistic is computed"
+  },
+  "amendment_2026_08_11_revision_3": {
+    "trigger": "the revision-2 re-review returned REJECTED (pre-data, narrow): findings 1, 5, 6 repaired completely; one blocking residual on finding 4 (the same_object_return re-appearance position anchor and its undefined-consensus handling were never fixed) plus four one-clause NOTEs",
+    "integrity_statement": "all repairs below are text-derived from the re-review record; no DiVa-360 measurement informed them; at amendment time still no census statistic had been computed; floors unchanged",
+    "repairs": [
+      "blocking residual: return_position frozen in association_rules (deterministic anchor + undefined-consensus tally)",
+      "note: the revision-2 rewrite of audit_protocol.estimate (Clopper-Pearson order of operations) is hereby enumerated as a revision-2 repair that the revision-2 amendment block omitted; it affects only the diagnostic-only M1-A0b cell",
+      "note: flicker_rule scope made explicit (true-absence candidate windows ONLY; occlusion events strictly consecutive, no bridging)",
+      "note: pixel rounding tie convention frozen (round-half-up on both axes)",
+      "note: census window default frozen (full shipped frame range common to all tracking cameras per dev sequence; realized window recorded in the census manifest)"
+    ],
+    "re_review": "a fresh-context review of revision 3, scoped to the amended sentences plus a no-other-change diff check, must SIGN before any DiVa-360 census statistic is computed"
   },
   "cells": {
     "M1-A0": {"kind": "model-free opportunity screen", "compute": "CPU", "gated": true, "statistics": ["occlusion_opportunity_upper_bound", "true_absence_candidate_count", "same_object_return_count", "track_coverage_upper_bound"], "inputs": "shipped fg/bg masks + 53-camera calibration + frozen tracks ONLY (no trained model anywhere)"},
@@ -50,11 +62,14 @@
     "component_definition": "8-connected foreground components; components smaller than 64 pixels are ignored everywhere (mask-noise floor)",
     "identity_association": "track identity j is associated at (camera c, frame t) with the eligible component that contains j's report pixel rounded to the nearest integer, iff j has an in-domain visible report there (v >= 0.5); no visible report => no association at (c, t)",
     "object_position": "'triangulated position' = the frozen tracks artifact's consensus point for the identity at the reference frame; 'last triangulated position' = the consensus point at the latest frame at or before the event start where it is defined; identities with no defined consensus point before the event are INELIGIBLE and counted in the census artifact as position_undefined_exclusions",
+    "return_position": "the return position of a same_object_return candidate is the consensus point at the EARLIEST frame at or after the start of the terminating re-appearance run, searched only within that run, where it is defined; if the consensus point is undefined throughout the run, the candidate counts as a true-absence candidate but NOT as a same-object return, and is tallied in the census artifact as return_position_undefined (revision 3, blocking residual)",
+    "pixel_rounding": "'rounded to the nearest integer' everywhere in this file means round-half-up on both axes, i.e. floor(x + 0.5), platform-independent (revision 3)",
     "frustum_containment": "a point is inside a camera's frustum iff it projects with positive camera-frame depth to a pixel inside [0, W-1] x [0, H-1]",
     "occlusion_duration_binding": "an occlusion event requires >= duration_floor_frames CONSECUTIVE frames on which BOTH hold with ONE FIXED absent camera: (a) the identity is associated with a component in >= min_cameras training cameras, and (b) that same fixed training camera, whose frustum contains the per-frame triangulated position, has no associated component",
     "min_positive_opportunity_cameras_role": "a true_absence_candidate additionally requires >= 2 training cameras whose frustums contain the last triangulated position at every frame of the candidate window",
-    "flicker_rule": "a re-appearance (mask-presence interruption) shorter than 4 consecutive frames (= duration_floor_frames / 2) does not terminate a candidate window; bridged interruptions are counted per candidate and disclosed in the census artifact",
-    "status": "frozen (revision 2, finding 4)"
+    "flicker_rule": "a re-appearance (mask-presence interruption) shorter than 4 consecutive frames (= duration_floor_frames / 2) does not terminate a candidate window; bridged interruptions are counted per candidate and disclosed in the census artifact. SCOPE (revision 3): flicker bridging applies to true_absence candidate windows ONLY; occlusion events require strictly consecutive frames with NO bridging",
+    "census_window": "the census window per dev sequence is the FULL shipped frame range common to all tracking cameras; the realized per-sequence window (first index, last index, count) is recorded in the census manifest (revision 3)",
+    "status": "frozen (revision 2, finding 4; revision 3 residual + notes)"
   },
   "eligibility_predicate": {
     "true_absence_candidate": {
@@ -65,7 +80,7 @@
       "status": "frozen"
     },
     "occlusion_event": {"definition": "fg-mask component present in >= min_cameras but absent in >= 1 camera whose frustum contains the triangulated position for >= duration_floor_frames (per association_rules occlusion_duration_binding)", "duration_floor_frames": 8, "min_cameras": 2, "status": "frozen"},
-    "same_object_return": {"definition": "a true-absence candidate whose track identity re-appears within r_site_census of its disappearance position (both positions per association_rules object_position)", "status": "frozen"}
+    "same_object_return": {"definition": "a true-absence candidate whose track identity re-appears within r_site_census of its disappearance position (disappearance position per association_rules object_position; return position per association_rules return_position)", "status": "frozen"}
   },
   "track_coverage_statistic": {
     "definition": "track_coverage_upper_bound = (number of eligible fg-mask components over training cameras x window frames containing >= 1 in-domain visible report pixel of any track) / (total number of eligible fg-mask components), eligible per association_rules component_definition",
