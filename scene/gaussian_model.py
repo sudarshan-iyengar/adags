@@ -212,7 +212,47 @@ class GaussianModel:
         self.lifecycle = None
         self._pending_lifecycle_state = None
 
+        # EL-GS: set by the trainer to an elgs.runtime.ElgsRuntime; the
+        # per-row family-id column ties rows to presence programs
+        # (-1 = unassigned). Stays None for non-EL-GS lanes.
+        self.elgs_runtime = None
+        self._elgs_family_ids = torch.empty(0, dtype=torch.long)
+        self._pending_elgs_state = None
+        self._elgs_checkpoint_extras = None
+
         self.setup_functions()
+
+    def get_elgs_presence(self, timestamp):
+        """(N, 1) winner-lookup presence multiplier (elgs.runtime)."""
+        if self.elgs_runtime is None:
+            raise RuntimeError("EL-GS runtime is not attached")
+        return self.elgs_runtime.presence_multiplier(
+            self._elgs_family_ids, float(timestamp)
+        ).to(self._opacity.device, self._opacity.dtype)
+
+    def _capture_elgs_state(self):
+        """Build the schema-versioned elgs_state for capture(), or None."""
+        if self.elgs_runtime is None or self._elgs_checkpoint_extras is None:
+            return None
+        from elgs.state_io import build_elgs_state
+
+        extras = self._elgs_checkpoint_extras
+        self.elgs_runtime.flush_to_registry()
+        payload = build_elgs_state(
+            self.elgs_runtime.registry,
+            extras["binding"],
+            extras["ledger"],
+            extras["search_cost"],
+            sampler=extras["sampler"],
+            slot_grid=extras.get("slot_grid", {}),
+            confirmation_refs=extras.get("confirmation_refs", {}),
+            moment_reset_log=extras.get("moment_reset_log", []),
+            round_bookkeeping=extras.get("round_bookkeeping", {}),
+            rng=extras.get("rng"),
+        )
+        payload_families = self._elgs_family_ids.detach().cpu().tolist()
+        payload["round_bookkeeping"]["row_family_ids"] = payload_families
+        return payload
 
     def capture(self):
         """Serialize state for checkpointing."""
@@ -271,6 +311,7 @@ class GaussianModel:
                     if getattr(self, "lifecycle", None) is not None
                     else None
                 ),
+                "elgs_state": self._capture_elgs_state(),
             }
 
             return (
@@ -444,6 +485,12 @@ class GaussianModel:
                 # the payload so the trainer can hand it to the manager it builds
                 # immediately after. Tolerant when the checkpoint predates v2.
                 self._pending_lifecycle_state = routing_motion_params.get("lifecycle_state")
+                # EL-GS: same stash pattern. A MISSING elgs_state is a
+                # baseline checkpoint (substrate initializes fresh); a
+                # PRESENT payload is validated by the trainer's setup
+                # via elgs.state_io.load_elgs_state (present-but-invalid
+                # is an explicit rejection there, never a silent skip).
+                self._pending_elgs_state = routing_motion_params.get("elgs_state")
 
         if training_args is not None:
             self.training_setup(training_args)
@@ -1559,6 +1606,15 @@ class GaussianModel:
         if lifecycle is not None:
             lifecycle.on_rows_pruned(valid_points_mask)
 
+        # EL-GS row alignment: slice the family-id column and report the
+        # per-family removals to the registry (auditable row counts).
+        if getattr(self, "elgs_runtime", None) is not None:
+            removed = self._elgs_family_ids[~valid_points_mask.to(self._elgs_family_ids.device)]
+            self._elgs_family_ids = self._elgs_family_ids[valid_points_mask.to(self._elgs_family_ids.device)]
+            for family_id, count in zip(*[t.tolist() for t in removed.unique(return_counts=True)]):
+                if family_id >= 0:
+                    self.elgs_runtime.registry.on_rows_pruned(int(family_id), int(count))
+
     def prune_static_points(self, mask):
         valid_points_mask = ~mask
         optimizable_tensors = self._prune_optimizer(valid_points_mask, static=True)
@@ -1668,6 +1724,7 @@ class GaussianModel:
             new_motion_scaffold_attach_idx=None,
             new_motion_scaffold_attach_w=None,
             created_iteration=None,
+            elgs_source_indices=None,
     ):
         if self.gaussian_dim == 4:
             self._ensure_capacity_state(created_iteration=0)
@@ -1780,6 +1837,26 @@ class GaussianModel:
         lifecycle = getattr(self, "lifecycle", None)
         if lifecycle is not None:
             lifecycle.on_rows_added(int(new_xyz.shape[0]), iteration=created_iteration)
+
+        # EL-GS row alignment: appended rows inherit the SOURCE rows'
+        # family ids (topology-inheriting clone/split — family-level
+        # tying; substrate). Rows appended outside a family context
+        # (e.g. lifecycle birth targets) carry -1 = unassigned.
+        if getattr(self, "elgs_runtime", None) is not None:
+            if elgs_source_indices is not None:
+                inherited = self._elgs_family_ids[
+                    elgs_source_indices.to(self._elgs_family_ids.device)
+                ]
+            else:
+                inherited = torch.full(
+                    (int(new_xyz.shape[0]),), -1,
+                    dtype=self._elgs_family_ids.dtype,
+                    device=self._elgs_family_ids.device,
+                )
+            self._elgs_family_ids = torch.cat([self._elgs_family_ids, inherited], dim=0)
+            for family_id, count in zip(*[t.tolist() for t in inherited.unique(return_counts=True)]):
+                if family_id >= 0:
+                    self.elgs_runtime.registry.on_rows_added(int(family_id), int(count))
 
     def densification_postfix_static(
             self,
@@ -1994,6 +2071,7 @@ class GaussianModel:
             new_motion_scaffold_attach_idx,
             new_motion_scaffold_attach_w,
             created_iteration=iteration,
+            elgs_source_indices=torch.where(selected_pts_mask)[0].repeat(N),
         )
 
         parent_removal_mask = selected_pts_mask
@@ -2077,6 +2155,7 @@ class GaussianModel:
             new_motion_scaffold_attach_idx,
             new_motion_scaffold_attach_w,
             created_iteration=iteration,
+            elgs_source_indices=torch.where(selected_pts_mask)[0],
         )
         return selected_count
 

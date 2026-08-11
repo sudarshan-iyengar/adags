@@ -217,6 +217,11 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     rotations_r = None
     ts = None
     cov3D_precomp = None
+    # EL-GS presence replaces the temporal-Gaussian marginal as the
+    # presence semantics when active (winner-lookup pi, exact zero in
+    # gaps; spec §1 + substrate). The marginal_t path stays untouched
+    # for every non-EL-GS configuration.
+    elgs_active = getattr(pc, "elgs_runtime", None) is not None
     if pipe.compute_cov3D_python:
         if pc.rot_4d:
             cov3D_precomp, delta_mean = pc.get_current_covariance_and_mean_offset(scaling_modifier, viewpoint_camera.timestamp)
@@ -224,8 +229,11 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         else:
             cov3D_precomp = pc.get_covariance(scaling_modifier)
         if pc.gaussian_dim == 4:
-            marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
-            opacity = opacity * marginal_t
+            if elgs_active:
+                opacity = opacity * pc.get_elgs_presence(viewpoint_camera.timestamp)
+            else:
+                marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
+                opacity = opacity * marginal_t
     else:
         scales = pc.get_scaling
         rotations = pc.get_rotation
@@ -235,8 +243,11 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             if pc.rot_4d:
                 rotations_r = pc.get_rotation_r
 
-            marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
-            opacity = opacity * marginal_t
+            if elgs_active:
+                opacity = opacity * pc.get_elgs_presence(viewpoint_camera.timestamp)
+            else:
+                marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
+                opacity = opacity * marginal_t
 
     opacity, runtime_hide_reveal_stats = _apply_runtime_hide_reveal_gate(
         opacity,
