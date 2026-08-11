@@ -435,6 +435,7 @@ def build_manifest(
     prereg_dir: os.PathLike[str] | str | None = None,
     submitter_host: str | None = None,
     utc_stamp: str | None = None,
+    hash_root: os.PathLike[str] | str | None = None,
 ) -> dict[str, Any]:
     """Build the pre-submission run manifest (S10.2 item 4).
 
@@ -452,18 +453,28 @@ def build_manifest(
     """
 
     root = Path(repo_root)
+    # Hashes must describe the bytes that TRAVEL. When the caller has
+    # materialized the git-archive context, hash_root points at it —
+    # otherwise a Windows CRLF worktree hashes differently from the
+    # LF archive the container re-verifies (the exact fail-closed
+    # mismatch the first S1 smoke caught).
+    files_root = Path(hash_root) if hash_root is not None else root
     config_entries = []
     for raw in config_paths:
         relative = _relative_repo_path(root, raw)
-        config_entries.append({"path": relative, "sha256": sha256_file(root / relative)})
+        config_entries.append(
+            {"path": relative, "sha256": sha256_file(files_root / relative)}
+        )
     config_entries.sort(key=lambda item: item["path"])
 
-    prereg_root = Path(prereg_dir) if prereg_dir is not None else root / "configs" / "elgs"
+    prereg_root = (
+        Path(prereg_dir) if prereg_dir is not None else files_root / "configs" / "elgs"
+    )
     prereg_entries = []
     if prereg_root.is_dir():
         for path in sorted(prereg_root.glob("prereg_*.json")):
             prereg_entries.append(
-                {"path": _relative_repo_path(root, path), "sha256": sha256_file(path)}
+                {"path": _relative_repo_path(files_root, path), "sha256": sha256_file(path)}
             )
 
     dataset_manifest = None
@@ -473,13 +484,18 @@ def build_manifest(
             raise ContractError(f"dataset manifest does not exist: {dataset_path}")
         dataset_manifest = {"path": str(dataset_path), "sha256": sha256_file(dataset_path)}
 
-    wrapper_file = Path(__file__).resolve()
+    wrapper_candidate = files_root / "scripts" / "submit_apollo.py"
+    wrapper_file = (
+        wrapper_candidate if wrapper_candidate.is_file() else Path(__file__).resolve()
+    )
     return {
         "schema": MANIFEST_SCHEMA,
         "commit": str(commit),
         "branch": str(branch),
         "config_files": config_entries,
-        "config_canonical_hash": canonical_config_hash(root / entry["path"] for entry in config_entries),
+        "config_canonical_hash": canonical_config_hash(
+            files_root / entry["path"] for entry in config_entries
+        ),
         "prereg_files": prereg_entries,
         "image_ref": str(image_ref),
         "pool": str(pool),
@@ -833,7 +849,9 @@ def cmd_submit(args: argparse.Namespace) -> int:
         # 5. materialize.
         archive_sha256 = materialize_context(repo_root, commit, context_dir)
 
-        # 6. manifest, written O_EXCL into the context; run-dir path recorded.
+        # 6. manifest, written O_EXCL into the context; run-dir path
+        # recorded. hash_root = the context: hashes describe the bytes
+        # that travel, not the (possibly CRLF) worktree view.
         manifest = build_manifest(
             repo_root=repo_root,
             commit=commit,
@@ -848,6 +866,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
             evidence_bearing=closure.evidence_bearing,
             projected_gpu_hours=args.projected_gpu_hours,
             dataset_manifest_path=args.dataset_manifest,
+            hash_root=context_dir,
         )
         manifest["archive_sha256"] = archive_sha256
         manifest["rendered_config_sha256"] = sha256(rendered_config.encode("utf-8")).hexdigest()
