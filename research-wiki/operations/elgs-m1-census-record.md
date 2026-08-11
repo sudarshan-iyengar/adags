@@ -51,9 +51,10 @@ reader changes expected, as planned.
   `transform_matrix`; the intrinsics-key block and frame count need
   the full schema dump (the raw JSON is single-line — line-grep
   counts are useless; parse it).
-- `segmented_gt.tar.gz`: per-camera mask PNGs
-  (`segmented_gt/camNN/NNNNNNNN.png`) — the fg/bg masks the
-  model-free census statistics consume.
+- `segmented_gt.tar.gz`: sparse per-camera segmented PNGs
+  (`segmented_gt/camNN/NNNNNNNN.png`; 6 files for unlock) in
+  ORIGINAL 1280×720 space — an audit reference, NOT a census input
+  (see the corrected INPUT MAPPING below).
 - Per-sequence structural variation: tarball names/compression vary
   (battery `image.tar`+`segmented_ngp.tar.gz`; pour_salt
   `image.tar.gz`+`segmented_ngp.tar`) — the landed converter
