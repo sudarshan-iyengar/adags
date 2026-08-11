@@ -115,13 +115,19 @@ class ElgsRuntime:
     # -- presence ---------------------------------------------------------
 
     def presence_multiplier(
-        self, family_ids: torch.Tensor, timestamp: float
+        self,
+        family_ids: torch.Tensor,
+        timestamp: float,
+        overrides: dict | None = None,
     ) -> torch.Tensor:
         """(N, 1) pi_winner(timestamp) per row, gathered by family.
 
-        Exact zero for rows of retired/empty families and rows whose
-        family has no active episode at t; differentiable w.r.t. the
-        a-logits of families active at t.
+        Exact zero for rows of retired/empty families, rows whose
+        family has no active episode at t, and unassigned rows (-1);
+        differentiable w.r.t. the a-logits of families active at t.
+        `overrides` maps family_id -> IntervalState for COUNTERFACTUAL
+        candidate evaluation (frozen-functional snapshot: the live
+        state is never mutated by scoring a candidate).
         """
         if family_ids.dim() != 1:
             raise ContractError("family_ids must be a 1-D per-row column")
@@ -129,11 +135,21 @@ class ElgsRuntime:
         zero = torch.zeros((), device=self.device, dtype=self.dtype)
         for family_id in torch.unique(family_ids).tolist():
             family_id = int(family_id)
-            record = self.registry.get(family_id)
-            if record.retired or record.interval.K == 0:
+            if family_id < 0:
                 per_family[family_id] = zero
                 continue
-            r = self.realization(family_id)
+            if overrides is not None and family_id in overrides:
+                candidate = overrides[family_id]
+                if candidate.K == 0:
+                    per_family[family_id] = zero
+                    continue
+                r = forward(candidate, self.config)
+            else:
+                record = self.registry.get(family_id)
+                if record.retired or record.interval.K == 0:
+                    per_family[family_id] = zero
+                    continue
+                r = self.realization(family_id)
             # Differentiable winner: episodes are disjoint, so at most
             # one episode presence is nonzero at t — the SUM equals
             # the winner's value while keeping the graph intact.

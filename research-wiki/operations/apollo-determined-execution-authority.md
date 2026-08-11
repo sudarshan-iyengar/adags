@@ -20,10 +20,14 @@ page is the operational summary implementers and auditors read.
   (`sudarshaniyengar/adags@sha256:...`) — mutable tags never pin bits.
   One planned image revision at M1 start adds the tracker stack (new
   tag, digest-pinned, `validate_apollo_runtime.py --build-check`).
-- Storage roots (inside containers, assumed agent-automounted —
-  UNVERIFIED until the one-time mount probe below): project
+- Storage roots (inside containers): project
   `/apollo/users/sri/proj_adags`, raw data `data/` (read-only),
-  runs `runs/elgs/<run_id>/`, logs `logs/`.
+  runs `runs/elgs/<run_id>/`, logs `logs/`. VERIFIED 2026-08-11 by
+  the one-time S0 mount probes (`det cmd run ls`, hopper task
+  `c25ac11f`, dgx task `0c098195`): /apollo automounts on BOTH pools,
+  both images pull and run, and `data/n3v` holds all six scenes.
+  Master `determined.intern.denayer.be` (0.38.0), CLI 0.38.1, user
+  `sri`; pools live at probe time (hopper 3 slots, dgx 8).
 - Code reaches the container ONLY as the uploaded `det e create`
   context produced by `git archive <commit>` — never from the shared
   worktree `/apollo/users/sri/proj_adags/repo/adags` (the historical
