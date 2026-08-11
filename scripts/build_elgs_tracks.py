@@ -66,7 +66,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from depth_visibility.artifacts import atomic_write_json, atomic_write_json_immutable  # noqa: E402
+from depth_visibility.artifacts import atomic_write_bytes, atomic_write_json, atomic_write_json_immutable  # noqa: E402
 from depth_visibility.camera import camera_center, intrinsics_matrix, opengl_c2w_to_opencv_w2c  # noqa: E402
 from depth_visibility.canonical import canonical_json_bytes, sha256_file  # noqa: E402
 from depth_visibility.errors import ContractError, SchemaError  # noqa: E402
@@ -733,15 +733,27 @@ def write_frozen_artifact_dir(
     if (out_dir / "MANIFEST.json").exists():
         raise ContractError(f"frozen artifact dir already sealed: {out_dir}")
 
+    # The artifact and its controls are written as PLAIN strict JSON (floats
+    # as standard JSON numbers, exact binary64 round-trip via Python's
+    # shortest-repr float encoding) -- NOT via the canonical writer, whose
+    # binary64_hex float tokens are an identity/hashing convention with no
+    # repo decoder and would make the artifact numerically unreadable to the
+    # census evaluator and the independent recomputation worker (defect
+    # caught on the first sealed real artifact, experiment 8 / retry 2).
+    # The MANIFEST stays canonical: it is identity-bearing metadata.
+    def _write_plain_json(path: Path, payload: dict[str, Any]) -> Path:
+        body = json.dumps(payload, allow_nan=False, sort_keys=True, separators=(",", ":"))
+        return atomic_write_bytes(path, body.encode("utf-8") + b"\n")
+
     files: dict[str, str] = {}
-    primary = atomic_write_json(out_dir / "tracks.json", artifact)
+    primary = _write_plain_json(out_dir / "tracks.json", artifact)
     files["tracks.json"] = sha256_file(primary)
     if controls:
         shift = make_shift_control(artifact, cfg.shift_frames)
         shuffle = make_shuffle_control(artifact, cfg.shuffle_seed)
-        files["tracks_shift.json"] = sha256_file(atomic_write_json(out_dir / "tracks_shift.json", shift))
+        files["tracks_shift.json"] = sha256_file(_write_plain_json(out_dir / "tracks_shift.json", shift))
         files["tracks_shuffle.json"] = sha256_file(
-            atomic_write_json(out_dir / "tracks_shuffle.json", shuffle)
+            _write_plain_json(out_dir / "tracks_shuffle.json", shuffle)
         )
 
     manifest = {

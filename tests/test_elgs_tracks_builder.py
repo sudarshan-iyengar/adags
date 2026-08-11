@@ -336,6 +336,39 @@ class SyntheticSceneTest(unittest.TestCase):
                     out, artifact, self.cfg, self.scene, backend, wall_seconds=1.0
                 )
 
+    def test_sealed_artifact_round_trips_plain_floats(self):
+        # Regression (experiment 8 / retry 2 defect): the canonical writer
+        # hex-encodes floats (binary64_hex identity tokens, no repo decoder),
+        # which made the first sealed real artifact numerically unreadable.
+        # The sealed files must be PLAIN JSON: numbers come back as floats
+        # and a control can be re-derived from the RELOADED artifact.
+        artifact = self._build(np.array([0.05, 0.0, 0.0]))
+        backend = builder.FakeTracker()
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "artifact"
+            builder.write_frozen_artifact_dir(
+                out, artifact, self.cfg, self.scene, backend, wall_seconds=1.0
+            )
+            reloaded = json.loads((out / "tracks.json").read_text(encoding="utf-8"))
+            report = next(
+                r
+                for track in reloaded["tracks"]
+                for r in track["reports"]
+                if not r["is_miss"]
+            )
+            self.assertIsInstance(report["v"], float)
+            self.assertIsInstance(report["x"], float)
+            self.assertIsInstance(report["frame"], float)
+            point = next(
+                e["point"]
+                for entries in reloaded["consensus"].values()
+                for e in entries
+                if e["point"] is not None
+            )
+            self.assertTrue(all(isinstance(c, float) for c in point))
+            rederived = builder.make_shift_control(reloaded, 2)
+            self.assertGreater(len(rederived["tracks"]), 0)
+
     def test_cli_dry_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             code = builder.main(
