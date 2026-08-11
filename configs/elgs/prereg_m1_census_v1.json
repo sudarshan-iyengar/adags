@@ -42,9 +42,13 @@
     "status": "frozen"
   },
   "scene_selection": {
-    "rule": "dev subset = the first 3 hand-object interaction sequences in the official DiVa-360 paper sequence table (Table order, not data-inspected); calibration sequences = the next 2; held-out sequences and cameras never enter tracking, observability, or calibration",
+    "rule_amendment_2026_08_11": "the original 'paper sequence table order' rule is UNIMPLEMENTABLE as written: the paper defers its sequence enumeration to supplementary Section 2 (absent from the arXiv HTML) and the repo metadata carries no categorization. Amended BEFORE any DiVa-360 data was inspected, from official materials only:",
+    "dev_sequences": ["battery", "flip_book", "unlock"],
+    "dev_rationale": "the three hand activities the paper's MAIN TEXT itself names as exemplars ('flipping a book, replacing a toy's batteries, and opening a lock'), alphabetical order",
+    "calibration_sequences": ["peel_apple", "pour_salt"],
+    "calibration_rationale": "the alphabetically first two sequences of the official GitHub README list whose names denote unambiguous hand actions and are not in the dev set",
     "held_out_camera_rule": "every camera id congruent to 0 mod 4 is held out from tracking/observability and reserved for evaluation",
-    "status": "frozen rule; names filled at inventory from the paper table and committed before download completes"
+    "status": "FROZEN 2026-08-11 prior to any download or data inspection; amendment recorded in the wiki M1 record"
   },
   "failure_retry_policy": "implementation plan 11.2: a scientifically valid failure against these floors is the FINAL M1 result; replacement only for a verified technical or protocol-execution defect (post-outcome invalidations need fresh-context confirmation, max two); no revision-cycle mechanism exists",
   "ceilings": {"census_gpu_hours_max": 25, "preprocessing": "reproducibility accounting only - projected and actual GPU-h, hardware provenance, processed scope; no hard ceiling"}
