@@ -184,9 +184,13 @@ class FamilyRegistry:
 
     def _log_pin_if_needed(self, record: FamilyRecord) -> None:
         if record.routing_pinned:
-            self._pin_log.append(
-                {"family_id": record.family_id, "K": record.interval.K}
-            )
+            entry = {"family_id": record.family_id, "K": record.interval.K}
+            # Dedupe on (family_id, K): checkpoint flushes re-write
+            # intervals without changing the pin state, and the log
+            # records transitions, not traffic.
+            if not self._pin_log or self._pin_log[-1] != entry:
+                if entry not in self._pin_log:
+                    self._pin_log.append(entry)
 
     @property
     def pin_log(self) -> tuple[dict, ...]:

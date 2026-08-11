@@ -185,11 +185,43 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
     # Built BEFORE the trainer state that references it.
     from .acceptance import SlotGrid
 
+    # Stratified reservation: within each timestamp group (the
+    # cameras of one frame, stably ordered), reserve the diagonal
+    # (frame_order + camera_order) % 4 == 0 — ~25% of units, rotating
+    # across cameras AND spreading over time, so the §7 confirmation
+    # measure can never collapse onto one view regardless of the
+    # dataset's index ordering.
     n_units_total = len(cameras)
-    reserved = tuple(
-        (i, float(getattr(cameras[i], "timestamp", 0.0)))
-        for i in range(0, n_units_total, 4)
-    )
+    by_time: dict = {}
+    for i in range(n_units_total):
+        t = float(getattr(cameras[i], "timestamp", 0.0))
+        by_time.setdefault(t, []).append(i)
+    reserved_list = []
+    reserved_cam_positions = set()
+    for f, t in enumerate(sorted(by_time)):
+        group = sorted(
+            by_time[t], key=lambda i: str(getattr(cameras[i], "image_name", i))
+        )
+        for c, index in enumerate(group):
+            if (f + c) % 4 == 0:
+                reserved_list.append((index, t))
+                reserved_cam_positions.add(c)
+    reserved = tuple(reserved_list)
+    if reserved:
+        times = [t for _, t in reserved]
+        all_times = sorted(by_time)
+        span = all_times[-1] - all_times[0] if len(all_times) > 1 else 0.0
+        covered = max(times) - min(times)
+        if len(reserved_cam_positions) < min(2, max(len(g) for g in by_time.values())):
+            raise ContractError(
+                "reserved confirmation pool covers fewer than 2 distinct "
+                "camera positions — stratification failed for this ordering"
+            )
+        if span > 0 and covered < 0.5 * span:
+            raise ContractError(
+                "reserved confirmation pool spans less than half the "
+                "sequence time range — stratification failed"
+            )
     n_rounds = len(schedule.round_iterations)
     slots_per_pass = int(getattr(opt, "elgs_candidate_cap"))
     # The configured confirmation-sample count IS the slot size (a
@@ -277,8 +309,13 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
             "reserved_indices": [u[0] for u in reserved],
             "consumed": sorted(state_slot_grid._consumed),
         },
-        "confirmation_refs": {},
-        "moment_reset_log": [],
+        "confirmation_refs": (
+            {k: [tuple(u) for u in v] for k, v in loaded["confirmation_refs"].items()}
+            if pending is not None else {}
+        ),
+        "moment_reset_log": (
+            list(loaded["moment_reset_log"]) if pending is not None else []
+        ),
         "round_bookkeeping": {
             "seeded": seeded,
             "rounds_run": rounds_run,
@@ -595,9 +632,9 @@ def apply_elgs_routing_pins(gaussians) -> None:
             f"routing-pin mask desync: family column has {ids.shape[0]} rows, "
             f"route-logit grad has {grad.shape[0]}"
         )
-    mask = torch.zeros(ids.shape[0], dtype=torch.bool)
-    for fid in pinned:
-        mask |= ids == fid
+    # Vectorized (runs before EVERY optimizer step): O(rows log pinned)
+    # via torch.isin, not a per-family python loop.
+    mask = torch.isin(ids, torch.tensor(sorted(pinned), dtype=ids.dtype))
     grad[mask.to(grad.device)] = 0.0
 
 
@@ -619,7 +656,14 @@ def run_post_refit_classification(state, gaussians, scene, iteration, render_uni
     POST-REFIT parameters — fixed-path decomposition. In the smoke
     wired path there is no tracker term: the render-only flag equals
     test (a) and the tracker-only flag is vacuously False (disclosed);
-    the data floor uses the preregistered 0.25*SE rule."""
+    the data floor uses the preregistered 0.25*SE rule.
+
+    DISCLOSED ASYMMETRY (fixed path, spec §8's own framing): the
+    committed arm kept training through the refit while the restored
+    incumbent is frozen at round time, so this comparison is
+    structurally biased toward the committed arm — the labels are an
+    operational decomposition, never statistical support (the
+    mandatory qualifier states this on every printed label)."""
     from .acceptance import paired_cluster_bootstrap_se, paired_snis_delta
     from .classification import DecisionFlags, classify, printable_label
     from .intervals import deserialize_state

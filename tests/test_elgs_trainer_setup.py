@@ -83,9 +83,12 @@ def _stub_gaussians(n_rows=64):
 
 
 def _build():
+    # Camera-fastest ordering with n_cams % 4 == 0: exactly the
+    # ordering that collapsed an index-stride reservation onto one
+    # camera — the stratified scheme must survive it.
     cameras = [
-        _StubCamera(timestamp=0.25 * (i // 4), name=f"cam{i % 4}_t{i // 4}")
-        for i in range(160)
+        _StubCamera(timestamp=0.25 * (i // 4), name=f"cam{i % 4}_t{i // 4:03d}")
+        for i in range(240)
     ]
     dataset = _CountingDataset(cameras)
     scene = _StubScene(dataset)
@@ -116,10 +119,20 @@ class SetupTests(unittest.TestCase):
         calls_before = dataset.getitem_calls
         filtered = filter_elgs_reserved(dataset, state)
         self.assertEqual(dataset.getitem_calls, calls_before)  # N2 guard
-        self.assertEqual(len(filtered), 160 - len(state.reserved_indices))
+        self.assertEqual(len(filtered), 240 - len(state.reserved_indices))
         # The filtered view never exposes a reserved index.
         kept = set(filtered.indices)
         self.assertFalse(kept & state.reserved_indices)
+
+    def test_reservation_is_stratified_across_cameras_and_time(self):
+        """P4 guard: under camera-fastest ordering with n_cams % 4 == 0
+        the old index-stride reservation collapsed onto one camera;
+        the diagonal scheme must cover multiple cameras and span time."""
+        state, _, _, dataset = _build()
+        reserved_cams = {i % 4 for i in state.reserved_indices}
+        self.assertGreaterEqual(len(reserved_cams), 2)
+        reserved_frames = {i // 4 for i in state.reserved_indices}
+        self.assertGreaterEqual(max(reserved_frames) - min(reserved_frames), 30)
 
     def test_pool_too_small_fails_closed(self):
         cameras = [_StubCamera(0.25 * i, f"c{i}") for i in range(40)]
