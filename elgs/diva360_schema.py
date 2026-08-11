@@ -189,6 +189,64 @@ def held_out_camera_ids(camera_ids: Iterable[int]) -> set[int]:
 
 
 # ---------------------------------------------------------------------------
+# --window mode: crossing the static rig calibration with frame indices
+# (owner decision D-M1-1, research-wiki/operations/elgs-m1-census-record.md)
+# ---------------------------------------------------------------------------
+
+
+def window_indices(start: int, end: int, stride: int = 1) -> tuple[int, ...]:
+    """The inclusive frame-index window ``[start, end]`` stepped by ``stride``.
+
+    Inclusive on both ends (a "window 0 60" request covers frame 60, not
+    just up to frame 59) -- the more intuitive reading for a frame range
+    and the one the converter's ``--window START END`` CLI documents.
+    """
+
+    for name, value in (("start", start), ("end", end), ("stride", stride)):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise SchemaError(f"window {name} must be an integer, got {value!r}")
+    if start < 0:
+        raise SchemaError(f"window start must be >= 0, got {start}")
+    if end < start:
+        raise SchemaError(f"window end ({end}) must be >= start ({start})")
+    if stride < 1:
+        raise SchemaError(f"window stride must be >= 1, got {stride}")
+    return tuple(range(start, end + 1, stride))
+
+
+def camera_path_template(file_path: str) -> tuple[str, str, int]:
+    """Derive ``(top_dir, camera_dir, frame_index_width)`` from one shipped
+    single-instant ``file_path``, e.g. ``"undist/cam01/00001000"`` ->
+    ``("undist", "cam01", 8)``.
+
+    Used by ``--window`` mode to generate per-index frame/mask paths
+    without assuming a fixed camera-id or frame-index zero-pad width --
+    both are read back from the rig's own shipped calibration frame.
+    """
+
+    top_dir, rest = split_top_level_dir(file_path)
+    if "/" not in rest:
+        raise SchemaError(f"expected 'camera_dir/frame_stem' in file_path: {file_path!r}")
+    camera_dir, index_stem = rest.rsplit("/", 1)
+    if not camera_dir or not index_stem.isdigit():
+        raise SchemaError(f"expected a numeric frame-index stem in file_path: {file_path!r}")
+    return top_dir, camera_dir, len(index_stem)
+
+
+def window_file_path(top_dir: str, camera_dir: str, index_width: int, frame_index: int) -> str:
+    """The extension-less ``file_path`` for one window (camera, index) pair."""
+
+    if isinstance(frame_index, bool) or not isinstance(frame_index, int) or frame_index < 0:
+        raise SchemaError(f"frame_index must be a non-negative integer, got {frame_index!r}")
+    if frame_index >= 10**index_width:
+        raise SchemaError(
+            f"frame_index {frame_index} does not fit the observed {index_width}-digit "
+            f"width for {camera_dir!r}"
+        )
+    return f"{top_dir}/{camera_dir}/{frame_index:0{index_width}d}"
+
+
+# ---------------------------------------------------------------------------
 # Fail-closed validation
 # ---------------------------------------------------------------------------
 

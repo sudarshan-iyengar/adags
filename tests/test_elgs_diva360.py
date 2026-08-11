@@ -88,6 +88,31 @@ def _write_manifest(path: Path, sequence_name: str, digest: str = "a" * 64) -> N
     path.write_text(f"{digest}  zips/{sequence_name}.zip\n", encoding="utf-8")
 
 
+# --- --window mode fixtures -------------------------------------------------
+
+WINDOW_START = 0
+WINDOW_END = 60
+WINDOW_STRIDE = 20
+WINDOW_INDICES = tuple(range(WINDOW_START, WINDOW_END + 1, WINDOW_STRIDE))  # (0, 20, 40, 60)
+
+
+def _write_multi_index_archive(
+    path: Path,
+    camera_frame_indices: dict,
+    *,
+    top_dir: str,
+    extension: str = ".png",
+    content_prefix: str = "fake-bytes",
+) -> None:
+    """camera_frame_indices: {camera_id: [frame_index, ...]}."""
+
+    with tarfile.open(path, "w:gz") as tar:
+        for cid, indices in camera_frame_indices.items():
+            for idx in indices:
+                name = f"{top_dir}/cam{cid:02d}/{idx:08d}{extension}"
+                _add_tar_member(tar, name, f"{content_prefix}-cam{cid}-{idx}".encode("ascii"))
+
+
 class Diva360FixtureCase(unittest.TestCase):
     """Builds one miniature valid DiVa-360 sequence directory per test."""
 
@@ -127,6 +152,50 @@ class Diva360FixtureCase(unittest.TestCase):
             output_dir=self.output_dir,
             num_random_points=64,
             seed=1,
+        )
+        kwargs.update(overrides)
+        return converter.build_plan(**kwargs)
+
+
+class WindowFixtureCase(Diva360FixtureCase):
+    """Adds a temporal frame archive + segmented_ngp mask archive on top of
+    the base single-instant fixture, for --window mode coverage."""
+
+    ALL_CAMERA_IDS = TRAIN_CAMERA_IDS + TEST_CAMERA_IDS
+
+    def setUp(self) -> None:
+        super().setUp()
+        # Full window coverage for every camera, PLUS the original
+        # single-instant index -- proves --window discovery doesn't
+        # depend on the archive being window-only, and that the same
+        # sequence dir still supports single-instant mode unchanged.
+        frame_indices = {
+            cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS
+        }
+        (self.sequence_dir / "frames_1.tar.gz").unlink()
+        _write_multi_index_archive(
+            self.sequence_dir / "frames_1.tar.gz",
+            frame_indices,
+            top_dir="frames_1",
+            content_prefix="frame",
+        )
+        # The real per-frame fg/bg masks the census consumes (per the M1
+        # census record's "INPUT MAPPING" note) -- full window coverage.
+        mask_indices = {cid: list(WINDOW_INDICES) for cid in self.ALL_CAMERA_IDS}
+        _write_multi_index_archive(
+            self.sequence_dir / "segmented_ngp.tar.gz",
+            mask_indices,
+            top_dir="segmented_ngp",
+            content_prefix="mask",
+        )
+
+    def build_window_plan(self, start=WINDOW_START, end=WINDOW_END, stride=WINDOW_STRIDE, **overrides):
+        kwargs = dict(
+            sequence_dir=self.sequence_dir,
+            output_dir=self.output_dir,
+            num_random_points=64,
+            seed=1,
+            window=(start, end, stride),
         )
         kwargs.update(overrides)
         return converter.build_plan(**kwargs)
@@ -289,6 +358,205 @@ class ConversionTests(Diva360FixtureCase):
         result = converter.execute_plan(plan2, payloads2, overwrite=True)
         self.assertTrue(Path(result["provenance"]).is_file())
 
+    def test_default_mode_has_no_window_plan(self):
+        # Single-instant mode (the default, no --window) must carry no
+        # window state at all -- the plan/provenance shape is unchanged.
+        plan, payloads = self.build_plan()
+        self.assertIsNone(plan.window)
+        self.assertIsNone(plan.window_splits)
+        result = converter.execute_plan(plan, payloads)
+        provenance = json.loads(Path(result["provenance"]).read_text(encoding="utf-8"))
+        self.assertNotIn("window", provenance)
+        self.assertNotIn("masks_dir", result)
+
+
+# ---------------------------------------------------------------------------
+# --window mode: temporal cross of static calibration with frame indices
+# ---------------------------------------------------------------------------
+
+
+class WindowModeTests(WindowFixtureCase):
+    def test_window_emission_counts_and_layout(self):
+        plan, payloads = self.build_window_plan()
+        self.assertEqual(plan.window.start, WINDOW_START)
+        self.assertEqual(plan.window.end, WINDOW_END)
+        self.assertEqual(plan.window.stride, WINDOW_STRIDE)
+        for split, ws in plan.window_splits.items():
+            for cam_id, paths in ws.camera_relative_paths.items():
+                self.assertEqual(len(paths), len(WINDOW_INDICES), (split, cam_id))
+
+        result = converter.execute_plan(plan, payloads)
+        train_payload = json.loads(Path(result["transforms"]["train"]).read_text(encoding="utf-8"))
+        test_payload = json.loads(Path(result["transforms"]["test"]).read_text(encoding="utf-8"))
+        self.assertEqual(len(train_payload["frames"]), len(TRAIN_CAMERA_IDS) * len(WINDOW_INDICES))
+        self.assertEqual(len(test_payload["frames"]), len(TEST_CAMERA_IDS) * len(WINDOW_INDICES))
+
+        # Every (camera, index) pair in the window is present exactly once,
+        # and every emitted frame reuses that camera's static pose.
+        seen = set()
+        for frame in train_payload["frames"] + test_payload["frames"]:
+            cam_id = schema.parse_camera_id(frame["file_path"])
+            frame_index = schema.parse_frame_index(frame["file_path"])
+            self.assertIn(frame_index, WINDOW_INDICES)
+            key = (cam_id, frame_index)
+            self.assertNotIn(key, seen)
+            seen.add(key)
+            self.assertEqual(
+                frame["transform_matrix"],
+                _make_frame(cam_id)["transform_matrix"],
+                "window frame must reuse the camera's static single-instant pose",
+            )
+        self.assertEqual(len(seen), (len(TRAIN_CAMERA_IDS) + len(TEST_CAMERA_IDS)) * len(WINDOW_INDICES))
+
+        # Relocated frame bytes land under the SAME scene_top_dir ("undist")
+        # single-instant mode uses -- not a window-specific directory.
+        relocated = self.output_dir / "undist" / "cam00" / f"{WINDOW_INDICES[0]:08d}.png"
+        self.assertTrue(relocated.is_file())
+        self.assertEqual(relocated.read_bytes(), f"frame-cam0-{WINDOW_INDICES[0]}".encode("ascii"))
+
+    def test_window_time_values(self):
+        plan, payloads = self.build_window_plan()
+        result = converter.execute_plan(plan, payloads)
+        train_payload = json.loads(Path(result["transforms"]["train"]).read_text(encoding="utf-8"))
+        by_index = {schema.parse_frame_index(f["file_path"]): f["time"] for f in train_payload["frames"]}
+        for index in WINDOW_INDICES:
+            self.assertAlmostEqual(by_index[index], index / FPS)
+
+    def test_window_mask_extraction(self):
+        plan, payloads = self.build_window_plan()
+        result = converter.execute_plan(plan, payloads)
+        masks_dir = Path(result["masks_dir"])
+        self.assertTrue(masks_dir.is_dir())
+        for cam_id in self.ALL_CAMERA_IDS:
+            for index in WINDOW_INDICES:
+                mask_path = masks_dir / f"cam{cam_id:02d}" / f"{index:08d}.png"
+                self.assertTrue(mask_path.is_file(), mask_path)
+                self.assertEqual(mask_path.read_bytes(), f"mask-cam{cam_id}-{index}".encode("ascii"))
+        expected_mask_count = len(self.ALL_CAMERA_IDS) * len(WINDOW_INDICES)
+        provenance = json.loads(Path(result["provenance"]).read_text(encoding="utf-8"))
+        total_masks = sum(s["mask_count"] for s in provenance["window"]["splits"].values())
+        self.assertEqual(total_masks, expected_mask_count)
+
+    def test_window_provenance_gains_bounds_and_counts(self):
+        plan, payloads = self.build_window_plan()
+        result = converter.execute_plan(plan, payloads)
+        provenance = json.loads(Path(result["provenance"]).read_text(encoding="utf-8"))
+        window = provenance["window"]
+        self.assertEqual(window["start"], WINDOW_START)
+        self.assertEqual(window["end"], WINDOW_END)
+        self.assertEqual(window["stride"], WINDOW_STRIDE)
+        train_split = window["splits"]["train"]
+        self.assertEqual(train_split["total_frame_count"], len(TRAIN_CAMERA_IDS) * len(WINDOW_INDICES))
+        for cam_id in TRAIN_CAMERA_IDS:
+            self.assertEqual(train_split["per_camera_frame_counts"][str(cam_id)], len(WINDOW_INDICES))
+        self.assertEqual(train_split["mask_count"], len(TRAIN_CAMERA_IDS) * len(WINDOW_INDICES))
+
+    def test_window_dry_run_touches_nothing(self):
+        buffer = io.StringIO()
+        argv = [
+            "--sequence-dir", str(self.sequence_dir),
+            "--output-dir", str(self.output_dir),
+            "--num-random-points", "8",
+            "--window", str(WINDOW_START), str(WINDOW_END),
+            "--stride", str(WINDOW_STRIDE),
+            "--dry-run",
+        ]
+        with contextlib.redirect_stdout(buffer):
+            exit_code = converter.main(argv)
+        self.assertEqual(exit_code, 0)
+        self.assertFalse(self.output_dir.exists())
+        printed = json.loads(buffer.getvalue())
+        self.assertEqual(printed["window"]["start"], WINDOW_START)
+        self.assertEqual(
+            printed["window"]["splits"]["train"]["total_frame_count"],
+            len(TRAIN_CAMERA_IDS) * len(WINDOW_INDICES),
+        )
+
+    def test_window_cli_end_to_end(self):
+        buffer = io.StringIO()
+        argv = [
+            "--sequence-dir", str(self.sequence_dir),
+            "--output-dir", str(self.output_dir),
+            "--num-random-points", "8",
+            "--window", str(WINDOW_START), str(WINDOW_END),
+            "--stride", str(WINDOW_STRIDE),
+        ]
+        with contextlib.redirect_stdout(buffer):
+            exit_code = converter.main(argv)
+        self.assertEqual(exit_code, 0)
+        printed = json.loads(buffer.getvalue())
+        self.assertTrue(Path(printed["masks_dir"]).is_dir())
+
+    def test_default_stride_is_one(self):
+        plan, _ = self.build_window_plan(start=0, end=2, stride=1)
+        for ws in plan.window_splits.values():
+            for paths in ws.camera_relative_paths.values():
+                indices = sorted(int(p.rsplit("/", 1)[-1].split(".")[0]) for p in paths)
+                # Only frame 0 is available at stride 1 within [0, 2] for
+                # this fixture (indices 1 and 2 were never written) --
+                # partial per-camera coverage is expected and NOT a
+                # failure as long as it's non-empty.
+                self.assertEqual(indices, [0])
+
+
+class WindowFailClosedTests(WindowFixtureCase):
+    def test_camera_with_zero_window_frames_is_rejected(self):
+        # cam02 (a train camera) gets NO entries at all in the requested
+        # window -- every other camera keeps full coverage.
+        frame_indices = {
+            cid: [FRAME_INDEX, *WINDOW_INDICES] for cid in self.ALL_CAMERA_IDS if cid != 2
+        }
+        frame_indices[2] = [FRAME_INDEX]  # present at the single instant only
+        (self.sequence_dir / "frames_1.tar.gz").unlink()
+        _write_multi_index_archive(
+            self.sequence_dir / "frames_1.tar.gz", frame_indices, top_dir="frames_1"
+        )
+        with self.assertRaisesRegex(ContractError, r"\[2\]|\b2\b"):
+            self.build_window_plan()
+
+    def test_missing_mask_for_a_kept_frame_is_rejected_with_itemized_list(self):
+        # frames_1 has full window coverage, but segmented_ngp is missing
+        # exactly one (camera, index) pair the frame archive kept.
+        mask_indices = {cid: list(WINDOW_INDICES) for cid in self.ALL_CAMERA_IDS}
+        mask_indices[0] = [i for i in WINDOW_INDICES if i != WINDOW_INDICES[-1]]
+        (self.sequence_dir / "segmented_ngp.tar.gz").unlink()
+        _write_multi_index_archive(
+            self.sequence_dir / "segmented_ngp.tar.gz", mask_indices, top_dir="segmented_ngp"
+        )
+        expected_missing = f"cam00/{WINDOW_INDICES[-1]:08d}.png"
+        with self.assertRaisesRegex(ContractError, "expected member.*not found"):
+            self.build_window_plan()
+        # Confirm the itemized message really names the missing pair.
+        try:
+            self.build_window_plan()
+            self.fail("expected ContractError")
+        except ContractError as exc:
+            self.assertIn(expected_missing, str(exc))
+
+    def test_ambiguous_mask_archive_is_rejected(self):
+        # A second archive, distinct from frames_1, that ALSO plausibly
+        # holds the requested masks -- must fail closed rather than guess.
+        mask_indices = {cid: list(WINDOW_INDICES) for cid in self.ALL_CAMERA_IDS}
+        _write_multi_index_archive(
+            self.sequence_dir / "segmented_ngp_dup.tar.gz", mask_indices, top_dir="segmented_ngp_dup"
+        )
+        with self.assertRaises(ContractError):
+            self.build_window_plan()
+
+    def test_no_mask_candidates_after_excluding_frame_archive_is_rejected(self):
+        # Remove every archive except the one already used as the frame
+        # source -- nothing is left to plausibly serve as the mask source.
+        (self.sequence_dir / "segmented_gt.tar.gz").unlink()
+        (self.sequence_dir / "segmented_ngp.tar.gz").unlink()
+        with self.assertRaises(ContractError):
+            self.build_window_plan()
+
+    def test_invalid_window_bounds_are_rejected(self):
+        with self.assertRaises(SchemaError):
+            self.build_window_plan(start=10, end=5, stride=1)
+        with self.assertRaises(SchemaError):
+            self.build_window_plan(start=0, end=10, stride=0)
+
 
 # ---------------------------------------------------------------------------
 # Fail-closed schema surprises
@@ -422,6 +690,39 @@ class SchemaHelperTests(unittest.TestCase):
         self.assertIn("time", stamped)
         with self.assertRaises(SchemaError):
             schema.stamp_frame_time(stamped, fps=FPS)
+
+    def test_window_indices_is_inclusive_both_ends(self):
+        self.assertEqual(schema.window_indices(0, 60, 20), (0, 20, 40, 60))
+        self.assertEqual(schema.window_indices(5, 5, 1), (5,))
+        self.assertEqual(schema.window_indices(0, 10, 3), (0, 3, 6, 9))
+
+    def test_window_indices_rejects_bad_bounds(self):
+        with self.assertRaises(SchemaError):
+            schema.window_indices(-1, 10)
+        with self.assertRaises(SchemaError):
+            schema.window_indices(10, 5)
+        with self.assertRaises(SchemaError):
+            schema.window_indices(0, 10, 0)
+        with self.assertRaises(SchemaError):
+            schema.window_indices(0, 10, -2)
+
+    def test_camera_path_template(self):
+        self.assertEqual(
+            schema.camera_path_template("undist/cam01/00001000"), ("undist", "cam01", 8)
+        )
+        with self.assertRaises(SchemaError):
+            schema.camera_path_template("undist/cam01/notdigits")
+        with self.assertRaises(SchemaError):
+            schema.camera_path_template("no_slash_here")
+
+    def test_window_file_path(self):
+        self.assertEqual(
+            schema.window_file_path("undist", "cam01", 8, 60), "undist/cam01/00000060"
+        )
+        with self.assertRaises(SchemaError):
+            schema.window_file_path("undist", "cam01", 8, -1)
+        with self.assertRaises(SchemaError):
+            schema.window_file_path("undist", "cam01", 2, 1000)  # overflows 2-digit width
 
 
 # ---------------------------------------------------------------------------
