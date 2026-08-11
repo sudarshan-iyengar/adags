@@ -37,7 +37,7 @@ TABLE_PATH = (
     pathlib.Path(__file__).resolve().parent.parent
     / "configs" / "elgs" / "prereg_latch_transition_table_v1.json"
 )
-TABLE_SHA256 = "9fdf0feece2ee87e5d7105f1324eea463a7d8f0856f47611812fa42f1f413f23"
+TABLE_SHA256 = "162ac4eb3c40f3b665a3fa425d4f763af654e2f92bf00621feff0bc6a6dc960f"
 
 CFG = IntervalConfig(T=30.0, w_m=1.0, w=1.0, floor_len=2.0, floor_gap=2.0)
 DT = torch.float64
