@@ -223,11 +223,17 @@ class GaussianModel:
         self.setup_functions()
 
     def get_elgs_presence(self, timestamp):
-        """(N, 1) winner-lookup presence multiplier (elgs.runtime)."""
+        """(N, 1) winner-lookup presence multiplier (elgs.runtime).
+
+        _elgs_presence_override (family_id -> IntervalState, or None)
+        supports counterfactual candidate renders: the live state is
+        never mutated by scoring (frozen-functional snapshot).
+        """
         if self.elgs_runtime is None:
             raise RuntimeError("EL-GS runtime is not attached")
+        override = getattr(self, "_elgs_presence_override", None)
         return self.elgs_runtime.presence_multiplier(
-            self._elgs_family_ids, float(timestamp)
+            self._elgs_family_ids, float(timestamp), overrides=override
         ).to(self._opacity.device, self._opacity.dtype)
 
     def _capture_elgs_state(self):

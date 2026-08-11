@@ -1110,6 +1110,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     # CSVL-VPL v2: built after training_setup and after the optional checkpoint
     # restore so the manager sees the final row count and any stashed state.
     lifecycle_manager = setup_lifecycle(gaussians, scene, dataset, opt)
+    # EL-GS: same placement rationale; mutually exclusive with the
+    # lifecycle (elgs.trainer_hooks fails closed on both enabled).
+    from elgs.trainer_hooks import maybe_run_elgs_schedule, setup_elgs, elgs_summary
+    elgs_trainer_state = setup_elgs(gaussians, scene, dataset, opt)
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
@@ -1178,6 +1182,26 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             slice_b_capacity_result = maybe_apply_slice_b_capacity_transaction(gaussians, opt, iteration)
             if slice_b_capacity_result is not None:
                 print(json.dumps({"slice_b_capacity_transaction": slice_b_capacity_result}, sort_keys=True))
+
+            if elgs_trainer_state is not None:
+                def _elgs_render_unit_loss(item, override):
+                    if isinstance(item, (tuple, list)) and len(item) == 2:
+                        gt_image, unit_cam = item
+                        gt = gt_image.cuda() if gt_image is not None else unit_cam.original_image.cuda()
+                    else:
+                        unit_cam = item
+                        gt = unit_cam.original_image.cuda()
+                    gaussians._elgs_presence_override = override
+                    try:
+                        with torch.no_grad():
+                            pkg = render(unit_cam, gaussians, pipe, background)
+                            return float(l1_loss(pkg["render"], gt))
+                    finally:
+                        gaussians._elgs_presence_override = None
+                maybe_run_elgs_schedule(
+                    elgs_trainer_state, gaussians, scene, opt, iteration,
+                    _elgs_render_unit_loss,
+                )
 
             if iteration % opt.sh_increase_interval == 0:
                 gaussians.oneupSHdegree()
@@ -1654,6 +1678,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     if lifecycle_manager is not None:
         summary_updates["lifecycle"] = lifecycle_manager.summary()
         summary_updates["lifecycle_ledger"] = lifecycle_manager.ledger_path
+    if elgs_trainer_state is not None:
+        summary_updates["elgs"] = elgs_summary(elgs_trainer_state)
     if best_val_metrics is not None:
         summary_updates.update(prefixed_summary_metrics("best_val", best_val_metrics))
     final_metrics = dict(final_diagnostics)
