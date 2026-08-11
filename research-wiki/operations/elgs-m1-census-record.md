@@ -232,10 +232,39 @@ re-run:
   PowerShell dry-run respectively — recorded, not deleted
   (append-only discipline).
 
+## Tracks artifact sealed + one pre-outcome defect invalidation
+
+- Experiment 8 (retry 2, `413c831`) COMPLETED and sealed the w0_47
+  artifact in 44s wall — but the completion audit's verification
+  probe caught a DEFECT before any census statistic consumed it: the
+  artifact was written through the canonical JSON writer, whose
+  binary64_hex float tokens are an identity/hashing convention with
+  no repo decoder — numerically unreadable. Fix `9faa14b` (plain
+  strict JSON for tracks + controls; canonical manifest retained;
+  reload round-trip regression test). The defective artifact is
+  preserved at `unlock_w0_47_tracks_r2_defective_hexfloat`;
+  `invalidated_by_defect` ledger event records defect, verification
+  (det tasks `ac0aab9e`/`7db8a459`), and replacement.
+- Experiment 9 (retry 3, `9faa14b`) COMPLETED; artifact VERIFIED
+  (det task `2a908aa5`): MANIFEST hashes OK; 88 seeds, 2,100 tracks
+  over frames 0..47; 100,777 positional reports (mean v 0.9802, 23
+  miss tokens); consensus defined at 4,224/4,224 (seed, frame)
+  pairs; reprojection RMS median 0.83 px / p90 0.93 px — sub-pixel
+  multi-camera consistency, the quantitative calibration
+  confirmation; FB-RMS median 1.56 px with a p90 612 px tail that
+  the frozen r_u mapping maps to r_min (reliability model working
+  as designed). Actual ≈0.02 GPU-h vs 0.5 projected; full-sequence
+  extrapolation ≈5 min/sequence.
+- NOTE for the census: the w0_47 window is pipeline validation; the
+  frozen census window is the FULL common range per dev sequence,
+  and the floors bind to counts over ALL THREE dev sequences — so
+  full-window conversions + tracks for unlock, battery, flip_book
+  precede M1-A0.
+
 ## Remaining M1 steps (per the plan)
 
-1. Experiment 8 completion audit; tracks artifact + controls sealed;
-   preprocessing GPU-h recorded (projected 0.5).
+1. Full-window conversions + tracker runs for the three dev
+   sequences (unlock w0_310 in progress).
 2. Census cells M1-A0 → A0b → A → B → C/D (≤25 GPU-h ceiling);
    M1-A0 via the wrapper with entrypoint
    `scripts/build_m1_census.py` and the signed prereg as the named
