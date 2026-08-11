@@ -257,6 +257,72 @@ class SlotGridTests(unittest.TestCase):
         self.assertNotEqual(crn_seed(1, 2, 3, 4), crn_seed(1, 2, 3, 5))
 
 
+class BootstrapOracleParityTests(unittest.TestCase):
+    """elgs/acceptance.py vs the FROZEN fresh-context §7 oracle
+    (tests/ref_impls/bootstrap_reference.py). Both transcriptions
+    sort unit keys and draw len(units) indices per replicate with
+    random.Random(seed).randrange, so the REALIZED delta and SE must
+    agree at the same seed (oracle ambiguities A1-A4 are pinned the
+    same way on both sides: sample sd ddof=1, sorted units)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from tests.ref_impls import bootstrap_reference as ref
+
+        cls.ref = ref
+
+    def _pairs(self, n=48, delta_fn=lambda i: -0.5):
+        mine, theirs = [], []
+        for i in range(n):
+            unit = (i % 4, float((i // 4) % 2))
+            nu, m = 0.1, LAMBDA_U * 0.1 + (1 - LAMBDA_U) * 0.08
+            inc = 1.0 + 0.03 * (i % 7)
+            cand = inc + delta_fn(i)
+            mine.append(SnisSample(unit, nu, m, inc, cand))
+            theirs.append(self.ref.Sample(unit, nu, m, inc, cand))
+        return mine, theirs
+
+    def test_weight_and_delta_parity(self):
+        mine, theirs = self._pairs()
+        for m_s, t_s in zip(mine, theirs):
+            self.assertAlmostEqual(
+                snis_weight(m_s, LAMBDA_U),
+                self.ref.snis_weight(t_s, LAMBDA_U),
+                places=15,
+            )
+        self.assertAlmostEqual(
+            paired_snis_delta(mine, LAMBDA_U),
+            self.ref.paired_delta(theirs, LAMBDA_U),
+            places=13,
+        )
+
+    def test_bootstrap_se_parity_at_same_seed(self):
+        mine, theirs = self._pairs(delta_fn=lambda i: -0.3 + 0.1 * (i % 5))
+        se_mine = paired_cluster_bootstrap_se(mine, LAMBDA_U, seed=17)
+        se_ref = self.ref.paired_cluster_bootstrap_se(theirs, LAMBDA_U, seed=17)
+        self.assertAlmostEqual(se_mine, se_ref, places=13)
+        self.assertGreater(se_mine, 0.0)
+
+    def test_degeneracy_parity(self):
+        mine, theirs = self._pairs(n=5)
+        # 5 samples over <= 5 units: both sides reject.
+        with self.assertRaises(ContractError):
+            paired_cluster_bootstrap_se(mine, LAMBDA_U, seed=1)
+        with self.assertRaises(ValueError):
+            self.ref.paired_cluster_bootstrap_se(theirs, LAMBDA_U, seed=1)
+
+    def test_accept_rule_parity_strictness(self):
+        self.assertTrue(self.ref.accept(-1e-15, 0.0, 1.0))
+        self.assertFalse(self.ref.accept(0.0, 0.0, 1.0))
+        # Mine: decide() realizes the same strict rule; spot-check the
+        # boundary via a constant-shift fixture with zero SE.
+        samples = _draw_samples(60, seed=8, delta=0.0)
+        params = FrozenSamplerParams(lambda_u=LAMBDA_U, pi_d_identity="pi", frozen=True)
+        rec = decide(samples, params, exact_deltas=0.0,
+                     transaction_increment=0.0, k=1.0, bootstrap_seed=3)
+        self.assertFalse(rec.accepted)  # delta_total == 0 is NOT < 0
+
+
 class EstimatorLanguageTests(unittest.TestCase):
     def test_no_unbiased_or_exact_estimator_claims_in_elgs(self):
         """Errata E2: no code or comment may describe the sampled
