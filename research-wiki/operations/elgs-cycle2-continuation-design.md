@@ -1,10 +1,18 @@
 # EL-GS Cycle-2 Continuation Design (post-M1-negative)
 
 Status: REFINED — the hostile fresh-context review returned SOUND
-WITH REPAIRS (10 blocking + 5 notes, all with accepted repairs; full
-record in the session artifacts, verdict quoted below). All ten
-blocking repairs are applied in this revision; the five notes are
-absorbed here and in the experiment plan. Authorized by the user
+WITH REPAIRS (blocking findings {1,2,3,5,6,7,8,9,10,14} + notes
+{4,11,12,13,15}; full record in the session artifacts, verdict
+quoted below). All blocking repairs are applied in this revision;
+the notes are absorbed here and in the experiment plan. The
+subsequent prereg SIGN-OFF review (2026-08-12) added four further
+one-clause repairs (B1–B4: R2′ z>0 participation; nearest-rank
+angular percentile; exactly-3 selection cardinality; tranche-2 /
+continuation semantics) — embodied in prereg revision 2, which is
+the operative frozen text wherever this page and the prereg differ.
+N8 prose correction: tol_c = r_site·fl_x/z_c is the exact image of
+the 3-D ball only under isotropic undistorted intrinsics; the
+operational pin to fl_x is the frozen deterministic rule. Authorized by the user
 2026-08-12: "form a full plan and implement this given the M1
 preserved negative."
 
@@ -59,7 +67,7 @@ R5. ABANDON: rejected — no refutation exists.
 
 54 official sequences minus the 5 assigned (cycle-1 dev battery,
 flip_book, unlock; calibration peel_apple, pour_salt) = 49
-candidates (45 short + 8 long; names in the experiment plan). The
+candidates (41 short + 8 long; names in the prereg). The
 name-prior ordering (chess/jenga/put_*/poker/writing/legos/puzzle
 first) affects only QUEUE COMPOSITION under the frozen full-tranche
 halt rule (§4.5) — never selection within the screened pool; the

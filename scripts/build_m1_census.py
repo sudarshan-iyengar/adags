@@ -46,6 +46,7 @@ import argparse
 import dataclasses
 import hashlib
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -286,9 +287,10 @@ def occlusion_events(
 
 
 def angular_separation_floor(scene: SceneBundle) -> float:
-    """Frozen R2-prime angular floor: the 10th percentile of pairwise
-    optical-axis angular separations among training cameras (calibration
-    only; prereg_m1_cycle2_screen_v1 gate_bearing_return_statistic)."""
+    """Frozen R2-prime angular floor (prereg_m1_cycle2_screen_v1 rev 2,
+    finding B2): the ceil(0.10 * N)-th smallest of the N = C(k,2) pairwise
+    optical-axis angular separations among training cameras — NEAREST-RANK,
+    no interpolation; calibration only."""
 
     axes = []
     for camera_id in scene.tracking_ids:
@@ -299,7 +301,9 @@ def angular_separation_floor(scene: SceneBundle) -> float:
         for j in range(i + 1, len(axes)):
             cosine = float(np.clip(np.dot(axes[i], axes[j]), -1.0, 1.0))
             separations.append(float(np.arccos(cosine)))
-    return float(np.percentile(separations, 10))
+    separations.sort()
+    rank = math.ceil(0.10 * len(separations))  # 1-indexed nearest-rank
+    return separations[rank - 1]
 
 
 def r2prime_holds(
