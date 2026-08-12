@@ -186,11 +186,22 @@ def build_association(
     scene: SceneBundle, index: ReportIndex
 ) -> tuple[dict[tuple[int, int, int], bool], dict[str, int]]:
     """(seed, camera, frame) -> associated-with-eligible-component, plus the
-    coverage tallies (components total / covered) computed in one pass."""
+    coverage tallies (components total / covered) computed in one pass.
 
+    Cycle-3 gate support: per-half tallies under the frozen floor(n/2)
+    split (a component instance belongs to the half containing its frame)
+    are emitted alongside the full-window tallies.
+    """
+
+    frames = list(scene.frame_indices)
+    split_frame = frames[len(frames) // 2]
     associated: dict[tuple[int, int, int], bool] = {}
     components_total = 0
     components_covered = 0
+    half_tallies = {
+        "first_half": {"components_total": 0, "components_covered": 0},
+        "second_half": {"components_total": 0, "components_covered": 0},
+    }
     for camera_id in scene.tracking_ids:
         for frame in scene.frame_indices:
             labels, eligible = load_component_labels(scene.mask_path(camera_id, frame))
@@ -210,9 +221,13 @@ def build_association(
                 if hit:
                     covered_labels.add(label)
             components_covered += len(covered_labels)
+            half = "first_half" if frame < split_frame else "second_half"
+            half_tallies[half]["components_total"] += len(eligible)
+            half_tallies[half]["components_covered"] += len(covered_labels)
     return associated, {
         "components_total": components_total,
         "components_covered": components_covered,
+        "by_half": half_tallies,
     }
 
 

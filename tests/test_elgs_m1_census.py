@@ -211,6 +211,13 @@ class CensusStatisticsTest(unittest.TestCase):
         tallies = self.result["coverage_tallies"]
         self.assertEqual(tallies["components_total"], 191)
         self.assertEqual(tallies["components_covered"], 71)
+        # Per-half tallies (cycle-3 gate; split_frame = 20): hand count —
+        # first half: 3 cams x (12 tracked-present + 20 untracked) = 96
+        # total / 36 covered; second half: cam01 5+20, cam02/03 15+20 = 95
+        # total / 35 covered.
+        by_half = self.result["per_sequence"]["scene"]["coverage_tallies"]["by_half"]
+        self.assertEqual(by_half["first_half"], {"components_total": 96, "components_covered": 36})
+        self.assertEqual(by_half["second_half"], {"components_total": 95, "components_covered": 35})
         self.assertAlmostEqual(
             self.result["statistics"]["track_coverage_upper_bound"], 71 / 191, places=12
         )
