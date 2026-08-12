@@ -40,6 +40,34 @@ floor) + `d546400` (B2 nearest-rank). 16 oracle tests in
 `tests/test_elgs_m1_census.py`; full suite green (652, only the 3
 pre-existing env failures).
 
+## R2′ implementation verification (the signature's boundary) — CLOSED
+
+- First pass (fresh-context, statement-by-statement, 13-row
+  conformance table): **DEVIATES** — two findings, both caught
+  BEFORE any screening statistic was computed. D2 (material): the
+  anchor search covered only the 4-frame termination-detection
+  prefix of the re-appearance run, not the frozen MAXIMAL run —
+  candidate-differential on the gate-bearing statistic, and it
+  explains part of cycle-1's 23-vs-30 primary-return spread
+  (cycle 1 stays FINAL; the concordance diagnostic will surface the
+  divergence). D1 (narrow): the in-domain filter tested continuous
+  coordinates where R8 binds the round-half-up pixel (half-pixel
+  boundary band wrongly discarded). The pairwise-separation
+  semantics were adjudicated CONFORMS under the unique monotone
+  reading.
+- Repairs at `1d8f3b0` (full-run extension with same-S closure +
+  return_run_end; rounded-pixel domain test) with pinning tests.
+- Re-verification: **CONFORMS — screening statistics computed at
+  `1d8f3b0` are protocol-valid.** Empirical pinning: both new tests
+  were run against the PRE-repair evaluator via module injection
+  and fail at exactly the predicted assertions; both pass at
+  `1d8f3b0`; 18/18 module suite. Disclosed enumeration convention
+  (recorded, not a deviation): frames inside a candidate's
+  terminating re-appearance run are not rescanned as potential
+  same-identity window starts — the greedy per-identity scan is
+  the signed enumeration. Ten non-blocking test recommendations
+  carried in the verification record.
+
 ## Acquisition mechanics
 
 Cycle-1 precedent: per-sequence `processed_data` zips from the
