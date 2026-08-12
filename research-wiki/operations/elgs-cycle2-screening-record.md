@@ -89,21 +89,46 @@ filesystem monitor is the real signal).
 
 ### Screening table (screened half; gate-bearing statistic = union returns)
 
-| seq | window | occl | true-abs | returns primary | returns union | single-cam diag | coverage | ret_undef | eligible (≥12 union, ≥0.5 cov) |
+| seq | window | occl | true-abs | primary | union | diag | coverage | ret_undef | eligible (≥12 union, ≥0.5 cov) |
 |---|---|---|---|---|---|---|---|---|---|
 | chess | 0–352 | 7,896 | 0 | 0 | 0 | 0 | 0.936 | 0 | NO |
 | maracas | 0–134 | 16,874 | 1 | 0 | 1 | 1 | 0.917 | 0 | NO |
-| tambourine | 0–127 | 11,065 | 18 | 3 | 9 | 16 | 0.815 | 0 | NO (union 9 < 12) |
+| tambourine | 0–127 | 11,065 | 18 | 3 | 9 | 16 | 0.815 | 0 | NO |
 | pour_tea | 0–225 | 12,101 | 73 | 1 | 3 | 18 | 0.591 | 26 | NO |
+| jenga | 0–272 | 9,698 | 0 | 0 | 0 | 0 | 0.896 | 0 | NO |
+| pan | 0–114 | 12,818 | 11 | 0 | 0 | 1 | 0.853 | 0 | NO |
+| soda | 0–171 | 15,468 | 1 | 0 | 0 | 0 | 0.774 | 0 | NO |
+| piano | 0–354 | 3,346 | 0 | 0 | 0 | 0 | 0.999 | 0 | NO |
+| tea | 0–164 | 18,944 | 13 | 3 | 3 | 7 | 0.743 | 7 | NO |
+| put_candy | 0–233 | 15,889 | 18 | 4 | 4 | 15 | 0.507 | 11 | NO |
+| writing_1 | 0–367 | 5,476 | 0 | 0 | 0 | 0 | 0.918 | 0 | NO |
+| put_fruit | 0–162 | 9,820 | 4 | 2 | 2 | 3 | 0.887 | 1 | NO |
+| **writing_2** | 0–239 | 7,315 | 84 | **49** | **50** | 62 | 0.845 | 8 | **YES** |
+| kindle | 0–292 | 12,444 | 0 | 0 | 0 | 0 | 0.779 | 0 | NO |
+| xylophone | 0–306 | 1,031 | 0 | 0 | 0 | 0 | 0.577 | 0 | NO |
+| keyboard_mouse | 0–176 | 3,675 | 0 | 0 | 0 | 0 | 0.853 | 0 | NO |
+| poker | 0–267 | 16,376 | 109 | 4 | 10 | 32 | **0.382** | 44 | NO (coverage) |
+| slice_apple | 0–233 | 6,241 | 4 | 2 | 2 | 3 | 0.731 | 1 | NO |
+| scissor | 0–561 | 35,254 | 343 | 20 | **75** | 254 | **0.441** | 212 | NO (coverage) |
+| music_box | 0–2867 | (converting) | | | | | | | |
 
-R2′ real-data behavior (first four rows): the union recovers
-censored returns the primary misses (tambourine 3→9, pour_tea 1→3,
-maracas 0→1) while staying FAR below the invalid single-camera form
-(diagnostics 16–18 where union admits 3–9) — the two-camera
-angular-separation requirement discriminates as the sign-off
-reviewer intended. pour_tea's profile (73 absences, ret_undef 26,
-single-diag 18, union 3) is the censoring regime characterized in
-cycle 1, measured live.
+Findings visible before music_box completes:
+- R2′ discriminates as designed everywhere: union recovers censored
+  returns (scissor 20→75, tambourine 3→9, poker 4→10) while staying
+  far below the invalid single-camera diagnostic (scissor 254,
+  poker 32).
+- Only writing_2 is eligible (union 50, cov 0.845 — writing +
+  erasing produces genuine leave-and-return events with a
+  well-tracked pen). The two other return-rich candidates fail the
+  per-sequence coverage floor for the principled reason it exists:
+  scissor (union 75, cov 0.441) and poker (union 10, cov 0.382)
+  are event-rich but tracker-illegible.
+- With at most 2 eligible possible (music_box pending), the frozen
+  exactly-3 rule yields DRY WITHIN THE FROZEN BUDGET regardless of
+  music_box; the pooled 72-union threshold is also unreachable from
+  eligible candidates (50 + 9 + 4 = 63 hypothetically). The
+  checkpoint's autonomy condition (>= 2 eligible) is NOT met — the
+  post-tranche decision is the user's by frozen design.
 
 - chess (exp 15 tracks: 512 seeds, 7,001 tracks, reproj median
   0.75 px, consensus 99.9%; exp 16 census): the STRONGEST
