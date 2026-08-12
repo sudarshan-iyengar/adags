@@ -110,9 +110,39 @@ filesystem monitor is the real signal).
 | poker | 0–267 | 16,376 | 109 | 4 | 10 | 32 | **0.382** | 44 | NO (coverage) |
 | slice_apple | 0–233 | 6,241 | 4 | 2 | 2 | 3 | 0.731 | 1 | NO |
 | scissor | 0–561 | 35,254 | 343 | 20 | **75** | 254 | **0.441** | 212 | NO (coverage) |
-| music_box | 0–2867 | (converting) | | | | | | | |
+| music_box | 0–2867 | 16,090 | 0 | 0 | 0 | 0 | 1.000 | 0 | NO |
 
-Findings visible before music_box completes:
+## FORMAL SELECTION OUTCOME (frozen algorithm, prereg revision 2)
+
+Tranche 1 fully screened (20/20, every row from a sealed
+protocol-valid census at `1d8f3b0`+). Step 1 eligibility (union ≥ 12
+AND coverage ≥ 0.5): exactly ONE candidate qualifies — writing_2
+(union 50, coverage 0.845). Fewer than 3 eligible ⇒ steps 3–4
+skipped ⇒ **DRY WITHIN THE FROZEN BUDGET** (frozen B3 rule). The
+pooled 72-union threshold is also unreachable from eligible +
+near-eligible candidates (50 + 9 + 4 = 63). The checkpoint autonomy
+condition (qualifying subset exists OR ≥ 2 eligible) is NOT met —
+the post-tranche decision belongs to the USER per the frozen
+protocol. No cycle-2 gate was run (no selected subset exists).
+
+Screening spend: ≈ 2–3 GPU-h total (20 tracker runs, mostly ≤ 3 min
+each with music_box ≈ 1 h; 20 CPU censuses on hopper slots; exact
+wall-times in the experiment ledger and Determined) of the 6 GPU-h
+ceiling; ≈ 350 GB acquired zips + extractions (33 TB free); every
+per-candidate seal set (tracks + census + manifests + realized
+windows) retained per the verifiability policy.
+
+What the tranche established POSITIVELY: the dev pool is massively
+rich in the OTHER three gated event classes — ~240k pooled occlusion
+opportunities, ~700 true-absence candidates, healthy coverage in
+17/20 sequences. G13's occlusion/absence program (BIRTH, FISSION,
+TRUNCATE, censored evidence) is data-rich in DiVa-360; ONLY G14's
+same-object-return supply (REACTIVATE) is scarce — concentrated in
+one well-tracked sequence (writing_2: 84 absences / 50 union returns
+in HALF a sequence) and two tracker-illegible ones (scissor union
+75 at coverage 0.441; poker at 0.382).
+
+Findings visible before music_box completed:
 - R2′ discriminates as designed everywhere: union recovers censored
   returns (scissor 20→75, tambourine 3→9, poker 4→10) while staying
   far below the invalid single-camera diagnostic (scissor 254,
