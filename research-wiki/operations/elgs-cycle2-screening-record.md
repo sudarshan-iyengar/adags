@@ -80,6 +80,24 @@ retained.
 
 ## Tranche-1 execution log
 
-(appended as screening proceeds; per candidate: acquisition task,
-manifest sha, conversion, half-window tracks experiment, screening
-census, seal, deletions)
+Acquisition: chess pilot validated the path (25.0 GB, sha
+`082ad68a…`, 18 min; the read-only seal on the cycle-1 tree had to
+be reopened for the zips dir — chmod, no data touched); remaining
+19 in four parallel batch tasks (local det streams cap at 10 min
+and exit 255 while the server tasks continue — benign, the
+filesystem monitor is the real signal).
+
+### Screening table (screened half; gate-bearing statistic = union returns)
+
+| seq | window | occl | true-abs | returns primary | returns union | coverage | eligible (≥12 union, ≥0.5 cov) |
+|---|---|---|---|---|---|---|---|
+| chess | 0–352 | 7,896 | 0 | 0 | 0 | 0.936 | NO (0 returns) |
+
+- chess (exp 15 tracks: 512 seeds, 7,001 tracks, reproj median
+  0.75 px, consensus 99.9%; exp 16 census): the STRONGEST
+  name-prior candidate has ZERO true-absence candidates in its
+  screened half — pieces never vanish from all containing cameras
+  simultaneously; occlusion supply is huge and coverage excellent,
+  so this is event content, not pipeline health. The cycle-1
+  lesson (names do not predict event content) validated by the
+  first measured row.
