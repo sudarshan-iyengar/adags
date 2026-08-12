@@ -58,7 +58,7 @@ def _second_half_returns(sequence: dict[str, Any]) -> dict[str, Any]:
     the sealed records (returns attributed by terminating-run start)."""
 
     split = sequence["halves"]["split_frame"]
-    union = primary = 0
+    union = primary = straddle = 0
     per_identity: dict[str, int] = {}
     for candidate in sequence["records"]["true_absence_candidates"]:
         if "return_run_start" not in candidate:
@@ -74,7 +74,16 @@ def _second_half_returns(sequence: dict[str, Any]) -> dict[str, Any]:
             continue
         key = str(candidate["seed_id"])
         per_identity[key] = per_identity.get(key, 0) + 1
-    return {"union": union, "primary": primary, "per_identity": per_identity}
+        # Signature binding reading (sign-off NOTE-2): a counted return may
+        # terminate a window whose FIRST frame lies in the screened half.
+        if candidate["first_frame"] < split:
+            straddle += 1
+    return {
+        "union": union,
+        "primary": primary,
+        "per_identity": per_identity,
+        "straddle_count": straddle,
+    }
 
 
 def apply_gate(census_paths: dict[str, Path]) -> dict[str, Any]:
@@ -110,6 +119,7 @@ def apply_gate(census_paths: dict[str, Path]) -> dict[str, Any]:
         "primary_returns_second_half": anchor_returns["primary"],
         "loosening_disclosure": "the strict cycle-1 primary is reported alongside the union per the standing disclosure",
         "per_identity_decomposition": anchor_returns["per_identity"],
+        "straddle_window_count": anchor_returns["straddle_count"],
         "coverage_second_half": anchor_coverage,
         "comparisons": {
             "union_returns_min": anchor_returns["union"] >= G_R_FLOORS["union_returns_min"],
@@ -176,6 +186,11 @@ def apply_gate(census_paths: dict[str, Path]) -> dict[str, Any]:
             "precondition for ITS claim family; each valid FAIL is final for its "
             "family on this subset; starting M2 remains a separate user approval"
         ),
+        "signature_binding_readings": {
+            "note2": "the G-R subset_note is read as >= 36 true-absence candidates whose terminating re-appearance run starts in the unscreened half; the straddle count is reported",
+            "note3": "pooled coverage is ratio-of-sums (cycle-2 precedent)",
+            "note4": "an undefined gate statistic means its floor is NOT met for the affected verdict",
+        },
         "census_sha256": provenance,
     }
 
