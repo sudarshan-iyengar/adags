@@ -1,8 +1,20 @@
 # EL-GS Cycle-3 Design: writing_2-Anchored Reactivation Rescope
 
-Status: REFINED — hostile fresh-context review returned SOUND WITH
-REPAIRS (8 blocking + 8 notes; verdict quoted below; all applied in
-this revision). USER DECISION 2026-08-12: after the cycle-2
+Status: SIGNED — the frozen gate prereg
+(`prereg_m1_cycle3_gate_v1.json` at `6de4d60`) passed its
+fresh-context sign-off with ZERO blocking findings and six notes;
+three BINDING READINGS form part of the signature record: (NOTE-2)
+the G-R subset_note reads as "≥ 36 true-absence candidates whose
+terminating re-appearance run starts in the unscreened half", with
+the straddle count reported; (NOTE-3) pooled coverage is
+ratio-of-sums; (NOTE-4) an undefined gate statistic fails its floor.
+The reviewer verified every cited number against the sealed table,
+recomputed the shrinkage/overdispersion arithmetic, confirmed the
+dev subset is forced with no free choice, and confirmed both
+verdicts mechanical and genuinely failable. Verdict (verbatim):
+"SIGNED. […] Tracks may be unquarantined; the gate may run."
+Design history: hostile refine SOUND WITH REPAIRS (8 blocking + 8
+notes; all applied). USER DECISION 2026-08-12: after the cycle-2
 tranche-1 DRY, the user selected the narrow R3 variant — an APPROVED
 CLAIM CHANGE. This page is the durable record.
 
