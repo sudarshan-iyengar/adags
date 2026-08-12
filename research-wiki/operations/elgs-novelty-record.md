@@ -70,3 +70,21 @@ STAR-GS v9 (training-side): 5.5 → LGS (representation, heuristic
 search): 6.5 → EL-GS (representation + inference principle): **8.0
 conditional**. The user-relaxed constraints (external priors; dataset
 freedom) were what unlocked the inference-principle half.
+
+## Scoping addendum (2026-08-12, cycle-3 rescope)
+
+Scoping addendum (2026-08-12, cycle-3 rescope): (i) CC4/G14
+(reactivation-with-own-content) empirical support = one sequence,
+one activity type, one rig (DiVa-360 surround; writing_2); (ii) the
+same activity type (writing_1) measured zero returns under the
+frozen census - the claim scope is the operational census predicate,
+not the activity type; (iii) CC5 (conjunction) inherits the same
+scope wherever reactivation contributes to it; (iv) an optional
+fresh novelty round was offered to the user and deferred. If any
+future claim statement asserts G14 occupancy as a general
+dynamic-scene capability, this addendum position collapses and a
+re-rating becomes mandatory.
+
+Appended per prereg_m1_cycle3_gate_v1 (SIGNED at 6de4d60),
+regardless of verdict; gate outcome: G-R PASS / G-OA FAIL
+([[operations/elgs-cycle3-gate-result]]).
