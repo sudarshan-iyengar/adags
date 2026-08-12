@@ -1,0 +1,50 @@
+{
+  "schema_version": "elgs-prereg-m1-cycle3-gate-v1",
+  "revision": 1,
+  "authority": "user claim-change decision 2026-08-12 (cycle-2 checkpoint: R3 narrow variant, writing_2-anchored reactivation) -> operations/elgs-cycle3-rescope-design (REFINED: hostile review SOUND WITH REPAIRS, all eight blocking repairs applied) -> this prereg. Cycle-1 negative and cycle-2 DRY remain FINAL and untouched.",
+  "status_note": "FROZEN before any full-window census statistic is computed and before any full-window track artifact is read; a fresh-context reviewer must SIGN before tracks are unquarantined",
+
+  "claim_rescope": {
+    "unchanged_broad_g13": "all occlusion/absence/censored-evidence claims (tracker visibility states as representation-level presence/identity evidence; measurement-model existence inference; BIRTH/FISSION/TRUNCATE under the censored energy; conditional claims only)",
+    "rescoped_narrow_g14": "REACTIVATE is claimed and tested ONLY on sequences satisfying the OPERATIONAL scope predicate: frozen tracker census measures >= 12 union returns at >= 0.5 coverage (the cycle-2 eligibility predicate). writing_2 is the sole current member. 'writing_2-like' means exactly: passing this predicate. Activity-type phrases are informal characterization only: the same activity type (writing_1) measured ZERO returns under the frozen census",
+    "favorable_fact": "writing_2's screened half: primary 49 vs union 50 - the anchor passes eligibility on the strict cycle-1 statistic alone; the gate reports primary alongside union per the standing loosening disclosure",
+    "novelty_addendum_text": "Scoping addendum (2026-08-12, cycle-3 rescope): (i) CC4/G14 (reactivation-with-own-content) empirical support = one sequence, one activity type, one rig (DiVa-360 surround; writing_2); (ii) the same activity type (writing_1) measured zero returns under the frozen census - the claim scope is the operational census predicate, not the activity type; (iii) CC5 (conjunction) inherits the same scope wherever reactivation contributes to it; (iv) an optional fresh novelty round was offered to the user and deferred. If any future claim statement asserts G14 occupancy as a general dynamic-scene capability, this addendum position collapses and a re-rating becomes mandatory.",
+    "addendum_application": "appended verbatim to operations/elgs-novelty-record at gate time regardless of verdict"
+  },
+
+  "dev_subset": {
+    "anchor": "writing_2 (unique eligible; union max among the 18 coverage-passing candidates, 50 vs runner-up 9; realized common range 481 frames, 0-480, screened half 0-239)",
+    "companion_rule": "over the fully screened tranche-1 pool EXCLUDING THE ANCHOR: screened-half coverage >= 0.5, ranked by screened-half true_absence_candidate_count descending, ties by union returns descending then ascending alphabetical",
+    "companions": ["pour_tea (73 absences; 452 frames, 0-451)", "tambourine (18-absence tie over put_candy broken by union 9 > 4; 256 frames, 0-255)"],
+    "post_data_rule_disclosure": "the companion rule was authored after the sealed screening table was visible; deterministic given its statement, but its parameterization (absence-primary, union tie-break) is post-data - disclosed per the program's data-informed-selection methodology; cycle-2 tracker-legibility and selection-bias disclosures carry forward verbatim",
+    "sequences": ["writing_2", "pour_tea", "tambourine"]
+  },
+
+  "gate": {
+    "windows": "UNSCREENED (second) halves from full-range tracks; cycle-2 frozen boundary conventions (returns by terminating-run start; occlusion/absence by first frame; split floor(n/2)); definitions = revision-3 base + twelve frozen readings + R2-prime union statistic with loosening disclosure; evaluator at 1d8f3b0 or later incl. its disclosed greedy per-identity enumeration convention (R2-prime verification record)",
+    "G_R_reactivation_precondition": {
+      "scope": "writing_2 ALONE",
+      "floors": {"union_returns_min": 36, "coverage_min": 0.5},
+      "subset_note": "union returns are a subset of true-absence candidates by frozen definition, so a G-R pass establishes >= 36 absence windows on writing_2's unscreened half - REACTIVATE's absence-window precondition needs no separate floor",
+      "shrinkage_disclosure": "selection shrinkage is NEGLIGIBLE by order statistics (runner-up eligible rate 9; P(rate-9 >= 36) ~ 1e-11): top-of-pool selection cannot have inflated writing_2's 50. The honest risk is the VARIANCE MODEL: returns are burst-clustered events from one or two identities; under overdispersion var = phi*mean, P(unscreened >= 36 | rate 50) falls from the Poisson idealization 0.98 to ~0.94 (phi=2) and ~0.85 (phi=4); no half-to-half model is trusted; the gate exists to catch phase confinement. Genuinely failable",
+      "one_scene_inference": "the scene-level cluster bootstrap is degenerate for a one-scene claim; reactivation-arm inference in M2 uses a TEMPORAL-BLOCK bootstrap within writing_2 (blocks of consecutive events; exchangeability caveat disclosed); the gate artifact publishes the per-identity decomposition of writing_2's returns"
+    },
+    "G_OA_occlusion_absence_precondition": {
+      "scope": "pooled over the three dev sequences",
+      "floors": {"occlusion_events_min_pooled": 36, "true_absence_min_pooled": 36, "true_absence_min_per_sequence": 12, "coverage_min_pooled": 0.5, "coverage_min_per_sequence": 0.5},
+      "per_sequence_rationale": "companions were selected for absence supply and must not free-ride (the frozen flip_book rationale); screened halves measured pour_tea 73 / tambourine 18",
+      "no_return_floor_on_companions": "companions carry NO return floor BECAUSE no reactivation claim is made on them"
+    },
+    "verdicts": "G-R and G-OA receive SEPARATE verdicts; each PASS restores the M1 precondition for ITS claim family; each valid FAIL is final for its family on this subset; starting M2 remains a separate explicit user approval either way, with the M2 matrix inheriting the scope (reactivation arms on scope-predicate content; occlusion/absence arms on the full dev subset)",
+    "verification": "independent fresh-context recomputation from primary inputs + integrity audit precede any recorded verdict (the standing protocol); concordance diagnostic (screened-half stats recomputed from full-range tracks) reported next to both verdicts; M1-A0b audited true absence runs post-gate, diagnostic-only; the revision-3 necessary-condition note is restated on the result page"
+  },
+
+  "quarantine": {
+    "conversions": "full-window conversions are content-neutral (frame/mask counts already public from screening) and may precede SIGN",
+    "tracks": "full-window tracker outputs are informative about unscreened-half statistics and are QUARANTINED: no human or agent reads, summarizes, or inspects track artifacts or track-bearing logs before SIGN; only exit status, wall time, and mechanically computed sha256 manifests are observable; the execution ledger records conformance; a pre-SIGN tracker failure is a disclosed infra note authorizing no design edit. Execution choice recorded: tracks are HELD until SIGN",
+    "failure_menu_on_any_FAIL": "options return to the user: R4 dataset extension, full R3 descope, or tranche-2 screening (still live under the frozen cycle-2 prereg: 21 short + 8 long unscreened, the deferred long list including legos/puzzle/origami)"
+  },
+
+  "budget": {"gate_gpu_hours_max": 1.5, "downloads": "none (all sequences acquired and manifested)"},
+  "review": {"signoff": "a fresh-context reviewer must SIGN this file (scope-predicate operationalization, split-verdict structure, floor arithmetic, quarantine, consistency with the refined design and the frozen cycle-2 base) BEFORE tracks are unquarantined or any full-window census statistic is computed"}
+}
