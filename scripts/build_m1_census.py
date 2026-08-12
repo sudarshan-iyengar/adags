@@ -141,10 +141,14 @@ def index_tracks(artifact: dict[str, Any], scene: SceneBundle) -> ReportIndex:
             if float(report["v"]) < VIS_THRESHOLD:
                 continue
             x, y = float(report["x"]), float(report["y"])
-            if not (0.0 <= x <= camera.width - 1.0 and 0.0 <= y <= camera.height - 1.0):
+            # R8 (verifier D1): in-domain binds the ROUND-HALF-UP pixel,
+            # not the continuous coordinates — the half-pixel boundary band
+            # (e.g. x in [-0.5, 0)) is in-domain.
+            col, row = round_half_up(x), round_half_up(y)
+            if not (0 <= col <= camera.width - 1 and 0 <= row <= camera.height - 1):
                 continue
             frame = int(round(float(report["frame"])))
-            pixels[(seed_id, camera_id, frame)] = (round_half_up(x), round_half_up(y))
+            pixels[(seed_id, camera_id, frame)] = (col, row)
     consensus: dict[int, dict[int, np.ndarray]] = {}
     for key, entries in artifact.get("consensus", {}).items():
         seed_id = int(key)
@@ -448,7 +452,18 @@ def true_absence_and_returns(
                 }
                 terminated = len(reappearance_run) >= FLICKER_MAX
                 if terminated:
+                    # Verifier D2: the frozen texts bind the anchor search to
+                    # the MAXIMAL terminating re-appearance run, not the
+                    # 4-frame termination-detection prefix. Extend the run to
+                    # its true end (next S-absence frame or window end),
+                    # using the SAME S per R4 (fixed at event start).
+                    extension = position + 1
+                    while extension < len(frames) and not absent_at(frames[extension]):
+                        reappearance_run.append(frames[extension])
+                        extension += 1
+                    position = extension - 1
                     record["return_run_start"] = reappearance_run[0]
+                    record["return_run_end"] = reappearance_run[-1]
                     # PRIMARY (revision-3 rule): earliest defined-consensus
                     # frame within the terminating run, within r_site.
                     primary_return = False

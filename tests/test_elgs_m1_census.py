@@ -364,6 +364,47 @@ class Cycle2AlignmentTests(unittest.TestCase):
         sequence = self._run(0.1)
         self.assertGreater(sequence["angular_floor_rad"], 0.0)
 
+    def test_d2_anchor_searches_full_maximal_run(self):
+        # Verifier D2 pinning: consensus undefined for the first 6 frames of
+        # the terminating run (25..30) and defined only at 31 with a
+        # within-r_site point. Under the 4-frame-prefix bug the primary
+        # anchor search would end at frame 28 and tally
+        # return_position_undefined; the frozen full-run search finds 31.
+        def defined_only_late(payload):
+            for entry in payload["consensus"]["0"]:
+                if 25 <= entry["frame"] <= 30:
+                    entry["point"] = None
+
+        sequence = self._run(0.1, defined_only_late)
+        record = next(
+            c for c in sequence["records"]["true_absence_candidates"] if c["first_frame"] == 10
+        )
+        self.assertEqual(record["return"], "same_object_return_primary")
+        self.assertEqual(record["return_frame"], 31)
+        self.assertEqual(record["return_run_start"], 25)
+        self.assertEqual(record["return_run_end"], 39)
+        self.assertEqual(sequence["statistics"]["same_object_return_count"], 1)
+
+    def test_d1_half_pixel_boundary_band_is_in_domain(self):
+        # Verifier D1 pinning: a report at x = -0.3 rounds to pixel 0 (in
+        # domain under R8) and must associate/count; x = -0.6 rounds to -1
+        # (out of domain) and must be dropped.
+        self.assertEqual(census.round_half_up(-0.3), 0)
+        self.assertEqual(census.round_half_up(-0.6), -1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene_dir, tracks_path = _write_scene(Path(tmp), return_offset=0.1)
+            payload = json.loads(tracks_path.read_text(encoding="utf-8"))
+            scene = census.load_temporal_scene(scene_dir)
+            # in-band: rounds to 0 -> kept; out-of-band: rounds to -1 -> dropped
+            payload["tracks"][0]["reports"][0].update({"x": -0.3, "y": 12.0})
+            payload["tracks"][1]["reports"][0].update({"x": -0.6, "y": 12.0})
+            index = census.index_tracks(payload, scene)
+            camera_in = int(payload["tracks"][0]["camera_id"])
+            camera_out = int(payload["tracks"][1]["camera_id"])
+            self.assertEqual(index.pixels.get((0, camera_in, 0)), (0, 12))
+            self.assertNotIn((0, camera_out, 0), index.pixels)
+
 
 class PooledCensusTest(unittest.TestCase):
     def test_two_sequences_pool_counts_and_coverage(self):
