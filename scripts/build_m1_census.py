@@ -285,40 +285,107 @@ def occlusion_events(
     return events, undefined_position_frames
 
 
+def angular_separation_floor(scene: SceneBundle) -> float:
+    """Frozen R2-prime angular floor: the 10th percentile of pairwise
+    optical-axis angular separations among training cameras (calibration
+    only; prereg_m1_cycle2_screen_v1 gate_bearing_return_statistic)."""
+
+    axes = []
+    for camera_id in scene.tracking_ids:
+        rotation = scene.cameras[camera_id].w2c[:3, :3]
+        axes.append(rotation.T @ np.array([0.0, 0.0, 1.0]))
+    separations = []
+    for i in range(len(axes)):
+        for j in range(i + 1, len(axes)):
+            cosine = float(np.clip(np.dot(axes[i], axes[j]), -1.0, 1.0))
+            separations.append(float(np.arccos(cosine)))
+    return float(np.percentile(separations, 10))
+
+
+def r2prime_holds(
+    scene: SceneBundle,
+    index: ReportIndex,
+    seed_id: int,
+    frame: int,
+    ltp: np.ndarray,
+    r_site: float,
+    angular_floor: float,
+) -> bool:
+    """R2-prime (frozen union member): >= 2 training cameras, pairwise
+    angular separation >= angular_floor, EACH with the identity's in-domain
+    visible report pixel within tol_c = r_site * fl_x_c / z_c of the LTP's
+    projection into that camera (the exact image of the 3-D r_site ball;
+    calibration + frozen tracks only, no free constants)."""
+
+    qualifying = []
+    for camera_id in scene.tracking_ids:
+        pixel = index.pixels.get((seed_id, camera_id, frame))
+        if pixel is None:
+            continue
+        camera = scene.cameras[camera_id]
+        cam_point = camera.w2c[:3, :3] @ ltp + camera.w2c[:3, 3]
+        z = float(cam_point[2])
+        if z <= 0.0:
+            continue
+        uv = camera.K @ cam_point
+        proj = np.array([uv[0] / uv[2], uv[1] / uv[2]])
+        tolerance = r_site * float(camera.K[0, 0]) / z
+        if float(np.hypot(pixel[0] - proj[0], pixel[1] - proj[1])) <= tolerance:
+            axis = camera.w2c[:3, :3].T @ np.array([0.0, 0.0, 1.0])
+            qualifying.append(axis)
+    if len(qualifying) < 2:
+        return False
+    for i in range(len(qualifying)):
+        for j in range(i + 1, len(qualifying)):
+            cosine = float(np.clip(np.dot(qualifying[i], qualifying[j]), -1.0, 1.0))
+            if float(np.arccos(cosine)) >= angular_floor:
+                return True
+    return False
+
+
 def true_absence_and_returns(
     scene: SceneBundle,
     index: ReportIndex,
     associated: dict[tuple[int, int, int], bool],
     r_site: float,
-) -> tuple[list[dict[str, Any]], int, int, int]:
+    angular_floor: float,
+) -> tuple[list[dict[str, Any]], int, int, dict[str, int]]:
     """Flicker-bridged true-absence candidates + same-object returns.
 
+    Cycle-2 alignment (prereg_m1_cycle2_screen_v1 frozen readings):
+    - R3: disappearance is a TRANSITION — associated in >= 1 camera of S
+      at t-1 and in none of S at t; no window opens at frame 0.
+    - R9: position_undefined_exclusions are tallied at GLOBAL disappearance
+      transitions with no defined consensus at or before t.
+    - Union return statistic: revision-3 consensus primary OR R2-prime;
+      the single-camera >= 1 form is diagnostic-only.
+
     Returns (candidates, position_undefined_exclusions,
-    return_position_undefined, same_object_return_count). Each candidate
-    record carries identity, camera set, frame window, bridged-interruption
-    count, and its return classification (interpretability requirement).
+    return_position_undefined, return_counts) where return_counts has
+    'primary', 'union', and 'single_camera_diagnostic'.
     """
 
     frames = list(scene.frame_indices)
     candidates: list[dict[str, Any]] = []
     position_undefined_exclusions = 0
     return_position_undefined = 0
-    returns = 0
+    return_counts = {"primary": 0, "union": 0, "single_camera_diagnostic": 0}
+
+    def associated_any(seed: int, f: int) -> bool:
+        return any(
+            associated.get((seed, camera_id, f), False) for camera_id in scene.tracking_ids
+        )
 
     for seed_id in index.seeds:
         per_frame_consensus = index.consensus.get(seed_id, {})
-        cursor = 0
+        cursor = 1  # R3: no window can open at frame 0
         while cursor < len(frames):
             frame = frames[cursor]
-            # A potential event start: the identity must currently be absent
-            # from every frustum-containing camera (computed against LTP).
+            previous = frames[cursor - 1]
             ltp, ltp_frame = last_defined_consensus(per_frame_consensus, frames, frame)
             if ltp is None:
-                # No defined consensus at or before this frame: ineligible.
-                if not any(
-                    associated.get((seed_id, camera_id, frame), False)
-                    for camera_id in scene.tracking_ids
-                ):
+                # R9: tally at GLOBAL disappearance transitions only.
+                if associated_any(seed_id, previous) and not associated_any(seed_id, frame):
                     position_undefined_exclusions += 1
                 cursor += 1
                 continue
@@ -336,7 +403,9 @@ def true_absence_and_returns(
                     associated.get((seed_id, camera_id, f), False) for camera_id in containing
                 )
 
-            if not absent_at(frame):
+            # R3 transition rule: associated in >= 1 camera of S at t-1 AND
+            # in none of S at t (S fixed at event start for the lifetime).
+            if not absent_at(frame) or absent_at(previous):
                 cursor += 1
                 continue
 
@@ -375,6 +444,10 @@ def true_absence_and_returns(
                 }
                 terminated = len(reappearance_run) >= FLICKER_MAX
                 if terminated:
+                    record["return_run_start"] = reappearance_run[0]
+                    # PRIMARY (revision-3 rule): earliest defined-consensus
+                    # frame within the terminating run, within r_site.
+                    primary_return = False
                     return_point = None
                     return_frame = None
                     for f in reappearance_run:
@@ -382,18 +455,58 @@ def true_absence_and_returns(
                             return_point = per_frame_consensus[f]
                             return_frame = f
                             break
-                    if return_point is None:
-                        return_position_undefined += 1
-                        record["return"] = "return_position_undefined"
-                    else:
+                    if return_point is not None:
                         distance = float(np.linalg.norm(return_point - ltp))
-                        if distance <= r_site:
-                            returns += 1
-                            record["return"] = "same_object_return"
-                        else:
-                            record["return"] = "beyond_r_site"
                         record["return_frame"] = return_frame
                         record["return_distance"] = distance
+                        primary_return = distance <= r_site
+                    else:
+                        return_position_undefined += 1
+                    # R2-PRIME: earliest frame of the run where it holds.
+                    r2p_return = False
+                    for f in reappearance_run:
+                        if r2prime_holds(
+                            scene, index, seed_id, f, ltp, r_site, angular_floor
+                        ):
+                            r2p_return = True
+                            record["r2prime_frame"] = f
+                            break
+                    # Single-camera >= 1 diagnostic (never gate-bearing):
+                    # any camera's report pixel within its own tol_c.
+                    single_cam = False
+                    for f in reappearance_run:
+                        for camera_id in scene.tracking_ids:
+                            pixel = index.pixels.get((seed_id, camera_id, f))
+                            if pixel is None:
+                                continue
+                            camera = scene.cameras[camera_id]
+                            cam_point = camera.w2c[:3, :3] @ ltp + camera.w2c[:3, 3]
+                            if cam_point[2] <= 0.0:
+                                continue
+                            uv = camera.K @ cam_point
+                            proj = (uv[0] / uv[2], uv[1] / uv[2])
+                            tol = r_site * float(camera.K[0, 0]) / float(cam_point[2])
+                            if np.hypot(pixel[0] - proj[0], pixel[1] - proj[1]) <= tol:
+                                single_cam = True
+                                break
+                        if single_cam:
+                            break
+
+                    if primary_return:
+                        return_counts["primary"] += 1
+                    if primary_return or r2p_return:
+                        return_counts["union"] += 1
+                    if single_cam:
+                        return_counts["single_camera_diagnostic"] += 1
+                    record["return"] = (
+                        "same_object_return_primary"
+                        if primary_return
+                        else "same_object_return_r2prime"
+                        if r2p_return
+                        else "return_position_undefined"
+                        if return_point is None
+                        else "beyond_r_site"
+                    )
                 else:
                     record["return"] = "no_terminating_reappearance"
                 candidates.append(record)
@@ -401,7 +514,7 @@ def true_absence_and_returns(
             # Resume scanning after the examined region.
             cursor = position + 1 if position > cursor else cursor + 1
 
-    return candidates, position_undefined_exclusions, return_position_undefined, returns
+    return candidates, position_undefined_exclusions, return_position_undefined, return_counts
 
 
 # ---------------------------------------------------------------------------
@@ -429,6 +542,15 @@ def load_prereg(prereg_path: Path) -> tuple[dict[str, Any], str]:
     return payload, sha256_file(prereg_path)
 
 
+def _attribute_half(records: list[dict[str, Any]], split_frame: int, key: str) -> dict[str, int]:
+    """Frozen boundary conventions: occlusion/absence windows belong to the
+    half containing their FIRST frame; returns to the half containing their
+    terminating re-appearance run START."""
+
+    first = sum(1 for record in records if record[key] < split_frame)
+    return {"first_half": first, "second_half": len(records) - first}
+
+
 def _census_one_sequence(scene_dir: Path, tracks_path: Path) -> dict[str, Any]:
     """The single-sequence census core; the gate binds to POOLED values."""
 
@@ -438,21 +560,48 @@ def _census_one_sequence(scene_dir: Path, tracks_path: Path) -> dict[str, Any]:
 
     associated, coverage = build_association(scene, index)
     r_site = R_SITE_FACTOR * rig_radius(scene)
+    angular_floor = angular_separation_floor(scene)
 
     occlusions, undefined_occ_frames = occlusion_events(scene, index, associated)
-    candidates, pos_undef, ret_undef, returns = true_absence_and_returns(
-        scene, index, associated, r_site
+    candidates, pos_undef, ret_undef, return_counts = true_absence_and_returns(
+        scene, index, associated, r_site, angular_floor
     )
     if coverage["components_total"] == 0:
         raise ContractError(f"{scene_dir}: zero eligible fg components over the census window")
+
+    # Half attribution (cycle-2 screen/gate modes; frozen split floor(n/2)).
+    frames = list(scene.frame_indices)
+    split_frame = frames[len(frames) // 2]
+    returns_terminated = [c for c in candidates if "return_run_start" in c]
+    union_returns = [
+        c
+        for c in returns_terminated
+        if c["return"] in ("same_object_return_primary", "same_object_return_r2prime")
+    ]
+    halves = {
+        "split_frame": int(split_frame),
+        "occlusion": _attribute_half(occlusions, split_frame, "first_frame"),
+        "true_absence": _attribute_half(candidates, split_frame, "first_frame"),
+        "union_returns": _attribute_half(union_returns, split_frame, "return_run_start"),
+        "primary_returns": _attribute_half(
+            [c for c in union_returns if c["return"] == "same_object_return_primary"],
+            split_frame,
+            "return_run_start",
+        ),
+    }
+
     return {
         "statistics": {
             "occlusion_opportunity_upper_bound": len(occlusions),
             "true_absence_candidate_count": len(candidates),
-            "same_object_return_count": returns,
+            "same_object_return_count": return_counts["primary"],
+            "union_return_count": return_counts["union"],
+            "single_camera_return_diagnostic": return_counts["single_camera_diagnostic"],
             "track_coverage_upper_bound": coverage["components_covered"]
             / coverage["components_total"],
         },
+        "halves": halves,
+        "angular_floor_rad": angular_floor,
         "window": {
             "first_frame": int(scene.frame_indices[0]),
             "last_frame": int(scene.frame_indices[-1]),

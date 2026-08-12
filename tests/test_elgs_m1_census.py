@@ -188,7 +188,7 @@ class CensusStatisticsTest(unittest.TestCase):
     def test_same_object_return_within_r_site(self):
         self.assertEqual(self.result["statistics"]["same_object_return_count"], 1)
         record = self._sequence()["records"]["true_absence_candidates"][0]
-        self.assertEqual(record["return"], "same_object_return")
+        self.assertEqual(record["return"], "same_object_return_primary")
         self.assertEqual(record["return_frame"], 25)
         self.assertAlmostEqual(record["return_distance"], 0.1, places=9)
         self.assertGreater(self._sequence()["constants"]["r_site_census"], 0.1)
@@ -244,6 +244,125 @@ class ReturnBeyondRSiteTest(unittest.TestCase):
             record = result["per_sequence"]["scene"]["records"]["true_absence_candidates"][0]
             self.assertEqual(record["return"], "beyond_r_site")
             self.assertNotIn("gate", result)
+
+
+class Cycle2AlignmentTests(unittest.TestCase):
+    """The prereg_m1_cycle2_screen_v1 frozen readings and union predicate."""
+
+    def _run(self, return_offset, mutate_tracks=None, recenter_masks_from=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            scene_dir, tracks_path = _write_scene(Path(tmp), return_offset=return_offset)
+            if recenter_masks_from is not None:
+                # Redraw the tracked component at the image center for
+                # frames >= recenter_masks_from (so center-pixel reports
+                # stay associated), in every camera that shows it.
+                from PIL import Image
+
+                for cam_index in range(4):
+                    for frame_index in range(recenter_masks_from, N_FRAMES):
+                        if not _seed_present(cam_index, frame_index):
+                            continue
+                        mask_path = (
+                            scene_dir / "masks" / f"cam{cam_index:02d}" / f"{frame_index:08d}.png"
+                        )
+                        mask = np.zeros((IMAGE_SIZE, IMAGE_SIZE), dtype=np.uint8)
+                        mask[26:38, 26:38] = 255  # centered tracked component
+                        mask[40:52, 40:52] = 255  # untracked component
+                        Image.fromarray(mask).save(mask_path)
+            if mutate_tracks is not None:
+                payload = json.loads(tracks_path.read_text(encoding="utf-8"))
+                mutate_tracks(payload)
+                tracks_path.write_text(json.dumps(payload), encoding="utf-8")
+            return census.run_census(
+                [(scene_dir, tracks_path)],
+                REPO_ROOT / "configs" / "elgs" / "prereg_m1_census_v1.json",
+                apply_gate=False,
+            )["per_sequence"]["scene"]
+
+    def test_r3_transition_rule_blocks_absent_from_start(self):
+        # Remove all associations before frame 12 (masks still show the
+        # square, but the identity has no visible reports until 12): with
+        # the transition rule, absence starting at the sequence start can
+        # never open a window at its first ELIGIBLE frame without a
+        # preceding associated frame.
+        def mutate(payload):
+            for track in payload["tracks"]:
+                for report in track["reports"]:
+                    if report["frame"] < 12:
+                        report.clear()
+                        report.update({"frame": report.get("frame", 0.0), "is_miss": True})
+
+        # rebuild reports properly (clear/update above loses the frame key
+        # ordering); simpler: mark frames < 12 as miss
+        def mutate_clean(payload):
+            for track in payload["tracks"]:
+                new_reports = []
+                for report in track["reports"]:
+                    if report["frame"] < 12:
+                        new_reports.append({"frame": report["frame"], "is_miss": True})
+                    else:
+                        new_reports.append(report)
+                track["reports"] = new_reports
+
+        sequence = self._run(0.1, mutate_clean)
+        # The original candidate window (10..24) required presence at 9;
+        # with reports gone until 12 there is no associated frame before
+        # the absence, so no transition => no candidate for that window.
+        starts = [c["first_frame"] for c in sequence["records"]["true_absence_candidates"]]
+        self.assertNotIn(10, starts)
+
+    def test_union_r2prime_counts_undefined_consensus_return(self):
+        # Break the consensus at the re-appearance frames (>= 25) so the
+        # PRIMARY return is undefined, while the per-camera reports remain:
+        # the reports sit at pixel (12, 12), which is NOT the projection of
+        # the LTP (origin projects to the image center 31.5), so R2-prime
+        # must NOT fire either -> return_position_undefined.
+        def kill_consensus(payload):
+            for entry in payload["consensus"]["0"]:
+                if entry["frame"] >= 25:
+                    entry["point"] = None
+
+        sequence = self._run(0.1, kill_consensus)
+        record = next(
+            c for c in sequence["records"]["true_absence_candidates"] if c["first_frame"] == 10
+        )
+        self.assertEqual(record["return"], "return_position_undefined")
+        self.assertEqual(sequence["statistics"]["union_return_count"], 0)
+
+        # Now ALSO move the re-appearance reports onto the LTP's projection
+        # (image center) in every camera: R2-prime fires (>= 2 separated
+        # cameras within the projected r_site tolerance), so the union
+        # counts the return the primary cannot.
+        def kill_consensus_and_center_reports(payload):
+            kill_consensus(payload)
+            for track in payload["tracks"]:
+                for report in track["reports"]:
+                    if not report["is_miss"] and report["frame"] >= 25:
+                        report["x"] = 31.5
+                        report["y"] = 31.5
+
+        sequence = self._run(0.1, kill_consensus_and_center_reports, recenter_masks_from=25)
+        record = next(
+            c for c in sequence["records"]["true_absence_candidates"] if c["first_frame"] == 10
+        )
+        self.assertEqual(record["return"], "same_object_return_r2prime")
+        self.assertEqual(sequence["statistics"]["union_return_count"], 1)
+        self.assertEqual(sequence["statistics"]["same_object_return_count"], 0)  # primary strict
+
+    def test_halves_attribution(self):
+        sequence = self._run(0.1)
+        halves = sequence["halves"]
+        self.assertEqual(halves["split_frame"], 20)  # frames[40//2]
+        # true-absence candidate first_frame 10 -> first half
+        self.assertEqual(halves["true_absence"], {"first_half": 1, "second_half": 0})
+        # its terminating re-appearance run starts at 25 -> second half
+        self.assertEqual(halves["union_returns"], {"first_half": 0, "second_half": 1})
+        # occlusion event first_frame 30 -> second half
+        self.assertEqual(halves["occlusion"], {"first_half": 0, "second_half": 1})
+
+    def test_angular_floor_is_calibration_only_and_positive(self):
+        sequence = self._run(0.1)
+        self.assertGreater(sequence["angular_floor_rad"], 0.0)
 
 
 class PooledCensusTest(unittest.TestCase):
