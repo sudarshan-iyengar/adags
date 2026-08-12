@@ -96,6 +96,7 @@ ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
     "main.py",
     "scripts/build_elgs_tracks.py",
     "scripts/build_m1_census.py",
+    "scripts/apply_cycle3_gate.py",
 )
 
 #: The one shared, mutable, historical worktree path. No evidence-bearing
