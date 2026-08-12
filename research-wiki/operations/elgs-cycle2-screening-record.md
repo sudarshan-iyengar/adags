@@ -89,9 +89,21 @@ filesystem monitor is the real signal).
 
 ### Screening table (screened half; gate-bearing statistic = union returns)
 
-| seq | window | occl | true-abs | returns primary | returns union | coverage | eligible (≥12 union, ≥0.5 cov) |
-|---|---|---|---|---|---|---|---|
-| chess | 0–352 | 7,896 | 0 | 0 | 0 | 0.936 | NO (0 returns) |
+| seq | window | occl | true-abs | returns primary | returns union | single-cam diag | coverage | ret_undef | eligible (≥12 union, ≥0.5 cov) |
+|---|---|---|---|---|---|---|---|---|---|
+| chess | 0–352 | 7,896 | 0 | 0 | 0 | 0 | 0.936 | 0 | NO |
+| maracas | 0–134 | 16,874 | 1 | 0 | 1 | 1 | 0.917 | 0 | NO |
+| tambourine | 0–127 | 11,065 | 18 | 3 | 9 | 16 | 0.815 | 0 | NO (union 9 < 12) |
+| pour_tea | 0–225 | 12,101 | 73 | 1 | 3 | 18 | 0.591 | 26 | NO |
+
+R2′ real-data behavior (first four rows): the union recovers
+censored returns the primary misses (tambourine 3→9, pour_tea 1→3,
+maracas 0→1) while staying FAR below the invalid single-camera form
+(diagnostics 16–18 where union admits 3–9) — the two-camera
+angular-separation requirement discriminates as the sign-off
+reviewer intended. pour_tea's profile (73 absences, ret_undef 26,
+single-diag 18, union 3) is the censoring regime characterized in
+cycle 1, measured live.
 
 - chess (exp 15 tracks: 512 seeds, 7,001 tracks, reproj median
   0.75 px, consensus 99.9%; exp 16 census): the STRONGEST
