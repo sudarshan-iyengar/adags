@@ -1,0 +1,95 @@
+{
+  "schema_version": "elgs-prereg-m1-cycle2-screen-v1",
+  "revision": 1,
+  "authority": "user directive 2026-08-12 (continue from the M1 preserved negative) -> operations/elgs-cycle2-continuation-design (REFINED: hostile fresh-context review SOUND WITH REPAIRS, all ten blocking repairs applied) -> this prereg. Cycle 1 (prereg_m1_census_v1.json revision 3) remains FINAL for its subset and is never overwritten.",
+  "status_note": "FROZEN before any candidate download or screening statistic; a fresh-context reviewer must SIGN this file before the first acquisition task is submitted",
+  "what_the_gate_tests": "winner's-curse-robust within-sequence generalization of event abundance from the screened (first) half to the unscreened (second) half of each selected sequence; full-range counts are reported, never gated, for downstream power accounting",
+
+  "candidate_pool": {
+    "source": "official DiVa-360 GitHub README sequence list (the same sanctioned source cycle 1 used)",
+    "excluded_already_assigned": ["battery", "flip_book", "unlock", "peel_apple", "pour_salt"],
+    "candidates_short": ["blue_car", "bunny", "chess", "clock", "dog", "drum", "horse", "hour_glass", "jenga", "k1_double_punch", "k1_hand_stand", "k1_push_up", "keyboard_mouse", "kindle", "maracas", "music_box", "pan", "penguin", "piano", "plasma_ball", "plasma_ball_clip", "poker", "pour_tea", "put_candy", "put_fruit", "red_car", "scissor", "slice_apple", "soda", "stirling", "tambourine", "tea", "tornado", "trex", "truck", "wall_e", "wolf", "world_globe", "writing_1", "writing_2", "xylophone"],
+    "candidates_long": ["chess_long", "crochet", "jenga_long", "legos", "origami", "painting", "puzzle", "rubiks_cube"],
+    "queue_tranche_1": ["chess", "jenga", "put_candy", "put_fruit", "poker", "writing_1", "writing_2", "keyboard_mouse", "slice_apple", "pour_tea", "soda", "tea", "scissor", "maracas", "tambourine", "pan", "kindle", "music_box", "piano", "xylophone"],
+    "queue_rationale": "name-prior ordering (placement-and-return semantics first); under the full-tranche halt rule the order affects only pool composition, never selection within the screened pool; residual pool-composition effect disclosed",
+    "halt_rule": "tranche 1 is screened IN FULL regardless of interim qualification; selection happens only over a fully screened tranche"
+  },
+
+  "windows": {
+    "screening_window": "the FIRST floor(n/2) frames of the sequence's common frame range (n = common-range length); realized bounds recorded per candidate",
+    "gate_window": "the SECOND half (frames floor(n/2)..n-1) of each SELECTED sequence, computed from FULL-range tracks",
+    "boundary_conventions": {
+      "return_attribution": "a gate-window return is one whose terminating re-appearance run STARTS in the gate window; LTP lookup may reach into the screened half",
+      "occlusion_and_absence_attribution": "occlusion runs and true-absence windows belong to the half containing their FIRST frame",
+      "status": "frozen"
+    },
+    "concordance_diagnostic": "at gate time, screened-half statistics are recomputed from the full-range tracks of the selected sequences (CPU) and deltas reported next to the gate; diagnostic-only"
+  },
+
+  "statistics": {
+    "definitions_base": "prereg_m1_census_v1.json revision 3 (eligibility_predicate, association_rules, r_site_census, track_coverage_statistic) with the twelve frozen readings below",
+    "gate_bearing_return_statistic": {
+      "name": "union_return_count",
+      "definition": "primary consensus return (revision-3 rule, unchanged) OR R2-prime: >= 2 TRAINING cameras (held-out id = 0 mod 4 excluded), pairwise angular separation >= angular_floor, EACH having the identity's in-domain visible report pixel within a per-camera tolerance tol_c = r_site_census * f_c / z_c of the projection of the LTP into camera c (f_c = the camera's fl_x, z_c = the LTP's camera-frame depth), evaluated at the earliest frame of the terminating re-appearance run where the R2-prime condition holds",
+      "angular_floor": "the 10th percentile of pairwise angular separations among training-camera optical axes, computed per sequence from shipped calibration only",
+      "single_camera_form": "the >= 1 camera variant is DIAGNOSTIC-ONLY, never gate-bearing, never selection-bearing",
+      "selection_statistic_identity": "the selection statistic IS the gate-bearing union statistic (frozen identity)",
+      "loosening_disclosure": "the union predicate is a post-outcome one-sided loosening motivated by the cycle-1 characterized censoring gap (70-109 undefined-consensus re-acquisitions); the strict cycle-1 primary is reported alongside every union value on every cycle-2 page",
+      "status": "frozen"
+    },
+    "frozen_readings": [
+      "R1 occlusion per-frame triangulated position must be DEFINED at every frame of the run; an undefined frame breaks the run (no bridging)",
+      "R2 occlusion event unit = one event per MAXIMAL qualifying run per (identity, fixed camera) pair; simultaneous absence in k cameras counts k events; runs are never subdivided",
+      "R3 mask_disappearance: camera universe = training cameras only; disappearance is a TRANSITION (associated in >= 1 camera of S at t-1, in none of S at t, so no window opens at frame 0); P (LTP) and S (containing set) are fixed at event start for the window's lifetime",
+      "R4 re-appearance = association in >= 1 camera of S (the negation of the disappearance predicate)",
+      "R5 duration_floor_frames applies to the window SPAN (first..last absent frame inclusive, bridged flicker included)",
+      "R6 a re-appearance run truncated by the window end with length < 4 is non-terminating flicker (no return)",
+      "R7 frustum containment uses continuous (unrounded) projected coordinates, inclusive bounds [0, W-1] x [0, H-1], depth z > 0",
+      "R8 in-domain visible report = non-miss, v >= 0.5, round-half-up pixel inside bounds; identical rule for identity association and the coverage numerator",
+      "R9 position_undefined_exclusions are tallied at global disappearance transitions (associated somewhere at t-1, nowhere at t) with no defined consensus at or before t",
+      "R10 consensus definedness = artifact point non-null; no n_cam threshold",
+      "R11 return distance is Euclidean 3-D, inclusive <= r_site_census",
+      "R12 min_positive_opportunity_cameras reduces to |S| >= 2 under the verified static rig"
+    ],
+    "implementation_alignment": "the census evaluator is aligned to these readings, with tests, BEFORE any screening statistic is computed; alignment commit recorded here at sign-off"
+  },
+
+  "screening_thresholds": {
+    "pooled_over_selected_subset": {"union_returns_min": 72, "occlusion_events_min": 72, "true_absence_candidates_min": 72, "track_coverage_min_fraction": 0.5},
+    "margin_disclosure": "2x is a DISCLOSED DESIGN MARGIN, not a derivation: under half-to-half stationarity screened 72 gives P(unscreened >= 36) ~ 0.99999 (Poisson), 0.97 at true per-half rate 48, 0.52 at 36; it buffers winner's-curse shrinkage from selecting top-3-of-~20 and mild nonstationarity; it cannot protect against an event phase confined to one half - the gate exists to catch exactly that",
+    "per_sequence_eligibility": {"union_returns_min": 12, "coverage_min": 0.5, "rationale": "no dev sequence may free-ride: cycle 1's flip_book contributed zero returns and zero absences and pooled floors hid it; the coverage floor's own rationale is per-scene"}
+  },
+
+  "selection_algorithm": {
+    "step_1": "eligibility filter per per_sequence_eligibility over the fully screened tranche",
+    "step_2": "order eligible candidates by screened-half union_return_count descending; ties ascending alphabetical",
+    "step_3": "take the top 3; test all four pooled screening thresholds (coverage pooled as ratio-of-sums)",
+    "step_4": "on failure, enumerate 3-subsets of eligible candidates in descending order of pooled union_returns, ties lexicographic by ordered member names; first subset passing all pooled thresholds is selected",
+    "step_5_dry": "enumeration exhausted without a passing subset => DRY WITHIN THE FROZEN BUDGET (never 'DiVa-360 exhausted' while unscreened candidates remain)",
+    "status": "frozen total function"
+  },
+
+  "gate": {
+    "floors_on_unscreened_half_pooled": {"union_returns_min": 36, "occlusion_events_min": 36, "true_absence_candidates_min": 36, "track_coverage_min_fraction": 0.5},
+    "per_sequence_gate_coverage_min": 0.5,
+    "protocol": "identical to cycle 1: independent fresh-context recomputation from primary inputs + integrity audit precede the recorded verdict; a valid FAIL on the selected subset is final for that subset under the frozen failure policy",
+    "carry_overs": "revision-3 necessary_condition_note restated on every result page (upper bounds; floors necessary, never sufficient); M1-A0b audited true absence runs post-gate on the selected subset, diagnostic-only; a cycle-2 PASS restores the scientific precondition the M1 gate tested - starting M2 REMAINS a separate explicit user approval"
+  },
+
+  "budget_and_data_policy": {
+    "per_candidate_gpu_hours_estimate": "0.06 + 0.10 * (n_frames/1000), halved for half-window tracking; long sequences use the disclosed chunked tracker path",
+    "ceilings": {"screening_gpu_hours_max": 6, "gate_gpu_hours_max": 1, "extracted_storage_gb_max": 400},
+    "checkpoint": "MANDATORY after tranche 1: full interim screening table + projected continuation cost + explicit options (continue tranche 2 / R4 dataset extension / R3 descope claim-change) put to the USER; 'continue' is autonomous-eligible only if a qualifying subset exists or >= 2 candidates cleared eligibility",
+    "seal_set_retained": ["half-window tracks artifact + controls", "screening census JSON", "all manifests", "realized-window record"],
+    "deletable_after_seal": "extracted frame images only; raw zips always retained; every deletion ledgered",
+    "preprocessing_accounting": "reproducibility only, per the standing M1 policy"
+  },
+
+  "standing_disclosures": {
+    "tracker_legibility": "selection maximizes returns AS MEASURED BY THE TRACKER-BASED CENSUS and therefore selects tracker-legible scenes; EL-GS consumes those tracks while ported baselines consume none, so arm comparisons on the selected subset estimate EL-GS's advantage in its cleanest-evidence, maximal-opportunity regime; all downstream claims are scoped to event-rich, tracker-legible sequences",
+    "full_table_publication": "the complete screening table (every screened candidate's statistics) is published with the selection",
+    "controls_scope": "within-scene shuffle/shift controls address evidence informativeness, not scene-selection external validity"
+  },
+
+  "review": {"signoff": "a fresh-context reviewer must SIGN this file (protocol coherence + the twelve readings + the R2-prime construction + the selection algorithm's totality) BEFORE the first candidate download; the review record is preserved in the wiki"}
+}
