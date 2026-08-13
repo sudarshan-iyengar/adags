@@ -126,15 +126,46 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-#: --window mode provenance/plan note (see the module docstring's --window
-#: section and select_archive_for_split's resolution-probe docstring for
-#: the full measured-on-Apollo evidence this summarizes).
-WINDOW_MASK_SOURCE = "frames_1 alpha channel, binarized >127, calibration-aligned"
+#: --window mode provenance/plan note.
+#:
+#: 2026-08-13: these were previously two unconditional constants asserting
+#: that masks came from ``frames_1`` and that ``segmented_ngp`` was "deliberately
+#: NOT extracted". They were emitted verbatim regardless of what the selector
+#: actually chose, so for the three defective conversions the sealed provenance
+#: CONTRADICTED its own ``archive_selection`` field and hid the substrate defect
+#: from three cycles of integrity audits. Provenance must report measurements,
+#: never assumptions -- ``window_mask_provenance`` below is computed from the
+#: actual selection. See
+#: ``research-wiki/operations/elgs-substrate-defect-2026-08-13.md``.
 WINDOW_MASK_NOTE = (
-    "segmented_ngp/segmented_gt are original pre-undistortion space "
-    "(1280x720 measured on Apollo unlock, vs. frames_1's calibration-space "
-    "1160x550) and are deliberately NOT extracted by this path"
+    "masks are derived from the alpha channel of the ACTUALLY SELECTED frame "
+    "archive recorded in frame_source below; the selector enforces an "
+    "unconditional decoded-vs-declared resolution postcondition"
 )
+
+
+def window_mask_provenance(
+    archive_selection: Mapping[str, ArchiveMatch],
+    declared_sizes: Mapping[str, tuple[int, int]] | None = None,
+) -> dict:
+    """Measured (not assumed) frame/mask substrate record, per split."""
+
+    declared_values = sorted({tuple(v) for v in (declared_sizes or {}).values()})
+    return {
+        "mask_source": (
+            "alpha channel of the selected frame archive, binarized >127"
+        ),
+        "mask_note": WINDOW_MASK_NOTE,
+        "frame_source": {
+            split: {
+                "archive_path": match.archive_path,
+                "member_prefix": match.top_level_dir,
+                "decoded_size": list(match.decoded_size) if match.decoded_size else None,
+            }
+            for split, match in sorted(archive_selection.items())
+        },
+        "declared_sizes_observed": [list(v) for v in declared_values],
+    }
 
 from depth_visibility.artifacts import atomic_write_json_immutable  # noqa: E402
 from depth_visibility.canonical import sha256_file  # noqa: E402
@@ -159,7 +190,11 @@ class SplitPlan:
 @dataclass(frozen=True)
 class ArchiveMatch:
     archive_path: str  # relative to sequence_dir
-    top_level_dir: str  # this archive's own internal top-level directory
+    top_level_dir: str  # this archive's own internal member prefix (may be
+    # MULTI-component, e.g. "dynamic_data/frames_1" -- some DiVa-360
+    # sequences nest frames_1 one level deeper than others)
+    decoded_size: tuple[int, int] | None = None  # measured (w, h) of the
+    # probe member; recorded in provenance so the substrate is auditable
 
 
 @dataclass(frozen=True)
@@ -205,6 +240,7 @@ class ConversionPlan:
     candidate_archives: tuple[str, ...]
     window: WindowSpec | None = None
     window_splits: dict[str, WindowSplitPlan] | None = None
+    declared_sizes: dict[str, tuple[int, int]] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +343,61 @@ def _probe_member_size(
         return None
 
 
+def strip_archive_prefix(member_name: str, prefix: str) -> str | None:
+    """Strip ``prefix + "/"`` off ``member_name``; ``None`` if it does not
+    match. Unlike ``schema.split_top_level_dir`` this handles MULTI-component
+    prefixes (see ``ArchiveMatch.top_level_dir``)."""
+
+    head = prefix + "/"
+    if not member_name.startswith(head):
+        return None
+    return member_name[len(head) :] or None
+
+
+def _discover_member_prefix(
+    archive_path: Path, wanted: set[str]
+) -> tuple[str, set[str]] | None:
+    """Find the unique member prefix under which ``archive_path`` carries the
+    wanted relative paths.
+
+    DiVa-360 ships the SAME logical archive at different nesting depths
+    across sequences (measured 2026-08-13: ``pour_tea`` ->
+    ``frames_1/camNN/...`` but ``writing_2`` -> ``dynamic_data/frames_1/
+    camNN/...``). Stripping a FIXED single component therefore silently
+    fails to match on the deeper layout, which is what caused the
+    2026-08-13 substrate defect
+    (``research-wiki/operations/elgs-substrate-defect-2026-08-13.md``).
+
+    Each wanted path has a known component count, so a member's prefix is
+    whatever precedes its last ``k`` components -- an O(1) test per member,
+    no per-wanted scan. Returns ``(prefix, found)`` or ``None`` if nothing
+    matched. Fails closed if members match under MORE THAN ONE prefix.
+    """
+
+    depths = {path.count("/") + 1 for path in wanted}
+    prefixes: dict[str, set[str]] = {}
+    for member_name in _iter_tar_relative_paths(archive_path):
+        parts = member_name.split("/")
+        for depth in depths:
+            if len(parts) <= depth:
+                continue
+            rest = "/".join(parts[-depth:])
+            if rest in wanted:
+                prefixes.setdefault("/".join(parts[:-depth]), set()).add(rest)
+        if any(found == wanted for found in prefixes.values()):
+            break
+    if not prefixes:
+        return None
+    if len(prefixes) > 1:
+        raise ContractError(
+            f"{archive_path}: wanted frame paths match under more than one "
+            f"member prefix {sorted(prefixes)} -- cannot resolve a unique "
+            "archive layout"
+        )
+    prefix, found = next(iter(prefixes.items()))
+    return prefix, found
+
+
 def select_archive_for_split(
     candidates: Sequence[Path],
     wanted_relative_paths: Sequence[str],
@@ -314,10 +405,20 @@ def select_archive_for_split(
 ) -> ArchiveMatch:
     """Content-addressed discovery of the archive that has every wanted frame.
 
-    Matches purely on content (member path with the archive's own
-    top-level directory stripped) -- never on the archive's filename or an
-    assumed internal directory name. Scanning a candidate stops as soon as
-    every wanted path has been found in it.
+    Matches purely on content (member path with the archive's own member
+    prefix stripped) -- never on the archive's filename or an assumed
+    internal directory name, and never assuming a FIXED prefix depth.
+    Scanning a candidate stops as soon as every wanted path has been found.
+
+    THE RESOLUTION POSTCONDITION IS UNCONDITIONAL (2026-08-13). The
+    selected archive's decoded ``(width, height)`` MUST equal the declared
+    ``(w, h)``, whether one candidate covered or several. Before
+    2026-08-13 the check ran only on the disambiguation branch, so a
+    single covering candidate was accepted undecoded -- that hole selected
+    1280x720 ``segmented_ngp`` imagery against a 1160x550 calibration for
+    ``writing_2`` and ``xylophone``. A declared size that is unavailable
+    for the probe frame is now itself a fail-closed condition: an
+    unverifiable substrate is not an acceptable substrate.
 
     When MORE than one candidate fully covers the wanted set (real DiVa-360:
     the per-frame mask archive (``segmented_ngp``) MIRRORS the frame
@@ -348,44 +449,33 @@ def select_archive_for_split(
         raise ContractError("cannot select an archive for zero wanted frame paths")
     covering: list[ArchiveMatch] = []
     for archive_path in candidates:
-        found: set[str] = set()
-        top_dirs: set[str] = set()
-        for member_name in _iter_tar_relative_paths(archive_path):
-            try:
-                top, rest = schema.split_top_level_dir(member_name)
-            except SchemaError:
-                continue
-            top_dirs.add(top)
-            if rest in wanted:
-                found.add(rest)
-            if found == wanted:
-                break
+        discovered = _discover_member_prefix(archive_path, wanted)
+        if discovered is None:
+            continue
+        prefix, found = discovered
         if found == wanted:
-            if len(top_dirs) != 1:
-                raise ContractError(
-                    f"{archive_path}: members span more than one top-level "
-                    f"directory in the scanned prefix: {sorted(top_dirs)}"
-                )
             covering.append(
-                ArchiveMatch(archive_path=archive_path.name, top_level_dir=next(iter(top_dirs)))
+                ArchiveMatch(archive_path=archive_path.name, top_level_dir=prefix)
             )
     if not covering:
         raise ContractError(
             f"no candidate archive contains every referenced frame path "
             f"({len(wanted)} wanted); candidates: {[c.name for c in candidates]}"
         )
+
+    by_name = {c.name: c for c in candidates}
+    probe_rest = sorted(wanted)[0]
+    declared = (declared_sizes or {}).get(probe_rest)
+    if declared is None:
+        # Fail-closed even for a single covering candidate: without a
+        # declared size the substrate cannot be verified at all.
+        raise ContractError(
+            f"cannot verify the frame substrate: no declared (w, h) is available "
+            f"for the probe frame {probe_rest!r}; covering candidate(s) "
+            f"{sorted(m.archive_path for m in covering)}"
+        )
+
     if len(covering) > 1:
-        probe_rest = sorted(wanted)[0]
-        declared = (declared_sizes or {}).get(probe_rest)
-        if declared is None:
-            raise ContractError(
-                "ambiguous frame source: "
-                f"{sorted(m.archive_path for m in covering)} all contain every "
-                f"referenced frame, and no declared (w, h) is available for the "
-                f"probe frame {probe_rest!r} to run the resolution probe -- "
-                "cannot discover a unique archive"
-            )
-        by_name = {c.name: c for c in candidates}
         matching = [
             match
             for match in covering
@@ -400,8 +490,29 @@ def select_archive_for_split(
                 f"{probe_rest!r}) left {sorted(m.archive_path for m in matching)} "
                 "candidate(s) -- cannot discover a unique archive"
             )
-        return matching[0]
-    return covering[0]
+        selected = matching[0]
+    else:
+        selected = covering[0]
+
+    # UNCONDITIONAL POSTCONDITION -- runs on the single-covering path too.
+    decoded = _probe_member_size(
+        by_name[selected.archive_path], selected.top_level_dir, probe_rest
+    )
+    if decoded != declared:
+        raise ContractError(
+            f"frame-substrate mismatch: selected archive "
+            f"{selected.archive_path!r} (member prefix "
+            f"{selected.top_level_dir!r}) decodes {probe_rest!r} at {decoded}, "
+            f"but the calibration declares {declared}. The declared intrinsics "
+            "could not have been computed against that pixel space -- refusing "
+            "to convert. (2026-08-13 substrate defect; see "
+            "research-wiki/operations/elgs-substrate-defect-2026-08-13.md)"
+        )
+    return ArchiveMatch(
+        archive_path=selected.archive_path,
+        top_level_dir=selected.top_level_dir,
+        decoded_size=decoded,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -436,8 +547,12 @@ def discover_window_frames_for_split(
             # scratch prefix, then strip it back off -- "rest" is the
             # archive-top-dir-stripped, extension-INCLUDED relative path
             # that member names compare against.
+            # Build "rest" (prefix-stripped, extension-included) directly.
+            # A sentinel prefix keeps window_file_path's index-width
+            # validation without assuming the archive prefix is ONE
+            # component (it may be multi-component -- see ArchiveMatch).
             full_path = schema.window_file_path(
-                frame_archive_top_level_dir, camera_dir, index_width, frame_index
+                "\x00sentinel", camera_dir, index_width, frame_index
             )
             _, camera_rest = schema.split_top_level_dir(full_path)
             rest = camera_rest + extension
@@ -449,11 +564,8 @@ def discover_window_frames_for_split(
         for member in tar:
             if not member.isfile() or not remaining:
                 continue
-            try:
-                top, rest = schema.split_top_level_dir(member.name)
-            except SchemaError:
-                continue
-            if top != frame_archive_top_level_dir or rest not in remaining:
+            rest = strip_archive_prefix(member.name, frame_archive_top_level_dir)
+            if rest is None or rest not in remaining:
                 continue
             found[requested[rest]].append(rest)
             remaining.discard(rest)
@@ -589,6 +701,7 @@ def build_plan(
         candidate_archives=tuple(c.name for c in candidates),
         window=window_spec,
         window_splits=window_splits,
+        declared_sizes=declared_sizes,
     )
     return plan, payloads
 
@@ -625,8 +738,7 @@ def plan_to_json(plan: ConversionPlan) -> dict:
             "end": plan.window.end,
             "stride": plan.window.stride,
             "masks_dir": "masks",
-            "mask_source": WINDOW_MASK_SOURCE,
-            "mask_note": WINDOW_MASK_NOTE,
+            **window_mask_provenance(plan.archive_selection, plan.declared_sizes),
             "splits": {
                 split: {
                     "per_camera_frame_counts": {
@@ -664,11 +776,8 @@ def extract_wanted_members(
         for member in tar:
             if not member.isfile():
                 continue
-            try:
-                top, rest = schema.split_top_level_dir(member.name)
-            except SchemaError:
-                continue
-            if top != archive_top_level_dir or rest not in wanted:
+            rest = strip_archive_prefix(member.name, archive_top_level_dir)
+            if rest is None or rest not in wanted:
                 continue
             target = destination_root / scene_top_dir / rest
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -936,8 +1045,7 @@ def build_provenance(
             "end": plan.window.end,
             "stride": plan.window.stride,
             "masks_dir": "masks",
-            "mask_source": WINDOW_MASK_SOURCE,
-            "mask_note": WINDOW_MASK_NOTE,
+            **window_mask_provenance(plan.archive_selection, plan.declared_sizes),
             "splits": {
                 split: {
                     "per_camera_frame_counts": {

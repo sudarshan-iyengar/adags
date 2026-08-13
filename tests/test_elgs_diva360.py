@@ -78,12 +78,28 @@ def _add_tar_member(tar: tarfile.TarFile, name: str, content: bytes) -> None:
 
 
 def _write_frame_archive(
-    path: Path, camera_ids, frame_index: int = FRAME_INDEX, *, top_dir: str = "frames_1"
+    path: Path,
+    camera_ids,
+    frame_index: int = FRAME_INDEX,
+    *,
+    top_dir: str = "frames_1",
+    content_bytes: bytes | None = None,
 ) -> None:
+    """Members are REAL decodable RGBA PNGs at the declared (w, h) by default.
+
+    2026-08-13: this fixture previously wrote ascii placeholders. Because the
+    converter only decoded members on the multi-covering-archive branch, an
+    undecodable single-covering archive was accepted silently -- so the
+    fixture could not have caught the substrate defect. The resolution
+    postcondition is now unconditional, and the fixture must therefore be
+    realistic. Pass ``content_bytes`` explicitly to write something else.
+    """
+
     with tarfile.open(path, "w:gz") as tar:
         for cid in camera_ids:
             name = f"{top_dir}/cam{cid:02d}/{frame_index:08d}.png"
-            _add_tar_member(tar, name, f"fake-png-bytes-cam{cid}".encode("ascii"))
+            payload = content_bytes if content_bytes is not None else _frame_rgba_png_bytes()
+            _add_tar_member(tar, name, payload)
 
 
 def _write_manifest(path: Path, sequence_name: str, digest: str = "a" * 64) -> None:
@@ -390,7 +406,9 @@ class ConversionTests(Diva360FixtureCase):
         for cid in TRAIN_CAMERA_IDS:
             relocated = self.output_dir / "undist" / f"cam{cid:02d}" / f"{FRAME_INDEX:08d}.png"
             self.assertTrue(relocated.is_file(), relocated)
-            self.assertEqual(relocated.read_bytes(), f"fake-png-bytes-cam{cid}".encode("ascii"))
+            # Byte-for-byte relocation of the archive member (fixture members
+            # are real decodable PNGs at the declared (w, h) since 2026-08-13).
+            self.assertEqual(relocated.read_bytes(), _frame_rgba_png_bytes())
 
         ply_path = Path(result["points3d_ply"])
         self.assertTrue(ply_path.is_file())
@@ -549,9 +567,19 @@ class WindowModeTests(WindowFixtureCase):
         provenance = json.loads(Path(result["provenance"]).read_text(encoding="utf-8"))
         total_masks = sum(s["mask_count"] for s in provenance["window"]["splits"].values())
         self.assertEqual(total_masks, expected_mask_count)
-        self.assertEqual(provenance["window"]["mask_source"], converter.WINDOW_MASK_SOURCE)
-        self.assertIn("segmented_ngp", provenance["window"]["mask_note"])
-        self.assertIn("1280x720", provenance["window"]["mask_note"])
+        # 2026-08-13: provenance now REPORTS the measured substrate instead of
+        # asserting a fixed one. The old boilerplate claimed frames_1 and
+        # "segmented_ngp deliberately NOT extracted" unconditionally, which was
+        # false for the three defective conversions and hid the defect.
+        window = provenance["window"]
+        self.assertIn("alpha channel", window["mask_source"])
+        frame_source = window["frame_source"]
+        for split in ("train", "test"):
+            self.assertEqual(frame_source[split]["archive_path"], "frames_1.tar.gz")
+            self.assertEqual(frame_source[split]["member_prefix"], "frames_1")
+            # the DECODED size is recorded, and it matches the declaration
+            self.assertEqual(frame_source[split]["decoded_size"], [FRAME_W, FRAME_H])
+        self.assertEqual(window["declared_sizes_observed"], [[FRAME_W, FRAME_H]])
 
     def test_window_provenance_gains_bounds_and_counts(self):
         plan, payloads = self.build_window_plan()
@@ -1016,17 +1044,96 @@ class ArchiveSelectionResolutionProbeTests(unittest.TestCase):
         self.addCleanup(self._tmp.cleanup)
         self.root = Path(self._tmp.name)
 
-    def test_unambiguous_single_candidate_never_decodes_content(self):
-        # Only one candidate covers the wanted set -- the resolution probe
-        # must never even run (content here is not a decodable image).
+    # NOTE (2026-08-13): this class previously asserted the OPPOSITE of the
+    # first two tests below -- that a single covering candidate "must never
+    # even run" the resolution probe. That asserted behaviour WAS the
+    # substrate defect (research-wiki/operations/elgs-substrate-defect-2026-08-13.md):
+    # it let 1280x720 segmented_ngp imagery through against a 1160x550
+    # calibration for writing_2 and xylophone. The postcondition is now
+    # unconditional and these tests pin it.
+
+    def test_single_candidate_wrong_resolution_fails_closed(self):
+        # THE REGRESSION. One covering candidate, decoding at a resolution
+        # the calibration never declared => must fail closed, not silently
+        # convert.
         archive = self.root / "only.tar.gz"
         _write_multi_index_archive(
-            archive, {0: [0]}, top_dir="undist", content_bytes=b"not-a-real-png"
+            archive, {0: [0]}, top_dir="undist", content_bytes=_decoy_rgba_png_bytes()
         )
+        declared = {"cam00/00000000.png": (FRAME_W, FRAME_H)}
+        with self.assertRaises(ContractError) as caught:
+            converter.select_archive_for_split(
+                [archive], ["cam00/00000000.png"], declared
+            )
+        self.assertIn("frame-substrate mismatch", str(caught.exception))
+
+    def test_single_candidate_correct_resolution_is_verified_and_recorded(self):
+        archive = self.root / "only.tar.gz"
+        _write_multi_index_archive(
+            archive, {0: [0]}, top_dir="undist", content_bytes=_frame_rgba_png_bytes()
+        )
+        declared = {"cam00/00000000.png": (FRAME_W, FRAME_H)}
         match = converter.select_archive_for_split(
-            [archive], ["cam00/00000000.png"]
+            [archive], ["cam00/00000000.png"], declared
         )
         self.assertEqual(match.archive_path, "only.tar.gz")
+        # the decoded size is MEASURED and carried into provenance
+        self.assertEqual(match.decoded_size, (FRAME_W, FRAME_H))
+
+    def test_single_candidate_without_declared_size_fails_closed(self):
+        # An unverifiable substrate is not an acceptable substrate, even
+        # when only one candidate covers.
+        archive = self.root / "only.tar.gz"
+        _write_multi_index_archive(
+            archive, {0: [0]}, top_dir="undist", content_bytes=_frame_rgba_png_bytes()
+        )
+        with self.assertRaises(ContractError):
+            converter.select_archive_for_split([archive], ["cam00/00000000.png"])
+
+    def test_multi_component_member_prefix_is_discovered(self):
+        # DiVa-360 variant nesting: writing_2/xylophone ship frames_1 as
+        # dynamic_data/frames_1/camNN/... while pour_tea ships
+        # frames_1/camNN/... A fixed single-component strip matched ZERO
+        # members on the deeper layout, which is what made the wrong
+        # archive the only covering candidate.
+        archive = self.root / "nested.tar.gz"
+        _write_multi_index_archive(
+            archive,
+            {0: [0]},
+            top_dir="dynamic_data/frames_1",
+            content_bytes=_frame_rgba_png_bytes(),
+        )
+        declared = {"cam00/00000000.png": (FRAME_W, FRAME_H)}
+        match = converter.select_archive_for_split(
+            [archive], ["cam00/00000000.png"], declared
+        )
+        self.assertEqual(match.archive_path, "nested.tar.gz")
+        self.assertEqual(match.top_level_dir, "dynamic_data/frames_1")
+
+    def test_nested_correct_archive_wins_over_flat_wrong_archive(self):
+        # The exact real-world configuration: a correctly-calibrated but
+        # DEEPLY NESTED frames_1 alongside a flat, wrong-resolution
+        # segmented_ngp. Before the fix the nested one was invisible.
+        nested_ok = self.root / "frames_1.tar.gz"
+        flat_wrong = self.root / "segmented_ngp.tar.gz"
+        _write_multi_index_archive(
+            nested_ok,
+            {0: [0]},
+            top_dir="dynamic_data/frames_1",
+            content_bytes=_frame_rgba_png_bytes(),
+        )
+        _write_multi_index_archive(
+            flat_wrong,
+            {0: [0]},
+            top_dir="segmented_ngp",
+            content_bytes=_decoy_rgba_png_bytes(),
+        )
+        declared = {"cam00/00000000.png": (FRAME_W, FRAME_H)}
+        match = converter.select_archive_for_split(
+            [nested_ok, flat_wrong], ["cam00/00000000.png"], declared
+        )
+        self.assertEqual(match.archive_path, "frames_1.tar.gz")
+        self.assertEqual(match.decoded_size, (FRAME_W, FRAME_H))
 
     def test_two_covering_candidates_resolved_by_matching_resolution(self):
         correct = self.root / "correct.tar.gz"

@@ -1,5 +1,31 @@
 # EL-GS Cycle-2 Screening Record (IN PROGRESS)
 
+> **APPEND-ONLY SUPERSESSION NOTE (2026-08-13).** Two rows of the screening
+> table below were produced from conversions with a VERIFIED image-substrate
+> defect — `writing_2` and `xylophone` drew frames from `segmented_ngp`
+> (1280x720) against calibration declaring 1160x550. See
+> [[operations/elgs-substrate-defect-2026-08-13]].
+>
+> - **writing_2's row (union 50, coverage 0.845, 84 true-absences) is
+>   INVALIDATED PENDING REMEASUREMENT.** Because writing_2 is the SOLE
+>   eligible candidate, the FORMAL SELECTION OUTCOME below — "exactly ONE
+>   candidate qualifies ... DRY WITHIN THE FROZEN BUDGET" — depends
+>   entirely on that one row and is likewise **CORRECTED OUTCOME
+>   UNKNOWN**.
+> - **xylophone's row (occl 1,031, 0/0/0, coverage 0.577, NO) is
+>   INVALIDATED PENDING REMEASUREMENT.** If a corrected xylophone were
+>   eligible, the eligible count becomes 2 and the frozen checkpoint
+>   autonomy condition (">= 2 eligible") flips from NOT MET to MET — a
+>   recorded decision, not a cosmetic row.
+> - The other 18 rows are unaffected (all 24 clean conversions verified by
+>   decoded-dimension measurement).
+> - The R2-prime verification, evaluator alignment, and prereg review
+>   chain are unaffected — this defect is upstream of the evaluator, in
+>   the converter.
+> - All rows and outcomes below are PRESERVED unchanged as the original
+>   record. Remeasurement will reapply the UNCHANGED frozen eligibility
+>   predicate.
+
 Started 2026-08-12. Governing frozen protocol:
 `configs/elgs/prereg_m1_cycle2_screen_v1.json` REVISION 2 at
 `d546400` — fresh-context SIGNED (chain below). Plan:

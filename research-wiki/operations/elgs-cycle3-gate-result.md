@@ -1,5 +1,31 @@
 # EL-GS Cycle-3 Gate Result — G-R PASS / G-OA FAIL (split verdicts)
 
+> **APPEND-ONLY SUPERSESSION NOTE (2026-08-13).** The "Material provenance
+> finding" below is now a **VERIFIED DEFECT**, and its verdict-robustness
+> assessment does not hold. See
+> [[operations/elgs-substrate-defect-2026-08-13]].
+>
+> - **G-R is INVALIDATED PENDING CORRECTED REMEASUREMENT — not FAIL, not
+>   PASS.** writing_2's frames came from `segmented_ngp` (1280x720) while
+>   its calibration declares 1160x550; geometry-to-image registration is
+>   off by ~(107,120) px (IoU 0.082 at the offset the code uses; only
+>   14.4% of foreground addressable). Seeds, queries, triangulation and
+>   the coverage denominator are all affected, so the frozen artifact
+>   cannot be re-scored — it must be re-measured. The corrected outcome is
+>   UNKNOWN in either direction.
+> - The "INTERNALLY CONSISTENT" argument recorded below (association
+>   0.997, reprojection median 2.35 px) is **not** evidence of
+>   correctness: a uniform pixel offset predicts exactly those
+>   diagnostics. The declared-vs-image bounds sensitivity (union 64 vs 66)
+>   re-analysed the frozen artifact and could not test its inputs.
+> - **G-OA's valid FAIL is UNAFFECTED and REMAINS FINAL.** Its sole
+>   violation (pour_tea per-sequence coverage 0.3748) is computed entirely
+>   within pour_tea, whose conversion is clean. Correcting writing_2
+>   cannot convert that FAIL into a PASS. This defect must not be used to
+>   reopen it.
+> - All numbers, artifacts and verdicts recorded below are PRESERVED
+>   unchanged as the original record.
+
 Date: 2026-08-12. Governing frozen protocol:
 `configs/elgs/prereg_m1_cycle3_gate_v1.json` (SIGNED at `6de4d60`,
 zero blocking findings, three binding readings). Design:
