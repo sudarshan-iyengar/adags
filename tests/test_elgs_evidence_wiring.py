@@ -835,7 +835,8 @@ class AssemblyTests(_TempDirTest):
         track_ids = [int(t["track_id"]) for t in self.sealed.tracks
                      if int(t["seed_id"]) == 0]
         frames, plateau, capped = family_anchor_series(
-            self.sealed, track_ids, c_cap=4, vis_threshold=0.5, min_cameras=2
+            self.sealed, track_ids, c_cap=4, vis_threshold=0.5,
+            min_cameras=2, seed_fraction=0.5,
         )
         self.assertEqual(len(frames), 8)
         # Frames 3 and 4 carry v=0.2 for every camera -> not a plateau.

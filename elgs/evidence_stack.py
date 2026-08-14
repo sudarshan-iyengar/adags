@@ -113,6 +113,7 @@ class EvidenceConstants:
     rho: float
     anchor_report_floor: int
     min_occupancy_cameras: int
+    plateau_seed_fraction: float
     vis_threshold: float
     sigma_world: float
     tier: str
@@ -233,6 +234,7 @@ def _constants_from_values(payload: Mapping, *, tier: str) -> EvidenceConstants:
         rho=float(payload["rho"]),
         anchor_report_floor=int(payload["anchor_report_floor"]),
         min_occupancy_cameras=int(payload["min_occupancy_cameras"]),
+        plateau_seed_fraction=float(payload["plateau_seed_fraction"]),
         vis_threshold=float(payload["vis_threshold"]),
         sigma_world=float(payload["sigma_world"]),
         tier=tier,
@@ -386,30 +388,60 @@ def family_anchor_series(
     c_cap: int,
     vis_threshold: float,
     min_cameras: int,
+    seed_fraction: float,
 ) -> tuple[tuple[float, ...], tuple[bool, ...], tuple[int, ...]]:
     """(frames, plateau_series, capped_visible_counts) for one family.
 
-    A frame is a PLATEAU frame iff at least `min_cameras` of the
-    family's tracks carry a visible report there; the capped count is
-    that count truncated at C_cap (the §4 cap operator's per-frame
-    budget). Both series are indexed by the artifact's own frame grid.
+    PLATEAU IS A FRACTION OF SEEDS, NOT A POOLED REPORT COUNT.
+
+    A SEED is observed at t iff at least `min_cameras` cameras carry a
+    visible report for it there — the census's own per-seed notion of
+    presence. The family is on a plateau at t iff at least
+    `plateau_seed_fraction` of its seeds are observed.
+
+    An earlier revision pooled visible reports across ALL the family's
+    tracks and tested that count against `min_cameras`. That predicate
+    SATURATES with family size: measured on the real scissor artifact,
+    one cluster held 512 seeds and 10,995 tracks, so at least two tracks
+    were visible at every single frame, the plateau never broke, and the
+    family produced ONE anchor and ZERO windows — Phi identically 0 on
+    the richest absence sequence in the tranche (census: 343 windows).
+    The synthetic fixture could not show this: three seeds that all went
+    dark together satisfy either predicate.
+
+    A fraction is scale-invariant and therefore cannot saturate.
     """
     frames = tuple(float(i) for i in sealed.frame_indices)
     wanted = {int(j) for j in track_ids}
-    counts: dict[float, int] = {f: 0 for f in frames}
+    # (seed, frame) -> number of cameras with a visible report.
+    per_seed: dict[int, dict[float, int]] = {}
     for track in sealed.tracks:
         if int(track["track_id"]) not in wanted:
             continue
+        seed_id = int(track["seed_id"])
+        by_frame = per_seed.setdefault(seed_id, {})
         for report in track["reports"]:
             if report.get("is_miss", False):
                 continue
             if float(report["v"]) >= vis_threshold:
                 frame = float(report["frame"])
-                if frame in counts:
-                    counts[frame] += 1
-    plateau = tuple(counts[f] >= min_cameras for f in frames)
-    capped = tuple(min(counts[f], c_cap) for f in frames)
-    return frames, plateau, capped
+                by_frame[frame] = by_frame.get(frame, 0) + 1
+
+    n_seeds = len(per_seed)
+    if n_seeds == 0:
+        return frames, tuple(False for _ in frames), tuple(0 for _ in frames)
+    needed = max(1, math.ceil(seed_fraction * n_seeds))
+
+    plateau: list[bool] = []
+    capped: list[int] = []
+    for frame in frames:
+        observed = sum(
+            1 for by_frame in per_seed.values()
+            if by_frame.get(frame, 0) >= min_cameras
+        )
+        plateau.append(observed >= needed)
+        capped.append(min(observed, c_cap))
+    return frames, tuple(plateau), tuple(capped)
 
 
 def family_windows(
@@ -426,6 +458,7 @@ def family_windows(
         c_cap=c_cap,
         vis_threshold=constants.vis_threshold,
         min_cameras=constants.min_occupancy_cameras,
+        seed_fraction=constants.plateau_seed_fraction,
     )
     anchors = find_anchor_intervals(
         frames, plateau, capped, constants.anchor_report_floor

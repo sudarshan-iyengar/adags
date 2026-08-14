@@ -1,0 +1,42 @@
+# DiVa-360 PHOTOMETRIC baseline — EXPLORATORY, never claim-grade.
+#
+# DiVa-360 has never been trained in this codebase: every M0 smoke ran on
+# N3V cut_roasted_beef. This lane answers the prior question the evidence
+# lanes depend on — does a DiVa-360 conversion train sanely AT ALL with
+# elgs_enable OFF? If it does not, every evidence number measured on top
+# of it is noise and any hyperparameter tuned on it is tuned on noise.
+#
+# Substrate: scissor_screen_w0_561 (562 frames at 120 fps, 35 train
+# cameras, 1160x550). Chosen because it is the richest absence sequence
+# in tranche 1 (census: 343 true-absence windows), so the SAME scene
+# carries the evidence lane and the baseline is directly comparable.
+#
+# Two DiVa-360 facts this lane must expose:
+#   * points3d.ply is SYNTHESIZED by the converter from a coarse frustum
+#     box it explicitly discloses as "a coarse smoke-test volume, NOT a
+#     claim-grade initialization". Measured extent +/-6.5 world units
+#     against actual scissor content of about +/-1.2 — the initialization
+#     covers roughly 150x the content volume.
+#   * time = frame_index / 120, then DIVIDED by frame_ratio at read time.
+#     frame_ratio is 1 here so model time is the converter's own scale.
+
+gaussian_dim: 4
+time_duration: [0, 4.7]        # 561 / 120 fps = 4.675 s
+num_pts: 50_000
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+
+ModelParams:
+  sh_degree: 3
+  resolution: 4                # 1160x550 -> 290x138; pixel_scale 4.0
+  frame_ratio: 1
+  eval: True
+
+OptimizationParams:
+  iterations: 3000
+  densify_until_iter: 2000
+  densify_until_num_points: 300_000
+  opacity_reset_interval: 30_000
+  motion_model: "lora"
+  elgs_enable: False           # PHOTOMETRIC ONLY — the whole point

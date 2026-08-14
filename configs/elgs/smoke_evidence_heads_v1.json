@@ -26,7 +26,7 @@
     "family": "beta(a,b) on [v_min, v_max], monotone-increasing constraint a >= 1",
     "a": 4.0,
     "b": 1.0,
-    "note": "a in [1,8], b in [0.5,4] per the heads prereg allowed_range. CORRECTED: an earlier draft used b=2, which is NOT monotone increasing — beta(a,b) peaks interior at (a-1)/(a+b-2) whenever b > 1, so beta(4,2) rises to u=0.75 then falls. The prereg's monotone-increasing requirement needs b <= 1; b=1 gives density 4*u^3, strictly increasing on [0,1], so a higher reported visibility is never less likely under the visible head. Max density 4.0 at u=1, inside g_cap 6.0."
+    "note": "a in [1,8], b in [0.5,4] per the heads prereg allowed_range. CORRECTED: an earlier draft used b=2, which is NOT monotone increasing \u2014 beta(a,b) peaks interior at (a-1)/(a+b-2) whenever b > 1, so beta(4,2) rises to u=0.75 then falls. The prereg's monotone-increasing requirement needs b <= 1; b=1 gives density 4*u^3, strictly increasing on [0,1], so a higher reported visibility is never less likely under the visible head. Max density 4.0 at u=1, inside g_cap 6.0."
   },
   "h_c": {
     "family": "uniform on [v_min, v_max] with h_floor",
@@ -46,15 +46,18 @@
   "vis_threshold": 0.5,
   "vis_threshold_note": "the tracker's own cfg.vis_threshold, the SAME constant elgs-absence-diagnostic-result.md identifies as a per-point self-occlusion signal. It is used here ONLY to build anchor plateaus and d_u, never as an existence claim: the census's hard v>=0.5 association-to-existence mapping is NOT imported into the trainer.",
   "unfrozen_items_still_outstanding": [
-    "g_v (a, b) — MLE on calibration visible-report values",
-    "h_c — MLE on censored-condition reports",
-    "h_o — uniform, freeze with the others",
-    "pi_miss (vis/cens/out) — empirical miss rates per condition",
-    "g_pos_sigma — MLE of report-to-bridge residuals",
-    "alpha_u.rho — empirical variance inflation of per-camera report agreement",
-    "r_u mapping — frozen with the tracks artifact manifest (the artifact already declares one; it is consumed verbatim)",
-    "anchor_report_floor — has no prereg home at all",
-    "sigma_world / bridge covariance — no estimator specified",
-    "the bridge constructor family itself (smoke tier uses hold-left/linear/hold-right)"
-  ]
+    "g_v (a, b) \u2014 MLE on calibration visible-report values",
+    "h_c \u2014 MLE on censored-condition reports",
+    "h_o \u2014 uniform, freeze with the others",
+    "pi_miss (vis/cens/out) \u2014 empirical miss rates per condition",
+    "g_pos_sigma \u2014 MLE of report-to-bridge residuals",
+    "alpha_u.rho \u2014 empirical variance inflation of per-camera report agreement",
+    "r_u mapping \u2014 frozen with the tracks artifact manifest (the artifact already declares one; it is consumed verbatim)",
+    "anchor_report_floor \u2014 has no prereg home at all",
+    "sigma_world / bridge covariance \u2014 no estimator specified",
+    "the bridge constructor family itself (smoke tier uses hold-left/linear/hold-right)",
+    "plateau_seed_fraction - no prereg home; chosen 0.5 without reading any per-sequence outcome"
+  ],
+  "plateau_seed_fraction": 0.5,
+  "plateau_seed_fraction_note": "A SEED is observed at t iff >= min_occupancy_cameras cameras carry a visible report for it; the family is on a PLATEAU at t iff >= this fraction of its seeds are observed. User-directed 2026-08-14 after the pooled-count predicate was measured INERT on real data: on scissor one cluster held 512 seeds / 10,995 tracks, so a pooled count >= 2 was true at every frame, giving ONE anchor and ZERO windows on the sequence the census scored with 343 true-absence windows. A fraction is scale-invariant and cannot saturate. LIKE anchor_report_floor, this constant has NO PREREG HOME and must acquire one before B2."
 }
