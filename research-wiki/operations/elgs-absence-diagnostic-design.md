@@ -8,9 +8,17 @@ differ.
 
 Revision history: r1 initial freeze; r2 owner pre-data multi-view
 tightening (§5); **r3 repairs of a fresh-context hostile review that
-returned REJECTED with nine blocking findings** (§5b). All repairs were
-made pre-data: no classification statistic had been computed and no mask
-had been decoded at any non-associated (camera, frame) pair.
+returned REJECTED with nine blocking findings** (§5b); **r4 repairs of a
+scoped re-review that returned REJECTED (narrow) with nine bounded
+residuals** (§5c). All repairs were made pre-data: no classification
+statistic had been computed and no mask had been decoded at any
+non-associated (camera, frame) pair.
+
+Freeze evidence: revision 3 was committed and pushed at `1f73aa0`
+(sha256 `797871808aa8bcc5…`) **before** the primary implementation was
+tracked, so the ordering is on the record and verifiable. No output of
+this diagnostic is admissible as evidence if the prereg was untracked at
+execution time.
 
 **This diagnostic changes no prior verdict.** The cycle-1 negative
 ([[operations/elgs-m1-census-result]]), the cycle-2 DRY
@@ -116,7 +124,8 @@ Four instruments, three of them tracker-free:
   component forward by maximum-IoU chaining. Entry is a tracker SUCCESS;
   propagation consumes no tracker output. Never changes an assigned class.
 - **D3 report-status cross-tabulation** (tracker-side; says WHY).
-  `NO_REPORT` / `OUT_OF_DOMAIN` / `LOW_VISIBILITY` / `OFF_COMPONENT`.
+  `NEVER_QUERIED` / `MISS_TOKEN` / `OUT_OF_DOMAIN` (provably empty) /
+  `LOW_VISIBILITY` / `OFF_COMPONENT` / `ASSOCIATED`.
 - **D4 substrate integrity**: decoded vs declared dimensions, every camera.
 
 ## 4. The central identity problem, and where the honest boundary is
@@ -157,7 +166,15 @@ occupancy, with at least one qualifying pair separated by at least the
 sequence's frozen angular floor. A physical surface at the anchor projects
 to the anchor pixel in every camera of S; a spurious occluder at a
 different 3-D location does not. Windows failing this fall to
-C5_NON_IDENTIFIABLE.
+`C5_NO_SUSTAINED_ANCHOR_OCCUPANCY` (decision-list step 3).
+
+**Disclosed weakness of this tightening (r4).** The frozen angular floor
+is the ~10th percentile of pairwise optical-axis separations, so about 90%
+of camera pairs qualify; at `min_occupancy_cameras = 2` the angular-pair
+requirement is therefore nearly always satisfied whenever two cameras
+satisfy strict occupancy. The multi-view clause is weaker than its wording
+suggests. Sensitivity reading S7 (1, 2, 3, 5) is what actually varies its
+strength, and S7 = 5 is the informative end.
 
 This tightening makes the "instrument is confounded" classes **strictly
 harder** to reach — it moves AGAINST the hypothesis under test. It was made
@@ -229,20 +246,97 @@ would have aborted identically.
 The reviewer independently re-verified the instrument-comparability claim
 and the disclosed arithmetic of §2; both hold.
 
+## 5c. Revision-4 re-review repairs (pre-data)
+
+The scoped re-review of revision 3 returned **REJECTED (narrow)** with nine
+bounded residuals, three of them independently disqualifying. All are
+repaired at r4. The ones that matter:
+
+- **The headline status was UNCOMPUTABLE.** Status 4's clause "the status
+  differs across decision-relevant readings" was circular, because statuses
+  1/2/3 each bake in an all-readings quantifier and no per-reading status
+  existed. And `pooling_B7` ("differs between poolings ⇒ Status 4")
+  directly contradicted the precedence list (which put Status 2 first) in a
+  live scenario. Repaired by a frozen reading-local label device, a binding
+  pooling (the sequence-unweighted mean), and a precedence that resolves
+  pooling disagreement first.
+- **I had made the "material defect" verdict EASIER, in the direction of my
+  own disclosed prior.** Status 2's single-sequence `{scissor}` disjunct
+  carried *no* cross-reading quantifier while its pooled disjunct carried
+  "under EVERY reading" — a one-sequence, one-unnamed-reading route to the
+  verdict I said I expected, sitting first in precedence. Repaired by
+  restoring the quantifier.
+- **My r3 integrity claim was FALSE and is withdrawn.** I wrote "Neither
+  decisive verdict was made easier." Two of the r3 repairs did make one
+  easier: excluding bridged frames from `W` makes step 1's universally
+  quantified condition easier to satisfy and therefore makes C1a and
+  Status 1 easier (undisclosed at r3), and the `{scissor}` freeze made
+  Status 2 easier. The prereg now itemises this honestly.
+- **The adequacy class may have been unreachable by an unmeasured
+  constant.** The reviewer required `tol_c` be computed before
+  classification. I did: on poker the median tolerance disc is **49.8 px**
+  on a 1160×550 raster — **1.22% of the frame** (p5 38.1, p95 66.0). C1a as
+  frozen at r3 demanded zero foreground of *any* size in that disc, in
+  *every* camera of S, at *every* frame of W. That is close to
+  unsatisfiable in a hand-object scene, which would have foreclosed
+  Statuses 1 and 3 by geometry rather than evidence. Repaired by adding a
+  symmetric 0.25×`tol_c` level to S2 (grid 108 → 144).
+- **The fail-closed guard was vacuous.** All three r3 conditions are
+  provably unreachable (frozen reading R3 forces `first_frame ∈ W`; the
+  census walk only ever assigns `last_frame` in the absent branch). r3 had
+  replaced a guard that *always* fired with one that *never* fires.
+  Replaced by a real, free cross-check: `|W| + bridged == n_frames` and the
+  bridged-run count must equal the census's own `bridged_interruptions`.
+- **The mandatory audit sample was not reproducible**, and r3 falsely
+  claimed the frozen M1-A0b protocol was "unchanged" while altering its
+  strata and seed. Now fully frozen, with the supersession and a
+  downward-bias disclosure (audit frames are drawn uniformly over the
+  census window, which includes bridged frames at which the identity is
+  associated by construction, so those frames can never yield a
+  confirmation).
+
+Also repaired: `W` was silently reading-dependent through S5 (now frozen at
+the primary reading); `T2b`'s radius under S2 was underdetermined; the
+decode scope excluded `ltp_frame` and D2's entry frame; C4 is a dead class
+now labelled as one; the duration stratum was mislabelled a "span"; and the
+disclosed poker report-composition figures are in the census-window unit,
+not the `W` unit the run will produce.
+
+The re-reviewer independently re-verified instrument comparability (third
+confirmation) and the disclosed arithmetic, including that the minimal
+descending-count prefix really is `{scissor}` alone at 57.45%.
+
 ## 6. Classification and pre-committed decision rules
 
-Six classes under a total, deterministic ordered decision list (prereg
-`classification.ordered_decision_list`): C1 genuine-absence-corroborated,
-C2 track/report loss, C3 visibility/association failure, C4
-substrate/projection, C5 non-identifiable, C6 other (asserted empty; a
-non-empty C6 fails the run closed).
+**Nine terminal classes** under a total, deterministic ordered decision
+list (prereg `classification.ordered_decision_list`): C1a
+genuine-absence-corroborated, C1b sub-threshold-foreground-only, C1c
+anchor-unsupported, C2 track/report loss, C3 visibility/association
+failure, C4 substrate/projection (a tautology check — asserted empty,
+since a substrate mismatch fails the whole SEQUENCE closed),
+C5_NON_IDENTIFIABLE, C5_STRUCTURALLY_SILENT,
+C5_NO_SUSTAINED_ANCHOR_OCCUPANCY; plus C6 other, asserted empty, a
+non-empty C6 fails the run closed.
 
-Four measurement-closure statuses with **pre-committed** thresholds
-(prereg `measurement_closure_decision_rules`), fixed before any outcome
-existed and evaluated in the order defect -> adequate -> not-identifiable ->
-partially-confounded. Seven sensitivity readings (S1..S7) bracket every
-residual semantic freedom; a status that flips across admissible readings
-is Status 4 unless a conservative reading is defensible.
+**Five measurement-closure statuses** with **pre-committed** thresholds
+(prereg `what_the_statuses_mean`), fixed before any outcome existed.
+Precedence: pooling-disagreement -> Status 4; else defect -> adequate ->
+not-identifiable -> partially-confounded -> unresolved. **The binding
+pooling is the sequence-unweighted mean over sequences carrying >= 10
+windows**, not the pooled-over-597 figure, which is arithmetically scissor
+alone (343/597 = 57.45%).
+
+**No analyst discretion exists anywhere.** The r1/r2 clause "unless a
+conservative reading is defensible" is DELETED. Seven sensitivity readings
+are defined; exactly four (S2, S3, S5, S7) are decision-relevant, giving a
+**144-cell grid**, all of which is reported. S1, S4 and S6 are
+decision-irrelevant **by construction** — S1 is a provable no-op under a
+fixed anchor and a static rig, S4 touches only the corroborative-only D2,
+and S6 merely redistributes mass inside the sum (C2 + C3) that every
+decision rule consumes. Whether a status "differs across readings" is
+evaluated through a frozen reading-local label device, because the status
+predicates themselves carry all-readings quantifiers and were otherwise
+circular.
 
 ## 7. Outcome-blindness is NOT claimed
 
@@ -264,13 +358,19 @@ Estimate: **2-4 CPU-hours total, parallelisable to ~15-30 minutes wall;
 < 200 MB of JSON added; no new download, no new conversion, no new
 tracking.**
 
-Cheaper routes were considered and rejected on the record (prereg
+Cheaper routes were considered (prereg
 `execution_and_verification.cheaper_alternatives_considered`): re-analysis
 of the sealed census records cannot answer the question at all, because the
 census records no mask state at non-associated pairs; sampling adds error
-for negligible saving; the human-audit protocol is slower, costlier, and
-still needs this mask evidence (it remains available as a later confirmation
-of a subsample).
+for negligible saving.
+
+**The frozen M1-A0b human audit is NOT rejected.** It is the ONLY route to
+the physical-absence question, and r4 makes it a **mandatory successor**
+whose stratified sample this diagnostic emits (fully frozen: population,
+class level, tercile rule, strata order, RNG, allocation, emitted fields).
+Emitting the sample is in scope for this phase; running the audit is not.
+**No statement about whether the frozen true-absence statistic measures
+PHYSICAL absence may be recorded before that audit returns.**
 
 ## 9. Verification protocol
 
