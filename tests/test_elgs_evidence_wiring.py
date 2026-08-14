@@ -329,11 +329,24 @@ class _StubCamera:
 
 
 class _StubGaussians:
-    def __init__(self, xyz, opacity, scaling, family_ids):
+    """Carries the SAME surface `gaussian_renderer` reads.
+
+    The earlier stub exposed only get_xyz/get_opacity/get_scaling, so the
+    probe's `get_marginal_t` and `get_dynamic_xyz` branches could never
+    execute in any test — which is precisely how a probe that disagreed
+    with the renderer passed 50 tests. `motion` and `routing` are opt-in
+    so a test can assert the probe tracks the renderer's composition.
+    """
+
+    def __init__(self, xyz, opacity, scaling, family_ids,
+                 motion=None, routing=None, marginal=None):
         self._xyz = xyz
         self._opacity = opacity
         self._scaling = scaling
         self._elgs_family_ids = family_ids
+        self._motion = motion
+        self._routing = routing
+        self._marginal = marginal
 
     @property
     def get_xyz(self):
@@ -346,6 +359,22 @@ class _StubGaussians:
     @property
     def get_scaling(self):
         return self._scaling
+
+    @property
+    def get_dynamic_probability(self):
+        if self._routing is None:
+            return torch.empty(0)
+        return self._routing
+
+    def get_dynamic_xyz(self, timestamp):
+        if self._motion is None:
+            return self._xyz
+        return self._xyz + self._motion(timestamp)
+
+    def get_marginal_t(self, timestamp, scaling_modifier=1):
+        if self._marginal is None:
+            return torch.ones_like(self._opacity)
+        return self._marginal(timestamp)
 
 
 class ProbeParityTests(unittest.TestCase):
@@ -414,9 +443,111 @@ class ProbeParityTests(unittest.TestCase):
         self.assertAlmostEqual(at_full[0][0], at_quarter[0][0], delta=1e-4)
         self.assertAlmostEqual(at_full[0][1], at_quarter[0][1], delta=1e-4)
 
-    def test_geometry_cache_does_not_grow_with_frames_or_families(self):
-        """The cache key was (camera, frame, family), which at S1 scale
-        is hundreds of GB. Geometry depends on the camera alone."""
+    def test_probe_tracks_the_renderer_composition_not_get_marginal_t(self):
+        """The defect a whole repair cycle introduced.
+
+        `gaussian_renderer/__init__.py` under EL-GS sets
+        `marginal_t = get_elgs_presence(t)` and multiplies by it — the
+        presence REPLACES the temporal marginal. A probe that also
+        multiplies by `get_marginal_t` deletes temporally distant
+        occluders, drives T toward 1 and q TOO HIGH. This pins the probe
+        to the renderer: with presence == 1 and routing == 1, a decaying
+        get_marginal_t must NOT change the transmittance.
+        """
+        camera = _StubCamera()
+        xyz = torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32)
+        opacity = torch.tensor([[0.8]], dtype=torch.float32)
+        scaling = torch.full((1, 3), 0.05, dtype=torch.float32)
+        ids = torch.tensor([1], dtype=torch.long)
+        ones = lambda t, f: torch.ones((1, 1), dtype=torch.float32)  # noqa: E731
+
+        without = ModelProbe(
+            _StubGaussians(xyz, opacity, scaling, ids),
+            {1: camera}, presence_at=ones,
+        ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                        exclude_track=None, present_family=None)
+        with_decay = ModelProbe(
+            _StubGaussians(xyz, opacity, scaling, ids,
+                           marginal=lambda t: torch.tensor([[1e-9]])),
+            {1: camera}, presence_at=ones,
+        ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                        exclude_track=None, present_family=None)
+        self.assertAlmostEqual(without, with_decay, delta=1e-12)
+        self.assertLess(without, 1.0, "the occluder must actually occlude")
+
+    def test_probe_applies_dynamic_probability_like_the_renderer(self):
+        """`opacity = base_opacity * dynamic_probability` — the factor the
+        renderer applies and the probe previously omitted."""
+        camera = _StubCamera()
+        xyz = torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32)
+        opacity = torch.tensor([[0.8]], dtype=torch.float32)
+        scaling = torch.full((1, 3), 0.05, dtype=torch.float32)
+        ids = torch.tensor([1], dtype=torch.long)
+        ones = lambda t, f: torch.ones((1, 1), dtype=torch.float32)  # noqa: E731
+
+        full = ModelProbe(
+            _StubGaussians(xyz, opacity, scaling, ids,
+                           routing=torch.tensor([[1.0]])),
+            {1: camera}, presence_at=ones,
+        ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                        exclude_track=None, present_family=None)
+        routed_off = ModelProbe(
+            _StubGaussians(xyz, opacity, scaling, ids,
+                           routing=torch.tensor([[0.0]])),
+            {1: camera}, presence_at=ones,
+        ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                        exclude_track=None, present_family=None)
+        self.assertLess(full, 1.0)
+        self.assertAlmostEqual(routed_off, 1.0, delta=1e-12)
+
+    def test_probe_projects_deformed_positions_not_canonical_xyz(self):
+        """`get_dynamic_xyz(t)` is what the renderer rasterizes. A
+        camera-only geometry cache assumed geometry was frame-invariant;
+        under the committed lora lane it is not."""
+        camera = _StubCamera()
+        xyz = torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32)
+        gaussians = _StubGaussians(
+            xyz, torch.tensor([[0.9]], dtype=torch.float32),
+            torch.full((1, 3), 0.02, dtype=torch.float32),
+            torch.tensor([1], dtype=torch.long),
+            # At t=0 the splat sits on the query ray; later it slides off.
+            motion=lambda t: torch.tensor([[2.0 * float(t), 0.0, 0.0]]),
+        )
+        probe = ModelProbe(
+            gaussians, {1: camera},
+            presence_at=lambda t, f: torch.ones((1, 1), dtype=torch.float32),
+            frame_to_time={0: 0.0, 9: 1.0},
+        )
+        on_ray = probe.transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                                     exclude_track=None, present_family=None)
+        moved = probe.transmittance(1, 9.0, (32.0, 24.0), 3.0,
+                                    exclude_track=None, present_family=None)
+        self.assertLess(on_ray, 0.999, "at t=0 the splat occludes the ray")
+        self.assertAlmostEqual(moved, 1.0, delta=1e-9)
+        self.assertEqual(len(probe._geometry), 2, "geometry is per (camera, frame)")
+
+    def test_geometry_cache_is_bounded(self):
+        camera = _StubCamera()
+        gaussians = _StubGaussians(
+            torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32),
+            torch.tensor([[0.5]], dtype=torch.float32),
+            torch.full((1, 3), 0.02, dtype=torch.float32),
+            torch.tensor([1], dtype=torch.long),
+        )
+        probe = ModelProbe(
+            gaussians, {1: camera},
+            presence_at=lambda t, f: torch.ones((1, 1)),
+            frame_to_time={i: i / 120.0 for i in range(200)},
+            max_entries=8,
+        )
+        for frame in range(200):
+            probe.transmittance(1, float(frame), (32.0, 24.0), 4.0,
+                                exclude_track=None, present_family=None)
+        self.assertLessEqual(len(probe._geometry), 8)
+
+    def test_geometry_cache_does_not_grow_with_families(self):
+        """The cache key was (camera, frame, family); the |families|
+        factor is what made it hundreds of GB at S1 scale."""
         camera = _StubCamera()
         gaussians = _StubGaussians(
             torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32),
@@ -434,7 +565,9 @@ class ProbeParityTests(unittest.TestCase):
                     1, float(frame), (32.0, 24.0), 4.0,
                     exclude_track=None, present_family=family,
                 )
-        self.assertEqual(len(probe._geometry), 1)
+        # Geometry is per (camera, frame) — 20 frames, one camera. The
+        # point of the fix is that it does NOT carry a family factor.
+        self.assertEqual(len(probe._geometry), 20)
         self.assertEqual(len(probe._presence), 20)
 
     def test_model_probe_matches_analytic_probe_to_1e6(self):

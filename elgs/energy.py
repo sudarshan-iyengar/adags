@@ -224,25 +224,45 @@ def stream_log_likelihoods(
                         # L0 (absence hypothesis) — L_{z_f(t)} with z=0.
                         l1 = likelihood_l0(report, r_u, heads)
                     l0 = likelihood_l0(report, r_u, heads)
-                    # A non-positive likelihood makes math.log raise
-                    # ValueError, which is NOT a ContractError and so
-                    # escapes the round driver's rejection handling and
-                    # kills the job mid-round. It is reachable: p_vis can
-                    # underflow to 0 for a badly displaced bridge, and at
-                    # r_u = 1 with q_tilde = 1 that leaves L1 = 0. Fail
-                    # closed with a diagnosable contract error instead.
-                    if l1 <= 0.0 or l0 <= 0.0:
-                        raise ContractError(
-                            f"non-positive likelihood (L1={l1}, L0={l0}) for "
-                            f"report {key}: the position head has underflowed, "
-                            "which usually means the bridge projection and the "
-                            "report are in different pixel domains"
-                        )
-                    l_scored += cluster.alpha_u * math.log(l1)
-                    l_cens += cluster.alpha_u * math.log(l0)
+                    # p_floor, not a raise. A previous revision raised
+                    # here, which was wrong twice over: math.log(0) gives
+                    # ValueError (not a ContractError, so it escapes the
+                    # round driver and kills the job), but raising at all
+                    # turns a REACHABLE and MEANINGFUL state into a fatal
+                    # error. L1 -> 0 means "the report is far from the
+                    # bridge, so presence is strongly disfavoured" — valid
+                    # evidence, not a fault. The heads prereg already
+                    # declares a p_floor for exactly this
+                    # ("derived: inf L0 = r_min*pi_floor at the miss token
+                    # or r_min*(1-pi_m^c)*h_floor/|D_img| positionally,
+                    # whichever is smaller"), so the floor is applied.
+                    floor = _p_floor(heads)
+                    l_scored += cluster.alpha_u * math.log(max(l1, floor))
+                    l_cens += cluster.alpha_u * math.log(max(l0, floor))
         scored[bridge_id] = l_scored
         censored[bridge_id] = l_cens
     return StreamLogLik(scored=scored, censored=censored)
+
+
+def _p_floor(heads: EvidenceHeads) -> float:
+    """The prereg's declared likelihood floor (evidence-heads
+    `floors_caps.p_floor`): the smaller of the miss-token and positional
+    infima of L0. Both limbs are strictly positive for admissible heads,
+    so the floor never fires on well-posed evidence — it exists so a
+    vanishing position head degrades the report to "maximally
+    uninformative" instead of to an undefined logarithm."""
+    params = heads.params
+    miss_limb = params.r_min * params.pi_floor
+    positional_limb = (
+        params.r_min * (1.0 - params.pi_miss_cens) * params.h_floor / params.d_img_area
+    )
+    floor = min(miss_limb, positional_limb)
+    if floor <= 0.0:
+        raise ContractError(
+            "derived p_floor is non-positive; the frozen head constants are "
+            "inadmissible"
+        )
+    return floor
 
 
 def _tempered_lse(values: Sequence[float], tau: float) -> float:

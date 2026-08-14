@@ -273,6 +273,9 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         reserved_indices=frozenset(u[0] for u in reserved),
     )
     if pending is not None:
+        # Stash the persisted evidence block for attach_evidence, which
+        # runs after the registry/runtime are live.
+        gaussians._restored_elgs_evidence = dict(loaded.get("evidence") or {})
         state.committed_decisions = list(
             loaded["round_bookkeeping"].get("committed_decisions", [])
         )
@@ -417,6 +420,19 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
     )
 
     report_raster = _declared_report_raster(source_path)
+    if report_raster is None:
+        # FAIL CLOSED. Defaulting pixel_scale to 1.0 and skipping the
+        # D_img check — as a previous revision did — silently restores
+        # the exact pixel-domain mismatch that made the evidence term
+        # favour truncation regardless of the data. An evidence run whose
+        # report raster cannot be determined must refuse, not guess.
+        raise ContractError(
+            f"cannot determine the report raster for {source_path}: "
+            "transforms_train.json is missing, unreadable, or carries no "
+            "frame with both 'w' and 'h'. The evidence path compares report "
+            "positions with bridge projections and will not assume they "
+            "share a pixel domain."
+        )
     state.evidence = build_evidence_context(
         sealed,
         constants,
@@ -429,16 +445,42 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
         tau_b=float(getattr(opt, "elgs_tau_b")),
         report_raster=report_raster,
     )
+    # RESTORE the persisted binding rather than keeping the one just
+    # re-derived. A previous revision serialized the binding and claimed
+    # a resume restored it; only the write existed, so a resumed run
+    # re-bound clusters against drifted primitive positions and could
+    # silently bind them to different families than the original run.
+    restored = (pending or {}).get("evidence") if isinstance(pending, dict) else None
+    if not restored:
+        restored = getattr(gaussians, "_restored_elgs_evidence", None)
+    if restored and restored.get("binding"):
+        from .clusters import BindingTable
+
+        state.evidence.binding = BindingTable.from_state(restored["binding"])
+        print(json.dumps({"elgs_evidence_binding_restored": {
+            "clusters": len(restored.get("clusters", [])),
+        }}, sort_keys=True))
     # Projected pixels must be mapped back into the REPORT raster before
     # g_pos ever sees them (see elgs.probe_model). The scale is exact:
-    # utils.camera_utils.loadCam divides every intrinsic by one `scale`.
-    if report_raster is None:
-        state.evidence_pixel_scale = 1.0
-    else:
-        loaded_width = float(cameras[0].image_width)
-        if loaded_width <= 0:
-            raise ContractError("loaded camera reports a non-positive width")
-        state.evidence_pixel_scale = report_raster[0] / loaded_width
+    # utils.camera_utils.loadCam divides every intrinsic by ONE `scale`
+    # and sets the raster to round(w/scale), round(h/scale). Recovering
+    # it as report_w / round(w/scale) is exact only when the width
+    # divides evenly, so both axes are checked for agreement and a
+    # disagreement refuses rather than picking one.
+    loaded_width = float(cameras[0].image_width)
+    loaded_height = float(cameras[0].image_height)
+    if loaded_width <= 0 or loaded_height <= 0:
+        raise ContractError("loaded camera reports a non-positive raster")
+    scale_x = report_raster[0] / loaded_width
+    scale_y = report_raster[1] / loaded_height
+    if abs(scale_x - scale_y) > 1e-3:
+        raise ContractError(
+            f"report/loaded raster ratios disagree by axis "
+            f"({scale_x:.6f} vs {scale_y:.6f}); the loader applies ONE "
+            "scale, so this means the loaded scene is not a uniform "
+            "downscale of the converted one"
+        )
+    state.evidence_pixel_scale = scale_x
     # Frame index -> MODEL time, read off the scene's own cameras. NOT
     # derived from the artifact's fps: the reader divides `time` by
     # `frame_ratio`, so 1/fps is the wrong unit whenever frame_ratio > 1

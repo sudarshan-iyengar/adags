@@ -8,7 +8,8 @@ prereg calls for -- "the GPU implementation (spatially pruned gather over
 the model's projected Gaussians, torch, no_grad) lands with the trainer
 wiring and must match AnalyticProbe on the closed-form fixture to 1e-6".
 
-`tests/test_elgs_probe_model.py` holds that reference-parity test.
+`tests/test_elgs_evidence_wiring.py::ProbeParityTests` holds that
+reference-parity test.
 
 QUERY-SOURCE EXCLUSION -- DISCLOSED READING. AnalyticProbe excludes
 splats by `source_track`, a tag that exists only in its hand-built
@@ -20,10 +21,16 @@ exclusion would contradict it. What remains model-side is the STRICT
 FRONT test that `transmittance` already applies: splats at or behind the
 query depth never composite, and the tracked surface's own splats sit at
 that depth by construction. `exclude_track` is therefore accepted and
-recorded but performs no additional row filtering here, and that is the
-CONSERVATIVE direction: any residual same-surface splat strictly in front
-lowers T, hence lowers q, hence makes the evidence LESS informative, never
-more. Row-level track provenance is a category-2 preregistration item.
+recorded but performs no additional row filtering here.
+
+DIRECTION OF BIAS IS NOT ESTABLISHED. An earlier revision called this
+"the CONSERVATIVE direction" on the grounds that a residual same-surface
+splat in front lowers T and hence q. That is only half the account:
+`FOOTPRINT_CUTOFF` DROPS occluders, which RAISES T and q, and its bound
+is per-splat so the aggregate grows with the kept set. The two effects
+run opposite ways and neither has been measured. No conservatism may be
+claimed for q before the q-tilde distribution is measured. Row-level
+track provenance is a category-2 preregistration item.
 
 Stop-gradient: every method runs under `torch.no_grad()`; q is a round
 snapshot (spec §3) and never carries gradients into theta or a.
@@ -55,15 +62,22 @@ _MIN_SIGMA_PX = 1e-3
 
 @dataclass(frozen=True)
 class ProjectedGeometry:
-    """One camera's projection of the model's CANONICAL positions.
+    """One (camera, frame) projection of the model's DEFORMED positions.
 
-    Cached per CAMERA, not per (camera, frame, family): `get_xyz` is the
-    canonical position and the rig is static, so screen geometry does not
-    vary with frame, and presence/opacity are applied separately. Keying
-    the cache on (camera, frame, present_family) instead — as an earlier
-    revision did — makes the key space |cameras| x |frames| x |families|,
-    which at M0's own S1 scale (111 families, 50k rows, ~26 cameras) is
-    hundreds of GB. That was a real OOM, not a theoretical one.
+    CORRECTED. An earlier revision cached per CAMERA ONLY, arguing that
+    "`get_xyz` is the canonical position and the rig is static, so screen
+    geometry does not vary with frame". That is FALSE for the only
+    committed EL-GS lane: `scene/gaussian_model.py::get_dynamic_xyz`
+    returns `_xyz + lora_motion_offset(t) + scaffold_motion_offset(t)`
+    for `gaussian_dim == 4` / `motion_model == "lora"` / `not rot_4d`,
+    and `gaussian_renderer/__init__.py` rasterizes exactly that. Screen
+    geometry IS frame-dependent, so the key is (camera, frame).
+
+    The cache is bounded by `max_entries` instead: the revision this
+    replaces was keyed (camera, frame, present_family), whose |families|
+    factor made it hundreds of GB at M0's S1 scale. Dropping the family
+    factor is what makes the cache affordable — presence is applied
+    separately and never enters the geometry.
     """
 
     center_px: torch.Tensor  # (N, 2)
@@ -132,6 +146,7 @@ class ModelProbe:
         presence_at,
         frame_to_time: dict | None = None,
         pixel_scale: float = 1.0,
+        max_entries: int = 64,
         device: torch.device | str | None = None,
     ) -> None:
         """`cameras` maps camera_id -> one Camera carrying that view's
@@ -164,7 +179,8 @@ class ModelProbe:
         # that would read as "the tracker says carve these families".
         self._pixel_scale = float(pixel_scale)
         self._device = torch.device(device) if device is not None else None
-        self._geometry: dict[int, ProjectedGeometry] = {}
+        self._max_entries = int(max_entries)
+        self._geometry: dict[tuple[int, float], ProjectedGeometry] = {}
         self._presence: dict[float, torch.Tensor] = {}
 
     def _timestamp_for(self, frame: float, camera) -> float:
@@ -185,13 +201,21 @@ class ModelProbe:
         return self._cameras[camera_id]
 
     @torch.no_grad()
-    def _geometry_for(self, camera_id: int) -> ProjectedGeometry:
-        """Screen geometry for one camera; frame- and family-independent."""
-        key = int(camera_id)
+    def _geometry_for(self, camera_id: int, frame: float) -> ProjectedGeometry:
+        """Screen geometry for one (camera, frame); family-independent.
+
+        Positions come from `get_dynamic_xyz(timestamp)` — the same call
+        `gaussian_renderer` rasterizes — not from the canonical `_xyz`.
+        """
+        camera = self._camera(camera_id)
+        timestamp = self._timestamp_for(frame, camera)
+        key = (int(camera_id), float(timestamp))
         if key in self._geometry:
             return self._geometry[key]
-        camera = self._camera(camera_id)
-        xyz = self._gaussians.get_xyz.detach()
+        dynamic = getattr(self._gaussians, "get_dynamic_xyz", None)
+        xyz = (
+            dynamic(timestamp) if callable(dynamic) else self._gaussians.get_xyz
+        ).detach()
         if self._device is not None:
             xyz = xyz.to(self._device)
         center_px, depth = project_points(camera, xyz)
@@ -208,6 +232,12 @@ class ModelProbe:
         geometry = ProjectedGeometry(
             center_px=center_px, depth=depth, sigma_px=sigma_px
         )
+        if len(self._geometry) >= self._max_entries:
+            # Bounded, not unbounded: evict in insertion order. A round
+            # walks frames in order, so the evicted entry is the least
+            # recently needed. The bound is what keeps the (camera,
+            # frame) key affordable.
+            self._geometry.pop(next(iter(self._geometry)))
         self._geometry[key] = geometry
         return geometry
 
@@ -226,19 +256,26 @@ class ModelProbe:
         presence = self._presence[timestamp]
 
         opacity = self._gaussians.get_opacity.detach().reshape(-1).to(presence.device)
-        # gaussian_dim == 4: the rasterizer composites the temporal
-        # marginal too, so the probe must, or a temporally distant
-        # Gaussian reads as a fully opaque occluder and q is
-        # under-estimated (prereg_observability: "exact w.r.t. the
-        # rasterizer's compositing model").
-        marginal = getattr(self._gaussians, "get_marginal_t", None)
-        if callable(marginal):
-            try:
-                temporal = marginal(timestamp).detach().reshape(-1).to(presence.device)
-            except (TypeError, RuntimeError):
-                temporal = None
-            if temporal is not None and temporal.shape == opacity.shape:
-                opacity = opacity * temporal
+        # THE RENDERER'S COMPOSITION, read off gaussian_renderer, not
+        # assumed. `opacity = base_opacity * dynamic_probability`, then
+        # for gaussian_dim == 4:
+        #     marginal_t = get_elgs_presence(t)   if EL-GS is active
+        #     marginal_t = get_marginal_t(t)      otherwise
+        #     opacity = opacity * marginal_t
+        # So under EL-GS the presence multiplier REPLACES the temporal
+        # marginal — it is never multiplied by it. A previous revision
+        # multiplied by `get_marginal_t` as well, calling that a
+        # faithfulness repair; because that factor decays to ~0 for
+        # temporally distant Gaussians it deleted most occluders, drove
+        # T toward 1 and q TOO HIGH — treating the evidence as fully
+        # informative exactly where the model says the point is occluded.
+        # `dynamic_probability` was simultaneously omitted, which the
+        # renderer does apply.
+        routing = getattr(self._gaussians, "get_dynamic_probability", None)
+        if routing is not None and getattr(routing, "numel", lambda: 0)():
+            routing = routing.detach().reshape(-1).to(presence.device)
+            if routing.shape == opacity.shape:
+                opacity = opacity * routing
 
         if presence.shape[0] != opacity.shape[0]:
             raise ContractError(
@@ -274,7 +311,7 @@ class ModelProbe:
         # unmapped frame index return 1.0 instead of failing closed,
         # because only `_alpha_for` consults the frame->time map.
         self._timestamp_for(frame, self._camera(camera_id))
-        geometry = self._geometry_for(camera_id)
+        geometry = self._geometry_for(camera_id, frame)
         if geometry.depth.numel() == 0:
             return 1.0
 
@@ -355,4 +392,4 @@ class ModelProbe:
         return (u, v), d
 
 
-__all__ = ["FOOTPRINT_CUTOFF", "ModelProbe", "ProjectedSplats", "project_points"]
+__all__ = ["FOOTPRINT_CUTOFF", "ModelProbe", "ProjectedGeometry", "project_points"]
