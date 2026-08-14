@@ -277,6 +277,7 @@ def check_execution_closure(
     execution_set: Iterable[str],
     *,
     dirty_smoke: bool = False,
+    exploratory: bool = False,
 ) -> ClosureReport:
     """Classify the working tree against the declared execution set (S10.2 item 1).
 
@@ -306,11 +307,20 @@ def check_execution_closure(
             "or pass --dirty-smoke for a deliberately non-evidence-bearing run."
         )
 
+    # `evidence_bearing` was previously derived SOLELY from working-tree
+    # cleanliness, which conflates two independent things: whether the
+    # code is reproducible, and whether the run is scientifically
+    # claim-bearing. A clean tree could therefore never be declared
+    # exploratory, and nothing stopped an evidence-bearing ledger line
+    # from consuming unfrozen smoke-tier constants. `--exploratory` lets
+    # a run say what it IS. It can only ever REMOVE evidence-bearing
+    # status, never grant it: a dirty tree stays non-evidence-bearing
+    # regardless.
     return ClosureReport(
         execution_set=tuple(entries),
         dirty_inside=tuple(sorted(dirty_inside)),
         dirty_outside=tuple(sorted(dirty_outside)),
-        evidence_bearing=not dirty_inside,
+        evidence_bearing=(not dirty_inside) and not exploratory,
         dirty_smoke=bool(dirty_smoke),
     )
 
@@ -788,7 +798,10 @@ def cmd_preflight(args: argparse.Namespace) -> int:
 
     repo_root = Path(args.repo_root).resolve()
     execution_set = resolve_execution_set(repo_root, [args.config])
-    closure = check_execution_closure(repo_root, execution_set, dirty_smoke=args.dirty_smoke)
+    closure = check_execution_closure(
+        repo_root, execution_set, dirty_smoke=args.dirty_smoke,
+        exploratory=args.exploratory,
+    )
     print("execution closure: " + ("OK (evidence-bearing)" if closure.evidence_bearing else "DIRTY-SMOKE (not evidence-bearing)"))
     if closure.dirty_outside:
         print(f"excluded (dirty/untracked, outside execution set): {list(closure.dirty_outside)}")
@@ -889,7 +902,10 @@ def cmd_submit(args: argparse.Namespace) -> int:
 
     # 3. execution closure.
     execution_set = resolve_execution_set(repo_root, [args.config])
-    closure = check_execution_closure(repo_root, execution_set, dirty_smoke=args.dirty_smoke)
+    closure = check_execution_closure(
+        repo_root, execution_set, dirty_smoke=args.dirty_smoke,
+        exploratory=args.exploratory,
+    )
 
     # 4. claim (before materialization/submission -- race-safe duplicate guard).
     claim_path = claim_cell(
@@ -1116,6 +1132,16 @@ def _add_common_submission_args(parser: argparse.ArgumentParser, *, require_proj
         "--dirty-smoke",
         action="store_true",
         help="permit a dirty/untracked execution-relevant tree; stamps evidence_bearing=false",
+    )
+    parser.add_argument(
+        "--exploratory",
+        action="store_true",
+        help=(
+            "declare this run EXPLORATORY: stamps evidence_bearing=false even "
+            "on a clean tree. Required for any run consuming smoke-tier "
+            "constants, and the only way to say 'not claim-bearing' about "
+            "reproducible code"
+        ),
     )
     parser.add_argument(
         "--projected-gpu-hours",

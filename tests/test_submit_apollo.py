@@ -193,6 +193,29 @@ class CheckExecutionClosureTests(_ScratchRepoTestCase):
         )
         self.assertTrue(report.evidence_bearing)
 
+    def test_exploratory_stamps_non_evidence_bearing_on_a_CLEAN_tree(self):
+        """`evidence_bearing` was derived solely from tree cleanliness,
+        which conflates 'is the code reproducible' with 'is this run
+        claim-bearing'. A clean tree could not be declared exploratory,
+        so nothing stopped an evidence-bearing ledger line from consuming
+        unfrozen smoke-tier constants."""
+        clean = wrapper.check_execution_closure(self.repo_root, self.execution_set)
+        self.assertTrue(clean.evidence_bearing)
+        self.assertEqual(clean.dirty_inside, ())
+
+        declared = wrapper.check_execution_closure(
+            self.repo_root, self.execution_set, exploratory=True
+        )
+        self.assertFalse(declared.evidence_bearing)
+        self.assertEqual(declared.dirty_inside, ())
+
+    def test_exploratory_can_only_remove_evidence_bearing_never_grant_it(self):
+        _write(self.repo_root / "elgs" / "scratch.py", "x = 1\n")
+        report = wrapper.check_execution_closure(
+            self.repo_root, self.execution_set, dirty_smoke=True, exploratory=False
+        )
+        self.assertFalse(report.evidence_bearing)
+
 
 # ---------------------------------------------------------------------------
 # materialize_context
