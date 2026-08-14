@@ -363,8 +363,16 @@ class _StubGaussians:
     @property
     def get_dynamic_probability(self):
         if self._routing is None:
-            return torch.empty(0)
+            # The real model returns ones((N,1)) when soft routing is
+            # off (scene/gaussian_model.py), never an empty tensor.
+            return torch.ones_like(self._opacity)
         return self._routing
+
+    @property
+    def get_static_probability(self):
+        if self._routing is None:
+            return torch.empty(0)
+        return 1.0 - self._routing
 
     def get_dynamic_xyz(self, timestamp):
         if self._motion is None:
@@ -402,6 +410,7 @@ class ProbeParityTests(unittest.TestCase):
         probe = ModelProbe(
             gaussians, {1: camera},
             presence_at=lambda t, f: torch.ones((2, 1), dtype=torch.float32),
+            frame_to_time={0: 0.0},
         )
 
         # Hand-computed geometry.
@@ -463,21 +472,34 @@ class ProbeParityTests(unittest.TestCase):
 
         without = ModelProbe(
             _StubGaussians(xyz, opacity, scaling, ids),
-            {1: camera}, presence_at=ones,
+            {1: camera}, presence_at=ones, frame_to_time={0: 0.0},
         ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
                         exclude_track=None, present_family=None)
         with_decay = ModelProbe(
             _StubGaussians(xyz, opacity, scaling, ids,
                            marginal=lambda t: torch.tensor([[1e-9]])),
-            {1: camera}, presence_at=ones,
+            {1: camera}, presence_at=ones, frame_to_time={0: 0.0},
         ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
                         exclude_track=None, present_family=None)
         self.assertAlmostEqual(without, with_decay, delta=1e-12)
         self.assertLess(without, 1.0, "the occluder must actually occlude")
 
-    def test_probe_applies_dynamic_probability_like_the_renderer(self):
-        """`opacity = base_opacity * dynamic_probability` — the factor the
-        renderer applies and the probe previously omitted."""
+    def test_routing_SPLITS_mass_between_branches_it_does_not_delete_it(self):
+        """`opacity = base_opacity * dynamic_probability` for the dynamic
+        branch and `base_opacity * static_probability` for the static one.
+
+        The two are complementary, so at full presence the ENDPOINTS
+        agree — all the mass sits in one branch either way. An earlier
+        assertion here (routing 0 => T = 1) was wrong: routing mass away
+        from the dynamic branch moves it to the static twin rather than
+        deleting it.
+
+        A 50/50 split does NOT conserve transmittance, and should not:
+        compositing is multiplicative, so two half-opacity splats occlude
+        strictly LESS than one full-opacity splat ((1-a/2)^2 > 1-a). That
+        is alpha compositing, not an artifact — and asserting equality
+        there was this author's second wrong expectation in this test.
+        """
         camera = _StubCamera()
         xyz = torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32)
         opacity = torch.tensor([[0.8]], dtype=torch.float32)
@@ -485,20 +507,80 @@ class ProbeParityTests(unittest.TestCase):
         ids = torch.tensor([1], dtype=torch.long)
         ones = lambda t, f: torch.ones((1, 1), dtype=torch.float32)  # noqa: E731
 
-        full = ModelProbe(
+        def probe_at(p_dyn):
+            return ModelProbe(
+                _StubGaussians(xyz, opacity, scaling, ids,
+                               routing=torch.tensor([[p_dyn]])),
+                {1: camera}, presence_at=ones, frame_to_time={0: 0.0},
+            ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                            exclude_track=None, present_family=None)
+
+        all_dynamic = probe_at(1.0)
+        all_static = probe_at(0.0)
+        half = probe_at(0.5)
+        self.assertLess(all_dynamic, 1.0, "the occluder must occlude")
+        # Endpoints agree: all mass in one branch either way.
+        self.assertAlmostEqual(all_dynamic, all_static, delta=1e-6)
+        # A split occludes LESS, multiplicatively: (1 - a/2)^2 > 1 - a.
+        self.assertGreater(half, all_dynamic + 1e-6)
+        self.assertAlmostEqual(half, (1.0 - 0.4) * (1.0 - 0.4), delta=1e-6)
+
+    def test_probe_composites_the_static_routing_branch(self):
+        """Under soft routing `gaussian_renderer` hands the rasterizer a
+        SECOND full copy of every row at the CANONICAL position with
+        `opacity_static = base_opacity * static_probability` and NO
+        presence. Those twins occlude in the rendered image; a probe that
+        ignores them reports T too high, hence q too high — the same
+        direction as the get_marginal_t defect.
+
+        Presence 0 must therefore NOT give T = 1 when routing leaves
+        static mass behind.
+        """
+        camera = _StubCamera()
+        xyz = torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32)
+        opacity = torch.tensor([[0.9]], dtype=torch.float32)
+        scaling = torch.full((1, 3), 0.05, dtype=torch.float32)
+        ids = torch.tensor([1], dtype=torch.long)
+        zero_presence = lambda t, f: torch.zeros((1, 1), dtype=torch.float32)  # noqa: E731
+
+        # 40% of the mass routed static: the static twin still occludes.
+        with_static = ModelProbe(
+            _StubGaussians(xyz, opacity, scaling, ids,
+                           routing=torch.tensor([[0.6]])),
+            {1: camera}, presence_at=zero_presence, frame_to_time={0: 0.0},
+        ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                        exclude_track=None, present_family=None)
+        self.assertLess(
+            with_static, 1.0,
+            "an absent family still renders its static twin under soft routing",
+        )
+
+        # All mass dynamic: presence 0 really does clear the ray.
+        all_dynamic = ModelProbe(
             _StubGaussians(xyz, opacity, scaling, ids,
                            routing=torch.tensor([[1.0]])),
-            {1: camera}, presence_at=ones,
+            {1: camera}, presence_at=zero_presence, frame_to_time={0: 0.0},
         ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
                         exclude_track=None, present_family=None)
-        routed_off = ModelProbe(
-            _StubGaussians(xyz, opacity, scaling, ids,
-                           routing=torch.tensor([[0.0]])),
-            {1: camera}, presence_at=ones,
-        ).transmittance(1, 0.0, (32.0, 24.0), 3.0,
-                        exclude_track=None, present_family=None)
-        self.assertLess(full, 1.0)
-        self.assertAlmostEqual(routed_off, 1.0, delta=1e-12)
+        self.assertAlmostEqual(all_dynamic, 1.0, delta=1e-9)
+
+    def test_empty_frame_map_fails_closed(self):
+        """Falling back to the Camera's own timestamp would collapse
+        every frame onto one arbitrary time — the exact falsehood the
+        camera-only geometry cache was rejected for."""
+        camera = _StubCamera()
+        gaussians = _StubGaussians(
+            torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32),
+            torch.tensor([[0.5]], dtype=torch.float32),
+            torch.full((1, 3), 0.02, dtype=torch.float32),
+            torch.tensor([1], dtype=torch.long),
+        )
+        probe = ModelProbe(
+            gaussians, {1: camera}, presence_at=lambda t, f: torch.ones((1, 1))
+        )
+        with self.assertRaises(ContractError):
+            probe.transmittance(1, 0.0, (32.0, 24.0), 3.0,
+                                exclude_track=None, present_family=None)
 
     def test_probe_projects_deformed_positions_not_canonical_xyz(self):
         """`get_dynamic_xyz(t)` is what the renderer rasterizes. A
@@ -584,7 +666,8 @@ class ProbeParityTests(unittest.TestCase):
 
         presence = torch.ones((4, 1), dtype=torch.float32)
         model_probe = ModelProbe(
-            gaussians, {1: camera}, presence_at=lambda t, f: presence
+            gaussians, {1: camera}, presence_at=lambda t, f: presence,
+            frame_to_time={0: 0.0},
         )
 
         pixel_centers, depths = project_points(camera, xyz)
@@ -623,6 +706,7 @@ class ProbeParityTests(unittest.TestCase):
         absent = ModelProbe(
             gaussians, {1: camera},
             presence_at=lambda t, f: torch.zeros((1, 1), dtype=torch.float32),
+            frame_to_time={0: 0.0},
         )
         self.assertAlmostEqual(
             absent.transmittance(

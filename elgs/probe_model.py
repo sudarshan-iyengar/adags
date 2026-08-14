@@ -181,17 +181,22 @@ class ModelProbe:
         self._device = torch.device(device) if device is not None else None
         self._max_entries = int(max_entries)
         self._geometry: dict[tuple[int, float], ProjectedGeometry] = {}
+        self._static_geometry: dict[int, ProjectedGeometry] = {}
         self._presence: dict[float, torch.Tensor] = {}
 
     def _timestamp_for(self, frame: float, camera) -> float:
         index = int(frame)
-        if self._frame_to_time:
-            if index not in self._frame_to_time:
-                raise ContractError(
-                    f"probe has no model timestamp for frame index {index}"
-                )
-            return float(self._frame_to_time[index])
-        return float(getattr(camera, "timestamp", frame))
+        if not self._frame_to_time:
+            raise ContractError(
+                "probe has no frame->time map; falling back to the Camera's "
+                "own timestamp would collapse every frame onto one arbitrary "
+                "time and evaluate the deformed geometry at the wrong instant"
+            )
+        if index not in self._frame_to_time:
+            raise ContractError(
+                f"probe has no model timestamp for frame index {index}"
+            )
+        return float(self._frame_to_time[index])
 
     # -- projection -------------------------------------------------------
 
@@ -289,6 +294,87 @@ class ModelProbe:
                 presence = presence.clone().masked_fill(mask, 1.0)
         return (opacity * presence).clamp(0.0, 1.0)
 
+    @torch.no_grad()
+    def _static_alpha(self) -> torch.Tensor | None:
+        """The SECOND opacity column the rasterizer composites.
+
+        Under soft routing (`gaussian_dim == 4` and `enable_soft_routing`
+        and a populated routing column -- the committed EL-GS lane)
+        `gaussian_renderer` hands the rasterizer a full second copy of
+        every row at `means3D_static = pc.get_xyz` (CANONICAL, not
+        deformed) with `opacity_static = base_opacity *
+        static_probability` and NO presence and NO temporal marginal.
+        Those static twins occlude in the rendered image. A probe that
+        ignores them reports transmittance too HIGH, hence q too high --
+        the same direction as the get_marginal_t defect. Returns None
+        when the branch is inactive.
+        """
+        static_p = getattr(self._gaussians, "get_static_probability", None)
+        if static_p is None or not getattr(static_p, "numel", lambda: 0)():
+            return None
+        routing = getattr(self._gaussians, "get_dynamic_probability", None)
+        if routing is None or not getattr(routing, "numel", lambda: 0)():
+            return None
+        opacity = self._gaussians.get_opacity.detach().reshape(-1)
+        static_column = static_p.detach().reshape(-1).to(opacity.device)
+        if static_column.shape != opacity.shape:
+            return None
+        return (opacity * static_column).clamp(0.0, 1.0)
+
+    @torch.no_grad()
+    def _static_geometry_for(self, camera_id: int) -> ProjectedGeometry:
+        """Canonical-position geometry for the static branch.
+
+        Frame-independent BY CONSTRUCTION here (the renderer uses
+        `pc.get_xyz`, not `get_dynamic_xyz`), so a camera-only key is
+        correct for this branch specifically.
+        """
+        key = int(camera_id)
+        if key in self._static_geometry:
+            return self._static_geometry[key]
+        camera = self._camera(camera_id)
+        xyz = self._gaussians.get_xyz.detach()
+        if self._device is not None:
+            xyz = xyz.to(self._device)
+        center_px, depth = project_points(camera, xyz)
+        center_px = center_px * self._pixel_scale
+        scaling = self._gaussians.get_scaling.detach().to(xyz.device)
+        world_sigma = (
+            scaling[:, :3].mean(dim=1) if scaling.shape[1] >= 3 else scaling.reshape(-1)
+        )
+        fl_x, fl_y, _, _ = _camera_intrinsics(camera)
+        focal = 0.5 * (fl_x + fl_y) * self._pixel_scale
+        sigma_px = (world_sigma * focal / depth.clamp_min(1e-8)).clamp_min(_MIN_SIGMA_PX)
+        geometry = ProjectedGeometry(
+            center_px=center_px, depth=depth, sigma_px=sigma_px
+        )
+        self._static_geometry[key] = geometry
+        return geometry
+
+    def _branch_product(
+        self, geometry: ProjectedGeometry, alpha: torch.Tensor,
+        pixel: tuple[float, float], depth: float,
+    ) -> float:
+        """(1 - a_i G_i) product over one branch's front set."""
+        front = (geometry.depth > 0.0) & (geometry.depth < float(depth))
+        if not bool(front.any()):
+            return 1.0
+        px = torch.tensor(
+            [float(pixel[0]), float(pixel[1])],
+            device=geometry.center_px.device,
+            dtype=geometry.center_px.dtype,
+        )
+        offset = geometry.center_px[front] - px
+        sigma = geometry.sigma_px[front]
+        footprint = torch.exp(-0.5 * (offset * offset).sum(dim=1) / (sigma * sigma))
+        keep = footprint > FOOTPRINT_CUTOFF
+        if not bool(keep.any()):
+            return 1.0
+        contribution = (alpha[front][keep] * footprint[keep]).clamp(0.0, 1.0)
+        return float(
+            torch.exp(torch.log1p(-contribution.clamp_max(1.0 - 1e-12)).sum())
+        )
+
     # -- RenderProbe ------------------------------------------------------
 
     @torch.no_grad()
@@ -315,34 +401,20 @@ class ModelProbe:
         if geometry.depth.numel() == 0:
             return 1.0
 
-        # Strict front set: splats at or behind the query point never
-        # composite. This is also what stands in for query-source
-        # exclusion model-side.
-        front = (geometry.depth > 0.0) & (geometry.depth < float(depth))
-        if not bool(front.any()):
-            return 1.0
-
-        px = torch.tensor(
-            [float(pixel[0]), float(pixel[1])],
-            device=geometry.center_px.device,
-            dtype=geometry.center_px.dtype,
-        )
-        offset = geometry.center_px[front] - px
-        sigma = geometry.sigma_px[front]
-        exponent = -0.5 * (offset * offset).sum(dim=1) / (sigma * sigma)
-        footprint = torch.exp(exponent)
-
-        # Spatial prune: keep only splats that can move the product.
-        # The cutoff is PER SPLAT, so the aggregate error grows with the
-        # kept-set size; it is set far below the 1e-6 parity tolerance
-        # and the pruned direction RAISES T (drops occluders), which is
-        # recorded rather than claimed to be conservative.
-        keep = footprint > FOOTPRINT_CUTOFF
-        if not bool(keep.any()):
-            return 1.0
+        # BOTH branches the rasterizer composites. Strict front set on
+        # each: splats at or behind the query point never composite,
+        # which is also what stands in for query-source exclusion
+        # model-side. The spatial prune's cutoff is PER SPLAT, so its
+        # aggregate error grows with the kept-set size, and it RAISES T
+        # (drops occluders) -- recorded, not claimed to be conservative.
         alpha = self._alpha_for(frame, self._camera(camera_id), present_family)
-        contribution = (alpha[front][keep] * footprint[keep]).clamp(0.0, 1.0)
-        t_value = float(torch.exp(torch.log1p(-contribution.clamp_max(1.0 - 1e-12)).sum()))
+        t_value = self._branch_product(geometry, alpha, pixel, depth)
+
+        static_alpha = self._static_alpha()
+        if static_alpha is not None:
+            t_value *= self._branch_product(
+                self._static_geometry_for(camera_id), static_alpha, pixel, depth
+            )
         if not (0.0 <= t_value <= 1.0):
             raise ContractError(
                 f"composited transmittance {t_value} outside [0,1]"

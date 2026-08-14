@@ -450,9 +450,11 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
     # a resume restored it; only the write existed, so a resumed run
     # re-bound clusters against drifted primitive positions and could
     # silently bind them to different families than the original run.
-    restored = (pending or {}).get("evidence") if isinstance(pending, dict) else None
-    if not restored:
-        restored = getattr(gaussians, "_restored_elgs_evidence", None)
+    # `pending` is a local of setup_elgs and is NOT in scope here — an
+    # earlier revision referenced it, which made every run that set
+    # elgs_tracks_dir die with NameError at setup. setup_elgs stashes the
+    # restored block on the model instead.
+    restored = getattr(gaussians, "_restored_elgs_evidence", None)
     if restored and restored.get("binding"):
         from .clusters import BindingTable
 
@@ -461,26 +463,23 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
             "clusters": len(restored.get("clusters", [])),
         }}, sort_keys=True))
     # Projected pixels must be mapped back into the REPORT raster before
-    # g_pos ever sees them (see elgs.probe_model). The scale is exact:
-    # utils.camera_utils.loadCam divides every intrinsic by ONE `scale`
-    # and sets the raster to round(w/scale), round(h/scale). Recovering
-    # it as report_w / round(w/scale) is exact only when the width
-    # divides evenly, so both axes are checked for agreement and a
-    # disagreement refuses rather than picking one.
-    loaded_width = float(cameras[0].image_width)
-    loaded_height = float(cameras[0].image_height)
-    if loaded_width <= 0 or loaded_height <= 0:
-        raise ContractError("loaded camera reports a non-positive raster")
-    scale_x = report_raster[0] / loaded_width
-    scale_y = report_raster[1] / loaded_height
-    if abs(scale_x - scale_y) > 1e-3:
-        raise ContractError(
-            f"report/loaded raster ratios disagree by axis "
-            f"({scale_x:.6f} vs {scale_y:.6f}); the loader applies ONE "
-            "scale, so this means the loaded scene is not a uniform "
-            "downscale of the converted one"
-        )
-    state.evidence_pixel_scale = scale_x
+    # g_pos ever sees them (see elgs.probe_model). The scale comes from
+    # the INTRINSICS, not the raster ratio: utils.camera_utils.loadCam
+    # divides fl_x by the UNROUNDED `scale` but sets the raster to
+    # round(w/scale), round(h/scale). A raster ratio is therefore only
+    # approximate -- DiVa-360 at resolution 4 gives round(550/4) = 138
+    # and a height ratio of 3.9855 against a width ratio of 4.0, so an
+    # axis-agreement test on the rasters rejects the one committed
+    # configuration over half a pixel of rounding. fl ratios are exact.
+    declared_fl = _declared_focal(source_path)
+    loaded_fl = float(getattr(cameras[0], "fl_x", 0.0) or 0.0)
+    if declared_fl and loaded_fl > 0.0:
+        state.evidence_pixel_scale = declared_fl / loaded_fl
+    else:
+        loaded_width = float(cameras[0].image_width)
+        if loaded_width <= 0:
+            raise ContractError("loaded camera reports a non-positive width")
+        state.evidence_pixel_scale = report_raster[0] / loaded_width
     # Frame index -> MODEL time, read off the scene's own cameras. NOT
     # derived from the artifact's fps: the reader divides `time` by
     # `frame_ratio`, so 1/fps is the wrong unit whenever frame_ratio > 1
@@ -587,6 +586,27 @@ def _declared_report_raster(source_path) -> tuple[float, float] | None:
     for frame in frames:
         if "w" in frame and "h" in frame:
             return float(frame["w"]), float(frame["h"])
+    return None
+
+
+def _declared_focal(source_path) -> float | None:
+    """The converted scene's declared `fl_x`, in REPORT pixels.
+
+    `loadCam` divides fl_x by the loader's unrounded `scale`, so
+    declared_fl_x / camera.fl_x recovers that scale EXACTLY, with no
+    dependence on how the raster rounded.
+    """
+    path = os.path.join(str(source_path), "transforms_train.json")
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            frames = json.load(handle).get("frames") or []
+    except (OSError, ValueError):
+        return None
+    for frame in frames:
+        if "fl_x" in frame:
+            return float(frame["fl_x"])
     return None
 
 
