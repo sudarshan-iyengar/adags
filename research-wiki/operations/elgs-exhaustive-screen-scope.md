@@ -81,6 +81,35 @@ Consequently:
 
 ## 3. Scope, by measurement-closure outcome
 
+> **UPDATE (2026-08-14): the outcome is now KNOWN — Status 2 (material
+> defect).** The branch table below was written as a conditional; the
+> **"Status 2 (defect)" rows are the live ones**. See
+> [[operations/elgs-absence-diagnostic-result]]. Which of the two Status-2
+> rows applies is NOT yet decidable, and that is the phase's main open
+> question:
+>
+> - The defect has **two named mechanisms**: the `v >= 0.5` visibility limb
+>   (87.6% of absence-evidence pairs) and the never-queried camera set
+>   (12.2%). Correcting the first is CENSUS-LEVEL (~1 CPU-hour, zero
+>   GPU-hours, tracks reused). Correcting the second is
+>   QUERY-CONSTRUCTION and REQUIRES RE-TRACKING all 20 sequences.
+> - **A third mechanism may dominate and is UNMEASURED: anchor drift.**
+>   The final review's principal finding is that `LOW_VISIBILITY` is
+>   stamped before any on-component test, so that 87.6% is an unmeasured
+>   mixture of correct-but-unconfident and grossly-drifted reports. **If
+>   drift dominates, lowering the visibility threshold makes the instrument
+>   WORSE and a tranche-1 re-evaluation built to that spec is wasted.**
+> - **Therefore: measure the on/off-component split of low-visibility
+>   reports (one CPU pass over already-sealed artifacts) BEFORE specifying
+>   the corrected instrument.** That measurement, not the re-evaluation, is
+>   the next cheap decisive step.
+>
+> §6's prognosis below is likewise no longer conditional in its premise:
+> the eligibility predicate's coverage limb is now known to share the
+> `v >= 0.5` constant with the absence limb, so "event-rich but
+> tracker-illegible" (scissor, poker) is a live instrument-artifact
+> hypothesis rather than a speculative one.
+
 | Outcome | Tranche-1 re-evaluation | Tracks reusable | New tracking | Instrument version for the screen |
 |---|---|---|---|---|
 | Status 1 (adequate) | none | yes | no | unchanged, `1d8f3b0`+ |

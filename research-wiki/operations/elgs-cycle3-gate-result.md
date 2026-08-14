@@ -130,3 +130,26 @@ frozen prereg (regardless of verdict). Compute: ~0.7 GPU-h of the
   extension; (d) full R3 descope. The OA event supply itself is not
   in doubt (205 pooled absences, 23k occlusions on THIS subset) —
   the failure is one companion's tracker legibility.
+
+> **APPEND-ONLY CORRECTION (2026-08-14).** The sentence "The OA event
+> supply itself is not in doubt (205 pooled absences...)" is the single
+> statement most directly falsified by measurement closure, for the
+> ABSENCE half. The frozen absence instrument is diagnosed at **status_2
+> (material defect)**, status_2 in all 144 sensitivity cells, with **C1a
+> (corroborated genuine absence) = ZERO in every cell**: of 597 scored
+> tranche-1 true-absence windows none is corroborated, and 96.6% (84.4%
+> in the most demanding cell) are windows where an eligible foreground
+> component sustained multi-view-consistent occupancy of the instrument's
+> own anchor while the tracker's report failed to qualify. The
+> **OCCLUSION** half of the sentence stands — that predicate requires
+> association in >= 2 cameras, i.e. tracking WORKING.
+>
+> This does NOT reopen the G-OA verdict on this page, which turns on
+> pour_tea's per-sequence COVERAGE floor. But note honestly: coverage is
+> counted only where a v >= 0.5 report lands in an eligible component, the
+> same constant now characterised as a per-point self-occlusion signal, so
+> coverage is instrument-dependent and under a corrected instrument
+> pour_tea's 0.3748 would move UPWARD. The FAIL stands as a valid result
+> of the FROZEN instrument; any future gate under a corrected instrument
+> is a NEW gate under a NEW preregistration, never a reopening.
+> See [[operations/elgs-absence-diagnostic-result]].
