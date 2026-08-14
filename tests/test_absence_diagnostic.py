@@ -1334,6 +1334,77 @@ class RobustnessGradeTests(unittest.TestCase):
         )
 
 
+class PerSequenceAttributionTests(Harness):
+    """Regression for the experiment-68 defect: `all_windows` was built in
+    `evaluations` INSERTION order while the per-sequence aggregation walked
+    `primary_assignment` with a cursor in SORTED order, so every per-window
+    class was misaligned with its window unless the caller happened to pass
+    sequences alphabetically. Pooled counts were unaffected (they never use
+    the cursor), which is why the primary artifact looked self-consistent and
+    only the independent recomputation caught it.
+    """
+
+    def _two_sequences(self, root):
+        from scripts.build_elgs_tracks import load_temporal_scene
+
+        built = []
+        # 'zulu' sorts AFTER 'alpha', so passing zulu first makes the CLI
+        # order differ from the sorted order -- the exact trigger.
+        for name, masks in (
+            ("zulu", lambda c, f: with_blobs(FAR_BLOB, ANCHOR_BLOB)),
+            ("alpha", lambda c, f: with_blobs(FAR_BLOB)),
+        ):
+            sub = root / f"holder_{name}"
+            sub.mkdir()
+            scene_dir = write_scene(sub, masks)
+            # The census key is the scene dir BASENAME, so the two scenes must
+            # have distinct names for the sorted/insertion order to differ.
+            renamed = scene_dir.parent / name
+            scene_dir.rename(renamed)
+            scene_dir = renamed
+            tracks = write_tracks(sub, reports_miss_in_window)
+            floor = census.angular_separation_floor(load_temporal_scene(scene_dir))
+            cen = write_census(sub, scene_dir, containing_cameras=[1, 2, 3], angular_floor=floor)
+            built.append((name, scene_dir, tracks, cen))
+        return built
+
+    def test_per_sequence_attribution_is_order_invariant(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            built = self._two_sequences(Path(tmp))
+            alone = {}
+            for name, scene_dir, tracks, cen in built:
+                r = diag.run_diagnostic([(name, scene_dir, tracks, cen)], PREREG, panel="primary")
+                alone[name] = r["per_sequence"][name]["classes"]
+            # zulu FIRST: CLI order != sorted order. Every sequence's classes
+            # must equal what it got on its own.
+            together = diag.run_diagnostic(built, PREREG, panel="primary")
+            for name in alone:
+                self.assertEqual(
+                    together["per_sequence"][name]["classes"], alone[name],
+                    f"{name}'s per-sequence classes changed when run alongside another sequence",
+                )
+
+    def test_every_window_class_agrees_with_its_own_detail(self):
+        """The general invariant that exposed the defect: a window's recorded
+        class must be derivable from its OWN recorded detail."""
+        with tempfile.TemporaryDirectory() as tmp:
+            built = self._two_sequences(Path(tmp))
+            result = diag.run_diagnostic(built, PREREG, panel="primary")
+            floor = diag.load_prereg(PREREG).occupancy_frame_fraction_min
+            checked = 0
+            for w in result["windows"]:
+                detail = w.get("class_detail") or {}
+                if "m_fraction" not in detail:
+                    continue  # step-1 / tautology paths carry no m_fraction
+                checked += 1
+                reached_step2 = detail["m_fraction"] >= floor
+                if reached_step2:
+                    self.assertIn(w["class"], (diag.CLASS_C2, diag.CLASS_C3), w)
+                else:
+                    self.assertEqual(w["class"], diag.CLASS_C5_NS, w)
+            self.assertGreater(checked, 0, "fixture exercised no step-2 window")
+
+
 class BindingPoolingTests(unittest.TestCase):
     """Pooling (b) BINDS every status predicate (prereg R2), so it is tested
     directly on Tally rather than only through a full pipeline run.

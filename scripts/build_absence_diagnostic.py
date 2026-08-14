@@ -2690,8 +2690,18 @@ def run_diagnostic(
             "conversion_provenance": result["substrate"]["conversion_provenance"],
         }
 
-    all_windows: list[WindowEval] = [w for r in evaluations.values() for w in r["windows"]]
+    # ORDER IS LOAD-BEARING. `names` is sorted, and the per-sequence
+    # aggregation below walks `primary_assignment` with a cursor in `names`
+    # order. all_windows MUST therefore be built in `names` order too --
+    # building it in `evaluations` INSERTION order (the CLI order) silently
+    # misaligns every per-window class with its window whenever the caller
+    # does not happen to pass sequences alphabetically. Caught by the
+    # independent recomputation on experiment 68: 40 of 597 windows carried a
+    # class contradicting their own m_fraction, and the per-sequence blocks
+    # were wrong while the pooled counts (which never use the cursor) were
+    # right. Regression: test_per_sequence_attribution_is_order_invariant.
     names = sorted(evaluations)
+    all_windows: list[WindowEval] = [w for name in names for w in evaluations[name]["windows"]]
     supply = {name: len(evaluations[name]["windows"]) for name in names}
     prefix = _minimal_prefix(supply)
 
