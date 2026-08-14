@@ -109,9 +109,37 @@ frames** (range 9.25-35.44; long sequences compress better — music_box
 | **A'. Tranche-1 re-evaluation, re-tracking** | 0 (reuse) | 20 | 20 | 0 | ~+150 GB tracks | **3-4** | ~1 |
 | **B. Tranche 2 (20 short)** | 20 | 20 | 20 | ~250 GB (est.) | ~250 GB zips + ~250 GB extracted | **2-3** | ~1 |
 | **C. Completion: world_globe** | 1 | 1 | 1 | ~10 GB (est.) | ~20 GB | **~0.15** | ~0.05 |
-| **D. Completion: 8 LONG** | 8 | 8 | 8 | **~600-1,300 GB (est.)** | **~1.2-2.6 TB** | **~8-20** | ~2 |
-| **Total, screen only (B+C+D)** | 29 | 29 | 29 | **~0.9-1.6 TB** | **~1.5-2.9 TB** | **~10-23** | **~3** |
-| **Total incl. re-evaluation (worst branch A'+B+C+D)** | 29 | 49 | 49 | same | + ~150 GB | **~13-27** | **~4** |
+| **D. Completion: 8 LONG** | 8 | 8 | 8 | **~3-4 TB (derived; see D-note)** | **~6-8 TB** | **~50-70** | ~5 |
+| **Total, screen only (B+C+D)** | 29 | 29 | 29 | **~3.3-4.3 TB** | **~6.5-8.5 TB** | **~53-73** | **~6** |
+| **Total incl. re-evaluation (worst branch A'+B+C+D)** | 29 | 49 | 49 | same | + ~150 GB | **~56-77** | **~7** |
+
+**D-note — the long batch dominates the entire scope and its size is
+UNVERIFIED.** No primary source publishes per-sequence frame counts: the
+official GitHub page, the project page and the arXiv abstract were all
+checked and none carries a table. The figures above are DERIVED from the
+paper's "17.4 M image frames" across 54 sequences, netting out the 23
+sequences whose frame counts are measured (17,600 full frames total, mean
+765, median 480, max 5,736 for music_box) and the 23 unscreened short
+candidates at that measured mean. The residual implies **roughly
+37,000-49,000 frames per long sequence** — 6-8x music_box, which is
+already the longest short-list candidate — giving ~6-9 GPU-h and
+~390-515 GB EACH.
+
+This is an ORDER-OF-MAGNITUDE BOUND, not a figure: "17.4M image frames"
+is not defined per-camera in any primary source and may count raw
+and/or all 53 cameras rather than the ~41 in the shipped splits. An
+earlier estimate in this page put item D at 8-20 GPU-h and 0.6-1.3 TB;
+that estimate assumed 3,000-12,000 frames per long sequence and is now
+superseded as too low.
+
+**Governance consequence — acquire ONE long sequence first as a cost
+pilot.** Tranche 1 used exactly this pattern (chess was the acquisition
+pilot that validated the download path before the other 19 ran in
+parallel). Screening a single long candidate in frozen queue order
+(`chess_long`) measures the real frame count, archive size, chunked-tracker
+wall time and extracted footprint, and converts every figure in row D from
+derived to measured — for roughly 1/8th of the risk. **The remaining seven
+should not be committed until that pilot returns.**
 
 Estimates for the 29 unscreened candidates assume 300-900 full frames for
 short candidates and 3,000-12,000 for long ones. **UNVERIFIED**: the
@@ -121,16 +149,21 @@ sizes are unknown until acquisition. The ranges above are derived from the
 25 measured sequences.
 
 **Storage governance flag.** The frozen `extracted_storage_gb_max` is
-**400 GB**. Item D alone breaches it by roughly 3-6x. Apollo currently has
-**31.1 TiB free** and DiVa-360 occupies 594 GiB, so the physical headroom
-exists, but the ceiling is a frozen protocol constant and **raising it is a
-user decision that must be recorded before item D begins**, not an
-implementation detail. Items A-C fit inside 400 GB with deletion-after-seal.
+**400 GB**. Item D breaches it by roughly **15-20x** on the derived
+estimate. Apollo currently has **31.1 TiB free** and DiVa-360 occupies
+594 GiB, so the physical headroom exists even at 8 TB, but the ceiling is
+a frozen protocol constant and **raising it is a user decision that must be
+recorded before item D begins**, not an implementation detail. Items A-C
+fit inside 400 GB with deletion-after-seal.
 
 **GPU-hour governance flag.** The frozen `screening_gpu_hours_max` is
-**6 GPU-h**. B+C fits (~2-3). **A'+D do not.** Any branch including the
-long batch or a re-tracking re-evaluation requires an explicit ceiling
-decision.
+**6 GPU-h**. B+C fits (~2-3). **A' and D do not** — D alone is roughly
+**10x the entire frozen screening ceiling**. Any branch including the long
+batch or a re-tracking re-evaluation requires an explicit ceiling decision.
+Note the frozen per-candidate cost formula (`0.06 + 0.10*(n/1000)`, halved)
+underestimates measured tranche-1 spend by about 2x and should be replaced
+with a measured coefficient in any new preregistration rather than carried
+forward.
 
 ## 5. Hardware, concurrency, provenance
 
