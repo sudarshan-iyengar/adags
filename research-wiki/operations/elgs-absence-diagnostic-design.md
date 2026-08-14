@@ -1,7 +1,7 @@
 # EL-GS True-Absence Measurement Diagnostic — Design (frozen)
 
 Status: DESIGN FROZEN at `configs/elgs/prereg_m1_absence_diagnostic_v1.json`
-**revision 3**. Authority: user directive 2026-08-14 (measurement closure
+**revision 5**. Authority: user directive 2026-08-14 (measurement closure
 before further DiVa-360 screening). This page is the durable narrative
 record; the prereg JSON is the operative frozen text wherever the two
 differ.
@@ -10,9 +10,11 @@ Revision history: r1 initial freeze; r2 owner pre-data multi-view
 tightening (§5); **r3 repairs of a fresh-context hostile review that
 returned REJECTED with nine blocking findings** (§5b); **r4 repairs of a
 scoped re-review that returned REJECTED (narrow) with nine bounded
-residuals** (§5c). All repairs were made pre-data: no classification
-statistic had been computed and no mask had been decoded at any
-non-associated (camera, frame) pair.
+residuals** (§5c); **r5 repairs of a scoped sign-off that returned
+REJECTED (narrow), including one owner repair of an r4 change that had
+moved a decisive verdict opposite to its stated purpose** (§5d). All
+repairs were made pre-data: no classification statistic had been computed
+and no mask had been decoded at any non-associated (camera, frame) pair.
 
 Freeze evidence: revision 3 was committed and pushed at `1f73aa0`
 (sha256 `797871808aa8bcc5…`) **before** the primary implementation was
@@ -225,7 +227,7 @@ pre-routing the answer to Status 3 (**B5** — added `status_5_UNRESOLVED`,
 deleted every discretion clause, froze the sequence group to the named
 minimal prefix `{scissor}`); three of six sensitivity axes provably unable
 to move the verdict (**B6** — the decision-relevant grid is now exactly
-S2 × S3 × S5 × S7 = 108 combinations, with S1/S4/S6 declared
+S2 × S3 × S5 × S7 = 144 combinations, with S1/S4/S6 declared
 decision-irrelevant *by construction*); pooled fractions being
 arithmetically scissor's fractions (**B7** — three-way pooling with the
 sequence-unweighted mean binding); status names asserting more than the
@@ -306,6 +308,55 @@ The re-reviewer independently re-verified instrument comparability (third
 confirmation) and the disclosed arithmetic, including that the minimal
 descending-count prefix really is `{scissor}` alone at 57.45%.
 
+## 5d. Revision-5 sign-off repairs (pre-data)
+
+The r4 sign-off returned **REJECTED (narrow)**. Two residuals were
+independently blocking, and the substantive one is an error I introduced
+at r4:
+
+- **My r4 `tol_c` repair was counterproductive.** I added a fourth
+  sensitivity level intending to rescue the adequacy class from being
+  unreachable by geometry. But statuses 1 and 3 carried *all-readings*
+  quantifiers, so adding a cell **adds a conjunct** to Status 1 and
+  **widens the span** Status 3 must be stable over — making both
+  *harder* — while making Status 4 *easier*. The net r4 direction was:
+  statuses 1, 2 and 3 all harder, status 4 easier. I had not itemised
+  this, which is precisely the failure the r3 withdrawal (§5c) was
+  supposed to end. It is itemised now.
+- **Status 4 would have been reached by construction, not by evidence.**
+  With all-readings quantifiers over a grid *deliberately widened* to
+  include extreme readings (0.25× and 2× tolerance; 16 px and 256 px
+  eligibility), non-unanimity is near-guaranteed and Statuses 1 and 3 are
+  very likely structurally unreachable. The design would have returned an
+  uninformative verdict wearing the costume of a measurement finding.
+  **Repaired (R15, owner):** the primary status is determined at a
+  **binding primary reading** under the binding pooling; the 144-cell grid
+  now yields a **robustness grade** (UNANIMOUS / ROBUST at ≥ 2/3 agreement
+  / FRAGILE), and only a FRAGILE grade forces Status 4.
+  **Disclosed direction: this makes Status 4 LESS likely and Statuses 1,
+  2 and 3 MORE likely.** It is the only change in this program's history
+  that relaxes a decisive verdict, it was made before any classification
+  statistic existed, and the full per-cell table is published so any
+  reader can apply the strict unanimity rule instead — with the result
+  page required to state whether doing so would change the answer.
+- **The status was still not computable with zero analyst choices**: there
+  was a binding *pooling* but no binding *reading*, leaving Status 3's and
+  Status 4's thresholds reading-dependent, and "stable" had no defined
+  referent. Both now frozen.
+
+Also repaired: a `108`/`144` orphan that would have made an independent
+reducer emit the wrong table; `stopping_conditions` still listing the two
+provably-unreachable guards while omitting the real one; the audit tercile
+boundaries needing nearest-rank (anchor staleness is a small integer with
+heavy ties at zero, so interpolation would change the sample); and the RNG
+construction being per-stratum.
+
+Honest note carried forward from the reviewer: **only the maximal-bridged-run
+equality is a genuine check that the diagnostic reproduces the census's own
+association** — the companion `|W| + bridged == n_frames` conjunct is an
+accounting identity given how `bridged_associated_frames` is defined, and r4
+overstated the pair by exactly the amount r4 criticised r3 for.
+
 ## 6. Classification and pre-committed decision rules
 
 **Nine terminal classes** under a total, deterministic ordered decision
@@ -354,7 +405,10 @@ CPU-only; no GPU is required (no tracking, no rendering, no training).
 Twelve primary-scope sequences carry at least one window. Each needs at most
 one streaming pass over already-converted masks — the same order as the
 original census pass, measured at roughly 2-12 minutes CPU per sequence.
-Estimate: **2-4 CPU-hours total, parallelisable to ~15-30 minutes wall;
+Estimate (revised at r4 after the re-reviewer noted the r3 figure
+under-scoped D2 lineage, the three full-window secondary-panel sequences,
+and the out-of-`W` decodes): **1-4 CPU-hours total, parallelisable to
+~15-40 minutes wall;
 < 200 MB of JSON added; no new download, no new conversion, no new
 tracking.**
 
