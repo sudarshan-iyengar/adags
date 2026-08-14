@@ -1,0 +1,60 @@
+{
+  "schema_version": "elgs-smoke-evidence-heads-v1",
+  "tier": "smoke",
+  "evidence_bearing": false,
+  "authority": "spec section 2 head families + prereg_evidence_heads_v1.json allowed_range bounds; NOT a preregistration and NOT a freeze",
+  "purpose": "Declared smoke-tier numeric constants so the evidence path can be exercised END TO END on a non-evidence-bearing run. prereg_evidence_heads_v1.json still carries status 'unfrozen' for g_v, h_c, h_o, pi_miss and g_pos_sigma, with freeze_point 'before the first evidence-bearing job (B2)'; elgs.evidence_stack.load_evidence_constants REFUSES to build heads from the frozen prereg while any entry is unfrozen, and accepts this file ONLY when elgs_smoke_schedule is set. Nothing here may be cited as a fitted value: no calibration sequence has been read.",
+  "provenance_of_values": "midpoints or defensible interior points of the allowed_range bounds the heads prereg already fixes; chosen WITHOUT looking at any DiVa-360 report distribution, so they carry no information from the data and cannot bias a later fit",
+  "params": {
+    "pi_miss_vis": 0.05,
+    "pi_miss_cens": 0.35,
+    "pi_miss_out": 0.5,
+    "d_img_x0": 0.0,
+    "d_img_x1": 1160.0,
+    "d_img_y0": 0.0,
+    "d_img_y1": 550.0,
+    "g_pos_sigma": 4.0,
+    "v_min": 0.0,
+    "v_max": 1.0,
+    "r_min": 0.05,
+    "h_floor": 0.01,
+    "pi_floor": 0.01,
+    "g_cap": 6.0,
+    "pos_cap": 0.6366
+  },
+  "g_v": {
+    "family": "beta(a,b) on [v_min, v_max], monotone-increasing constraint a >= 1",
+    "a": 4.0,
+    "b": 1.0,
+    "note": "a in [1,8], b in [0.5,4] per the heads prereg allowed_range. CORRECTED: an earlier draft used b=2, which is NOT monotone increasing — beta(a,b) peaks interior at (a-1)/(a+b-2) whenever b > 1, so beta(4,2) rises to u=0.75 then falls. The prereg's monotone-increasing requirement needs b <= 1; b=1 gives density 4*u^3, strictly increasing on [0,1], so a higher reported visibility is never less likely under the visible head. Max density 4.0 at u=1, inside g_cap 6.0."
+  },
+  "h_c": {
+    "family": "uniform on [v_min, v_max] with h_floor",
+    "note": "the heads prereg permits 'uniform or 8-bin histogram density'; uniform is the parameter-free member and the only one specifiable without reading calibration data"
+  },
+  "h_o": {
+    "family": "uniform on [v_min, v_max]"
+  },
+  "rho": 0.75,
+  "rho_note": "alpha_u = n_cam^(-rho); prereg_observability_v1.json alpha_u.rho allowed_range [0.5, 1.0], status unfrozen. 0.75 is the midpoint.",
+  "sigma_world": 0.02,
+  "sigma_world_note": "one bridge-covariance sigma per world axis for the frozen 7-point sigma grid (prereg_observability sigma_points). No bridge covariance is estimated at smoke tier, so a small fixed world-space radius stands in; it is a smoke constant, not an estimate.",
+  "anchor_report_floor": 8,
+  "anchor_report_floor_note": "elgs.bridges.find_anchor_intervals requires a preregistered floor on a plateau run's TOTAL capped visible-report count. No frozen prereg currently carries this constant; it MUST acquire one before B2. Flagged, not silently defaulted.",
+  "min_occupancy_cameras": 2,
+  "min_occupancy_cameras_note": "matches prereg_m1_absence_diagnostic_v1.json frozen_constants.min_occupancy_cameras and the spec's own 'visible in >= 2 training cameras' seed rule",
+  "vis_threshold": 0.5,
+  "vis_threshold_note": "the tracker's own cfg.vis_threshold, the SAME constant elgs-absence-diagnostic-result.md identifies as a per-point self-occlusion signal. It is used here ONLY to build anchor plateaus and d_u, never as an existence claim: the census's hard v>=0.5 association-to-existence mapping is NOT imported into the trainer.",
+  "unfrozen_items_still_outstanding": [
+    "g_v (a, b) — MLE on calibration visible-report values",
+    "h_c — MLE on censored-condition reports",
+    "h_o — uniform, freeze with the others",
+    "pi_miss (vis/cens/out) — empirical miss rates per condition",
+    "g_pos_sigma — MLE of report-to-bridge residuals",
+    "alpha_u.rho — empirical variance inflation of per-camera report agreement",
+    "r_u mapping — frozen with the tracks artifact manifest (the artifact already declares one; it is consumed verbatim)",
+    "anchor_report_floor — has no prereg home at all",
+    "sigma_world / bridge covariance — no estimator specified",
+    "the bridge constructor family itself (smoke tier uses hold-left/linear/hold-right)"
+  ]
+}

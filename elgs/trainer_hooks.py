@@ -72,6 +72,8 @@ class ElgsTrainerState:
     reserved_indices: frozenset = frozenset()
     committed_decisions: list = field(default_factory=list)
     post_refit_done: bool = False
+    evidence: object = None             # elgs.evidence_stack.EvidenceContext
+    evidence_frame_time: dict = field(default_factory=dict)  # frame index -> model t
 
 
 def load_structural_prereg(prereg_dir: str) -> dict:
@@ -335,14 +337,166 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
              "tensors_reset": len(state.runtime.logit_parameters())}
         )
     _refresh_routing_pins(state, gaussians)
+    attach_evidence(state, gaussians, scene, opt)
     print(json.dumps({"elgs_setup": {
         "schedule": schedule_key,
         "frame_dt": frame_dt,
         "time_span": time_span,
         "restored": pending is not None,
         "families": len(registry.active_ids()),
+        "evidence": state.evidence is not None,
     }}, sort_keys=True))
     return state
+
+
+def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
+    """Bind the sealed tracks artifact, or stay photometric-only.
+
+    No `elgs_tracks_dir` => the run is photometric-only by declaration
+    and this is a no-op (the verified M0 path, unchanged). A tracks dir
+    that is present but incompatible RAISES: silently degrading a
+    declared evidence run to photometric-only would make the two
+    indistinguishable in the artifact.
+    """
+    tracks_dir = str(getattr(opt, "elgs_tracks_dir", "") or "").strip()
+    if not tracks_dir:
+        return
+
+    from .evidence_stack import build_evidence_context, load_evidence_constants
+    from .tracks_loader import load_sealed_tracks
+
+    smoke = bool(getattr(opt, "elgs_smoke_schedule", False))
+    for key in ("elgs_beta", "elgs_tau_b", "elgs_c_cap", "elgs_r_site",
+                "elgs_binding_threshold"):
+        if float(getattr(opt, key)) < 0:
+            raise ContractError(f"{key} is unset (-1 sentinel); the evidence path needs it")
+
+    constants = load_evidence_constants(
+        str(getattr(opt, "elgs_prereg_dir", "configs/elgs")), smoke=smoke
+    )
+
+    source_path = getattr(scene, "source_path", None) or getattr(
+        opt, "source_path", ""
+    )
+    sequence_id = os.path.basename(str(source_path).replace("\\", "/").rstrip("/"))
+    cameras = [_unpack_camera(item)[0] for item in scene.getTrainCameras()]
+    camera_ids = sorted({_camera_id_of(c) for c in cameras} - {None})
+    frame_time = _scene_frame_times(cameras)
+    if not frame_time:
+        raise ContractError(
+            "cannot recover DiVa-360 frame indices from the loaded scene's "
+            "camera image paths; the evidence path needs a frame->model-time "
+            "map and will not guess one"
+        )
+
+    sealed = load_sealed_tracks(
+        tracks_dir,
+        scene_sequence_id=sequence_id,
+        scene_camera_ids=camera_ids,
+        scene_frame_indices=sorted(frame_time),
+        scene_source_sha256=_scene_source_sha256(source_path),
+        require_evidence_admissible=not smoke,
+    )
+
+    state.evidence = build_evidence_context(
+        sealed,
+        constants,
+        gaussians._xyz.detach(),
+        gaussians._elgs_family_ids.to(gaussians._xyz.device),
+        r_site=float(getattr(opt, "elgs_r_site")),
+        binding_threshold=float(getattr(opt, "elgs_binding_threshold")),
+        c_cap=int(getattr(opt, "elgs_c_cap")),
+        beta=float(getattr(opt, "elgs_beta")),
+        tau_b=float(getattr(opt, "elgs_tau_b")),
+    )
+    # Frame index -> MODEL time, read off the scene's own cameras. NOT
+    # derived from the artifact's fps: the reader divides `time` by
+    # `frame_ratio`, so 1/fps is the wrong unit whenever frame_ratio > 1
+    # and every interval comparison would be silently mis-scaled.
+    # `state.frame_dt` (inferred from the scene at setup) is left alone —
+    # `build_interval_config` already used it.
+    state.evidence_frame_time = frame_time
+    gaussians._elgs_checkpoint_extras["evidence"] = state.evidence.to_state()
+    print(json.dumps({"elgs_evidence_bound": {
+        "tier": constants.tier,
+        "clusters": len(state.evidence.clusters),
+        "bound": sum(
+            1 for c in state.evidence.clusters
+            if state.evidence.binding.family_of(c.cluster_id) is not None
+        ),
+        **sealed.provenance(),
+    }}, sort_keys=True))
+
+
+def _camera_id_of(camera):
+    """The DiVa-360 integer camera id behind a Camera, or None.
+
+    `image_name` is the frame stem (`00000000`) and the camera lives in
+    the parent directory (`undist/cam07/00000000`), so the id is parsed
+    from `image_path`, falling back to `image_name`.
+    """
+    from depth_visibility.errors import SchemaError
+    from elgs import diva360_schema as dschema
+
+    for attribute in ("image_path", "image_name"):
+        text = str(getattr(camera, attribute, "") or "")
+        try:
+            return dschema.parse_camera_id(text)
+        except SchemaError:
+            continue
+    return None
+
+
+def _scene_frame_times(cameras) -> dict:
+    """frame index -> model timestamp, read off the scene's own cameras.
+
+    Fails closed on a frame index that carries two different timestamps:
+    that would mean the loaded scene is not the static-rig temporal
+    conversion the tracks artifact was built against.
+    """
+    from depth_visibility.errors import SchemaError
+    from elgs import diva360_schema as dschema
+
+    out: dict[int, float] = {}
+    for camera in cameras:
+        for attribute in ("image_path", "image_name"):
+            text = str(getattr(camera, attribute, "") or "")
+            try:
+                index = dschema.parse_frame_index(text, "")
+            except SchemaError:
+                continue
+            timestamp = float(getattr(camera, "timestamp", 0.0))
+            if index in out and abs(out[index] - timestamp) > 1e-9:
+                raise ContractError(
+                    f"frame index {index} carries two model timestamps "
+                    f"({out[index]} and {timestamp}); the scene is not a "
+                    "static-rig temporal conversion"
+                )
+            out[index] = timestamp
+            break
+    return out
+
+
+def _scene_source_sha256(source_path) -> str | None:
+    """The scene's conversion provenance digest, if the converter left one.
+
+    `diva360_to_blender.py` writes `diva360_conversion_provenance.json`
+    next to the transforms; the tracks manifest records the same value in
+    `source_sha256`. A scene without one skips the substrate check rather
+    than failing a legitimately older conversion.
+    """
+    candidate = os.path.join(str(source_path), "diva360_conversion_provenance.json")
+    if not os.path.isfile(candidate):
+        return None
+    try:
+        with open(candidate, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError):
+        return None
+    value = payload.get("source_sha256")
+    if isinstance(value, dict):
+        value = value.get("value")
+    return str(value) if value else None
 
 
 def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
@@ -533,11 +687,24 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
         state.bundle.search_cost.rasterizer_seconds += time.time() - started
         return samples
 
+    round_evidence = _refresh_round_evidence(state, gaussians, scene, round_index)
+    exact_deltas_fn = None
+    if round_evidence is not None:
+        from .evidence_stack import evidence_exact_delta
+
+        def exact_deltas_fn(plan):
+            return evidence_exact_delta(
+                state.evidence, round_evidence, plan,
+                state.runtime.registry, state.config,
+                frame_time=state.evidence_frame_time,
+            )
+
     outcome = run_pass(
         proposals, state.runtime, state.bundle, sample_builder,
         state.sampler_params, k_se=state.k_se, base_seed=state.base_seed,
         round_index=round_index, pass_index=0, iteration=iteration,
         candidate_cap=state.candidate_cap,
+        exact_deltas_fn=exact_deltas_fn,
     )
     from .intervals import serialize_state
 
@@ -590,6 +757,72 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
         "peak_rows": state.bundle.search_cost.peak_rendered_rows,
         "peak_scalars": state.bundle.search_cost.peak_stored_scalars,
     }}, sort_keys=True))
+
+
+def _refresh_round_evidence(state, gaussians, scene, round_index):
+    """Recompute and freeze the round's q snapshot, or return None.
+
+    Returns None exactly when the run is photometric-only (no evidence
+    context), so the caller passes `exact_deltas_fn=None` and the
+    acceptance decision is bit-identical to the verified M0 path.
+    """
+    if state.evidence is None:
+        return None
+
+    from .evidence_stack import refresh_round_evidence
+    from .probe_model import ModelProbe
+
+    cameras = {}
+    for item in scene.getTrainCameras():
+        camera = _unpack_camera(item)[0]
+        camera_id = _camera_id_of(camera)
+        # One Camera per id is enough: the rig is static (the tracks
+        # builder asserts it), so extrinsics and intrinsics do not vary
+        # across frames and only the presence multiplier is time-varying.
+        if camera_id is not None and camera_id not in cameras:
+            cameras[camera_id] = camera
+
+    ids = gaussians._elgs_family_ids
+
+    def presence_at(timestamp, present_family):
+        """Per-row presence at t, with `present_family` FORCED present.
+
+        This is the spec §3 "family-present" transmittance: q asks what
+        the tracker COULD have seen if the family were there, so the
+        family under evaluation must not occlude-or-vanish by its own
+        current interval. Forcing is applied to a COPY (frozen-functional
+        snapshot, spec rev-2 item 3) — the live column is never mutated.
+        """
+        column = state.runtime.presence_multiplier(ids, float(timestamp))
+        if present_family is None:
+            return column
+        column = column.clone()
+        mask = (ids == int(present_family)).reshape(-1, 1).to(column.device)
+        return column.masked_fill(mask, 1.0)
+
+    probe = ModelProbe(
+        gaussians,
+        cameras,
+        presence_at=presence_at,
+        frame_to_time=state.evidence_frame_time,
+    )
+    evidence = refresh_round_evidence(
+        state.evidence,
+        probe,
+        round_index=round_index,
+        family_ids=state.runtime.registry.active_ids(),
+    )
+    gaussians._elgs_checkpoint_extras["evidence"] = state.evidence.to_state()
+    print(json.dumps({"elgs_evidence_round": {
+        "round_index": round_index,
+        "windows": len(evidence.windows),
+        "q_values": evidence.n_q_values,
+        "families_with_windows": len({w.family_id for w in evidence.windows}),
+        "photometric_only_families": sum(
+            1 for v in evidence.coverage.values() if v.get("photometric_only")
+        ),
+    }}, sort_keys=True))
+    return evidence
 
 
 def filter_elgs_reserved(training_dataset, state):

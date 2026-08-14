@@ -33,9 +33,14 @@ _TOP_KEYS = {
     "moment_reset_log",
     "round_bookkeeping",
     "rng",
+    "evidence",
 }
 
-_REQUIRED_KEYS = _TOP_KEYS - {"rng"}
+# `rng` and `evidence` are OPTIONAL: a photometric-only run (no
+# elgs_tracks_dir) writes no evidence block, and every M0-era checkpoint
+# predates both keys. Their absence restores a valid photometric-only
+# state; a PRESENT but malformed block still fails closed downstream.
+_REQUIRED_KEYS = _TOP_KEYS - {"rng", "evidence"}
 
 
 def build_elgs_state(
@@ -50,6 +55,7 @@ def build_elgs_state(
     moment_reset_log: list,
     round_bookkeeping: dict,
     rng: dict | None = None,
+    evidence: dict | None = None,
 ) -> dict:
     """Assemble the checkpoint payload.
 
@@ -75,6 +81,7 @@ def build_elgs_state(
         "moment_reset_log": list(moment_reset_log),
         "round_bookkeeping": dict(round_bookkeeping),
         "rng": dict(rng) if rng is not None else {},
+        "evidence": dict(evidence) if evidence is not None else {},
     }
 
 
@@ -108,6 +115,7 @@ def load_elgs_state(payload: dict) -> dict:
         "moment_reset_log": list(payload["moment_reset_log"]),
         "round_bookkeeping": dict(payload["round_bookkeeping"]),
         "rng": dict(payload.get("rng", {})),
+        "evidence": dict(payload.get("evidence", {})),
     }
 
 

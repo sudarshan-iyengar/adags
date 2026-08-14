@@ -1,0 +1,1038 @@
+"""Evidence-path assembly: sealed tracks -> clusters -> windows -> Phi.
+
+This is the GLUE that was disclosed as M1-gated in
+`research-wiki/operations/elgs-m0-implementation-record.md` ("the evidence
+stack (clusters/bridges/observability/energy/SlotGrid full path) is
+implemented + unit-tested but unwired pending the M1 track artifacts").
+Every scientific primitive it calls already exists and is unchanged:
+`elgs.clusters`, `elgs.bridges`, `elgs.observability`, `elgs.evidence`,
+`elgs.energy`. Nothing here re-derives them.
+
+What it adds is exactly the composition:
+
+  sealed artifact (elgs.tracks_loader)
+    -> per-seed r_u / d_u / n_cam            (the artifact's own frozen
+                                              r_u mapping + §2 d_u formula)
+    -> seed-overlap clusters                 (elgs.clusters.form_clusters)
+    -> bind(u) = nearest family              (elgs.clusters.nearest_family)
+    -> per-family anchors and windows        (elgs.bridges)
+    -> evidence-independent bridge family    (below; stop-gradient)
+    -> q_tilde round snapshot                (elgs.observability + a probe)
+    -> EvidenceBatch -> Phi                  (elgs.energy)
+    -> beta * (Phi_candidate - Phi_incumbent) as the acceptance
+       `exact_deltas` term                   (elgs.acceptance.decide)
+
+WHERE THE EVIDENCE ENTERS. `elgs.acceptance`'s module docstring fixes
+this: "'Exact' survives only for the non-sampled closed-form
+tracker/prior deltas added outside the sampled render estimate". Phi is
+exactly such a closed-form term, so it enters through
+`run_pass(..., exact_deltas_fn=...)` and NOT through the SNIS render
+samples. The photometric path is untouched.
+
+HEADS ARE GATED, NOT ASSUMED. `configs/elgs/prereg_evidence_heads_v1.json`
+still carries `"status": "unfrozen"` for g_v, h_c, h_o, pi_miss and
+g_pos_sigma (freeze point: "before the first evidence-bearing job (B2)"),
+and `prereg_observability_v1.json` for `alpha_u.rho`. `load_evidence_heads`
+therefore REFUSES to build heads from the frozen prereg while any required
+entry is unfrozen, and accepts the declared smoke-tier constants ONLY for
+a run that has set `elgs_smoke_schedule` (which the submission wrapper
+stamps `evidence_bearing: false`). An evidence-bearing run cannot reach
+the evidence path until the heads are actually frozen.
+
+DISCLOSED READINGS (recorded here, not silently applied):
+  D1. `d_u` is the §2 "cluster's visible-report rate in its anchor
+      intervals". Anchors are per-FAMILY but `form_clusters` needs a
+      per-SEED d before binding exists, so d is computed per seed over
+      that seed's OWN plateau frames (the frames where it carries at
+      least `min_occupancy_cameras` visible reports) and the cluster
+      takes the min over members -- the same conservative rule §2
+      prescribes for merged clusters.
+  D2. The smoke-tier bridge family is the three-hypothesis
+      {hold-left, linear, hold-right} interpolation between the two
+      bounding anchors' consensus points. It reads committed anchor
+      state ONLY, never the reports it will score, satisfying the §3
+      evidence-independence requirement. It is declared smoke-tier: a
+      claim-grade constructor is a category-2 preregistration item.
+  D3. A family with fewer than two anchors has no evidence windows and
+      contributes Phi = 0.0 exactly (`elgs.bridges` returns no windows;
+      the family is reported photometric_only in coverage). This is the
+      INSUFFICIENT-EVIDENCE FALLBACK: it degrades to the verified M0
+      behaviour for that family rather than refusing the round.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import os
+from dataclasses import dataclass, field
+from typing import Mapping, Sequence
+
+import torch
+
+from depth_visibility.errors import ContractError, SchemaError
+
+from .bridges import (
+    AnchorInterval,
+    Window,
+    coverage_entry,
+    find_anchor_intervals,
+    validate_bridge_ids,
+    windows_between_anchors,
+)
+from .clusters import BindingTable, SeedCluster, form_clusters, nearest_family
+from .energy import (
+    EvidenceBatch,
+    Segment,
+    phi,
+    stream_log_likelihoods,
+)
+from .evidence import EvidenceHeads, EvidenceParams, Report
+from .observability import QSnapshot, SigmaPoint, compute_q, q_tilde
+from .tracks_loader import SealedTracks
+
+SMOKE_HEADS_FILENAME = "smoke_evidence_heads_v1.json"
+HEADS_PREREG_FILENAME = "prereg_evidence_heads_v1.json"
+SMOKE_HEADS_SCHEMA = "elgs-smoke-evidence-heads-v1"
+
+#: The frozen §3 sigma-point scheme: centre (0.4) + 6 axis offsets (0.1).
+SIGMA_CENTER_WEIGHT = 0.4
+SIGMA_AXIS_WEIGHT = 0.1
+
+
+# ---------------------------------------------------------------------------
+# Head loading (the unfrozen-prereg gate)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EvidenceConstants:
+    """Head bundle plus the §3/§4 constants the assembly needs."""
+
+    heads: EvidenceHeads
+    rho: float
+    anchor_report_floor: int
+    min_occupancy_cameras: int
+    vis_threshold: float
+    sigma_world: float
+    tier: str
+
+    def alpha_model(self, n_cam: int) -> float:
+        """alpha_u = n_cam^(-rho) (prereg_observability alpha_u.family)."""
+        if n_cam < 1:
+            raise ContractError("n_cam must be >= 1")
+        return float(n_cam) ** (-self.rho)
+
+
+def _beta_density(a: float, b: float, lo: float, hi: float):
+    """The frozen g_v family: beta(a,b) on [v_min, v_max], a >= 1."""
+    if a < 1.0:
+        raise ContractError("g_v beta density requires a >= 1 (monotone constraint)")
+    if hi <= lo:
+        raise ContractError("g_v support must be non-empty")
+    log_norm = math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b)
+    span = hi - lo
+
+    def density(v: float) -> float:
+        u = (float(v) - lo) / span
+        if u <= 0.0 or u >= 1.0:
+            # Endpoint mass is not representable in a density; the §2
+            # floors/caps are constraints, so return the limiting value
+            # rather than clamping to zero (which would violate the cap
+            # check's "floors are constraints" ruling).
+            u = min(max(u, 1e-12), 1.0 - 1e-12)
+        return math.exp(log_norm + (a - 1.0) * math.log(u) + (b - 1.0) * math.log1p(-u)) / span
+
+    return density
+
+
+def _uniform_density(lo: float, hi: float, floor: float):
+    value = 1.0 / (hi - lo)
+    if value < floor:
+        raise ContractError(
+            f"uniform value head density {value} is below its floor {floor}"
+        )
+
+    def density(_v: float) -> float:
+        return value
+
+    return density
+
+
+def load_evidence_constants(prereg_dir: str, *, smoke: bool) -> EvidenceConstants:
+    """Build the head bundle, or refuse.
+
+    ``smoke=False`` reads the FROZEN prereg and raises if any required
+    entry is still ``"status": "unfrozen"`` -- the gate that keeps an
+    evidence-bearing run out of the evidence path before B2.
+    ``smoke=True`` reads the declared smoke-tier constants instead.
+    """
+
+    if not smoke:
+        path = os.path.join(prereg_dir, HEADS_PREREG_FILENAME)
+        if not os.path.isfile(path):
+            raise ContractError(f"evidence-heads prereg missing: {path}")
+        with open(path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        unfrozen = sorted(
+            name
+            for name, entry in (payload.get("head_families") or {}).items()
+            if isinstance(entry, Mapping) and entry.get("status") == "unfrozen"
+        )
+        reliability = payload.get("reliability") or {}
+        for name, entry in reliability.items():
+            if isinstance(entry, Mapping) and entry.get("status") == "unfrozen":
+                unfrozen.append(f"reliability.{name}")
+        if unfrozen:
+            raise ContractError(
+                "the evidence heads are not frozen "
+                f"({sorted(unfrozen)}); prereg_evidence_heads_v1 fixes their "
+                "freeze point at 'before the first evidence-bearing job "
+                "(B2)'. An evidence-bearing run may not consume the evidence "
+                "path until they are frozen; use elgs_smoke_schedule for a "
+                "declared non-evidence-bearing smoke."
+            )
+        frozen_values = payload.get("frozen_values")
+        if not isinstance(frozen_values, Mapping):
+            raise ContractError(
+                "prereg_evidence_heads_v1 reports every head frozen but "
+                "carries no 'frozen_values' block with their numeric "
+                "materialization; refusing to invent head parameters"
+            )
+        return _constants_from_values(frozen_values, tier="frozen")
+
+    path = os.path.join(prereg_dir, SMOKE_HEADS_FILENAME)
+    if not os.path.isfile(path):
+        raise ContractError(f"smoke evidence-heads constants missing: {path}")
+    with open(path, "r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if payload.get("schema_version") != SMOKE_HEADS_SCHEMA:
+        raise SchemaError(
+            f"unsupported smoke heads schema: {payload.get('schema_version')!r}"
+        )
+    if payload.get("tier") != "smoke" or payload.get("evidence_bearing") is not False:
+        raise ContractError(
+            "smoke heads file must declare tier='smoke' and "
+            "evidence_bearing=false"
+        )
+    return _constants_from_values(payload, tier="smoke")
+
+
+def _constants_from_values(payload: Mapping, *, tier: str) -> EvidenceConstants:
+    """Materialize the head bundle from an explicit numeric block."""
+    params = EvidenceParams(**payload["params"])
+    gv = payload["g_v"]
+    heads = EvidenceHeads(
+        params=params,
+        g_v=_beta_density(float(gv["a"]), float(gv["b"]), params.v_min, params.v_max),
+        h_c=_uniform_density(params.v_min, params.v_max, params.h_floor),
+        h_o=_uniform_density(params.v_min, params.v_max, params.h_floor),
+    )
+    return EvidenceConstants(
+        heads=heads,
+        rho=float(payload["rho"]),
+        anchor_report_floor=int(payload["anchor_report_floor"]),
+        min_occupancy_cameras=int(payload["min_occupancy_cameras"]),
+        vis_threshold=float(payload["vis_threshold"]),
+        sigma_world=float(payload["sigma_world"]),
+        tier=tier,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Per-seed derivation from the sealed artifact
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SeedEvidence:
+    """Everything one seed contributes before clustering."""
+
+    seed_id: int
+    point: tuple[float, float, float]
+    n_cam: int
+    r_u: float
+    d_u: float
+
+
+def _clip(value: float, lo: float, hi: float) -> float:
+    return min(max(value, lo), hi)
+
+
+def derive_seed_evidence(
+    sealed: SealedTracks, *, r_min: float, vis_threshold: float, min_cameras: int
+) -> tuple[SeedEvidence, ...]:
+    """Per-seed r_u and d_u from the artifact's OWN frozen diagnostics.
+
+    r_u follows the artifact manifest's declared mapping verbatim
+    (`build_elgs_tracks.R_U_MAPPING`): clip(min(1 - fb_rms/8,
+    1 - reproj_rms/8), r_min, 1); a missing diagnostic yields r_min.
+    d_u is disclosed reading D1 (module docstring).
+    """
+
+    diagnostics = sealed.artifact.get("diagnostics") or {}
+    fb = diagnostics.get("fb_rms_px") or {}
+    reproj = diagnostics.get("reproj_rms_px") or {}
+
+    # Per (seed, frame) visible-camera counts, for the D1 plateau.
+    visible: dict[int, dict[float, int]] = {}
+    queried: dict[int, set[int]] = {}
+    for track in sealed.tracks:
+        seed_id = int(track["seed_id"])
+        queried.setdefault(seed_id, set()).add(int(track["camera_id"]))
+        per_frame = visible.setdefault(seed_id, {})
+        for report in track["reports"]:
+            if report.get("is_miss", False):
+                continue
+            if float(report["v"]) >= vis_threshold:
+                frame = float(report["frame"])
+                per_frame[frame] = per_frame.get(frame, 0) + 1
+
+    out: list[SeedEvidence] = []
+    for seed in sealed.seeds:
+        seed_id = int(seed["seed_id"])
+        fb_values = [
+            float(v) for key, v in fb.items() if key.split(":", 1)[0] == str(seed_id)
+        ]
+        fb_rms = max(fb_values) if fb_values else None
+        reproj_rms = reproj.get(str(seed_id))
+        candidates = []
+        if fb_rms is not None:
+            candidates.append(1.0 - fb_rms / 8.0)
+        if reproj_rms is not None:
+            candidates.append(1.0 - float(reproj_rms) / 8.0)
+        r_u = _clip(min(candidates), r_min, 1.0) if candidates else r_min
+
+        per_frame = visible.get(seed_id, {})
+        plateau = [count for count in per_frame.values() if count >= min_cameras]
+        n_queried = max(1, len(queried.get(seed_id, ())))
+        d_u = _clip(
+            (sum(plateau) / (len(plateau) * n_queried)) if plateau else 0.0, 0.0, 1.0
+        )
+        out.append(
+            SeedEvidence(
+                seed_id=seed_id,
+                point=tuple(float(c) for c in seed["point"]),
+                n_cam=int(seed["n_cam"]),
+                r_u=r_u,
+                d_u=d_u,
+            )
+        )
+    return tuple(sorted(out, key=lambda s: s.seed_id))
+
+
+def seed_overlap_edges(
+    seeds: Sequence[SeedEvidence], radius: float
+) -> tuple[tuple[int, int], ...]:
+    """The seed-overlap graph: seeds within `radius` share a cluster.
+
+    O(n^2) over at most `max_seeds` (512) seeds -- 131k distance
+    evaluations, evaluated once per run at binding, not per round.
+    """
+    if radius <= 0.0:
+        raise ContractError("seed overlap radius must be positive")
+    edges: list[tuple[int, int]] = []
+    for i, a in enumerate(seeds):
+        for b in seeds[i + 1 :]:
+            dx = a.point[0] - b.point[0]
+            dy = a.point[1] - b.point[1]
+            dz = a.point[2] - b.point[2]
+            if dx * dx + dy * dy + dz * dz <= radius * radius:
+                edges.append((a.seed_id, b.seed_id))
+    return tuple(edges)
+
+
+def build_clusters(
+    seeds: Sequence[SeedEvidence], *, radius: float, constants: EvidenceConstants
+) -> tuple[SeedCluster, ...]:
+    """Connected components of the seed-overlap graph (elgs.clusters)."""
+    if not seeds:
+        return ()
+    return form_clusters(
+        {s.seed_id: s.point for s in seeds},
+        seed_overlap_edges(seeds, radius),
+        {s.seed_id: s.r_u for s in seeds},
+        {s.seed_id: s.d_u for s in seeds},
+        {s.seed_id: s.n_cam for s in seeds},
+        constants.alpha_model,
+    )
+
+
+def bind_clusters(
+    clusters: Sequence[SeedCluster],
+    positions: torch.Tensor,
+    family_ids: torch.Tensor,
+    threshold: float,
+) -> BindingTable:
+    """bind(u) for every cluster; unassigned => inactive (spec §2)."""
+    table = BindingTable()
+    for cluster in clusters:
+        table.bind(
+            cluster.cluster_id,
+            nearest_family(cluster.canonical_point, positions, family_ids, threshold),
+        )
+    return table
+
+
+# ---------------------------------------------------------------------------
+# Anchors and windows (per family)
+# ---------------------------------------------------------------------------
+
+
+def family_anchor_series(
+    sealed: SealedTracks,
+    track_ids: Sequence[int],
+    *,
+    c_cap: int,
+    vis_threshold: float,
+    min_cameras: int,
+) -> tuple[tuple[float, ...], tuple[bool, ...], tuple[int, ...]]:
+    """(frames, plateau_series, capped_visible_counts) for one family.
+
+    A frame is a PLATEAU frame iff at least `min_cameras` of the
+    family's tracks carry a visible report there; the capped count is
+    that count truncated at C_cap (the §4 cap operator's per-frame
+    budget). Both series are indexed by the artifact's own frame grid.
+    """
+    frames = tuple(float(i) for i in sealed.frame_indices)
+    wanted = {int(j) for j in track_ids}
+    counts: dict[float, int] = {f: 0 for f in frames}
+    for track in sealed.tracks:
+        if int(track["track_id"]) not in wanted:
+            continue
+        for report in track["reports"]:
+            if report.get("is_miss", False):
+                continue
+            if float(report["v"]) >= vis_threshold:
+                frame = float(report["frame"])
+                if frame in counts:
+                    counts[frame] += 1
+    plateau = tuple(counts[f] >= min_cameras for f in frames)
+    capped = tuple(min(counts[f], c_cap) for f in frames)
+    return frames, plateau, capped
+
+
+def family_windows(
+    sealed: SealedTracks,
+    track_ids: Sequence[int],
+    *,
+    c_cap: int,
+    constants: EvidenceConstants,
+) -> tuple[tuple[AnchorInterval, ...], tuple[Window, ...]]:
+    """Anchors and the windows between them for one family."""
+    frames, plateau, capped = family_anchor_series(
+        sealed,
+        track_ids,
+        c_cap=c_cap,
+        vis_threshold=constants.vis_threshold,
+        min_cameras=constants.min_occupancy_cameras,
+    )
+    anchors = find_anchor_intervals(
+        frames, plateau, capped, constants.anchor_report_floor
+    )
+    return anchors, windows_between_anchors(anchors)
+
+
+# ---------------------------------------------------------------------------
+# Bridges (disclosed reading D2)
+# ---------------------------------------------------------------------------
+
+
+def _consensus_point(
+    sealed: SealedTracks, seed_id: int, frame: float
+) -> tuple[float, float, float] | None:
+    for entry in sealed.consensus.get(str(seed_id), ()):
+        if float(entry["frame"]) == frame and entry.get("point") is not None:
+            return tuple(float(c) for c in entry["point"])
+    return None
+
+
+def _nearest_consensus(
+    sealed: SealedTracks, seed_id: int, frame: float
+) -> tuple[float, float, float] | None:
+    """The consensus point at `frame`, else the nearest frame that has
+    one (anchor endpoints can fall on a frame with < 2 visible cameras)."""
+    exact = _consensus_point(sealed, seed_id, frame)
+    if exact is not None:
+        return exact
+    best = None
+    best_gap = None
+    for entry in sealed.consensus.get(str(seed_id), ()):
+        if entry.get("point") is None:
+            continue
+        gap = abs(float(entry["frame"]) - frame)
+        if best_gap is None or gap < best_gap:
+            best_gap, best = gap, tuple(float(c) for c in entry["point"])
+    return best
+
+
+def build_bridge_family(
+    sealed: SealedTracks,
+    seed_id: int,
+    window: Window,
+) -> dict[int, tuple[tuple[float, float, float], tuple[float, float, float]]]:
+    """B(W): {bridge_id: (p_start, p_end)} -- disclosed reading D2.
+
+    Evidence-independent by construction: reads only the consensus
+    points at the two bounding ANCHOR frames, never any report inside
+    the window it will score. Returns an empty family when neither
+    endpoint has a consensus point (the caller then treats the window
+    as photometric-only).
+    """
+    left = _nearest_consensus(sealed, seed_id, window.start_frame)
+    right = _nearest_consensus(sealed, seed_id, window.end_frame)
+    if left is None and right is None:
+        return {}
+    if left is None:
+        left = right
+    if right is None:
+        right = left
+    family = {0: (left, left), 1: (left, right), 2: (right, right)}
+    validate_bridge_ids(sorted(family))
+    return family
+
+
+def bridge_point(
+    endpoints: tuple[tuple[float, float, float], tuple[float, float, float]],
+    window: Window,
+    frame: float,
+) -> tuple[float, float, float]:
+    """Constant-velocity position of one bridge hypothesis at `frame`."""
+    span = window.end_frame - window.start_frame
+    t = 0.0 if span <= 0.0 else (frame - window.start_frame) / span
+    t = _clip(t, 0.0, 1.0)
+    start, end = endpoints
+    return tuple(start[i] + t * (end[i] - start[i]) for i in range(3))
+
+
+def sigma_points_for(
+    point: tuple[float, float, float],
+    sigma: float,
+    project,
+) -> tuple[SigmaPoint, ...]:
+    """The frozen 7-point grid (prereg_observability sigma_points).
+
+    `project(world_point) -> (pixel, depth) | None`; a point that does
+    not project is dropped and its weight is redistributed over the
+    survivors so the weights still sum to one (validate_sigma_points is
+    a hard contract).
+    """
+    offsets = [(point, SIGMA_CENTER_WEIGHT)]
+    for axis in range(3):
+        for sign in (-1.0, 1.0):
+            shifted = list(point)
+            shifted[axis] += sign * sigma
+            offsets.append((tuple(shifted), SIGMA_AXIS_WEIGHT))
+
+    survivors = []
+    for world, weight in offsets:
+        projected = project(world)
+        if projected is None:
+            continue
+        pixel, depth = projected
+        if depth <= 0.0:
+            continue
+        survivors.append((world, weight, pixel, depth))
+    if not survivors:
+        return ()
+    total = sum(w for _, w, _, _ in survivors)
+    return tuple(
+        SigmaPoint(weight=w / total, point=world, pixel=pixel, depth=depth)
+        for world, w, pixel, depth in survivors
+    )
+
+
+# ---------------------------------------------------------------------------
+# Round context: the object the trainer holds across a round
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class EvidenceContext:
+    """Bound evidence state for one run (persisted across checkpoints)."""
+
+    sealed: SealedTracks
+    constants: EvidenceConstants
+    clusters: tuple[SeedCluster, ...]
+    binding: BindingTable
+    tracks_of_cluster: dict[int, tuple[int, ...]]
+    seed_of_track: dict[int, int]
+    c_cap: int
+    beta: float
+    tau_b: float
+    coverage: dict = field(default_factory=dict)
+
+    def clusters_of_family(self, family_id: int) -> tuple[SeedCluster, ...]:
+        wanted = set(self.binding.clusters_of(family_id))
+        return tuple(c for c in self.clusters if c.cluster_id in wanted)
+
+    def track_ids_of_family(self, family_id: int) -> tuple[int, ...]:
+        ids: list[int] = []
+        for cluster in self.clusters_of_family(family_id):
+            ids.extend(self.tracks_of_cluster.get(cluster.cluster_id, ()))
+        return tuple(sorted(ids))
+
+    def to_state(self) -> dict:
+        """Checkpoint payload (the binding table serializes separately —
+        it already rides in the M0 `elgs_state.binding` slot)."""
+        return {
+            "tracks_provenance": self.sealed.provenance(),
+            "tier": self.constants.tier,
+            "clusters": [
+                {
+                    "cluster_id": c.cluster_id,
+                    "seed_ids": list(c.seed_ids),
+                    "canonical_point": list(c.canonical_point),
+                    "r_u": c.r_u,
+                    "d_u": c.d_u,
+                    "n_cam": c.n_cam,
+                    "alpha_u": c.alpha_u,
+                }
+                for c in self.clusters
+            ],
+            "tracks_of_cluster": {
+                str(k): list(v) for k, v in sorted(self.tracks_of_cluster.items())
+            },
+            "coverage": dict(self.coverage),
+        }
+
+
+def build_evidence_context(
+    sealed: SealedTracks,
+    constants: EvidenceConstants,
+    positions: torch.Tensor,
+    family_ids: torch.Tensor,
+    *,
+    r_site: float,
+    binding_threshold: float,
+    c_cap: int,
+    beta: float,
+    tau_b: float,
+) -> EvidenceContext:
+    """One-shot binding pass: clusters, bind(u), and the track index."""
+    seeds = derive_seed_evidence(
+        sealed,
+        r_min=constants.heads.params.r_min,
+        vis_threshold=constants.vis_threshold,
+        min_cameras=constants.min_occupancy_cameras,
+    )
+    clusters = build_clusters(seeds, radius=r_site, constants=constants)
+    binding = bind_clusters(clusters, positions, family_ids, binding_threshold)
+
+    seed_of_track = {int(t["track_id"]): int(t["seed_id"]) for t in sealed.tracks}
+    tracks_by_seed: dict[int, list[int]] = {}
+    for track_id, seed_id in seed_of_track.items():
+        tracks_by_seed.setdefault(seed_id, []).append(track_id)
+    tracks_of_cluster = {
+        c.cluster_id: tuple(
+            sorted(tid for sid in c.seed_ids for tid in tracks_by_seed.get(sid, ()))
+        )
+        for c in clusters
+    }
+    return EvidenceContext(
+        sealed=sealed,
+        constants=constants,
+        clusters=clusters,
+        binding=binding,
+        tracks_of_cluster=tracks_of_cluster,
+        seed_of_track=seed_of_track,
+        c_cap=c_cap,
+        beta=beta,
+        tau_b=tau_b,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phi for one family under one interval hypothesis
+# ---------------------------------------------------------------------------
+
+
+def _reports_in_window(
+    sealed: SealedTracks,
+    track_ids: Sequence[int],
+    window: Window,
+    params: EvidenceParams,
+) -> dict[tuple[int, int, float], Report]:
+    """Raw reports for the window, keyed (track, camera, frame).
+
+    Out-of-domain positions never reach here: the builder already
+    converted them to miss tokens (`build_elgs_tracks` step 5), which is
+    the heads prereg's `off_domain_reports` ruling.
+    """
+    wanted = {int(j) for j in track_ids}
+    out: dict[tuple[int, int, float], Report] = {}
+    for track in sealed.tracks:
+        track_id = int(track["track_id"])
+        if track_id not in wanted:
+            continue
+        camera_id = int(track["camera_id"])
+        for report in track["reports"]:
+            frame = float(report["frame"])
+            if not (window.start_frame <= frame <= window.end_frame):
+                continue
+            if report.get("is_miss", False):
+                out[(track_id, camera_id, frame)] = Report(is_miss=True)
+            else:
+                out[(track_id, camera_id, frame)] = Report(
+                    is_miss=False,
+                    v=_clip(float(report["v"]), params.v_min, params.v_max),
+                    x=_clip(float(report["x"]), params.d_img_x0, params.d_img_x1),
+                    y=_clip(float(report["y"]), params.d_img_y0, params.d_img_y1),
+                )
+    return out
+
+
+def window_phi(
+    context: EvidenceContext,
+    family_id: int,
+    window: Window,
+    clusters: Sequence[SeedCluster],
+    reports: Mapping[tuple[int, int, float], Report],
+    q_snapshot: QSnapshot,
+    bridge_centers: Mapping[int, Mapping[tuple[int, int, float], tuple[float, float]]],
+    z_series: Sequence[bool],
+) -> float:
+    """Phi_{f,W} for one family/window (elgs.energy, unchanged).
+
+    `z_series` is the family's presence indicator over the window's
+    frames under the interval hypothesis being scored -- this is the ONLY
+    place the candidate's structure enters, which is what makes
+    Phi_candidate - Phi_incumbent a well-defined closed-form delta.
+    """
+    frames = sorted({f for (_, _, f) in reports})
+    if not frames:
+        return 0.0
+    segments = _build_segments(frames, z_series)
+    if not segments:
+        return 0.0
+
+    q_maps = q_snapshot.as_bridge_maps()
+    if not q_maps:
+        return 0.0
+    batch = EvidenceBatch(
+        reports=dict(reports),
+        q_tilde={b: dict(m) for b, m in q_maps.items()},
+        bridge_centers={b: dict(m) for b, m in bridge_centers.items()},
+    )
+    stream = stream_log_likelihoods(
+        batch,
+        clusters,
+        context.tracks_of_cluster,
+        segments,
+        context.constants.heads,
+        context.c_cap,
+    )
+    return phi(stream, context.tau_b)
+
+
+def _build_segments(frames: Sequence[float], z_series: Sequence[bool]) -> tuple[Segment, ...]:
+    """S(P_f, W) with no edge band declared at smoke tier."""
+    from .energy import build_segments
+
+    if len(frames) != len(z_series):
+        raise ContractError("z_series must align with the window's frames")
+    return build_segments(frames, z_series, [False] * len(frames))
+
+
+def presence_series(
+    realization, frames: Sequence[float], frame_time: Mapping[int, float]
+) -> tuple[bool, ...]:
+    """z_f(t): whether an episode covers each frame under a realization.
+
+    `frame_time` maps a DiVa-360 frame INDEX to the MODEL time the scene
+    actually stamped on that frame's cameras. It is an explicit lookup,
+    never a formula: the converter writes `time = index / fps` but the
+    dataset reader then divides by `frame_ratio`
+    (`scene/dataset_readers.py::readCamerasFromTransforms`), so
+    `1 / artifact_fps` is NOT the model dt whenever `frame_ratio > 1`.
+    Deriving it would silently mis-scale every interval comparison; a
+    frame index absent from the map fails closed.
+    """
+    out: list[bool] = []
+    for frame in frames:
+        index = int(frame)
+        if index not in frame_time:
+            raise ContractError(
+                f"artifact frame {index} has no model timestamp in the "
+                "loaded scene; refusing to guess a frame->time mapping"
+            )
+        t = frame_time[index]
+        covered = any(
+            float(b) <= t <= float(d) for b, d in zip(realization.b, realization.d)
+        )
+        out.append(covered)
+    return tuple(out)
+
+
+# ---------------------------------------------------------------------------
+# Round-boundary q refresh and the acceptance `exact_deltas` term
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class WindowEvidence:
+    """One (family, window) pair's frozen inputs for the round."""
+
+    family_id: int
+    window: Window
+    clusters: tuple[SeedCluster, ...]
+    reports: dict
+    bridge_centers: dict
+    frames: tuple[float, ...]
+
+
+@dataclass
+class RoundEvidence:
+    """Everything the round needs, frozen at the round boundary."""
+
+    round_index: int
+    q_snapshot: QSnapshot
+    windows: tuple[WindowEvidence, ...]
+    coverage: dict
+    n_q_values: int
+
+    def windows_of_family(self, family_id: int) -> tuple[WindowEvidence, ...]:
+        return tuple(w for w in self.windows if w.family_id == family_id)
+
+
+def refresh_round_evidence(
+    context: EvidenceContext,
+    probe,
+    *,
+    round_index: int,
+    family_ids: Sequence[int],
+) -> RoundEvidence:
+    """Recompute the q snapshot and freeze it for this round (spec §3).
+
+    A family with fewer than two anchors yields no windows and is
+    recorded `photometric_only` in coverage (disclosed reading D3): it
+    contributes Phi = 0.0 and the round proceeds. That is the
+    INSUFFICIENT-EVIDENCE FALLBACK, not a refusal.
+    """
+    snapshot = QSnapshot(round_index)
+    windows: list[WindowEvidence] = []
+    coverage: dict[str, dict] = {}
+    written: set[tuple[int, int, int, float]] = set()
+
+    for family_id in sorted(int(f) for f in family_ids):
+        clusters = context.clusters_of_family(family_id)
+        if not clusters:
+            coverage[str(family_id)] = {
+                "n_anchors": 0, "n_windows": 0, "photometric_only": True,
+                "reason": "no bound clusters",
+            }
+            continue
+        track_ids = context.track_ids_of_family(family_id)
+        anchors, family_window_set = family_windows(
+            context.sealed, track_ids, c_cap=context.c_cap, constants=context.constants
+        )
+        entry = coverage_entry(family_id, anchors)
+        coverage[str(family_id)] = {
+            "n_anchors": entry.n_anchors,
+            "n_windows": entry.n_windows,
+            "photometric_only": entry.photometric_only,
+        }
+        if entry.photometric_only:
+            continue
+
+        for window in family_window_set:
+            reports = _reports_in_window(
+                context.sealed, track_ids, window, context.constants.heads.params
+            )
+            if not reports:
+                continue
+            bridges_by_seed: dict[int, dict] = {}
+            for cluster in clusters:
+                for seed_id in cluster.seed_ids:
+                    family_bridges = build_bridge_family(context.sealed, seed_id, window)
+                    if family_bridges:
+                        bridges_by_seed[seed_id] = family_bridges
+            if not bridges_by_seed:
+                continue
+            bridge_ids = sorted({b for fam in bridges_by_seed.values() for b in fam})
+            centers: dict[int, dict] = {b: {} for b in bridge_ids}
+
+            d_by_cluster = {c.cluster_id: c.d_u for c in clusters}
+            cluster_of_seed = {
+                sid: c.cluster_id for c in clusters for sid in c.seed_ids
+            }
+            for (track_id, camera_id, frame) in reports:
+                seed_id = context.seed_of_track[track_id]
+                d_u = d_by_cluster.get(cluster_of_seed.get(seed_id, -1), 0.0)
+                seed_bridges = bridges_by_seed.get(seed_id)
+                for bridge_id in bridge_ids:
+                    value = 0.0
+                    center = (0.0, 0.0)
+                    endpoints = (seed_bridges or {}).get(bridge_id)
+                    if endpoints is not None:
+                        point = bridge_point(endpoints, window, frame)
+                        projected = probe.project(camera_id, point)
+                        if projected is not None:
+                            center = projected[0]
+                            sigmas = sigma_points_for(
+                                point,
+                                context.constants.sigma_world,
+                                lambda p, cid=camera_id: probe.project(cid, p),
+                            )
+                            if sigmas:
+                                q = compute_q(
+                                    sigmas,
+                                    probe,
+                                    camera_id,
+                                    frame,
+                                    exclude_track=track_id,
+                                    present_family=family_id,
+                                    kappa_res=1.0,
+                                )
+                                value = q_tilde(q, d_u)
+                    key = (bridge_id, track_id, camera_id, frame)
+                    if key not in written:
+                        snapshot.put(bridge_id, track_id, camera_id, frame, value)
+                        written.add(key)
+                    centers[bridge_id][(track_id, camera_id, frame)] = center
+
+            windows.append(
+                WindowEvidence(
+                    family_id=family_id,
+                    window=window,
+                    clusters=clusters,
+                    reports=reports,
+                    bridge_centers=centers,
+                    frames=tuple(sorted({f for (_, _, f) in reports})),
+                )
+            )
+
+    snapshot.freeze()
+    context.coverage = coverage
+    return RoundEvidence(
+        round_index=round_index,
+        q_snapshot=snapshot,
+        windows=tuple(windows),
+        coverage=coverage,
+        n_q_values=len(written),
+    )
+
+
+def _window_q_subset(round_evidence: RoundEvidence, entry: WindowEvidence) -> QSnapshot:
+    """A frozen QSnapshot restricted to one window's report keys.
+
+    `EvidenceBatch.validate_bridge_independent_eligibility` requires each
+    bridge's q map to cover EXACTLY the window's report key set; the
+    round snapshot spans every window, so it is projected down here.
+    Values are copied, never recomputed -- the round snapshot stays the
+    single source of q (spec §3: no mid-round refresh).
+    """
+    subset = QSnapshot(round_evidence.round_index)
+    for bridge_id in sorted(entry.bridge_centers):
+        for (track_id, camera_id, frame) in entry.reports:
+            subset.put(
+                bridge_id,
+                track_id,
+                camera_id,
+                frame,
+                round_evidence.q_snapshot.get(bridge_id, track_id, camera_id, frame),
+            )
+    subset.freeze()
+    return subset
+
+
+def family_phi(
+    context: EvidenceContext,
+    round_evidence: RoundEvidence,
+    family_id: int,
+    realization,
+    *,
+    frame_time: Mapping[int, float],
+) -> float:
+    """sum_W Phi_{f,W} under one interval realization (0.0 if no windows).
+
+    `realization=None` scores the family as absent everywhere (the
+    TRUNCATE_DELETE / retirement hypothesis).
+    """
+    total = 0.0
+    for entry in round_evidence.windows_of_family(family_id):
+        if realization is None:
+            z_series = tuple(False for _ in entry.frames)
+        else:
+            z_series = presence_series(realization, entry.frames, frame_time)
+        total += window_phi(
+            context,
+            family_id,
+            entry.window,
+            entry.clusters,
+            entry.reports,
+            _window_q_subset(round_evidence, entry),
+            entry.bridge_centers,
+            z_series,
+        )
+    return total
+
+
+def evidence_exact_delta(
+    context: EvidenceContext,
+    round_evidence: RoundEvidence,
+    plan,
+    registry,
+    config,
+    *,
+    frame_time: Mapping[int, float],
+) -> float:
+    """beta * (Phi_candidate - Phi_incumbent) over the plan's families.
+
+    This is the acceptance path's `exact_deltas` term: a NON-SAMPLED
+    closed-form quantity added outside the SNIS render estimate
+    (`elgs.acceptance` module docstring). A plan touching only families
+    with no evidence windows returns exactly 0.0, so the decision
+    reduces to the verified M0 photometric comparison.
+    """
+    from .intervals import forward
+
+    delta = 0.0
+    for family_id in plan.family_ids:
+        if not round_evidence.windows_of_family(family_id):
+            continue
+        record = registry.get(family_id)
+        incumbent = (
+            None
+            if record.retired or record.interval.K == 0
+            else forward(record.interval, config)
+        )
+        candidate_state = plan.child_intervals.get(family_id)
+        candidate = (
+            None
+            if candidate_state is None or candidate_state.K == 0
+            else forward(candidate_state, config)
+        )
+        phi_inc = family_phi(
+            context, round_evidence, family_id, incumbent, frame_time=frame_time
+        )
+        phi_cand = family_phi(
+            context, round_evidence, family_id, candidate, frame_time=frame_time
+        )
+        delta += phi_cand - phi_inc
+    return context.beta * delta
+
+
+__all__ = [
+    "EvidenceConstants",
+    "EvidenceContext",
+    "RoundEvidence",
+    "WindowEvidence",
+    "evidence_exact_delta",
+    "family_phi",
+    "refresh_round_evidence",
+    "SeedEvidence",
+    "bind_clusters",
+    "bridge_point",
+    "build_bridge_family",
+    "build_clusters",
+    "build_evidence_context",
+    "derive_seed_evidence",
+    "family_anchor_series",
+    "family_windows",
+    "load_evidence_constants",
+    "presence_series",
+    "seed_overlap_edges",
+    "sigma_points_for",
+    "window_phi",
+]

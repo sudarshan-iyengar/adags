@@ -269,6 +269,7 @@ class GaussianModel:
             moment_reset_log=extras.get("moment_reset_log", []),
             round_bookkeeping=extras.get("round_bookkeeping", {}),
             rng=extras.get("rng"),
+            evidence=extras.get("evidence"),
         )
         payload_families = self._elgs_family_ids.detach().cpu().tolist()
         payload["round_bookkeeping"]["row_family_ids"] = payload_families
