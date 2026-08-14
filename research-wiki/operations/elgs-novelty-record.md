@@ -88,3 +88,39 @@ re-rating becomes mandatory.
 Appended per prereg_m1_cycle3_gate_v1 (SIGNED at 6de4d60),
 regardless of verdict; gate outcome: G-R PASS / G-OA FAIL
 ([[operations/elgs-cycle3-gate-result]]).
+
+## CORRECTION to the scoping addendum (2026-08-14) — support is ZERO, not one
+
+The addendum above is FALSIFIED in the direction that WEAKENS it. Its
+clause (i) — "CC4/G14 (reactivation-with-own-content) empirical support =
+one sequence, one activity type, one rig (DiVa-360 surround; writing_2)" —
+rested on writing_2 measurements produced through a VERIFIED image-substrate
+defect ([[operations/elgs-substrate-defect-2026-08-13]]). Remeasured on the
+corrected substrate under the unchanged frozen predicates
+([[operations/elgs-substrate-remeasurement-result]]):
+
+- writing_2 union returns **50 -> 1** (screened half) and **64 -> 0**
+  (unscreened half); true-absence candidates **84 -> 2**; coverage IMPROVED
+  0.845 -> 0.924. It does NOT satisfy the operational scope predicate.
+- xylophone likewise NOT eligible (union 0).
+- **CC4/G14 empirical support in DiVa-360 tranche 1 = ZERO sequences.**
+  Corrected clause (i) reads: no sequence in the screened tranche has been
+  shown to supply the same-object-return events the reactivation claim
+  requires.
+- Clause (ii) stands and is strengthened: names do not predict event
+  content, and neither did the one apparent exception.
+- Clause (iii) stands: CC5 inherits the scope, which is now empty on this
+  subset.
+
+Bearing on the 8.0 rating: the calibrated novelty priced MECHANISM-CELL
+OCCUPANCY, and its stated conditionality concerned q as an observation
+model — not evidence breadth. The rating is therefore NOT re-rated here on
+this basis alone. What changes is the EVIDENCE position: CC4 currently has
+no measured event supply in the primary dataset, so the reactivation arm of
+the experiment program cannot be run there as things stand. Any future claim
+statement asserting G14 occupancy — general OR scoped to a measured
+subset — must cite this correction, and a re-rating becomes mandatory if
+such a claim is made without new qualifying event supply.
+
+The mechanism is NOT refuted. This is a measurement finding about a dataset
+subset, not about EL-GS's method or mathematics.

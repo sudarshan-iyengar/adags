@@ -25,6 +25,16 @@
 >   reopen it.
 > - All numbers, artifacts and verdicts recorded below are PRESERVED
 >   unchanged as the original record.
+>
+> **REMEASUREMENT COMPLETE (2026-08-14).** G-R is no longer "pending" —
+> it was remeasured on the corrected substrate under the UNCHANGED frozen
+> gate and **FAILS**: unscreened-half union returns **0 < 36** (coverage
+> 0.9340 passes; straddle count 0, so NOTE-2 does not rescue it). The
+> PASS recorded below (union 64) was produced by the substrate defect.
+> Independent fresh-context recomputation agreed EXACTLY on all seventeen
+> gate-bearing numbers; integrity audit clean. Result:
+> [[operations/elgs-substrate-remeasurement-result]]. G-OA's valid FAIL
+> below is unchanged and remains final.
 
 Date: 2026-08-12. Governing frozen protocol:
 `configs/elgs/prereg_m1_cycle3_gate_v1.json` (SIGNED at `6de4d60`,

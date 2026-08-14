@@ -108,7 +108,28 @@ And: content in the lower ~22% of each frame is systematically labelled
 `is_miss`, a mechanism that MANUFACTURES disappear/reappear transitions —
 which is exactly the class G-R counts.
 
-## 5. Status of every affected claim
+## 4b. REMEASUREMENT COMPLETE (2026-08-14) — outcomes are now KNOWN
+
+The "CORRECTED OUTCOME UNKNOWN" entries in §5 below are RESOLVED by
+[[operations/elgs-substrate-remeasurement-result]]. Under the unchanged
+frozen predicates on the corrected substrate:
+
+- **G-R FAILS** (unscreened-half union returns 0 < 36; the recorded PASS at
+  union 64 was defect-produced).
+- **writing_2 and xylophone are BOTH NOT ELIGIBLE** under the cycle-2
+  predicate => **tranche 1 has ZERO eligible candidates**.
+- Coverage IMPROVED in every case (0.845->0.924, 0.8637->0.9340,
+  0.577->0.779), confirming the correction rather than a second defect.
+- The magnitude prediction in §4 is CONFIRMED empirically: the
+  misregistration MANUFACTURED disappear/reappear transitions
+  (writing_2 true-absence 84 -> 2).
+- G-OA is unchanged and remains FINAL, exactly as §5 requires.
+
+Independent fresh-context recomputation agreed EXACTLY on all seventeen
+gate-bearing numbers; integrity audit clean (experiments 62-67, commit
+`79ae5b7`).
+
+## 5. Status of every affected claim (ORIGINAL assessment; see §4b for resolved outcomes)
 
 | Object | Classification |
 |---|---|

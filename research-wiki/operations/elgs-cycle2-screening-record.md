@@ -25,6 +25,20 @@
 > - All rows and outcomes below are PRESERVED unchanged as the original
 >   record. Remeasurement will reapply the UNCHANGED frozen eligibility
 >   predicate.
+>
+> **REMEASUREMENT COMPLETE (2026-08-14).** Both rows were remeasured on the
+> corrected substrate under the UNCHANGED frozen eligibility predicate
+> (union >= 12 AND coverage >= 0.5):
+> **writing_2 union 50 -> 1, coverage 0.845 -> 0.924 => NOT ELIGIBLE**;
+> **xylophone union 0 -> 0, occl 1,031 -> 2,899, coverage 0.577 -> 0.779
+> => NOT ELIGIBLE.** Coverage IMPROVED in both cases (corrected
+> registration tracks better); the absence/return supply collapsed.
+> **TRANCHE 1 THEREFORE CONTAINS ZERO ELIGIBLE CANDIDATES.** The DRY
+> outcome below STANDS (fewer than 3 eligible either way) and the
+> checkpoint autonomy condition (>= 2 eligible) remains NOT MET — xylophone
+> does NOT flip it, so the post-tranche decision remains the user's.
+> Independent recomputation agreed exactly. Result:
+> [[operations/elgs-substrate-remeasurement-result]].
 
 Started 2026-08-12. Governing frozen protocol:
 `configs/elgs/prereg_m1_cycle2_screen_v1.json` REVISION 2 at
