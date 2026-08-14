@@ -179,7 +179,6 @@ _SCENE_KWARGS = dict(
     scene_sequence_id="demo_screen_w0_7",
     scene_camera_ids=(1, 2, 3),
     scene_frame_indices=tuple(range(8)),
-    scene_source_sha256="a" * 64,
 )
 
 
@@ -266,11 +265,40 @@ class TracksAdmissionTests(_TempDirTest):
         self.assertEqual(caught.exception.reason, "sequence_mismatch")
 
     def test_substrate_mismatch(self):
-        merged = dict(_SCENE_KWARGS)
-        merged["scene_source_sha256"] = "b" * 64
+        """The artifact pins the sha256 OF a named scene file. A scene
+        whose file differs by one byte is a different conversion."""
+        scene = self.tmp / "scene"
+        scene.mkdir()
+        (scene / "transforms_train.json").write_text("{}", encoding="utf-8")
+        directory = self._sealed(
+            source_sha256={"of": "transforms_train.json", "value": "b" * 64}
+        )
         with self.assertRaises(TracksIncompatible) as caught:
-            load_sealed_tracks(self._sealed(), **merged)
+            load_sealed_tracks(directory, scene_dir=scene, **_SCENE_KWARGS)
         self.assertEqual(caught.exception.reason, "substrate_mismatch")
+
+    def test_substrate_match_admits(self):
+        scene = self.tmp / "scene_ok"
+        scene.mkdir()
+        target = scene / "transforms_train.json"
+        target.write_text("{}", encoding="utf-8")
+        directory = self._sealed(
+            source_sha256={"of": "transforms_train.json",
+                           "value": sha256_file(target)}
+        )
+        self.assertTrue(
+            load_sealed_tracks(directory, scene_dir=scene, **_SCENE_KWARGS)
+        )
+
+    def test_substrate_file_absent_from_scene(self):
+        scene = self.tmp / "scene_empty"
+        scene.mkdir()
+        directory = self._sealed(
+            source_sha256={"of": "transforms_train.json", "value": "b" * 64}
+        )
+        with self.assertRaises(TracksIncompatible) as caught:
+            load_sealed_tracks(directory, scene_dir=scene, **_SCENE_KWARGS)
+        self.assertEqual(caught.exception.reason, "substrate_missing")
 
     def test_camera_not_in_scene(self):
         merged = dict(_SCENE_KWARGS)

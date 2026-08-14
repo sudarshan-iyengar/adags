@@ -194,6 +194,59 @@ estimate is therefore UNCHANGED and still derived, not measured:
 ~50-70 GPU-h and ~6-8 TB for the 8 long sequences, explicitly an
 order-of-magnitude bound ([[operations/elgs-exhaustive-screen-scope]] §4).
 
+## Exploratory training authorization — 2026-08-14 (recorded BEFORE execution)
+
+User directive 2026-08-14, after three rejected reviews: the patch/review
+loop has become the wrong instrument for the question that matters, and
+an end-to-end exploratory run is more informative now than another broad
+static review. **Authorized: ~15 GPU-hours, staged, for EXPLORATORY
+training only.** Separate from, and not additive to, the chess_long
+pilot's 12 GPU-h.
+
+**The decisive fact behind this decision: the evidence path has NEVER
+executed.** Defect B1 was a `NameError` on an unbound local — it would
+have died in seconds of runtime, yet it survived three review cycles and
+56 targeted tests, because every test drives the probe through stubs and
+`configs/elgs/smoke_elgs.yaml` sets no `elgs_tracks_dir`. Review 3 stated
+plainly that a smoke on that config "would exercise none of this commit".
+
+Division of labour recorded for future phases:
+- **Runtime catches plumbing** (unbound names, contract arity, config
+  refusals, unit mismatches that raise). B1, B2, the K=0 interval
+  contract and two lambda-arity bugs are all of this class and all die
+  instantly at runtime.
+- **Static review catches silent bias** (M1 pixel domain, F1
+  `get_marginal_t`, F-A the static routing branch). These produce
+  PLAUSIBLE NUMBERS, so no run flags them. This is where review earned
+  its keep and where it must be retained.
+
+**Evidence boundary for everything under this authorization: EXPLORATORY,
+NOT claim-grade.** Runs are stamped `evidence_bearing: false` via
+`--dirty-smoke`, which is also what permits the smoke-tier heads (the
+frozen heads remain unfrozen, so no evidence-bearing run can reach this
+path). No output may be cited as a result, a baseline, or a supply claim.
+`chess` is deliberately the substrate: it is already screened (0
+true-absence, coverage 0.9362) and therefore non-gate-bearing.
+
+**Sequencing (user-directed): photometric baseline FIRST.** DiVa-360 has
+never been trained in this codebase — every M0 smoke ran on N3V
+`cut_roasted_beef` (best-val PSNR 28.24). Its `points3d.ply` is
+SYNTHESIZED by the converter from a coarse frustum box explicitly
+disclosed as "a coarse smoke-test volume, NOT a claim-grade
+initialization", and its scale against this rig is unverified. If the
+scene does not train sanely with `elgs_enable` off, every evidence
+number is noise and any hyperparameter tuned on it is tuned on noise.
+
+**No public hyperparameters exist to look up.** DiVa-360 was selected
+precisely because it is "the event-dense benchmark with no GS baselines"
+([[gap_map]] Loop-2 update). The only anchor is the N3V smoke.
+
+Still outstanding and NOT waived by this authorization — they block any
+evidence-bearing use, not exploratory runs: the prereg-mandated 1e-6
+parity fixture is still self-referential; no test exercises
+`transmittance` at `pixel_scale != 1`; `p_floor` has no fire-counter; the
+geometry-cache eviction is uninstrumented.
+
 ## Open at the time of writing
 
 Third repair cycle authorized by the user. Targets: point the probe at

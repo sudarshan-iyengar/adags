@@ -141,7 +141,7 @@ def load_sealed_tracks(
     scene_sequence_id: str,
     scene_camera_ids: Sequence[int],
     scene_frame_indices: Sequence[int] | None = None,
-    scene_source_sha256: str | None = None,
+    scene_dir: str | Path | None = None,
     require_evidence_admissible: bool = True,
 ) -> SealedTracks:
     """Load and validate one sealed artifact directory, or refuse.
@@ -257,18 +257,40 @@ def load_sealed_tracks(
         )
 
     # 8. Calibration / substrate identity.
-    if scene_source_sha256 is not None:
+    #
+    # The manifest records `{"of": <filename>, "value": <sha256 OF THAT
+    # FILE>}` -- `build_elgs_tracks` hashes the scene's own
+    # `transforms_train.json` (or `provenance.json`). It is NOT the
+    # upstream zip hash, which is a DIFFERENT quantity living INSIDE
+    # `diva360_conversion_provenance.json` under the same key name. An
+    # earlier revision compared the artifact's value against that inner
+    # field and refused every legitimate pairing. Hashing the named file
+    # here is both correct and stronger: it proves the calibration the
+    # trainer loads is byte-identical to the one the tracker used.
+    if scene_dir is not None:
         recorded = manifest.get("source_sha256")
-        recorded_value = (
-            recorded.get("value") if isinstance(recorded, Mapping) else recorded
-        )
-        if recorded_value != scene_source_sha256:
-            raise TracksIncompatible(
-                "substrate_mismatch",
-                f"artifact source_sha256 {recorded_value!r} != scene "
-                f"{scene_source_sha256!r}: the tracks were built on a "
-                "different conversion of this sequence",
-            )
+        if isinstance(recorded, Mapping):
+            recorded_value = recorded.get("value")
+            named = str(recorded.get("of") or "").strip()
+        else:
+            recorded_value, named = recorded, ""
+        if recorded_value and named:
+            candidate = Path(scene_dir) / named
+            if not candidate.is_file():
+                raise TracksIncompatible(
+                    "substrate_missing",
+                    f"artifact pins its substrate to {named!r}, which is "
+                    f"absent from the loaded scene ({candidate})",
+                )
+            actual_source = sha256_file(candidate)
+            if actual_source != recorded_value:
+                raise TracksIncompatible(
+                    "substrate_mismatch",
+                    f"{named} sha256 {actual_source} != the {recorded_value} "
+                    "the tracks were built against: the tracker and the "
+                    "trainer are looking at different conversions of this "
+                    "sequence",
+                )
 
     # 9. Camera sets.
     training = tuple(int(c) for c in manifest.get("training_cameras", ()))

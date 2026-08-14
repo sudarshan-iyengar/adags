@@ -415,7 +415,7 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
         scene_sequence_id=sequence_id,
         scene_camera_ids=camera_ids,
         scene_frame_indices=sorted(frame_time),
-        scene_source_sha256=_scene_source_sha256(source_path),
+        scene_dir=source_path,
         require_evidence_admissible=not smoke,
     )
 
@@ -608,28 +608,6 @@ def _declared_focal(source_path) -> float | None:
         if "fl_x" in frame:
             return float(frame["fl_x"])
     return None
-
-
-def _scene_source_sha256(source_path) -> str | None:
-    """The scene's conversion provenance digest, if the converter left one.
-
-    `diva360_to_blender.py` writes `diva360_conversion_provenance.json`
-    next to the transforms; the tracks manifest records the same value in
-    `source_sha256`. A scene without one skips the substrate check rather
-    than failing a legitimately older conversion.
-    """
-    candidate = os.path.join(str(source_path), "diva360_conversion_provenance.json")
-    if not os.path.isfile(candidate):
-        return None
-    try:
-        with open(candidate, "r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except (OSError, ValueError):
-        return None
-    value = payload.get("source_sha256")
-    if isinstance(value, dict):
-        value = value.get("value")
-    return str(value) if value else None
 
 
 def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
