@@ -738,6 +738,23 @@ def runtime_assertions(*, cwd: str | None = None, manifest_filename: str = MANIF
                 f"(recorded {recorded_hash}, recomputed {recomputed}); refusing to train"
             )
 
+    # Make the RUN DIR self-describing. The manifest is written into the
+    # uploaded context, so before this nothing ever placed it beside the
+    # artifacts and `cmd_audit` -- which requires it there -- could never
+    # succeed on any run. Copying it here, after validation and before
+    # any training, means a run directory always records the commit,
+    # config hash, image and evidence-bearing status that produced it.
+    # The write is O_EXCL: a second task writing into the same run dir
+    # fails loudly rather than silently overwriting another run's
+    # provenance (the template's "never a silent second run under the
+    # same experiment ID" requirement).
+    run_dir = os.environ.get("ADAGS_RUN_DIR", "").strip()
+    if run_dir:
+        target = Path(run_dir) / manifest_filename
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write_json_immutable(target, manifest)
+
 
 # ---------------------------------------------------------------------------
 # CLI: det invocation helpers (never used by the CPU test suite)
