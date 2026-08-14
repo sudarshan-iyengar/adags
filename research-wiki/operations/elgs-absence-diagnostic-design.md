@@ -339,6 +339,30 @@ at r4:
   statistic existed, and the full per-cell table is published so any
   reader can apply the strict unanimity rule instead — with the result
   page required to state whether doing so would change the answer.
+
+  **The honest statement about R15, which I volunteered and the sign-off
+  then sharpened.** R15 makes **Status 2 — "the instrument has a material
+  defect" — materially easier to reach, and Status 2 is precisely the
+  outcome my disclosed prior expects.** Specifically it re-cheapens
+  Status 2's single-sequence `{scissor}` disjunct, whose cheapness an
+  earlier repair (R8) was written to close, from 144 readings to one. The
+  absence of a classification statistic is *not* a defence: steering needs
+  only knowledge of direction, and I had that. What licenses R15 is
+  instead: (i) the defect was found by an independent reviewer and is
+  verifiable from the r4 text alone; (ii) the relaxation is identical
+  across Statuses 1, 2 and 3 and moves no threshold; (iii) the superseded
+  unanimity rule is fully recoverable from the mandatory 144-row table;
+  and (iv) **2/3 is the conservative half of the defensible margin range —
+  a self-serving choice would have been a simple majority**, since every
+  lower margin makes ROBUST easier and so makes the primary reading's
+  label stand. The sign-off verified this independently and concluded the
+  margin is not tuned.
+
+  The sign-off also caught a **live conflict I introduced**: R15 says a
+  FRAGILE grade forces Status 4, while the precedence list still evaluated
+  Status 2 and Status 1 first — and the two resolutions differ in the
+  direction of my prior. Fixed by hoisting FRAGILE alongside
+  pooling-disagreement, i.e. resolved *against* my prior.
 - **The status was still not computable with zero analyst choices**: there
   was a binding *pooling* but no binding *reading*, leaving Status 3's and
   Status 4's thresholds reading-dependent, and "stable" had no defined
@@ -371,11 +395,13 @@ non-empty C6 fails the run closed.
 
 **Five measurement-closure statuses** with **pre-committed** thresholds
 (prereg `what_the_statuses_mean`), fixed before any outcome existed.
-Precedence: pooling-disagreement -> Status 4; else defect -> adequate ->
-not-identifiable -> partially-confounded -> unresolved. **The binding
-pooling is the sequence-unweighted mean over sequences carrying >= 10
-windows**, not the pooled-over-597 figure, which is arithmetically scissor
-alone (343/597 = 57.45%).
+Precedence: **fragile-robustness or pooling-disagreement -> Status 4**;
+else defect -> adequate -> not-identifiable -> partially-confounded ->
+unresolved. **The binding pooling is the sequence-unweighted mean over
+sequences carrying >= 10 windows**, not the pooled-over-597 figure, which
+is arithmetically scissor alone (343/597 = 57.45%). **The binding reading
+is the primary reading**; cross-reading behaviour is carried by the
+robustness grade, not by all-readings conjuncts.
 
 **No analyst discretion exists anywhere.** The r1/r2 clause "unless a
 conservative reading is defensible" is DELETED. Seven sensitivity readings
@@ -384,10 +410,11 @@ are defined; exactly four (S2, S3, S5, S7) are decision-relevant, giving a
 decision-irrelevant **by construction** — S1 is a provable no-op under a
 fixed anchor and a static rig, S4 touches only the corroborative-only D2,
 and S6 merely redistributes mass inside the sum (C2 + C3) that every
-decision rule consumes. Whether a status "differs across readings" is
-evaluated through a frozen reading-local label device, because the status
-predicates themselves carry all-readings quantifiers and were otherwise
-circular.
+decision rule consumes. Cross-reading behaviour is evaluated through a
+frozen reading-local label device feeding the robustness grade (§5d); at
+r4 the status predicates themselves carried all-readings quantifiers,
+which was both circular and, as the sign-off established, a guarantee of
+Status 4 by construction.
 
 ## 7. Outcome-blindness is NOT claimed
 
