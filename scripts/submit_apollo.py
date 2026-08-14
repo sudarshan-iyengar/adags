@@ -38,7 +38,6 @@ import json
 import os
 import re
 import shlex
-import shutil
 import socket
 import subprocess
 import sys
@@ -61,6 +60,7 @@ from depth_visibility.artifacts import (  # noqa: E402
 )
 from depth_visibility.canonical import canonical_json_bytes, sha256_file  # noqa: E402
 from depth_visibility.errors import ArtifactError, ContractError, SchemaError  # noqa: E402
+from elgs import determined  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -734,12 +734,10 @@ def runtime_assertions(*, cwd: str | None = None, manifest_filename: str = MANIF
 
 
 def _det_version() -> str:
-    if shutil.which("det") is None:
-        raise ContractError("the `det` CLI was not found on PATH")
-    result = subprocess.run(["det", "--version"], capture_output=True, text=True)
-    if result.returncode != 0:
-        raise ContractError(f"`det --version` failed (exit {result.returncode}): {result.stderr.strip()}")
-    return result.stdout.strip() or result.stderr.strip()
+    command = determined.resolve_det_command()
+    invocation = determined.run_det(command, ["--version"])
+    determined.check_invocation(invocation)
+    return invocation.stdout.strip() or invocation.stderr.strip()
 
 
 def _parse_experiment_id(stdout: str) -> int:
@@ -831,22 +829,31 @@ def ensure_workspace_and_project() -> None:
     (owner decision, recorded in the Apollo execution-authority wiki
     page): workspace WORKSPACE_NAME, project PROJECT_NAME. `det`
     returns nonzero for an already-existing name; that outcome is
-    accepted, any other failure surfaces."""
-    for cmd, exists_ok_marker in (
-        (["det", "workspace", "create", WORKSPACE_NAME], "already exists"),
-        (
-            ["det", "project", "create", WORKSPACE_NAME, PROJECT_NAME],
-            "already exists",
-        ),
+    accepted, any other failure surfaces.
+
+    Not routed through :func:`elgs.determined.check_invocation`: this
+    function's nonzero-exit handling is tri-state (created / already
+    exists / real failure), which `check_invocation`'s blanket
+    any-nonzero-is-fatal contract cannot express. It still goes through
+    :func:`elgs.determined.resolve_det_command` and
+    :func:`elgs.determined.run_det` for the actual process invocation, so
+    there is still exactly one place in the repo that decides how to find
+    and launch `det`.
+    """
+    command = determined.resolve_det_command()
+    for det_args, exists_ok_marker in (
+        (["workspace", "create", WORKSPACE_NAME], "already exists"),
+        (["project", "create", WORKSPACE_NAME, PROJECT_NAME], "already exists"),
     ):
-        proc = subprocess.run(cmd, capture_output=True, text=True)
-        if proc.returncode == 0:
-            print(f"created: {' '.join(cmd[1:])}")
-        elif exists_ok_marker in (proc.stdout + proc.stderr).lower():
-            print(f"exists: {' '.join(cmd[1:])}")
+        invocation = determined.run_det(command, det_args)
+        if invocation.returncode == 0:
+            print(f"created: {' '.join(det_args)}")
+        elif exists_ok_marker in (invocation.stdout + invocation.stderr).lower():
+            print(f"exists: {' '.join(det_args)}")
         else:
             raise ContractError(
-                f"{' '.join(cmd)} failed: {proc.stderr.strip() or proc.stdout.strip()}"
+                f"det {' '.join(det_args)} failed: "
+                f"{invocation.stderr.strip() or invocation.stdout.strip()}"
             )
 
 
@@ -978,34 +985,35 @@ def cmd_submit(args: argparse.Namespace) -> int:
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    result = subprocess.run(
-        ["det", "experiment", "describe", str(args.experiment_id), "--json"],
-        capture_output=True,
-        text=True,
+    command = determined.resolve_det_command()
+    invocation = determined.run_det(
+        command, ["experiment", "describe", str(args.experiment_id), "--json"]
     )
-    if result.returncode != 0:
-        raise ContractError(f"`det experiment describe` failed (exit {result.returncode}): {result.stderr.strip()}")
-    print(result.stdout)
+    determined.check_invocation(invocation)
+    print(invocation.stdout)
     return 0
 
 
 def cmd_logs(args: argparse.Namespace) -> int:
-    command = ["det", "experiment", "logs", str(args.experiment_id)]
+    command = determined.resolve_det_command()
+    det_args = ["experiment", "logs", str(args.experiment_id)]
     if args.follow:
-        command.append("-f")
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise ContractError(f"`det experiment logs` failed (exit {result.returncode}): {result.stderr.strip()}")
-    print(result.stdout)
+        det_args.append("-f")
+    # timeout_seconds=None: the original bare subprocess.run call here had
+    # no timeout at all, and `-f` follows logs indefinitely -- preserve
+    # that unbounded-wait behaviour rather than inheriting run_det's 120s
+    # default (which would turn a normal `--follow` session into a
+    # DetInvocationError after two minutes).
+    invocation = determined.run_det(command, det_args, timeout_seconds=None)
+    determined.check_invocation(invocation)
+    print(invocation.stdout)
     return 0
 
 
 def cmd_cancel(args: argparse.Namespace) -> int:
-    result = subprocess.run(
-        ["det", "experiment", "kill", str(args.experiment_id)], capture_output=True, text=True
-    )
-    if result.returncode != 0:
-        raise ContractError(f"`det experiment kill` failed (exit {result.returncode}): {result.stderr.strip()}")
+    command = determined.resolve_det_command()
+    invocation = determined.run_det(command, ["experiment", "kill", str(args.experiment_id)])
+    determined.check_invocation(invocation)
     append_ledger(
         args.ledger,
         {
@@ -1036,15 +1044,20 @@ def cmd_audit(args: argparse.Namespace) -> int:
         raise ContractError(
             "no experiment ID available -- pass --experiment-id or ensure the manifest/claim records one"
         )
-    result = subprocess.run(
-        ["det", "experiment", "describe", str(experiment_id), "--json"],
-        capture_output=True,
-        text=True,
+    command = determined.resolve_det_command()
+    invocation = determined.run_det(
+        command, ["experiment", "describe", str(experiment_id), "--json"]
     )
-    if result.returncode != 0:
-        raise ContractError(f"`det experiment describe` failed (exit {result.returncode}): {result.stderr.strip()}")
-    described = json.loads(result.stdout)
-    state = described.get("experiment", {}).get("state", described.get("state"))
+    determined.check_invocation(invocation)
+    # elgs.determined.parse_experiment_state, not a local json.loads(...).get(...):
+    # `det experiment describe --json` was VERIFIED (2026-08-14, live cluster) to
+    # return a JSON ARRAY containing one object, not a bare object -- the
+    # original `described.get("experiment", {})` here would raise
+    # AttributeError ('list' object has no attribute 'get') against the real
+    # CLI. Routing through the shared, live-verified parser fixes that
+    # latent bug as a direct consequence of there being one det-invocation
+    # and one state-parsing path.
+    state = determined.parse_experiment_state(invocation.stdout)
 
     inventory = build_inventory(run_dir, exclude=(MANIFEST_FILENAME, "terminal.json"))
     payload = {
