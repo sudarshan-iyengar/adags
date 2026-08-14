@@ -172,6 +172,42 @@ ceiling; ≈ 350 GB acquired zips + extractions (33 TB free); every
 per-candidate seal set (tracks + census + manifests + realized
 windows) retained per the verifiability policy.
 
+> **APPEND-ONLY CORRECTION (2026-08-14) — the TRUE-ABSENCE half of the
+> paragraph below does not survive measurement closure.** Full result:
+> [[operations/elgs-absence-diagnostic-result]].
+>
+> 1. **ARITHMETIC.** "~700 true-absence candidates" is the DEFECTIVE-ERA
+>    as-measured total (679). Substituting the corrected-substrate rows
+>    for writing_2 (84 -> 2) and xylophone gives **597**. Occlusion:
+>    237,821 as-measured, **239,545** corrected. Owner-recomputed from the
+>    20 sealed censuses.
+> 2. **INTERPRETATION — the material one.** "Data-rich in DiVa-360" does
+>    NOT hold for the true-absence class. The frozen absence instrument is
+>    diagnosed at **status_2 (material defect), UNANIMOUS across 144
+>    sensitivity readings**: of all **597** scored true-absence windows,
+>    **ZERO** are corroborated as genuine full-multiview disappearance, and
+>    in **96.6%** an eligible foreground component sustained
+>    multi-view-consistent occupancy of the instrument's own anchor while
+>    the tracker's report failed to qualify — **87.6%** of the evidence
+>    being a per-point visibility flag below 0.5 and **12.2%** cameras
+>    never queried and structurally unable to associate. Independent
+>    recomputation agreed exactly on the cross-tabulation, the R6 guard,
+>    C1a = 0 and the status.
+>
+> **SURVIVES:** the OCCLUSION supply claim, untouched — that predicate
+> requires the identity to be ASSOCIATED in >= 2 cameras (tracking
+> WORKING) and is barely coverage-correlated (r = -0.178) where absence is
+> strongly anticorrelated (r = -0.765). The coverage figures survive. The
+> DRY selection outcome survives (it turns on RETURNS, not absences).
+>
+> **DOES NOT SURVIVE:** any claim that tranche 1 supplies ~700 genuine
+> true absences, and any inference from that to G13/C2 event supply for
+> the ABSENCE class. Corrected reading: 597 true-absence CANDIDATES, none
+> corroborated by the mask evidence, pending the M1-A0b audit that alone
+> addresses physical absence.
+>
+> The original text is preserved unchanged below.
+
 What the tranche established POSITIVELY: the dev pool is massively
 rich in the OTHER three gated event classes — ~240k pooled occlusion
 opportunities, ~700 true-absence candidates, healthy coverage in

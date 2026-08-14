@@ -128,6 +128,25 @@ substrate.**
   xylophone 0; the other 18 rows are from verified-clean conversions. The
   supply remains large, and this remeasurement does not re-open it.
 
+> **APPEND-ONLY CORRECTION (2026-08-14) — the bullet immediately above is
+> HALF SUPERSEDED.** The OCCLUSION half stands. The ABSENCE half does not:
+> a frozen, four-times-reviewed diagnostic over all 597 corrected
+> true-absence windows returned **status_2 (material defect), UNANIMOUS
+> across 144 sensitivity readings**. **ZERO** windows are corroborated as
+> genuine full-multiview disappearance; in **96.6%** an eligible foreground
+> component sustained multi-view-consistent occupancy of the instrument's
+> own anchor while the tracker's report failed to qualify. The evidence is
+> **87.6%** per-point visibility flags below 0.5 and **12.2%** cameras
+> never queried for that seed. Because track coverage uses the SAME
+> `v >= 0.5` threshold, coverage and absence are mechanically coupled
+> through one constant.
+>
+> This does NOT reopen anything on this page: the substrate remeasurement's
+> own verdicts (G-R FAILS; both sequences ineligible; DRY stands; G-OA
+> unchanged) all turn on RETURNS and COVERAGE, not on the absence class.
+> The corrected pooled absence total is **597**, not ~700. See
+> [[operations/elgs-absence-diagnostic-result]].
+
 ## What is NOT concluded here
 
 - The reactivation MECHANISM is not refuted. What is established is that

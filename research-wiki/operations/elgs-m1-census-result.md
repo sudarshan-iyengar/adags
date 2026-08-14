@@ -61,6 +61,24 @@ divergence. No verified implementation, instrumentation,
 corrupted-data, or protocol-execution defect was identified against
 the gate computation.
 
+> **APPEND-ONLY CORRECTION (2026-08-14) — the ABSENCE statistic on this
+> page is now known to be materially confounded.** The gate VERDICT is
+> untouched: it failed on `same_object_returns_min` (23-30 vs floor 36),
+> a RETURN statistic, and that remains a valid, final, preserved negative.
+> What is corrected is the supporting reading below that the dev subset
+> holds "600 candidates" of "genuine multi-view absence". A frozen
+> diagnostic over the tranche-1 screening windows returned **status_2
+> (material defect), UNANIMOUS across 144 readings**: zero of 597 scored
+> true-absence windows are corroborated, 96.6% being windows where
+> foreground demonstrably occupied the instrument's own anchor while the
+> tracker flagged v < 0.5 (87.6% of evidence pairs) or the camera was
+> never queried (12.2%). The word "genuine" in the reading below is
+> therefore NOT supported for the absence class; "candidate" is.
+> The same caution applies to the unlock 0.98 -> 0.24 mean-visibility
+> observation, which is a TRACKER-VISIBILITY statistic, not an existence
+> one. See [[operations/elgs-absence-diagnostic-result]]. Original text
+> preserved unchanged.
+
 ## Scientific reading (why the floor failed)
 
 The dev subset is rich in occlusion opportunity (93,841) and genuine

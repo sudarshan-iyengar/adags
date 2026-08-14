@@ -3,6 +3,47 @@
 Updated 2026-08-08 (night) after Loop 2 ([[operations/elgs-method]]).
 Earlier updates remain binding history.
 
+## Measurement-Closure Update — 2026-08-14
+
+**G13's ABSENCE limb loses its measured supply; its OCCLUSION limb keeps
+it.** A frozen, four-times-reviewed diagnostic over all 597 corrected
+DiVa-360 tranche-1 true-absence windows returned **status_2 (material
+defect), UNANIMOUS across 144 sensitivity readings**
+([[operations/elgs-absence-diagnostic-result]]):
+
+- **ZERO of 597** scored true-absence windows are corroborated as genuine
+  full-multiview disappearance — zero pooled and zero in every one of the
+  twelve sequences.
+- **96.6%** are windows where an eligible foreground component sustained
+  multi-view-consistent occupancy of the instrument's own frozen anchor
+  while the tracker's report failed to qualify: **87.6%** of the evidence
+  is a per-point visibility flag below 0.5, **12.2%** is cameras in the
+  applicable set that were never queried and can never associate. The
+  tracker never LOST the point (C2 = 0 everywhere).
+- Because `track_coverage_upper_bound` uses the SAME `v >= 0.5` threshold,
+  coverage and absence are coupled through one constant — part of the
+  measured coverage/absence anticorrelation (r = -0.765) is an instrument
+  identity, not a scene fact. Occlusion, which requires association in
+  >= 2 cameras (tracking WORKING), is barely coupled (r = -0.178).
+
+**New negative knowledge.** A tracker visibility flag is a per-point
+self-occlusion signal, not an existence signal: on a surround rig a surface
+point can be self-occluded in every queried camera while the object is
+plainly present. Any future presence/absence instrument must separate
+"unobserved" from "absent" by evidence that does not reduce to the tracker's
+own confidence, and must not let its applicable-camera set include cameras
+it never queried.
+
+**Not concluded:** that the objects were physically present. C2/C3 cannot
+separate "component still there, untracked" from "identity left and the
+manipulating hand covers the vacated site". Only the frozen M1-A0b audit
+can, and its 73-window stratified sample has been emitted but NOT run.
+
+G14/CC4 is unchanged by this: it already had zero measured supply
+([[operations/elgs-substrate-remeasurement-result]]). G9's
+uncertainty/abstention need is sharpened — the instrument had no abstention
+class at all until this diagnostic introduced one.
+
 ## Loop-2 Update - 2026-08-08 (night)
 
 Under user-relaxed constraints (external priors; any public dataset;

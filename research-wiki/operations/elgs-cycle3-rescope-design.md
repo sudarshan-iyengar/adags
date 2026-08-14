@@ -30,6 +30,16 @@ the exact failure mode it was created to escape."
 
 ## 1. The claim rescope (user-approved; repairs 1, 2, 13)
 
+> **APPEND-ONLY CORRECTION (2026-08-14).** The "~700 absence" figure below
+> is the defective-era total; corrected it is **597**. More importantly,
+> the ABSENCE half of "measured this supply as massive" does not survive:
+> the frozen absence instrument is diagnosed at **status_2 (material
+> defect), UNANIMOUS across 144 readings** — zero of 597 windows
+> corroborated, 96.6% explained by a per-point visibility flag below 0.5
+> (87.6% of pairs) or by never-queried cameras (12.2%). The OCCLUSION
+> supply claim is untouched. See
+> [[operations/elgs-absence-diagnostic-result]]. Original text preserved.
+
 UNCHANGED (broad, G13): every occlusion/absence/censored-evidence
 claim — tracker visibility states as representation-level
 presence/identity evidence; measurement-model existence inference;

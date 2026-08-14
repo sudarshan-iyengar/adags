@@ -1,5 +1,33 @@
 # Query Pack
 
+## 2026-08-14 MEASUREMENT CLOSURE — the absence instrument has a material defect
+
+Read [[operations/elgs-absence-diagnostic-result]] before citing any
+DiVa-360 true-absence figure. Verdict **status_2 (material defect),
+UNANIMOUS across 144 sensitivity readings**, independently recomputed.
+
+- Corrected tranche-1 pooled totals: **239,545 occlusion / 597
+  true-absence / coverage 0.8212** (the durable "~240k / ~700" was the
+  defective-era 237,821 / 679).
+- **ZERO of 597** true-absence windows are corroborated as genuine
+  full-multiview disappearance — pooled and in every sequence. In
+  **96.6%** an eligible foreground component sustained
+  multi-view-consistent occupancy of the anchor while the tracker's report
+  failed to qualify: **87.6%** visibility flag < 0.5, **12.2%**
+  never-queried cameras, C2 (true track loss) = **0 everywhere**.
+- Coverage and absence share the `v >= 0.5` threshold, so their
+  anticorrelation is partly an instrument identity. Occlusion (needs
+  association in >= 2 cameras) is barely coupled and its supply claim
+  STANDS.
+- **Tracks and conversions are REUSABLE**: `v` is stored per report, so any
+  census-level instrument correction re-evaluates all 20 tranche-1
+  sequences for ~1 CPU-hour and ZERO GPU-hours. Only a query-construction
+  change (fixing the 12.2% never-queried limb) needs re-tracking.
+- NOT established: physical presence. The frozen M1-A0b audit sample (73
+  windows) was emitted but NOT run; no physical-absence claim is permitted
+  before it returns. G-OA's valid FAIL is NOT reopened.
+- Screening scope and cost: [[operations/elgs-exhaustive-screen-scope]].
+
 Compressed project memory for ideation. Updated 2026-08-08 (night)
 after Loop 2 of the representation-first program produced
 [[operations/elgs-method]] (EL-GS, calibrated novelty 8.0/10
