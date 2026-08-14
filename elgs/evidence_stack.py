@@ -573,11 +573,20 @@ class EvidenceContext:
         return tuple(sorted(ids))
 
     def to_state(self) -> dict:
-        """Checkpoint payload (the binding table serializes separately —
-        it already rides in the M0 `elgs_state.binding` slot)."""
+        """Checkpoint payload.
+
+        CORRECTED: an earlier revision said the binding table "already
+        rides in the M0 `elgs_state.binding` slot". It does NOT — that
+        slot holds `StateBundle.binding`, a DIFFERENT object the evidence
+        path never writes. The evidence binding is its own table and is
+        serialized here, so a resume restores the bindings the run
+        actually used instead of re-deriving them against drifted
+        primitive positions.
+        """
         return {
             "tracks_provenance": self.sealed.provenance(),
             "tier": self.constants.tier,
+            "binding": self.binding.to_state(),
             "clusters": [
                 {
                     "cluster_id": c.cluster_id,
@@ -608,8 +617,28 @@ def build_evidence_context(
     c_cap: int,
     beta: float,
     tau_b: float,
+    report_raster: tuple[float, float] | None = None,
 ) -> EvidenceContext:
-    """One-shot binding pass: clusters, bind(u), and the track index."""
+    """One-shot binding pass: clusters, bind(u), and the track index.
+
+    `report_raster` is the (width, height) the artifact's report
+    positions live in. It is checked against the heads' declared D_img:
+    `g_pos` compares a report position with a bridge projection, so a
+    D_img in one raster and reports in another silently zeroes the
+    visible head for every report and gives the evidence term a constant
+    sign. Passing None skips the check and is only valid for a fixture.
+    """
+    if report_raster is not None:
+        params = constants.heads.params
+        width, height = float(report_raster[0]), float(report_raster[1])
+        declared = (params.d_img_x1 - params.d_img_x0,
+                    params.d_img_y1 - params.d_img_y0)
+        if abs(declared[0] - width) > 1.0 or abs(declared[1] - height) > 1.0:
+            raise ContractError(
+                f"declared D_img {declared[0]:.0f}x{declared[1]:.0f} does not "
+                f"match the report raster {width:.0f}x{height:.0f}; g_pos "
+                "would compare positions in two different pixel domains"
+            )
     seeds = derive_seed_evidence(
         sealed,
         r_min=constants.heads.params.r_min,
@@ -653,11 +682,21 @@ def _reports_in_window(
     window: Window,
     params: EvidenceParams,
 ) -> dict[tuple[int, int, float], Report]:
-    """Raw reports for the window, keyed (track, camera, frame).
+    """Raw reports STRICTLY INSIDE the window, keyed (track, camera, frame).
 
     Out-of-domain positions never reach here: the builder already
     converted them to miss tokens (`build_elgs_tracks` step 5), which is
     the heads prereg's `off_domain_reports` ruling.
+
+    ENDPOINTS ARE EXCLUDED. `windows_between_anchors` builds
+    `Window(earlier.end_frame, later.start_frame)`, so both endpoints ARE
+    anchor frames, and the bridge family for the window is constructed
+    FROM the consensus points at exactly those frames. Including them
+    would (a) score anchor-frame reports against a bridge fitted to them
+    and (b) double-count every frame shared by two windows whenever an
+    anchor is a single frame -- in which case `earlier.end_frame ==
+    later.start_frame` and consecutive windows touch. A window is the
+    span BETWEEN anchors; its interior is what the evidence is about.
     """
     wanted = {int(j) for j in track_ids}
     out: dict[tuple[int, int, float], Report] = {}
@@ -668,7 +707,7 @@ def _reports_in_window(
         camera_id = int(track["camera_id"])
         for report in track["reports"]:
             frame = float(report["frame"])
-            if not (window.start_frame <= frame <= window.end_frame):
+            if not (window.start_frame < frame < window.end_frame):
                 continue
             if report.get("is_miss", False):
                 out[(track_id, camera_id, frame)] = Report(is_miss=True)
@@ -684,8 +723,6 @@ def _reports_in_window(
 
 def window_phi(
     context: EvidenceContext,
-    family_id: int,
-    window: Window,
     clusters: Sequence[SeedCluster],
     reports: Mapping[tuple[int, int, float], Report],
     q_snapshot: QSnapshot,
@@ -827,11 +864,16 @@ def refresh_round_evidence(
             context.sealed, track_ids, c_cap=context.c_cap, constants=context.constants
         )
         entry = coverage_entry(family_id, anchors)
-        coverage[str(family_id)] = {
+        # `n_windows_retained` is counted AFTER the drops below, so a
+        # family whose windows all carry zero reports or no bridge family
+        # is not logged as evidence-covered while contributing Phi = 0.
+        record = {
             "n_anchors": entry.n_anchors,
             "n_windows": entry.n_windows,
+            "n_windows_retained": 0,
             "photometric_only": entry.photometric_only,
         }
+        coverage[str(family_id)] = record
         if entry.photometric_only:
             continue
 
@@ -886,9 +928,22 @@ def refresh_round_evidence(
                                 )
                                 value = q_tilde(q, d_u)
                     key = (bridge_id, track_id, camera_id, frame)
-                    if key not in written:
-                        snapshot.put(bridge_id, track_id, camera_id, frame, value)
-                        written.add(key)
+                    if key in written:
+                        # With exclusive window endpoints two windows of
+                        # one family cannot share a frame, so this is
+                        # unreachable. It is a HARD failure rather than a
+                        # silent skip: the previous revision skipped, and
+                        # the skip handed the second window a q computed
+                        # under the FIRST window's bridge geometry while
+                        # recomputing its centre -- q and g_pos then
+                        # referred to different world points.
+                        raise ContractError(
+                            f"q snapshot key {key} written twice: two windows "
+                            "of one family share a frame, which the exclusive "
+                            "window-endpoint rule must prevent"
+                        )
+                    snapshot.put(bridge_id, track_id, camera_id, frame, value)
+                    written.add(key)
                     centers[bridge_id][(track_id, camera_id, frame)] = center
 
             windows.append(
@@ -901,6 +956,11 @@ def refresh_round_evidence(
                     frames=tuple(sorted({f for (_, _, f) in reports})),
                 )
             )
+            record["n_windows_retained"] += 1
+            record["photometric_only"] = False
+        if record["n_windows_retained"] == 0:
+            record["photometric_only"] = True
+            record.setdefault("reason", "no window retained reports or bridges")
 
     snapshot.freeze()
     context.coverage = coverage
@@ -957,8 +1017,6 @@ def family_phi(
             z_series = presence_series(realization, entry.frames, frame_time)
         total += window_phi(
             context,
-            family_id,
-            entry.window,
             entry.clusters,
             entry.reports,
             _window_q_subset(round_evidence, entry),

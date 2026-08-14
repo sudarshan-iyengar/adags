@@ -216,6 +216,20 @@ def load_sealed_tracks(
     except ContractError as exc:
         raise TracksIncompatible("artifact_schema", str(exc)) from exc
 
+    # A CONTROL is never evidence. `make_shift_control` /
+    # `make_shuffle_control` stamp `control: {"kind": ...}` and their
+    # digests sit in the SAME `files_sha256` map, so editing the
+    # manifest's `primary` field would otherwise promote a falsification
+    # arm past every other check with its seal intact.
+    control = artifact.get("control")
+    if control:
+        raise TracksIncompatible(
+            "control_artifact",
+            f"{primary_path} is the {control.get('kind')!r} CONTROL arm, not "
+            "the primary artifact; controls are falsification arms and are "
+            "never consumed as evidence",
+        )
+
     # 6. Backend admissibility.
     identity = _tracker_identity(manifest)
     admissible = bool(identity.get("evidence_admissible", False))

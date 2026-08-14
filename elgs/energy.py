@@ -224,6 +224,20 @@ def stream_log_likelihoods(
                         # L0 (absence hypothesis) — L_{z_f(t)} with z=0.
                         l1 = likelihood_l0(report, r_u, heads)
                     l0 = likelihood_l0(report, r_u, heads)
+                    # A non-positive likelihood makes math.log raise
+                    # ValueError, which is NOT a ContractError and so
+                    # escapes the round driver's rejection handling and
+                    # kills the job mid-round. It is reachable: p_vis can
+                    # underflow to 0 for a badly displaced bridge, and at
+                    # r_u = 1 with q_tilde = 1 that leaves L1 = 0. Fail
+                    # closed with a diagnosable contract error instead.
+                    if l1 <= 0.0 or l0 <= 0.0:
+                        raise ContractError(
+                            f"non-positive likelihood (L1={l1}, L0={l0}) for "
+                            f"report {key}: the position head has underflowed, "
+                            "which usually means the bridge projection and the "
+                            "report are in different pixel domains"
+                        )
                     l_scored += cluster.alpha_u * math.log(l1)
                     l_cens += cluster.alpha_u * math.log(l0)
         scored[bridge_id] = l_scored

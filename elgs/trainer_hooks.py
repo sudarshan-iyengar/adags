@@ -74,6 +74,7 @@ class ElgsTrainerState:
     post_refit_done: bool = False
     evidence: object = None             # elgs.evidence_stack.EvidenceContext
     evidence_frame_time: dict = field(default_factory=dict)  # frame index -> model t
+    evidence_pixel_scale: float = 1.0   # loaded raster -> report raster
 
 
 def load_structural_prereg(prereg_dir: str) -> dict:
@@ -371,6 +372,23 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
         if float(getattr(opt, key)) < 0:
             raise ContractError(f"{key} is unset (-1 sentinel); the evidence path needs it")
 
+    # THE ACTUAL EVIDENCE-BEARING GATE. `elgs_smoke_schedule` is a
+    # SCHEDULE switch; it does NOT make a run non-evidence-bearing.
+    # scripts/submit_apollo.py derives `evidence_bearing` purely from
+    # working-tree cleanliness, and the two flags are independent — so a
+    # clean-tree run stamped `evidence_bearing: true` could otherwise set
+    # elgs_smoke_schedule and consume unfrozen hand-picked head constants
+    # under an evidence-bearing ledger line. The run manifest the
+    # submission wrapper writes into the context is the authority, and it
+    # is read here.
+    if smoke and _manifest_is_evidence_bearing():
+        raise ContractError(
+            "the run manifest stamps evidence_bearing=true, so the smoke-tier "
+            "evidence heads may not be loaded; freeze the heads in "
+            "prereg_evidence_heads_v1.json or submit this run as "
+            "non-evidence-bearing"
+        )
+
     constants = load_evidence_constants(
         str(getattr(opt, "elgs_prereg_dir", "configs/elgs")), smoke=smoke
     )
@@ -398,6 +416,7 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
         require_evidence_admissible=not smoke,
     )
 
+    report_raster = _declared_report_raster(source_path)
     state.evidence = build_evidence_context(
         sealed,
         constants,
@@ -408,7 +427,18 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
         c_cap=int(getattr(opt, "elgs_c_cap")),
         beta=float(getattr(opt, "elgs_beta")),
         tau_b=float(getattr(opt, "elgs_tau_b")),
+        report_raster=report_raster,
     )
+    # Projected pixels must be mapped back into the REPORT raster before
+    # g_pos ever sees them (see elgs.probe_model). The scale is exact:
+    # utils.camera_utils.loadCam divides every intrinsic by one `scale`.
+    if report_raster is None:
+        state.evidence_pixel_scale = 1.0
+    else:
+        loaded_width = float(cameras[0].image_width)
+        if loaded_width <= 0:
+            raise ContractError("loaded camera reports a non-positive width")
+        state.evidence_pixel_scale = report_raster[0] / loaded_width
     # Frame index -> MODEL time, read off the scene's own cameras. NOT
     # derived from the artifact's fps: the reader divides `time` by
     # `frame_ratio`, so 1/fps is the wrong unit whenever frame_ratio > 1
@@ -475,6 +505,47 @@ def _scene_frame_times(cameras) -> dict:
             out[index] = timestamp
             break
     return out
+
+
+def _manifest_is_evidence_bearing(manifest_filename: str = "elgs_run_manifest.json") -> bool:
+    """Whether the submission wrapper stamped this run evidence-bearing.
+
+    The manifest is written O_EXCL into the git-archive context root, so
+    in-container it sits in the working directory (the same file
+    `scripts.submit_apollo.runtime_assertions` re-verifies). Absent
+    manifest => a local/test invocation => False, which keeps the CPU
+    suite and any bare `python main.py` runnable.
+    """
+    path = os.path.join(os.getcwd(), manifest_filename)
+    if not os.path.isfile(path):
+        return False
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return bool(json.load(handle).get("evidence_bearing", False))
+    except (OSError, ValueError):
+        # An unreadable manifest is not a licence to load smoke heads.
+        return True
+
+
+def _declared_report_raster(source_path) -> tuple[float, float] | None:
+    """The (w, h) the artifact's report positions live in.
+
+    `build_elgs_tracks` bounds reports by the camera width/height it read
+    from `transforms_train.json`, i.e. the FULL declared raster — not the
+    possibly-downscaled raster the trainer loads.
+    """
+    path = os.path.join(str(source_path), "transforms_train.json")
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            frames = json.load(handle).get("frames") or []
+    except (OSError, ValueError):
+        return None
+    for frame in frames:
+        if "w" in frame and "h" in frame:
+            return float(frame["w"]), float(frame["h"])
+    return None
 
 
 def _scene_source_sha256(source_path) -> str | None:
@@ -693,11 +764,25 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
         from .evidence_stack import evidence_exact_delta
 
         def exact_deltas_fn(plan):
-            return evidence_exact_delta(
-                state.evidence, round_evidence, plan,
-                state.runtime.registry, state.config,
-                frame_time=state.evidence_frame_time,
-            )
+            # A ContractError raised here would be caught by
+            # `round_driver.run_pass` and recorded as an ordinary
+            # candidate REJECTION, so a systematic evidence-path defect
+            # would present as "every candidate rejected" — a
+            # publishable-looking null result produced by a bug. Re-raise
+            # outside the ContractError hierarchy so it stops the run
+            # loudly instead (AGENTS.md: never a silent no-state
+            # observation).
+            try:
+                return evidence_exact_delta(
+                    state.evidence, round_evidence, plan,
+                    state.runtime.registry, state.config,
+                    frame_time=state.evidence_frame_time,
+                )
+            except ContractError as failure:
+                raise RuntimeError(
+                    f"EL-GS evidence path failed on a {plan.op} candidate for "
+                    f"families {plan.family_ids}: {failure}"
+                ) from failure
 
     outcome = run_pass(
         proposals, state.runtime, state.bundle, sample_builder,
@@ -805,6 +890,7 @@ def _refresh_round_evidence(state, gaussians, scene, round_index):
         cameras,
         presence_at=presence_at,
         frame_to_time=state.evidence_frame_time,
+        pixel_scale=state.evidence_pixel_scale,
     )
     evidence = refresh_round_evidence(
         state.evidence,

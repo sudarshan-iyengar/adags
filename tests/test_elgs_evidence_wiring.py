@@ -53,6 +53,15 @@ from elgs.tracks_schema import TRACKS_SCHEMA
 
 PREREG_DIR = str(Path(__file__).resolve().parents[1] / "configs" / "elgs")
 
+#: The fixture's object is STATIONARY, so every report lands on the same
+#: pixel and a correct bridge projects onto it. That agreement is what
+#: makes the evidence support presence, and therefore what makes the sign
+#: of the evidence term well defined. An earlier fixture let the report
+#: drift with the frame while the stub probe projected to a fixed pixel;
+#: `g_pos` then decayed with distance and the evidence legitimately
+#: opposed presence — a fixture artifact that says nothing about the code.
+_REPORT_PX = (100.0, 60.0)
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -87,10 +96,10 @@ def _artifact(
                     # In-domain but low visibility: the exact condition
                     # the absence diagnostic found dominates real data.
                     reports.append({**base, "is_miss": False, "v": 0.2,
-                                    "x": 100.0 + frame, "y": 60.0})
+                                    "x": _REPORT_PX[0], "y": _REPORT_PX[1]})
                 else:
                     reports.append({**base, "is_miss": False, "v": 0.9,
-                                    "x": 100.0 + frame, "y": 60.0})
+                                    "x": _REPORT_PX[0], "y": _REPORT_PX[1]})
             tracks.append({
                 "track_id": track_id, "seed_id": seed["seed_id"],
                 "camera_id": camera_id, "reports": reports,
@@ -284,6 +293,14 @@ class TracksAdmissionTests(_TempDirTest):
         )
         self._assert_reason("held_out_leak", directory)
 
+    def test_control_arm_is_refused_even_when_promoted_to_primary(self):
+        """A control's digest sits in the same files_sha256 map, so
+        editing `primary` would otherwise slip a falsification arm past
+        every other check with its seal intact."""
+        artifact = _artifact()
+        artifact["control"] = {"kind": "shift", "shift_frames": 10}
+        self._assert_reason("control_artifact", _seal(self.tmp / "ctl", artifact))
+
     def test_artifact_schema_failure_is_reported_as_such(self):
         artifact = _artifact()
         artifact["seeds"][0]["n_cam"] = 1  # violates the >= 2 camera seed rule
@@ -332,6 +349,94 @@ class _StubGaussians:
 
 
 class ProbeParityTests(unittest.TestCase):
+    def test_model_probe_matches_a_hand_computed_closed_form(self):
+        """INDEPENDENT parity: the expected value is computed here from
+        the compositing definition, NOT by calling project_points.
+
+        The earlier version of this test built the AnalyticProbe fixture
+        with the implementation under test, so the extrinsics convention,
+        the intrinsic fallback and the sigma_px derivation all cancelled
+        and only the product was compared. This one fixes the geometry by
+        hand: identity extrinsics, fl = 50, principal point (32, 24), so
+        a splat at (X, Y, Z) lands at (50X/Z + 32, 50Y/Z + 24) with
+        sigma_px = mean_scale * 50 / Z.
+        """
+        camera = _StubCamera()  # 64x48, fl 50, cx 32, cy 24, identity w2c
+        # One splat exactly on the query ray at depth 2, one off-axis.
+        xyz = torch.tensor([[0.0, 0.0, 2.0], [0.04, 0.0, 2.0]], dtype=torch.float32)
+        opacity = torch.tensor([[0.5], [0.25]], dtype=torch.float32)
+        scale = 0.02
+        scaling = torch.full((2, 3), scale, dtype=torch.float32)
+        gaussians = _StubGaussians(
+            xyz, opacity, scaling, torch.tensor([1, 1], dtype=torch.long)
+        )
+        probe = ModelProbe(
+            gaussians, {1: camera},
+            presence_at=lambda t, f: torch.ones((2, 1), dtype=torch.float32),
+        )
+
+        # Hand-computed geometry.
+        sigma_px = scale * 50.0 / 2.0                      # 0.5 px
+        centre_0 = (32.0, 24.0)                            # on-axis
+        centre_1 = (50.0 * 0.04 / 2.0 + 32.0, 24.0)        # 33.0 px
+        query = (32.0, 24.0)
+        g0 = math.exp(-0.5 * 0.0 / sigma_px ** 2)          # 1.0
+        g1 = math.exp(-0.5 * ((query[0] - centre_1[0]) ** 2) / sigma_px ** 2)
+        expected = (1.0 - 0.5 * g0) * (1.0 - 0.25 * g1)
+
+        actual = probe.transmittance(
+            1, 0.0, query, 3.0, exclude_track=None, present_family=None
+        )
+        self.assertAlmostEqual(actual, expected, delta=1e-6)
+        self.assertAlmostEqual(centre_0[0], 32.0, places=12)  # fixture sanity
+
+    def test_pixel_scale_maps_projections_into_the_report_raster(self):
+        """The domain fix: a model loaded at resolution N must report
+        pixels in the FULL report raster, not its own downscaled one."""
+        full = _StubCamera(width=64, height=48, fl=50.0)
+        quarter = _StubCamera(width=16, height=12, fl=12.5)
+        quarter.cx, quarter.cy = 8.0, 6.0
+        xyz = torch.tensor([[0.04, 0.0, 2.0]], dtype=torch.float32)
+        gaussians = _StubGaussians(
+            xyz, torch.tensor([[0.5]], dtype=torch.float32),
+            torch.full((1, 3), 0.02, dtype=torch.float32),
+            torch.tensor([1], dtype=torch.long),
+        )
+        at_full = ModelProbe(
+            gaussians, {1: full}, presence_at=lambda t, f: torch.ones((1, 1))
+        ).project(1, (0.04, 0.0, 2.0))
+        at_quarter = ModelProbe(
+            gaussians, {1: quarter}, presence_at=lambda t, f: torch.ones((1, 1)),
+            pixel_scale=4.0,
+        ).project(1, (0.04, 0.0, 2.0))
+        self.assertIsNotNone(at_full)
+        self.assertIsNotNone(at_quarter)
+        self.assertAlmostEqual(at_full[0][0], at_quarter[0][0], delta=1e-4)
+        self.assertAlmostEqual(at_full[0][1], at_quarter[0][1], delta=1e-4)
+
+    def test_geometry_cache_does_not_grow_with_frames_or_families(self):
+        """The cache key was (camera, frame, family), which at S1 scale
+        is hundreds of GB. Geometry depends on the camera alone."""
+        camera = _StubCamera()
+        gaussians = _StubGaussians(
+            torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32),
+            torch.tensor([[0.5]], dtype=torch.float32),
+            torch.full((1, 3), 0.02, dtype=torch.float32),
+            torch.tensor([1], dtype=torch.long),
+        )
+        probe = ModelProbe(
+            gaussians, {1: camera}, presence_at=lambda t, f: torch.ones((1, 1)),
+            frame_to_time={i: i / 120.0 for i in range(20)},
+        )
+        for frame in range(20):
+            for family in (1, 2, 3, 4, 5):
+                probe.transmittance(
+                    1, float(frame), (32.0, 24.0), 4.0,
+                    exclude_track=None, present_family=family,
+                )
+        self.assertEqual(len(probe._geometry), 1)
+        self.assertEqual(len(probe._presence), 20)
+
     def test_model_probe_matches_analytic_probe_to_1e6(self):
         camera = _StubCamera()
         # Three splats in front of a query point at depth 4.0.
@@ -577,12 +682,38 @@ class EvidenceContextTests(_TempDirTest):
         # A family with no bound cluster has no evidence: the fallback.
         self.assertEqual(context.track_ids_of_family(11), ())
 
+    def test_declared_D_img_must_match_the_report_raster(self):
+        """The pixel-domain guard. A D_img in one raster and reports in
+        another zeroes the visible head for every report and gives the
+        evidence term a constant sign."""
+        positions = torch.tensor(
+            [[0.0, 0.0, 1.0], [0.1, 0.0, 1.0], [0.2, 0.0, 1.0]], dtype=torch.float32
+        )
+        family_ids = torch.tensor([11, 11, 12], dtype=torch.long)
+        with self.assertRaises(ContractError) as caught:
+            build_evidence_context(
+                self.sealed, self.constants, positions, family_ids,
+                r_site=0.5, binding_threshold=1.0, c_cap=4, beta=0.1, tau_b=1.0,
+                report_raster=(290.0, 137.0),  # the downscaled raster
+            )
+        self.assertIn("pixel domain", str(caught.exception))
+        # The declared raster is accepted.
+        build_evidence_context(
+            self.sealed, self.constants, positions, family_ids,
+            r_site=0.5, binding_threshold=1.0, c_cap=4, beta=0.1, tau_b=1.0,
+            report_raster=(1160.0, 550.0),
+        )
+
     def test_context_state_round_trips_through_the_checkpoint_slot(self):
         context = self._context()
         payload = context.to_state()
         self.assertIn("tracks_provenance", payload)
         self.assertEqual(payload["tier"], "smoke")
         self.assertTrue(payload["clusters"])
+        # The evidence binding is its OWN table and must persist: the M0
+        # elgs_state.binding slot holds a different object.
+        self.assertIn("binding", payload)
+        self.assertIn("binding", payload["binding"])
         # The evidence block rides inside elgs_state; a run WITHOUT one
         # must still load (photometric-only and every M0-era checkpoint).
         state = build_elgs_state(
@@ -645,7 +776,8 @@ class _StubProbe:
         self._t = float(transmittance_value)
 
     def project(self, camera_id, point):
-        return (100.0 + 10.0 * camera_id, 60.0), 2.0
+        # ON the report pixel: a correct bridge for a stationary object.
+        return _REPORT_PX, 2.0
 
     def in_frustum(self, camera_id, frame, point):
         return True
@@ -770,6 +902,53 @@ class EvidenceDeltaTests(_TempDirTest):
         phi_present = _family_phi(self.context, evidence, self.record.family_id,
                                   present, self.frame_time)
         self.assertEqual(phi_present, 0.0)
+
+    def test_evidence_term_has_the_right_SIGN_for_a_supported_family(self):
+        """The behaviour no earlier test covered, and the one whose
+        absence let a pixel-domain bug through: the SIGN.
+
+        The fixture's tracks report the object present (v=0.9) either
+        side of the gap and the bridge sits on its consensus point, so
+        the evidence supports PRESENCE. Deleting the family must
+        therefore RAISE the energy — a positive exact_deltas — which
+        pushes `delta_total + k*SE < 0` away from acceptance. A sign
+        inversion anywhere in phi() or evidence_exact_delta flips this.
+        """
+        from elgs.evidence_stack import evidence_exact_delta
+
+        evidence = self._round_evidence()
+        delta = evidence_exact_delta(
+            self.context, evidence,
+            _Plan(family_ids=(self.record.family_id,),
+                  child_intervals={self.record.family_id: _EMPTY_INTERVAL()}),
+            self.registry, self.config, frame_time=self.frame_time,
+        )
+        self.assertGreater(
+            delta, 0.0,
+            "deleting a family the tracks support must raise the energy",
+        )
+
+    def test_window_endpoints_are_excluded_so_windows_never_share_a_frame(self):
+        """Single-frame anchors make consecutive windows touch. With
+        inclusive endpoints the shared frame was counted in both windows
+        AND its q was reused across two different bridge geometries."""
+        from elgs.bridges import AnchorInterval, windows_between_anchors
+        from elgs.evidence_stack import _reports_in_window
+
+        anchors = (
+            AnchorInterval(0.0, 1.0, 9),
+            AnchorInterval(3.0, 3.0, 9),   # single frame
+            AnchorInterval(6.0, 7.0, 9),
+        )
+        windows = windows_between_anchors(anchors)
+        self.assertEqual(len(windows), 2)
+        self.assertEqual(windows[0].end_frame, windows[1].start_frame)
+
+        track_ids = [int(t["track_id"]) for t in self.sealed.tracks]
+        params = self.constants.heads.params
+        first = set(_reports_in_window(self.sealed, track_ids, windows[0], params))
+        second = set(_reports_in_window(self.sealed, track_ids, windows[1], params))
+        self.assertEqual(first & second, set(), "windows must not share reports")
 
     def test_beta_scales_the_delta_linearly(self):
         from elgs.evidence_stack import evidence_exact_delta

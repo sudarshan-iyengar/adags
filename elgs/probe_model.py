@@ -54,14 +54,21 @@ _MIN_SIGMA_PX = 1e-3
 
 
 @dataclass(frozen=True)
-class ProjectedSplats:
-    """One camera/frame projection of the whole model, cached per round."""
+class ProjectedGeometry:
+    """One camera's projection of the model's CANONICAL positions.
+
+    Cached per CAMERA, not per (camera, frame, family): `get_xyz` is the
+    canonical position and the rig is static, so screen geometry does not
+    vary with frame, and presence/opacity are applied separately. Keying
+    the cache on (camera, frame, present_family) instead — as an earlier
+    revision did — makes the key space |cameras| x |frames| x |families|,
+    which at M0's own S1 scale (111 families, 50k rows, ~26 cameras) is
+    hundreds of GB. That was a real OOM, not a theoretical one.
+    """
 
     center_px: torch.Tensor  # (N, 2)
     depth: torch.Tensor  # (N,)
-    alpha: torch.Tensor  # (N,)
     sigma_px: torch.Tensor  # (N,)
-    family_ids: torch.Tensor  # (N,)
 
 
 def _camera_intrinsics(camera) -> tuple[float, float, float, float]:
@@ -124,6 +131,7 @@ class ModelProbe:
         *,
         presence_at,
         frame_to_time: dict | None = None,
+        pixel_scale: float = 1.0,
         device: torch.device | str | None = None,
     ) -> None:
         """`cameras` maps camera_id -> one Camera carrying that view's
@@ -140,8 +148,24 @@ class ModelProbe:
         self._cameras = dict(cameras)
         self._presence_at = presence_at
         self._frame_to_time = dict(frame_to_time or {})
+        if pixel_scale <= 0.0:
+            raise ContractError("pixel_scale must be positive")
+        # REPORT-RASTER MAPPING. Reports live in the CONVERTED scene's
+        # full raster (the tracks builder bounds them by the
+        # transforms' declared w/h), while the trainer may load that
+        # scene downscaled -- `utils/camera_utils.loadCam` divides every
+        # intrinsic by `scale` for `args.resolution != 1`, and the one
+        # committed EL-GS config sets `resolution: 4`. Projected pixels
+        # are therefore multiplied back into the report raster before
+        # they are ever compared with a report position. Without this
+        # the two live in rasters differing by 4x, `g_pos` underflows to
+        # zero for every report, and the evidence term acquires a
+        # CONSTANT SIGN favouring truncation -- an axis-scale artifact
+        # that would read as "the tracker says carve these families".
+        self._pixel_scale = float(pixel_scale)
         self._device = torch.device(device) if device is not None else None
-        self._cache: dict[tuple[int, float, int | None], ProjectedSplats] = {}
+        self._geometry: dict[int, ProjectedGeometry] = {}
+        self._presence: dict[float, torch.Tensor] = {}
 
     def _timestamp_for(self, frame: float, camera) -> float:
         index = int(frame)
@@ -161,48 +185,72 @@ class ModelProbe:
         return self._cameras[camera_id]
 
     @torch.no_grad()
-    def _project(self, camera_id: int, frame: float, present_family: int | None) -> ProjectedSplats:
-        key = (int(camera_id), float(frame), present_family)
-        if key in self._cache:
-            return self._cache[key]
+    def _geometry_for(self, camera_id: int) -> ProjectedGeometry:
+        """Screen geometry for one camera; frame- and family-independent."""
+        key = int(camera_id)
+        if key in self._geometry:
+            return self._geometry[key]
         camera = self._camera(camera_id)
-        timestamp = self._timestamp_for(frame, camera)
-
         xyz = self._gaussians.get_xyz.detach()
         if self._device is not None:
             xyz = xyz.to(self._device)
         center_px, depth = project_points(camera, xyz)
+        center_px = center_px * self._pixel_scale
 
-        opacity = self._gaussians.get_opacity.detach().to(xyz.device).reshape(-1)
-        presence = self._presence_at(timestamp, present_family)
-        presence = presence.detach().to(xyz.device).reshape(-1)
+        scaling = self._gaussians.get_scaling.detach().to(xyz.device)
+        world_sigma = (
+            scaling[:, :3].mean(dim=1) if scaling.shape[1] >= 3 else scaling.reshape(-1)
+        )
+        fl_x, fl_y, _, _ = _camera_intrinsics(camera)
+        focal = 0.5 * (fl_x + fl_y) * self._pixel_scale
+        sigma_px = (world_sigma * focal / depth.clamp_min(1e-8)).clamp_min(_MIN_SIGMA_PX)
+
+        geometry = ProjectedGeometry(
+            center_px=center_px, depth=depth, sigma_px=sigma_px
+        )
+        self._geometry[key] = geometry
+        return geometry
+
+    @torch.no_grad()
+    def _alpha_for(self, frame: float, camera, present_family: int | None) -> torch.Tensor:
+        """Composited per-row opacity at `frame`, family forced present.
+
+        Presence is cached per FRAME for the live state; forcing is a
+        masked write on a clone, so the cache never grows with the
+        family count.
+        """
+        timestamp = self._timestamp_for(frame, camera)
+        if timestamp not in self._presence:
+            column = self._presence_at(timestamp, None).detach().reshape(-1)
+            self._presence[timestamp] = column
+        presence = self._presence[timestamp]
+
+        opacity = self._gaussians.get_opacity.detach().reshape(-1).to(presence.device)
+        # gaussian_dim == 4: the rasterizer composites the temporal
+        # marginal too, so the probe must, or a temporally distant
+        # Gaussian reads as a fully opaque occluder and q is
+        # under-estimated (prereg_observability: "exact w.r.t. the
+        # rasterizer's compositing model").
+        marginal = getattr(self._gaussians, "get_marginal_t", None)
+        if callable(marginal):
+            try:
+                temporal = marginal(timestamp).detach().reshape(-1).to(presence.device)
+            except (TypeError, RuntimeError):
+                temporal = None
+            if temporal is not None and temporal.shape == opacity.shape:
+                opacity = opacity * temporal
+
         if presence.shape[0] != opacity.shape[0]:
             raise ContractError(
                 f"presence column has {presence.shape[0]} rows but the model "
                 f"has {opacity.shape[0]}"
             )
-        alpha = (opacity * presence).clamp(0.0, 1.0)
-
-        scaling = self._gaussians.get_scaling.detach().to(xyz.device)
-        world_sigma = scaling[:, :3].mean(dim=1) if scaling.shape[1] >= 3 else scaling.reshape(-1)
-        fl_x, fl_y, _, _ = _camera_intrinsics(camera)
-        focal = 0.5 * (fl_x + fl_y)
-        sigma_px = (world_sigma * focal / depth.clamp_min(1e-8)).clamp_min(_MIN_SIGMA_PX)
-
-        family_ids = getattr(self._gaussians, "_elgs_family_ids", None)
-        if family_ids is None:
-            family_ids = torch.full((xyz.shape[0],), -1, dtype=torch.long)
-        family_ids = family_ids.to(xyz.device)
-
-        projected = ProjectedSplats(
-            center_px=center_px,
-            depth=depth,
-            alpha=alpha,
-            sigma_px=sigma_px,
-            family_ids=family_ids,
-        )
-        self._cache[key] = projected
-        return projected
+        if present_family is not None:
+            family_ids = getattr(self._gaussians, "_elgs_family_ids", None)
+            if family_ids is not None:
+                mask = (family_ids.to(presence.device) == int(present_family))
+                presence = presence.clone().masked_fill(mask, 1.0)
+        return (opacity * presence).clamp(0.0, 1.0)
 
     # -- RenderProbe ------------------------------------------------------
 
@@ -221,32 +269,42 @@ class ModelProbe:
         compositing, spec §3). `exclude_track` is recorded but performs
         no row filtering -- see the module docstring's disclosed reading."""
         _ = exclude_track
-        projected = self._project(camera_id, frame, present_family)
-        if projected.depth.numel() == 0:
+        # Validate the frame FIRST. The early returns below (empty model,
+        # empty front set, everything pruned) would otherwise let an
+        # unmapped frame index return 1.0 instead of failing closed,
+        # because only `_alpha_for` consults the frame->time map.
+        self._timestamp_for(frame, self._camera(camera_id))
+        geometry = self._geometry_for(camera_id)
+        if geometry.depth.numel() == 0:
             return 1.0
 
         # Strict front set: splats at or behind the query point never
         # composite. This is also what stands in for query-source
         # exclusion model-side.
-        front = (projected.depth > 0.0) & (projected.depth < float(depth))
+        front = (geometry.depth > 0.0) & (geometry.depth < float(depth))
         if not bool(front.any()):
             return 1.0
 
         px = torch.tensor(
             [float(pixel[0]), float(pixel[1])],
-            device=projected.center_px.device,
-            dtype=projected.center_px.dtype,
+            device=geometry.center_px.device,
+            dtype=geometry.center_px.dtype,
         )
-        offset = projected.center_px[front] - px
-        sigma = projected.sigma_px[front]
+        offset = geometry.center_px[front] - px
+        sigma = geometry.sigma_px[front]
         exponent = -0.5 * (offset * offset).sum(dim=1) / (sigma * sigma)
         footprint = torch.exp(exponent)
 
         # Spatial prune: keep only splats that can move the product.
+        # The cutoff is PER SPLAT, so the aggregate error grows with the
+        # kept-set size; it is set far below the 1e-6 parity tolerance
+        # and the pruned direction RAISES T (drops occluders), which is
+        # recorded rather than claimed to be conservative.
         keep = footprint > FOOTPRINT_CUTOFF
         if not bool(keep.any()):
             return 1.0
-        contribution = (projected.alpha[front][keep] * footprint[keep]).clamp(0.0, 1.0)
+        alpha = self._alpha_for(frame, self._camera(camera_id), present_family)
+        contribution = (alpha[front][keep] * footprint[keep]).clamp(0.0, 1.0)
         t_value = float(torch.exp(torch.log1p(-contribution.clamp_max(1.0 - 1e-12)).sum()))
         if not (0.0 <= t_value <= 1.0):
             raise ContractError(
@@ -260,10 +318,21 @@ class ModelProbe:
         device = self._gaussians.get_xyz.device
         tensor = torch.tensor([list(point)], device=device, dtype=torch.float32)
         pixel, depth = project_points(camera, tensor)
+        pixel = pixel * self._pixel_scale
         if float(depth[0]) <= float(getattr(camera, "znear", 0.01)):
             return False
         u, v = float(pixel[0, 0]), float(pixel[0, 1])
-        return 0.0 <= u <= camera.image_width - 1.0 and 0.0 <= v <= camera.image_height - 1.0
+        width, height = self._report_raster(camera)
+        return 0.0 <= u <= width - 1.0 and 0.0 <= v <= height - 1.0
+
+    def _report_raster(self, camera) -> tuple[float, float]:
+        """The camera's raster in REPORT pixels (bounds must scale with
+        the projected pixels, or a downscaled model rejects most of its
+        own frustum)."""
+        return (
+            camera.image_width * self._pixel_scale,
+            camera.image_height * self._pixel_scale,
+        )
 
     @torch.no_grad()
     def project(self, camera_id: int, point: tuple[float, float, float]):
@@ -275,11 +344,13 @@ class ModelProbe:
         device = self._gaussians.get_xyz.device
         tensor = torch.tensor([list(point)], device=device, dtype=torch.float32)
         pixel, depth = project_points(camera, tensor)
+        pixel = pixel * self._pixel_scale
         d = float(depth[0])
         if d <= float(getattr(camera, "znear", 0.01)):
             return None
         u, v = float(pixel[0, 0]), float(pixel[0, 1])
-        if not (0.0 <= u <= camera.image_width - 1.0 and 0.0 <= v <= camera.image_height - 1.0):
+        width, height = self._report_raster(camera)
+        if not (0.0 <= u <= width - 1.0 and 0.0 <= v <= height - 1.0):
             return None
         return (u, v), d
 
