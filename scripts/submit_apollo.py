@@ -855,20 +855,51 @@ def ensure_workspace_and_project() -> None:
     and launch `det`.
     """
     command = determined.resolve_det_command()
-    for det_args, exists_ok_marker in (
-        (["workspace", "create", WORKSPACE_NAME], "already exists"),
-        (["project", "create", WORKSPACE_NAME, PROJECT_NAME], "already exists"),
-    ):
-        invocation = determined.run_det(command, det_args)
-        if invocation.returncode == 0:
-            print(f"created: {' '.join(det_args)}")
-        elif exists_ok_marker in (invocation.stdout + invocation.stderr).lower():
-            print(f"exists: {' '.join(det_args)}")
-        else:
+
+    # POSITIVE verification, not error-string matching. The previous
+    # revision treated a nonzero `create` as "already exists" only when
+    # the output contained the literal "already exists"; the master
+    # actually answers a duplicate workspace with "avoid names equal to
+    # other workspaces (case-insensitive)", so preflight FAILED on the
+    # workspace M0 itself created. Asking whether the thing exists is
+    # both correct and immune to the master's phrasing.
+    probe = determined.run_det(command, ["workspace", "describe", WORKSPACE_NAME])
+    if probe.returncode == 0:
+        print(f"exists: workspace {WORKSPACE_NAME}")
+    else:
+        created = determined.run_det(command, ["workspace", "create", WORKSPACE_NAME])
+        if created.returncode != 0:
             raise ContractError(
-                f"det {' '.join(det_args)} failed: "
-                f"{invocation.stderr.strip() or invocation.stdout.strip()}"
+                f"det workspace create {WORKSPACE_NAME} failed: "
+                f"{created.stderr.strip() or created.stdout.strip()}"
             )
+        print(f"created: workspace {WORKSPACE_NAME}")
+
+    listing = determined.run_det(
+        command, ["project", "list", WORKSPACE_NAME, "--json"]
+    )
+    existing: set[str] = set()
+    if listing.returncode == 0:
+        try:
+            existing = {
+                str(entry.get("name")) for entry in json.loads(listing.stdout or "[]")
+            }
+        except (TypeError, ValueError) as exc:
+            raise ContractError(
+                f"could not parse `det project list {WORKSPACE_NAME} --json`: {exc}"
+            ) from exc
+    if PROJECT_NAME in existing:
+        print(f"exists: project {WORKSPACE_NAME}/{PROJECT_NAME}")
+        return
+    created = determined.run_det(
+        command, ["project", "create", WORKSPACE_NAME, PROJECT_NAME]
+    )
+    if created.returncode != 0:
+        raise ContractError(
+            f"det project create {WORKSPACE_NAME} {PROJECT_NAME} failed: "
+            f"{created.stderr.strip() or created.stdout.strip()}"
+        )
+    print(f"created: project {WORKSPACE_NAME}/{PROJECT_NAME}")
 
 
 def cmd_submit(args: argparse.Namespace) -> int:
