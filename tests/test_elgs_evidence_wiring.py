@@ -1264,6 +1264,36 @@ class _Plan:
         self.op = "TEST"
 
 
+class SequenceIdentityTests(unittest.TestCase):
+    """The identity the cross-sequence guard compares against.
+
+    `source_path` lives on ModelParams, already absolute via
+    ModelParams.extract(). Reading it off the Scene or
+    OptimizationParams yields '' — which experiment 72 proved is caught
+    (the guard refused) but only AFTER a full scene load, so the unit
+    test pins where the value actually comes from.
+    """
+
+    def test_model_params_is_where_source_path_lives(self):
+        from arguments import ModelParams
+        import argparse
+
+        parser = argparse.ArgumentParser()
+        model = ModelParams(parser)
+        args = parser.parse_args(
+            ["--source_path", "/apollo/x/scissor_screen_w0_561"]
+        )
+        extracted = model.extract(args)
+        self.assertTrue(extracted.source_path)
+        self.assertTrue(extracted.source_path.endswith("scissor_screen_w0_561"))
+        # The two places an earlier revision looked carry nothing.
+        from arguments import OptimizationParams
+
+        opt_parser = argparse.ArgumentParser()
+        opt = OptimizationParams(opt_parser)
+        self.assertFalse(hasattr(opt, "source_path"))
+
+
 class HeadsGateTests(unittest.TestCase):
     def test_frozen_path_refuses_while_heads_are_unfrozen(self):
         with self.assertRaises(ContractError) as caught:

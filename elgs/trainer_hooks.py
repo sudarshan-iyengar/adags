@@ -341,7 +341,7 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
              "tensors_reset": len(state.runtime.logit_parameters())}
         )
     _refresh_routing_pins(state, gaussians)
-    attach_evidence(state, gaussians, scene, opt)
+    attach_evidence(state, gaussians, scene, dataset, opt)
     print(json.dumps({"elgs_setup": {
         "schedule": schedule_key,
         "frame_dt": frame_dt,
@@ -353,7 +353,7 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
     return state
 
 
-def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
+def attach_evidence(state: ElgsTrainerState, gaussians, scene, dataset, opt) -> None:
     """Bind the sealed tracks artifact, or stay photometric-only.
 
     No `elgs_tracks_dir` => the run is photometric-only by declaration
@@ -396,9 +396,17 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, opt) -> None:
         str(getattr(opt, "elgs_prereg_dir", "configs/elgs")), smoke=smoke
     )
 
-    source_path = getattr(scene, "source_path", None) or getattr(
-        opt, "source_path", ""
-    )
+    # `source_path` lives on ModelParams (`dataset`), which
+    # ModelParams.extract() has already made absolute. It is NOT on the
+    # Scene and NOT on OptimizationParams: reading those yielded '' and
+    # the sequence check correctly refused the run rather than scoring
+    # scissor's tracks against an unidentified scene.
+    source_path = str(getattr(dataset, "source_path", "") or "").strip()
+    if not source_path:
+        raise ContractError(
+            "the evidence path needs the scene's source_path to establish "
+            "sequence identity, and ModelParams carries none"
+        )
     sequence_id = os.path.basename(str(source_path).replace("\\", "/").rstrip("/"))
     cameras = [_unpack_camera(item)[0] for item in scene.getTrainCameras()]
     camera_ids = sorted({_camera_id_of(c) for c in cameras} - {None})
