@@ -56,3 +56,14 @@ OptimizationParams:
   elgs_a_lr: 0.002
   elgs_r_site: 0.05
   elgs_binding_threshold: 0.25
+
+  # SMOKE-ONLY EVALUATION BOUND — not a production report cap.
+  # Measured on this exact scene: the selected family's second window
+  # spans 464 interior frames / 135,488 reports, which with 3 bridges and
+  # 7 sigma points is 2,851,380 full-model transmittance passes for ONE
+  # round (experiment 76, cancelled after ~30 min still computing).
+  # elgs.evidence_stack.resolve_smoke_report_cap refuses this key unless
+  # the run BOTH sets elgs_smoke_schedule AND is stamped
+  # evidence_bearing false. Selection is deterministic and reads only
+  # (track, camera, frame) identifiers.
+  elgs_smoke_max_reports_per_window: 96

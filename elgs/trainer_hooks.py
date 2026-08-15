@@ -380,7 +380,11 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, dataset, opt) -> 
     if not tracks_dir:
         return
 
-    from .evidence_stack import build_evidence_context, load_evidence_constants
+    from .evidence_stack import (
+        build_evidence_context,
+        load_evidence_constants,
+        resolve_smoke_report_cap,
+    )
     from .tracks_loader import load_sealed_tracks
 
     smoke = bool(getattr(opt, "elgs_smoke_schedule", False))
@@ -455,6 +459,14 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, dataset, opt) -> 
             "positions with bridge projections and will not assume they "
             "share a pixel domain."
         )
+    # SMOKE-ONLY evaluation bound. Fail-closed on both conditions; the
+    # manifest is the authority on evidence-bearing status, exactly as it
+    # is for the smoke heads above.
+    smoke_cap = resolve_smoke_report_cap(
+        int(getattr(opt, "elgs_smoke_max_reports_per_window", 0) or 0),
+        smoke_schedule=smoke,
+        evidence_bearing=_manifest_is_evidence_bearing(),
+    )
     state.evidence = build_evidence_context(
         sealed,
         constants,
@@ -467,6 +479,7 @@ def attach_evidence(state: ElgsTrainerState, gaussians, scene, dataset, opt) -> 
         tau_b=float(getattr(opt, "elgs_tau_b")),
         report_raster=report_raster,
     )
+    state.evidence.smoke_max_reports_per_window = smoke_cap
     # RESTORE the persisted binding rather than keeping the one just
     # re-derived. A previous revision serialized the binding and claimed
     # a resume restored it; only the write existed, so a resumed run
@@ -1011,6 +1024,7 @@ def _refresh_round_evidence(state, gaussians, scene, round_index, family_ids=Non
         "photometric_only_families": sum(
             1 for v in evidence.coverage.values() if v.get("photometric_only")
         ),
+        "reports": evidence.report_accounting,
     }}, sort_keys=True))
     return evidence
 

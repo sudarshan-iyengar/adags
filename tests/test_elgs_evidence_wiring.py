@@ -1429,6 +1429,135 @@ class _SmokeState:
         self.rounds_run = []
 
 
+class SmokeReportBoundTests(unittest.TestCase):
+    """The SMOKE-ONLY per-window evaluation bound.
+
+    It truncates what the evidence estimator sees, so it is NOT a
+    production report cap: it must be unusable outside a declared
+    non-evidence-bearing smoke, deterministic, outcome-blind, and an
+    exact no-op when absent.
+    """
+
+    @staticmethod
+    def _reports(n_frames=8, n_cameras=4, n_tracks=3):
+        from elgs.evidence import Report
+
+        out = {}
+        for frame in range(n_frames):
+            for camera in range(n_cameras):
+                for track in range(n_tracks):
+                    out[(track, camera, float(frame))] = Report(
+                        is_miss=False, v=0.9, x=10.0, y=20.0
+                    )
+        return out
+
+    # -- gating -----------------------------------------------------
+
+    def test_disabled_by_default(self):
+        from elgs.evidence_stack import resolve_smoke_report_cap
+
+        self.assertEqual(
+            resolve_smoke_report_cap(0, smoke_schedule=True, evidence_bearing=False), 0
+        )
+
+    def test_requires_the_smoke_schedule(self):
+        from elgs.evidence_stack import resolve_smoke_report_cap
+
+        with self.assertRaises(ContractError) as caught:
+            resolve_smoke_report_cap(
+                32, smoke_schedule=False, evidence_bearing=False
+            )
+        self.assertIn("SMOKE-ONLY", str(caught.exception))
+
+    def test_fails_closed_for_an_evidence_bearing_run(self):
+        from elgs.evidence_stack import resolve_smoke_report_cap
+
+        with self.assertRaises(ContractError) as caught:
+            resolve_smoke_report_cap(
+                32, smoke_schedule=True, evidence_bearing=True
+            )
+        self.assertIn("evidence-bearing", str(caught.exception))
+
+    def test_admissible_only_with_both_conditions(self):
+        from elgs.evidence_stack import resolve_smoke_report_cap
+
+        self.assertEqual(
+            resolve_smoke_report_cap(32, smoke_schedule=True, evidence_bearing=False),
+            32,
+        )
+
+    # -- no-op when absent ------------------------------------------
+
+    def test_uncapped_execution_is_bit_identical(self):
+        from elgs.evidence_stack import select_smoke_reports
+
+        reports = self._reports()
+        for cap in (0, -1):
+            kept, stats = select_smoke_reports(reports, cap)
+            self.assertEqual(kept, reports)
+            self.assertEqual(stats["dropped"], 0)
+            self.assertEqual(stats["retained"], len(reports))
+
+    def test_a_window_already_within_budget_is_untouched(self):
+        from elgs.evidence_stack import select_smoke_reports
+
+        reports = self._reports(n_frames=2, n_cameras=1, n_tracks=1)
+        kept, stats = select_smoke_reports(reports, 100)
+        self.assertEqual(kept, reports)
+        self.assertEqual(stats["dropped"], 0)
+
+    # -- the selection itself ---------------------------------------
+
+    def test_respects_the_budget_and_accounts_exactly(self):
+        from elgs.evidence_stack import select_smoke_reports
+
+        reports = self._reports()          # 8 x 4 x 3 = 96
+        kept, stats = select_smoke_reports(reports, 12)
+        self.assertLessEqual(len(kept), 12)
+        self.assertEqual(stats["total"], 96)
+        self.assertEqual(stats["retained"], len(kept))
+        self.assertEqual(stats["dropped"], 96 - len(kept))
+        self.assertTrue(set(kept).issubset(set(reports)))
+
+    def test_selection_is_deterministic(self):
+        from elgs.evidence_stack import select_smoke_reports
+
+        reports = self._reports()
+        first = sorted(select_smoke_reports(reports, 12)[0])
+        for _ in range(4):
+            self.assertEqual(sorted(select_smoke_reports(reports, 12)[0]), first)
+        # Insertion order of the input must not matter either.
+        shuffled = {k: reports[k] for k in sorted(reports, reverse=True)}
+        self.assertEqual(sorted(select_smoke_reports(shuffled, 12)[0]), first)
+
+    def test_selection_is_stratified_over_frames_and_cameras(self):
+        from elgs.evidence_stack import select_smoke_reports
+
+        reports = self._reports()
+        kept, stats = select_smoke_reports(reports, 12)
+        self.assertGreater(stats["frames"], 1, "must span the temporal extent")
+        self.assertGreater(stats["cameras"], 1, "must span cameras where practical")
+        frames = sorted({k[2] for k in kept})
+        self.assertEqual(frames[0], 0.0, "the extent's start must be represented")
+        self.assertGreaterEqual(max(frames), 4.0, "and its far half too")
+
+    def test_selection_is_outcome_blind(self):
+        """Selection must read only (track, camera, frame). Reports whose
+        visibility values differ wildly must yield the SAME subset."""
+        from elgs.evidence import Report
+        from elgs.evidence_stack import select_smoke_reports
+
+        base = self._reports()
+        skewed = {
+            key: Report(is_miss=False, v=0.01 if key[2] < 4 else 0.99, x=1.0, y=2.0)
+            for key in base
+        }
+        self.assertEqual(
+            sorted(select_smoke_reports(base, 12)[0]),
+            sorted(select_smoke_reports(skewed, 12)[0]),
+        )
+
+
 class SequenceIdentityTests(unittest.TestCase):
     """The identity the cross-sequence guard compares against.
 

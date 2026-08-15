@@ -246,6 +246,13 @@ class OptimizationParams(ParamGroup):
         self.elgs_a_lr = -1.0
         self.elgs_r_site = -1.0
         self.elgs_binding_threshold = -1.0
+        # SMOKE-ONLY evaluation bound (0 = disabled = full-report
+        # semantics). NOT a production report cap: it truncates what
+        # the evidence estimator sees, so elgs.evidence_stack
+        # .resolve_smoke_report_cap refuses it unless the run both
+        # sets elgs_smoke_schedule and is stamped evidence_bearing
+        # false.
+        self.elgs_smoke_max_reports_per_window = 0
 
         super().__init__(parser, "Optimization Parameters")
 

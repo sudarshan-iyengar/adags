@@ -604,6 +604,9 @@ class EvidenceContext:
     beta: float
     tau_b: float
     coverage: dict = field(default_factory=dict)
+    #: SMOKE-ONLY per-window evaluation bound; 0 = disabled (full-report
+    #: semantics). Set only via resolve_smoke_report_cap.
+    smoke_max_reports_per_window: int = 0
     _window_counts: dict = field(default_factory=dict)
 
     def window_count(self, family_id: int) -> int:
@@ -794,6 +797,107 @@ def _reports_in_window(
     return out
 
 
+#: Frozen description of the smoke-only selection rule, emitted in the
+#: round log so the bound is never silent.
+SMOKE_SELECTION_RULE = (
+    "smoke-only: frames evenly spaced across the window's temporal extent, "
+    "then reports evenly spaced by (camera_id, track_id) within each "
+    "selected frame; deterministic; selection reads ONLY track/camera/frame "
+    "identifiers"
+)
+
+
+def resolve_smoke_report_cap(
+    cap: int, *, smoke_schedule: bool, evidence_bearing: bool
+) -> int:
+    """Validate the SMOKE-ONLY per-window report cap, or refuse.
+
+    Returns 0 (disabled, full-report semantics) when no cap is declared.
+    A declared cap is admissible ONLY on a run that both sets
+    `elgs_smoke_schedule` AND is stamped `evidence_bearing: false`. It is
+    an evaluation bound for an integration smoke, NOT a production report
+    cap: capping reports changes what the evidence estimator sees, and a
+    production cap needs its own design, calibration, review and
+    preregistration. Fail-closed on either condition.
+    """
+    cap = int(cap or 0)
+    if cap <= 0:
+        return 0
+    if not smoke_schedule:
+        raise ContractError(
+            "elgs_smoke_max_reports_per_window is a SMOKE-ONLY evaluation "
+            "bound and requires elgs_smoke_schedule; it is not a production "
+            "report cap"
+        )
+    if evidence_bearing:
+        raise ContractError(
+            "elgs_smoke_max_reports_per_window may not be used on an "
+            "evidence-bearing run: it truncates the reports the evidence "
+            "estimator sees, which is a scientific change requiring its own "
+            "design, calibration and preregistration"
+        )
+    return cap
+
+
+def select_smoke_reports(reports: Mapping, max_reports: int):
+    """A small deterministic, OUTCOME-BLIND subset of `reports`.
+
+    Stratified across the window's temporal extent (evenly spaced frames)
+    and across cameras (evenly spaced by camera id within each selected
+    frame). Selection reads ONLY the (track_id, camera_id, frame) key —
+    never q, never a likelihood, never the report's visibility value,
+    never a delta sign — so it cannot select for a preferred result.
+
+    Returns `(retained, stats)`. `max_reports <= 0` or a window already
+    within budget returns the reports UNCHANGED, so the uncapped path is
+    bit-identical to full-report semantics.
+    """
+    keys = sorted(reports)
+    total = len(keys)
+    if max_reports <= 0 or total <= max_reports:
+        return dict(reports), {
+            "total": total, "retained": total, "dropped": 0,
+            "frames": len({k[2] for k in keys}),
+            "cameras": len({k[1] for k in keys}),
+        }
+
+    by_frame: dict[float, list] = {}
+    for key in keys:
+        by_frame.setdefault(key[2], []).append(key)
+    frames = sorted(by_frame)
+
+    n_frames = min(len(frames), max_reports)
+    picked_frames = sorted(
+        dict.fromkeys(frames[(i * len(frames)) // n_frames] for i in range(n_frames))
+    )
+    budget = max(1, max_reports // len(picked_frames))
+
+    chosen: list = []
+    for index, frame in enumerate(picked_frames):
+        group = sorted(by_frame[frame], key=lambda k: (k[1], k[0]))
+        take = min(len(group), budget)
+        # ROTATE the within-frame start by the frame's position. Without
+        # it a budget of one report per frame always lands on the lowest
+        # (camera_id, track_id) and the subset covers exactly ONE camera —
+        # temporally spread but camera-degenerate. The rotation is pure
+        # index arithmetic on identifiers, so it stays deterministic and
+        # outcome-blind while spreading the subset over cameras too.
+        offset = index % len(group)
+        chosen.extend(
+            group[(offset + (i * len(group)) // take) % len(group)]
+            for i in range(take)
+        )
+    chosen = sorted(dict.fromkeys(chosen))[:max_reports]
+
+    return {key: reports[key] for key in chosen}, {
+        "total": total,
+        "retained": len(chosen),
+        "dropped": total - len(chosen),
+        "frames": len({k[2] for k in chosen}),
+        "cameras": len({k[1] for k in chosen}),
+    }
+
+
 def window_phi(
     context: EvidenceContext,
     clusters: Sequence[SeedCluster],
@@ -900,6 +1004,7 @@ class RoundEvidence:
     windows: tuple[WindowEvidence, ...]
     coverage: dict
     n_q_values: int
+    report_accounting: dict = field(default_factory=dict)
 
     def windows_of_family(self, family_id: int) -> tuple[WindowEvidence, ...]:
         return tuple(w for w in self.windows if w.family_id == family_id)
@@ -920,6 +1025,16 @@ def refresh_round_evidence(
     INSUFFICIENT-EVIDENCE FALLBACK, not a refusal.
     """
     snapshot = QSnapshot(round_index)
+    accounting = {
+        "total": 0, "retained": 0, "dropped": 0,
+        "frames_covered": 0, "cameras_covered": 0,
+        "max_reports_per_window": int(context.smoke_max_reports_per_window),
+        "selection_rule": (
+            SMOKE_SELECTION_RULE
+            if context.smoke_max_reports_per_window > 0
+            else "uncapped: every report in the window"
+        ),
+    }
     windows: list[WindowEvidence] = []
     coverage: dict[str, dict] = {}
     written: set[tuple[int, int, int, float]] = set()
@@ -956,6 +1071,15 @@ def refresh_round_evidence(
             )
             if not reports:
                 continue
+            reports, selection = select_smoke_reports(
+                reports, context.smoke_max_reports_per_window
+            )
+            for field_name in ("total", "retained", "dropped"):
+                accounting[field_name] += selection[field_name]
+            accounting["frames_covered"] += selection["frames"]
+            accounting["cameras_covered"] = max(
+                accounting["cameras_covered"], selection["cameras"]
+            )
             bridges_by_seed: dict[int, dict] = {}
             for cluster in clusters:
                 for seed_id in cluster.seed_ids:
@@ -1043,6 +1167,7 @@ def refresh_round_evidence(
         windows=tuple(windows),
         coverage=coverage,
         n_q_values=len(written),
+        report_accounting=accounting,
     )
 
 
@@ -1161,8 +1286,11 @@ __all__ = [
     "derive_seed_evidence",
     "family_anchor_series",
     "family_windows",
+    "SMOKE_SELECTION_RULE",
     "load_evidence_constants",
     "presence_series",
+    "resolve_smoke_report_cap",
+    "select_smoke_reports",
     "seed_overlap_edges",
     "sigma_points_for",
     "window_phi",
