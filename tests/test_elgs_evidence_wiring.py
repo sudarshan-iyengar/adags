@@ -1264,6 +1264,171 @@ class _Plan:
         self.op = "TEST"
 
 
+class SmokeProposerSelectionTests(_TempDirTest):
+    """Smoke-tier candidate selection (`_propose_smoke_candidates`).
+
+    Experiment 73 ran all three rounds with q_values 0 because selection
+    ranked by interval span, which is identical for every K=1 spanning
+    family and therefore evidence-blind. Selection may now read WINDOW
+    AVAILABILITY and family ids; it must never read a likelihood, a q
+    value, an evidence-delta sign, or an acceptance outcome.
+
+    The fixture binds every cluster to family 2 of {0, 1, 2}. Family 2 is
+    neither the first visited nor the lowest id, so preferring it can
+    only come from window availability.
+    """
+
+    TARGET = 2
+
+    def setUp(self):
+        super().setUp()
+        self.constants = load_evidence_constants(PREREG_DIR, smoke=True)
+        self.sealed = load_sealed_tracks(
+            _seal(self.tmp / "tracks", _artifact()), **_SCENE_KWARGS
+        )
+
+    def _context(self, bind_to=None):
+        target = self.TARGET if bind_to is None else bind_to
+        positions = torch.tensor(
+            [[0.0, 0.0, 1.0], [0.1, 0.0, 1.0], [0.2, 0.0, 1.0]], dtype=torch.float32
+        )
+        family_ids = torch.full((3,), int(target), dtype=torch.long)
+        return build_evidence_context(
+            self.sealed, self.constants, positions, family_ids,
+            r_site=0.05, binding_threshold=1.0, c_cap=4, beta=0.1, tau_b=1.0,
+        )
+
+    def _state(self, evidence, n_families=3):
+        return _SmokeState(evidence, n_families)
+
+    def test_window_count_is_structural_and_memoized(self):
+        context = self._context()
+        self.assertGreater(context.window_count(self.TARGET), 0)
+        self.assertEqual(context.window_count(0), 0)
+        self.assertEqual(context.window_count(4242), 0)
+        self.assertIn(4242, context._window_counts)
+        self.assertEqual(
+            context.families_with_windows([0, 1, 2]), (self.TARGET,)
+        )
+
+    def test_family_with_windows_is_preferred_over_one_without(self):
+        from elgs.trainer_hooks import _propose_smoke_candidates
+
+        state = self._state(self._context())
+        proposals = _propose_smoke_candidates(state, iteration=200)
+        self.assertEqual(len(proposals), 1)
+        self.assertEqual(
+            proposals[0].plan.family_ids[0], self.TARGET,
+            "the family carrying evidence windows must be preferred over "
+            "families with none, though all are K=1 with an identical span",
+        )
+
+    def test_preference_is_not_merely_picking_the_lowest_or_highest_id(self):
+        from elgs.trainer_hooks import _propose_smoke_candidates
+
+        for target in (0, 1, 2):
+            state = self._state(self._context(bind_to=target))
+            picked = _propose_smoke_candidates(state, iteration=200)
+            self.assertEqual(
+                picked[0].plan.family_ids[0], target,
+                f"selection must follow the windows to family {target}",
+            )
+
+    def test_selection_is_deterministic_across_repeats(self):
+        from elgs.trainer_hooks import _propose_smoke_candidates
+
+        context = self._context()
+        chosen = set()
+        for _ in range(5):
+            state = self._state(context)
+            chosen.add(
+                _propose_smoke_candidates(state, iteration=200)[0].plan.family_ids[0]
+            )
+        self.assertEqual(chosen, {self.TARGET})
+
+    def test_falls_back_when_no_family_has_windows(self):
+        """The insufficient-evidence path must still produce a candidate."""
+        from elgs.trainer_hooks import _propose_smoke_candidates
+
+        # Bind every cluster to a family the registry does not contain.
+        state = self._state(self._context(bind_to=999))
+        self.assertEqual(state.evidence.families_with_windows([0, 1, 2]), ())
+        proposals = _propose_smoke_candidates(state, iteration=200)
+        self.assertEqual(len(proposals), 1)
+        self.assertIn(proposals[0].plan.family_ids[0], (0, 1, 2))
+
+    def test_falls_back_when_there_is_no_evidence_context_at_all(self):
+        from elgs.trainer_hooks import _propose_smoke_candidates
+
+        proposals = _propose_smoke_candidates(self._state(None), iteration=200)
+        self.assertEqual(len(proposals), 1)
+        self.assertIn(proposals[0].plan.family_ids[0], (0, 1, 2))
+
+    def test_capped_report_count_semantics_are_unchanged(self):
+        """`find_anchor_intervals` sums a capped VISIBLE-REPORT count and
+        compares it with report_floor. 3 cameras per seed, C_cap 4 -> 3
+        reports per plateau frame; C_cap 2 -> 2."""
+        track_ids = [int(t["track_id"]) for t in self.sealed.tracks
+                     if int(t["seed_id"]) == 0]
+        _, plateau, capped = family_anchor_series(
+            self.sealed, track_ids, c_cap=4, vis_threshold=0.5,
+            min_cameras=2, seed_fraction=0.5,
+        )
+        self.assertEqual(plateau, (True, True, True, False, False, True, True, True))
+        self.assertEqual(capped, (3, 3, 3, 0, 0, 3, 3, 3))
+        _, _, capped_two = family_anchor_series(
+            self.sealed, track_ids, c_cap=2, vis_threshold=0.5,
+            min_cameras=2, seed_fraction=0.5,
+        )
+        self.assertEqual(capped_two, (2, 2, 2, 0, 0, 2, 2, 2))
+
+
+class _SmokeState:
+    """The `_propose_smoke_candidates` surface, backed by a REAL registry.
+
+    Every family is K=1 spanning with an identical span, so span alone
+    cannot decide between them and only window availability can.
+    """
+
+    def __init__(self, evidence, n_families=3):
+        from elgs.clusters import BindingTable
+        from elgs.families import FamilyRegistry
+        from elgs.intervals import IntervalConfig, inverse
+        from elgs.runtime import ElgsRuntime, ScheduleAnchors
+        from elgs.transaction_ledger import SearchCostLedger, TransactionLedger
+        from elgs.transactions import StateBundle
+
+        self.config = IntervalConfig(
+            T=8 / 120.0, w_m=2 / 120.0, w=0.5 / 120.0,
+            floor_len=2.0 * (0.5 / 120.0) + 1 / 120.0,
+            floor_gap=2.0 * (0.5 / 120.0) + 1 / 120.0,
+            delta_tol=0.1 / 120.0,
+        )
+        registry = FamilyRegistry()
+        spanning = inverse(
+            1, True, True, 0.0, [self.config.omega], [], 0.0, self.config,
+            dtype=torch.float32,
+        )
+        for index in range(n_families):
+            registry.create_family(
+                birth_time=0.0, birth_site=(0.0, 0.0, 1.0),
+                lineage_key=f"seed-cell-{index}", interval=spanning, tau=(0.0,),
+            )
+        schedule = ScheduleAnchors(
+            seed_iteration=100, audit_iteration=150,
+            round_iterations=(200,), refit_until=600,
+        )
+        self.runtime = ElgsRuntime(
+            registry, self.config, schedule, dtype=torch.float32
+        )
+        self.bundle = StateBundle(
+            registry, BindingTable(), TransactionLedger(),
+            SearchCostLedger(row_cap=1000, scalar_budget=10**9),
+        )
+        self.evidence = evidence
+        self.rounds_run = []
+
+
 class SequenceIdentityTests(unittest.TestCase):
     """The identity the cross-sequence guard compares against.
 

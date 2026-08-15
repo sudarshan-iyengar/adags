@@ -704,18 +704,41 @@ def _propose_smoke_candidates(state: ElgsTrainerState, iteration: int) -> list:
     from .transaction_ledger import LedgerEvent
 
     proposals = []
-    best = None
-    for family_id in state.runtime.registry.active_ids():
-        record = state.runtime.registry.get(family_id)
-        if record.interval.K != 1:
-            continue
-        r = state.runtime.realization(family_id)
-        span = float(r.lens[0])
-        if best is None or span > best[1]:
-            best = (family_id, span)
-    if best is None:
+    # Eligibility for the smoke operation is unchanged: K == 1.
+    eligible = [
+        family_id
+        for family_id in state.runtime.registry.active_ids()
+        if state.runtime.registry.get(family_id).interval.K == 1
+    ]
+    if not eligible:
         return proposals
-    family_id, _ = best
+
+    # SMOKE-TIER SELECTION ONLY. Prefer a family that is bound to a
+    # cluster AND carries at least one evidence window, so the round
+    # actually exercises the evidence path instead of falling through to
+    # the insufficient-evidence case. Experiment 73 rejected all three
+    # rounds with q_values 0 for exactly this reason: ranking by span
+    # alone is evidence-BLIND, every family is K=1 spanning so the span
+    # is identical, and the family it landed on had no bound cluster.
+    #
+    # The preference reads WINDOW AVAILABILITY and family ids ONLY. It
+    # never inspects a likelihood, a q value, an evidence-delta sign, or
+    # an acceptance outcome, so it cannot select for a preferred result.
+    # This is the smoke proposer; the production candidate-generation
+    # semantics are untouched.
+    preferred = eligible
+    if state.evidence is not None:
+        with_windows = state.evidence.families_with_windows(eligible)
+        if with_windows:
+            preferred = list(with_windows)
+
+    # Deterministic: largest span, ties broken by LOWEST family id.
+    # Spanning K=1 families all share one span, so the id tie-break is
+    # what actually decides and the choice is stable across runs.
+    family_id = max(
+        preferred,
+        key=lambda f: (float(state.runtime.realization(f).lens[0]), -f),
+    )
     r = state.runtime.realization(family_id)
     b, d = float(r.b[0]), float(r.d[0])
     mid = 0.5 * (b + d)

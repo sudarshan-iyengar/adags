@@ -1,0 +1,58 @@
+# DiVa-360 evidence smoke, 220 iterations — EXPLORATORY INTEGRATION TEST.
+#
+# Crosses seeding (families exist from setup) and the FIRST structural
+# round at iteration 200, and stops before round 1 at 350. Its only
+# purpose is to prove the real q / likelihood / Phi path executes on
+# actual reports rather than falling through the insufficient-evidence
+# case, which is what experiment 73 could not show.
+#
+# CPU preflight against this exact scene, artifact and constants
+# (replicating setup-time voxel seeding from points3d.ply): 512 families
+# seeded, 334 of 512 clusters bound, 4 families carry evidence windows
+# (219, 226, 227, 283), and the evidence-aware smoke proposer selects
+# family 219 — 2 windows, 292 tracks.
+#
+# Nothing here may be read scientifically. Phi is NOT required to be
+# nonzero; if it is exactly zero that must be shown to come from
+# evaluated finite terms, not from zero windows or skipped computation.
+# The smoke heads are unchanged from the declared smoke-tier constants
+# and were NOT tuned to obtain any outcome.
+
+gaussian_dim: 4
+time_duration: [0, 4.7]
+num_pts: 50_000
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+
+ModelParams:
+  sh_degree: 3
+  resolution: 4
+  frame_ratio: 1
+  eval: True
+
+OptimizationParams:
+  iterations: 220              # crosses seeding + round 0 at iteration 200
+  densify_until_iter: 400
+  densify_until_num_points: 60_000
+  opacity_reset_interval: 30_000
+  motion_model: "lora"
+
+  elgs_enable: True
+  elgs_smoke_schedule: True    # seed 100, audit 150, rounds 200/350/500
+  elgs_prereg_dir: "configs/elgs"
+  elgs_tracks_dir: "/apollo/users/sri/proj_adags/data/diva360_derived/scissor_screen_w0_561_tracks"
+
+  elgs_beta: 0.1
+  elgs_kappa: 0.01
+  elgs_chi: 0.01
+  elgs_mu: 0.01
+  elgs_tau_b: 1.0
+  elgs_k_se: 1.0
+  elgs_lambda_u: 1.0
+  elgs_c_cap: 4
+  elgs_candidate_cap: 2
+  elgs_confirmation_samples: 8
+  elgs_a_lr: 0.002
+  elgs_r_site: 0.05
+  elgs_binding_threshold: 0.25

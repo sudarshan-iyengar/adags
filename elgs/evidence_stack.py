@@ -604,6 +604,36 @@ class EvidenceContext:
     beta: float
     tau_b: float
     coverage: dict = field(default_factory=dict)
+    _window_counts: dict = field(default_factory=dict)
+
+    def window_count(self, family_id: int) -> int:
+        """How many evidence windows family `family_id` has.
+
+        STRUCTURAL AVAILABILITY ONLY. This counts windows; it never
+        evaluates a likelihood, a q value, an evidence delta, or an
+        acceptance outcome, so a caller may use it to choose WHERE to
+        look without any result-bearing quantity entering the choice.
+
+        Memoized: the count depends only on the sealed artifact, the
+        frozen constants and the binding, none of which change while a
+        run is training.
+        """
+        family_id = int(family_id)
+        if family_id in self._window_counts:
+            return self._window_counts[family_id]
+        track_ids = self.track_ids_of_family(family_id)
+        if not track_ids:
+            self._window_counts[family_id] = 0
+            return 0
+        _, windows = family_windows(
+            self.sealed, track_ids, c_cap=self.c_cap, constants=self.constants
+        )
+        self._window_counts[family_id] = len(windows)
+        return len(windows)
+
+    def families_with_windows(self, family_ids: Sequence[int]) -> tuple[int, ...]:
+        """The subset of `family_ids` carrying at least one window."""
+        return tuple(sorted(f for f in family_ids if self.window_count(f) > 0))
 
     def clusters_of_family(self, family_id: int) -> tuple[SeedCluster, ...]:
         wanted = set(self.binding.clusters_of(family_id))
