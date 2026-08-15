@@ -247,6 +247,77 @@ parity fixture is still self-referential; no test exercises
 `transmittance` at `pixel_scale != 1`; `p_floor` has no fire-counter; the
 geometry-cache eviction is uninstrumented.
 
+## Exploratory Apollo results — 2026-08-15 (EXPLORATORY, never claim-grade)
+
+All runs `evidence_bearing: false` via `--exploratory`, dgx/V100, smoke
+heads unchanged and NOT tuned toward any outcome. Substrate throughout:
+`scissor_screen_w0_561` + its sealed cotracker3 tracks.
+
+**Exp 71 — DiVa-360 photometric baseline: PASSED.** The Blender loader
+accepts the conversion unchanged ("Found transforms_train.json file").
+3000 iterations in 8:48, best val PSNR 19.65 / SSIM 0.855, still
+improving at the final iteration. Points 20,000 -> pruned to ~6,300 by
+iter 1500 -> 10,806: the synthesized `points3d.ply` spans +/-6.5 against
+scissor content at +/-1.2, so most of the initial cloud is empty space.
+Routing collapsed near-fully dynamic (mean_dynamic_prob 0.976).
+
+**Exp 73 — evidence path ACTIVATED.** Tracks loaded and bound: 512
+seeds / 10,995 tracks, 512 clusters, **334 bound to families**, tier
+smoke, `frame_dt` 1/120. All three rounds (200/350/500) ran; every
+candidate rejected; rollback clean; `committed_decisions` 0 so the §8
+post-refit pass correctly skipped. **But q_values 0 and windows 0 in
+every round**: the M0 smoke proposer ranked families by interval span,
+which is IDENTICAL for every K=1 spanning family, so selection was
+evidence-blind and landed on a family with no bound cluster. The real
+q/likelihood/Phi path was never entered.
+
+**Exp 74 — checkpoint/resume: PASSED.** `rounds_run [200,350,500]` not
+repeated, slot-grid `consumed [0,2,4]` not redrawn, 334/512 bindings
+RESTORED (`elgs_evidence_binding_restored`) rather than recomputed,
+a-logit moments reset as disclosed, training continued to 700 without
+divergence.
+
+**Exp 75 — crashed at the FIRST real q evaluation.** `setup_elgs`'s
+restore branch built `ElgsRuntime` on the model device while the fresh
+branch used the default (cpu), so presence and projected geometry lived
+on different devices and `alpha[front]` raised "indices should be either
+on cpu or on the same device as the indexed tensor". The asymmetry was
+present from the start; exp 73 never reached `transmittance` because it
+had no windows, so only the evidence-aware proposer could expose it.
+Fixed with device-agnostic regression tests on both paths.
+
+**Exp 76 — the evidence path reached q, and the COST is the result.**
+Cancelled deliberately, not failed. Measured exactly on CPU for the
+family the proposer selects (219):
+
+| window | interior frames | reports |
+|---|---:|---:|
+| (45, 47) | 1 | 292 |
+| (47, 512) | **464** | **135,488** |
+
+135,780 reports x 3 bridges = **407,340 q values**, each with 7 sigma
+points = **2,851,380 full-model transmittance passes for ONE round**.
+That is hours of GPU time per round. The round was progressing, not
+hung.
+
+**NEW MEASURED KNOWLEDGE.** The §4 cap operator caps CAMERAS per
+(bridge, track, frame); nothing caps FRAMES per window or reports per
+family. A family whose two anchors sit at opposite ends of the sequence
+produces a 464-frame "window" that is not a gap in any useful sense, and
+its evidence cost is quadratic in the wrong thing. `q_values` per round
+must be bounded and logged before any evidence-bearing use, and the
+bound must be a preregistered constant, not an implementation detail.
+
+**Still NOT demonstrated:** that q, the likelihood terms and the
+evidence delta are finite and data-dependent. Exp 73 could not show it
+(no windows); exp 76 could not finish. This remains the open claim.
+
+Selection change recorded: `_propose_smoke_candidates` now prefers a
+family bound to a cluster AND carrying >= 1 evidence window, using
+window availability and family ids ONLY — never a likelihood, a q value,
+an evidence-delta sign, or an acceptance outcome. SMOKE TIER ONLY;
+production candidate generation is untouched.
+
 ## Open at the time of writing
 
 Third repair cycle authorized by the user. Targets: point the probe at
