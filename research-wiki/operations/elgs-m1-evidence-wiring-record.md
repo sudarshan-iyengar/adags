@@ -318,6 +318,63 @@ window availability and family ids ONLY — never a likelihood, a q value,
 an evidence-delta sign, or an acceptance outcome. SMOKE TIER ONLY;
 production candidate generation is untouched.
 
+## The real q/likelihood/Phi path HAS EXECUTED — exp 78, 2026-08-15
+
+Determined experiment **78**, commit `e87e841`, dgx/V100, run manifest
+`evidence_bearing: false`, config hash `503a8d97`, image
+`apollo-v100-v1`, `STATE_COMPLETED`. EXPLORATORY; nothing below is
+scientific.
+
+```
+elgs_evidence_round: windows 2, families_with_windows 1, q_values 576,
+  reports {total 135780, retained 192, dropped 135588,
+           frames_covered 97, cameras_covered 23,
+           max_reports_per_window 96, selection_rule "smoke-only: ..."}
+elgs_round: iteration 200, proposals 1,
+  committed ["FISSION:219:a5395116"], rejected []
+```
+
+Checkpoint at 220: `rounds_run [200]`, `committed_decisions 1`
+(FISSION on family 219, n_samples 8, **se 0.0**), evidence tier smoke,
+334/512 bindings, 512 families.
+
+**What this establishes.** q was evaluated 576 times and every value
+passed `QSnapshot.put`'s `0 <= q <= 1` check, so all 576 are finite and
+in range — a NaN raises there. The likelihood terms were evaluated
+under the declared `p_floor`; a non-positive likelihood raises
+`ContractError` in `stream_log_likelihoods`. `elgs.acceptance.decide`
+refuses a non-finite `exact_deltas`, so the COMMIT proves the evidence
+delta was finite. With `se = 0.0` the acceptance rule reduces to
+`delta_total < 0`, so the total is strictly negative and finite. Phi was
+computed from **192 real retained reports spanning 97 frames and 23
+cameras**, not from a fallback: `families_with_windows` is 1, not 0, and
+`q_values` is 576, not 0. Acceptance completed and committed without
+corrupting state (registry intact at 512 families, peak_scalars grew
+1400898 -> 1400900 as the fission's a-logit dimension requires).
+
+**NOT established, and not claimed.** That Phi is nonzero. `se = 0.0`
+means the eight confirmation units gave an identical paired render
+delta, so the photometric arm carried no discriminating signal for this
+candidate; the decision therefore rested on a strictly negative finite
+`delta_render + exact_deltas`, but the two are not separable from the
+artifacts. No smoke head was tuned toward any outcome, and Phi was not
+forced.
+
+**MEASURED q THROUGHPUT.** The round occupied 05:04 -> 06:08 of the
+tqdm clock = **64 s**, of which ~6 s was acceptance (paired renders +
+Phi). So ~58 s for 576 q values ~= **10 q/s**, i.e. ~70 full-model
+transmittance passes per second over 20,000 Gaussians (each q costs 7
+sigma points). Extrapolated to the unbounded window that experiment 76
+attempted (407,340 q values): **~11.3 hours for ONE round**, which is
+consistent with exp 76 still computing after 30 minutes.
+
+Two device defects were found and fixed on the way, each reachable only
+because the previous fix let execution get further: the fresh-run
+runtime sat on CPU while the model was on CUDA (exp 75), and
+planner-built candidate intervals stayed on CPU once the runtime moved
+to CUDA (exp 77, in the paired candidate render). Both carry
+device-agnostic regression tests.
+
 ## Open at the time of writing
 
 Third repair cycle authorized by the user. Targets: point the probe at
