@@ -435,12 +435,22 @@ def family_anchor_series(
     plateau: list[bool] = []
     capped: list[int] = []
     for frame in frames:
-        observed = sum(
-            1 for by_frame in per_seed.values()
-            if by_frame.get(frame, 0) >= min_cameras
-        )
+        observed = 0
+        reports = 0
+        for by_frame in per_seed.values():
+            cameras = by_frame.get(frame, 0)
+            if cameras >= min_cameras:
+                observed += 1
+            # §4 cap operator: at most C_cap cameras per (seed, frame).
+            reports += min(cameras, c_cap)
         plateau.append(observed >= needed)
-        capped.append(min(observed, c_cap))
+        # `find_anchor_intervals` sums this over a run and compares it
+        # with `report_floor`, and elgs.bridges specifies a capped
+        # VISIBLE-REPORT count. Only the PLATEAU predicate becomes a seed
+        # fraction; counting seeds here too would silently rescale the
+        # floor by the cameras-per-seed factor (~21 on scissor) and, on
+        # singleton clusters, put every run below any sane floor.
+        capped.append(reports)
     return frames, tuple(plateau), tuple(capped)
 
 

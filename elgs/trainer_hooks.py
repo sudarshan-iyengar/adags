@@ -798,7 +798,12 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
         state.bundle.search_cost.rasterizer_seconds += time.time() - started
         return samples
 
-    round_evidence = _refresh_round_evidence(state, gaussians, scene, round_index)
+    candidate_families = sorted(
+        {int(f) for p in proposals for f in p.plan.family_ids}
+    )
+    round_evidence = _refresh_round_evidence(
+        state, gaussians, scene, round_index, family_ids=candidate_families
+    )
     exact_deltas_fn = None
     if round_evidence is not None:
         from .evidence_stack import evidence_exact_delta
@@ -884,7 +889,7 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
     }}, sort_keys=True))
 
 
-def _refresh_round_evidence(state, gaussians, scene, round_index):
+def _refresh_round_evidence(state, gaussians, scene, round_index, family_ids=None):
     """Recompute and freeze the round's q snapshot, or return None.
 
     Returns None exactly when the run is photometric-only (no evidence
@@ -932,15 +937,29 @@ def _refresh_round_evidence(state, gaussians, scene, round_index):
         frame_to_time=state.evidence_frame_time,
         pixel_scale=state.evidence_pixel_scale,
     )
+    # SCOPE q TO THE FAMILIES A CANDIDATE ACTUALLY TOUCHES.
+    # `evidence_exact_delta` iterates plan.family_ids only, so q computed
+    # for any other family is never read. Computing it for every active
+    # family is what makes the round cost unbounded: on scissor, 512
+    # singleton clusters x ~21 cameras x window frames x 3 bridges x 7
+    # sigma points is ~10^6 full-model transmittance passes per round,
+    # none of which reaches a decision. Values are IDENTICAL either way
+    # (q for family f does not depend on which candidates exist), so this
+    # narrows what is computed, never what is compared. The snapshot is
+    # still frozen before any candidate is scored.
+    active = list(state.runtime.registry.active_ids())
+    scoped = sorted(set(active) & {int(f) for f in family_ids}) if family_ids else active
     evidence = refresh_round_evidence(
         state.evidence,
         probe,
         round_index=round_index,
-        family_ids=state.runtime.registry.active_ids(),
+        family_ids=scoped,
     )
     gaussians._elgs_checkpoint_extras["evidence"] = state.evidence.to_state()
     print(json.dumps({"elgs_evidence_round": {
         "round_index": round_index,
+        "families_scoped": len(scoped),
+        "families_active": len(active),
         "windows": len(evidence.windows),
         "q_values": evidence.n_q_values,
         "families_with_windows": len({w.family_id for w in evidence.windows}),

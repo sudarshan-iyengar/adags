@@ -1,0 +1,64 @@
+# DiVa-360 EVIDENCE smoke — EXPLORATORY INTEGRATION TEST, never claim-grade.
+#
+# Answers ONE question: do scene, renderer, sealed tracks, evidence
+# stack, optimizer and checkpointing operate together on real data?
+# Nothing here may be read scientifically — not PSNR, not q, not Phi,
+# not any structural decision.
+#
+# FRESH RUN, NOT A RESUME. The compressed structural schedule fires at
+# iteration 100 (seed), 150 (audit), 200/350/500 (rounds) and 600
+# (refit_until), per configs/elgs/prereg_structural_v1.json. Resuming the
+# iteration-3000 photometric checkpoint would skip every one of them.
+#
+# Substrate: scissor_screen_w0_561 + its SEALED tracks artifact
+# (cotracker3, evidence_admissible true, 512 seeds / 10,995 tracks,
+# frames 0-561). The same scene the photometric baseline used, so the
+# two are directly comparable.
+#
+# elgs_r_site 0.05 sits just BELOW the hull-carving lattice pitch
+# (measured nearest-neighbour spacing 0.0529 on scissor), which yields
+# singleton clusters — the census's own per-seed unit, and the only
+# regime that produces evidence windows on this seeding scheme. Measured
+# in Stage 0: 0.5 -> 1 cluster / 2 windows; 0.05 -> 512 clusters / 508
+# windows.
+
+gaussian_dim: 4
+time_duration: [0, 4.7]        # 561 / 120 fps = 4.675 s
+num_pts: 50_000
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+
+ModelParams:
+  sh_degree: 3
+  resolution: 4                # 1160x550 -> 290x138; pixel_scale 4.0
+  frame_ratio: 1
+  eval: True
+
+OptimizationParams:
+  iterations: 600              # == prereg smoke refit_until
+  densify_until_iter: 400
+  densify_until_num_points: 60_000
+  opacity_reset_interval: 30_000
+  motion_model: "lora"
+
+  elgs_enable: True
+  elgs_smoke_schedule: True    # seed 100, audit 150, rounds 200/350/500
+  elgs_prereg_dir: "configs/elgs"
+  elgs_tracks_dir: "/apollo/users/sri/proj_adags/data/diva360_derived/scissor_screen_w0_561_tracks"
+
+  elgs_beta: 0.1
+  elgs_kappa: 0.01
+  elgs_chi: 0.01
+  elgs_mu: 0.01
+  elgs_tau_b: 1.0
+  elgs_k_se: 1.0
+  # lambda_u = 1.0 makes the declared mixture literally m = nu — the
+  # degenerate-valid SNIS case the smoke sampler implements.
+  elgs_lambda_u: 1.0
+  elgs_c_cap: 4
+  elgs_candidate_cap: 2
+  elgs_confirmation_samples: 8
+  elgs_a_lr: 0.002
+  elgs_r_site: 0.05            # below the 0.0529 lattice pitch
+  elgs_binding_threshold: 0.25
