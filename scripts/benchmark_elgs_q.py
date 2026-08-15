@@ -172,6 +172,39 @@ def _downstream(state, evidence, proposals) -> dict:
     return {"family_phi": phis, "exact_deltas": deltas}
 
 
+def _run_parity_tests() -> dict:
+    """The batched-vs-scalar parity classes, on THIS device.
+
+    The CPU unit cell runs the same classes but skips their CUDA case
+    for want of a device, so GPU parity is only ever demonstrated by a
+    cell that has one -- which is this one.
+    """
+    import unittest
+
+    import tests.test_elgs_evidence_wiring as suite_module
+
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite(
+        loader.loadTestsFromTestCase(getattr(suite_module, name))
+        for name in (
+            "BatchedTransmittanceParityTests",
+            "BatchedProjectionParityTests",
+            "BatchedQParityTests",
+            "BatchedWindowResolutionTests",
+            "ProbeParityTests",
+        )
+    )
+    result = unittest.TextTestRunner(verbosity=2, stream=sys.stdout).run(suite)
+    return {
+        "ok": result.wasSuccessful(),
+        "run": result.testsRun,
+        "failures": [str(case) for case, _ in result.failures],
+        "errors": [str(case) for case, _ in result.errors],
+        "skipped": [str(case) for case, _ in result.skipped],
+        "cuda_available": bool(torch.cuda.is_available()),
+    }
+
+
 def _max_difference(left: dict, right: dict) -> dict:
     if set(left) != set(right):
         return {
@@ -206,7 +239,10 @@ def main() -> int:
     pp = PipelineParams(parser)
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--start_checkpoint", type=str, required=True)
-    parser.add_argument("--out", type=str, required=True)
+    parser.add_argument(
+        "--out", type=str, default=None,
+        help="report path; defaults to $ADAGS_RUN_DIR/q_benchmark.json",
+    )
     parser.add_argument("--gaussian_dim", type=int, default=3)
     parser.add_argument("--time_duration", nargs=2, type=float, default=[-0.5, 0.5])
     parser.add_argument("--num_pts", type=int, default=100_000)
@@ -226,8 +262,31 @@ def main() -> int:
         help="skip the scalar oracle pass (only for a workload known too "
              "large to time scalar-side; the parity gate then cannot be met)",
     )
+    parser.add_argument(
+        "--parity-tests", action="store_true",
+        help="run the batched-vs-scalar parity unit tests first, ON THIS "
+             "DEVICE. The CPU cell skips the CUDA case by construction, so "
+             "this is where GPU parity is actually demonstrated.",
+    )
     args = parser.parse_args(sys.argv[1:])
     _merge_config(args, args.config)
+
+    run_dir = os.environ.get("ADAGS_RUN_DIR", "").strip()
+    if args.out is None:
+        if not run_dir:
+            raise ContractError("--out is required when ADAGS_RUN_DIR is unset")
+        args.out = os.path.join(run_dir, "q_benchmark.json")
+    if not str(getattr(args, "model_path", "") or "").strip():
+        if not run_dir:
+            raise ContractError("--model_path is required when ADAGS_RUN_DIR is unset")
+        args.model_path = run_dir
+
+    parity = None
+    if args.parity_tests:
+        parity = _run_parity_tests()
+        print(f"[bench] parity tests: {parity}", flush=True)
+        if not parity["ok"]:
+            raise ContractError(f"parity tests failed on this device: {parity}")
 
     torch.manual_seed(args.seed)
     dataset = lp.extract(args)
@@ -237,6 +296,7 @@ def main() -> int:
     if not bool(getattr(opt, "elgs_enable", False)):
         raise ContractError("benchmark_elgs_q needs an EL-GS lane (elgs_enable true)")
 
+    os.makedirs(dataset.model_path, exist_ok=True)
     print(f"[bench] building scene from {dataset.source_path}", flush=True)
     gaussians = GaussianModel(
         dataset.sh_degree, gaussian_dim=args.gaussian_dim,
@@ -282,6 +342,7 @@ def main() -> int:
         "smoke_max_reports_per_window": int(
             state.evidence.smoke_max_reports_per_window
         ),
+        "parity_tests": parity,
         "passes": [],
     }
 
