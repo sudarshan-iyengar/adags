@@ -102,6 +102,58 @@ def _render_loss(item, override):
     return 1.0 if override is None else 0.5
 
 
+class RuntimeDeviceTests(unittest.TestCase):
+    """The fresh path must place the runtime on the MODEL's device.
+
+    A fresh run built `ElgsRuntime` with the default device (cpu) while
+    the restore branch used `gaussians._xyz.device`. On CUDA that put the
+    presence column and the probe's projected geometry on different
+    devices, and the first round that actually reached `transmittance`
+    died with
+
+      RuntimeError: indices should be either on cpu or on the same
+      device as the indexed tensor (cpu)
+
+    Experiment 73 never reached it (no evidence windows), so the
+    asymmetry survived until experiment 75. This pins the invariant
+    device-agnostically: whatever device the model is on, the runtime
+    and the presence column must agree with it, on BOTH paths.
+    """
+
+    def test_fresh_runtime_matches_the_model_device(self):
+        state, gaussians, _, _ = _build()
+        self.assertEqual(state.runtime.device, gaussians._xyz.device)
+
+    def test_presence_column_lands_on_the_model_device(self):
+        state, gaussians, _, _ = _build()
+        column = state.runtime.presence_multiplier(
+            gaussians._elgs_family_ids, 0.0
+        )
+        self.assertEqual(column.device, gaussians._xyz.device)
+
+    def test_restored_runtime_matches_the_model_device_too(self):
+        state, gaussians, scene, dataset = _build()
+        payload = build_elgs_state(
+            state.runtime.registry,
+            gaussians._elgs_checkpoint_extras["binding"],
+            gaussians._elgs_checkpoint_extras["ledger"],
+            gaussians._elgs_checkpoint_extras["search_cost"],
+            sampler=gaussians._elgs_checkpoint_extras["sampler"],
+            slot_grid=gaussians._elgs_checkpoint_extras["slot_grid"],
+            confirmation_refs={},
+            moment_reset_log=[],
+            round_bookkeeping={
+                "seeded": True,
+                "rounds_run": [],
+                "row_family_ids": gaussians._elgs_family_ids.tolist(),
+            },
+        )
+        fresh = _stub_gaussians()
+        fresh._pending_elgs_state = payload
+        restored = setup_elgs(fresh, scene, dataset=None, opt=_stub_opt())
+        self.assertEqual(restored.runtime.device, fresh._xyz.device)
+
+
 class SetupTests(unittest.TestCase):
     def test_setup_constructs_and_seeds(self):
         state, gaussians, _, _ = _build()

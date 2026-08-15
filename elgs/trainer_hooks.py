@@ -170,7 +170,21 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
                 scalar_budget=10**10,
             ),
         )
-        runtime = ElgsRuntime(registry, config, schedule, dtype=torch.float32)
+        # SAME device selection as the restore branch above. A fresh run
+        # previously left the runtime on CPU while the model sat on CUDA,
+        # so the presence column and the probe's projected geometry lived
+        # on different devices and `alpha[front]` raised
+        #   "indices should be either on cpu or on the same device as the
+        #    indexed tensor"
+        # the first time a round actually reached `transmittance`.
+        # Experiment 73 never reached it (no windows), so the asymmetry
+        # survived until the evidence-aware proposer found a family with
+        # windows in experiment 75.
+        runtime = ElgsRuntime(
+            registry, config, schedule,
+            device=gaussians._xyz.device if gaussians._xyz.numel() else "cpu",
+            dtype=torch.float32,
+        )
         seeded = False
         rounds_run = []
     gaussians._pending_elgs_state = None

@@ -370,6 +370,13 @@ class ModelProbe:
         keep = footprint > FOOTPRINT_CUTOFF
         if not bool(keep.any()):
             return 1.0
+        # `front`/`keep` are derived from the geometry, `alpha` from the
+        # presence column, and the two can be built on different devices
+        # (the runtime's device is chosen at setup, the model's by the
+        # trainer). Aligning here makes the probe correct regardless,
+        # rather than relying on every caller to agree — the mismatch
+        # that killed experiment 75 at its first real q evaluation.
+        alpha = alpha.to(footprint.device)
         contribution = (alpha[front][keep] * footprint[keep]).clamp(0.0, 1.0)
         return float(
             torch.exp(torch.log1p(-contribution.clamp_max(1.0 - 1e-12)).sum())
