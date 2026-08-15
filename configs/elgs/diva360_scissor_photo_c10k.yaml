@@ -1,0 +1,62 @@
+# DiVa-360 PHOTOMETRIC CONTINUATION to 10,000 iterations -- EXPLORATORY,
+# never claim-grade.
+#
+# Resumes experiment 71's verified `chkpnt3000.pth` (best val PSNR
+# 19.652290120243602, SSIM 0.8552483019738294, 10,806 points) via
+# `--start_checkpoint`; `main.py` reads `first_iter` out of the checkpoint
+# and trains `range(first_iter, opt.iterations)`, so this lane adds 7,000
+# iterations on top of exp 71 rather than restarting.
+#
+# EVERY photometric setting below is byte-identical to
+# `diva360_scissor_photometric.yaml`. The ONLY differences are:
+#
+#   * `iterations: 3000 -> 10000`. This is the continuation itself. It
+#     crosses main.py's DEFAULT_MAX_TRAIN_ITERATIONS (6000) guard, so the
+#     submission must pass `--max-train-iterations 10000`; the guard is a
+#     deliberate-long-run switch, not a hyperparameter.
+#   * `test_iterations` / `save_iterations` are stated explicitly. This is
+#     MEASUREMENT CADENCE, not tuning. Exp 71's defaults normalized to a
+#     SINGLE validation at iteration 3000, so its `best_val_iter == 3000`
+#     carries no information about whether validation was still improving
+#     -- there was nothing else to compare against. A continuation whose
+#     stated purpose is "improving or plateauing?" cannot answer that from
+#     one point either, so it validates every 1000 iterations.
+#
+# NOT changed, and deliberately so:
+#   * `densify_until_iter: 2000` is already behind `first_iter = 3000`, so
+#     NO densification runs in this lane and the point count stays at exp
+#     71's 10,806. That is what "densification settings unchanged" means
+#     here; raising it would be tuning.
+#   * `opacity_reset_interval: 30000` never fires within 10,000 iterations.
+#   * `position_lr_max_steps` is 30,000 (arguments/__init__.py), INDEPENDENT
+#     of `iterations`, so extending the run continues along exp 71's own
+#     exponential decay instead of rescaling it.
+#   * `elgs_enable: False` -- photometric only, same as exp 71.
+#
+# Substrate: scissor_screen_w0_561, unchanged. Initialization is exp 71's
+# trained state, so the synthesized-`points3d.ply` scale problem recorded
+# on the parent config is inherited, not re-run.
+
+gaussian_dim: 4
+time_duration: [0, 4.7]        # 561 / 120 fps = 4.675 s
+num_pts: 50_000
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+
+test_iterations: [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
+save_iterations: [4000, 6000, 8000, 10000]
+
+ModelParams:
+  sh_degree: 3
+  resolution: 4                # 1160x550 -> 290x138; pixel_scale 4.0
+  frame_ratio: 1
+  eval: True
+
+OptimizationParams:
+  iterations: 10000
+  densify_until_iter: 2000
+  densify_until_num_points: 300_000
+  opacity_reset_interval: 30_000
+  motion_model: "lora"
+  elgs_enable: False           # PHOTOMETRIC ONLY -- the whole point

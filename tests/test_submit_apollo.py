@@ -14,6 +14,7 @@ mocked out.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -544,18 +545,45 @@ class RenderTemplateTests(unittest.TestCase):
             "ENTRYPOINT_SCRIPT": "main.py",
             "ENTRYPOINT_ARGS": "--config configs/elgs/smoke.json --model_path /apollo/x",
             "RUN_DIR": "/apollo/users/sri/proj_adags/runs/elgs/x",
+            "MAX_TRAIN_ITERATIONS": "6000",
         }
         rendered = wrapper.render_template(REPO_ROOT / "det_exp_apollo.yaml", substitutions)
         # No *actual* placeholder token survives. (The template's own header
         # comments legitimately mention the literal string "{{...}}" while
         # explaining the substitution syntax -- that is prose, not a
         # placeholder, and render_template's own placeholder regex correctly
-        # ignores it; assert on the six real tokens instead of a blanket
+        # ignores it; assert on the real tokens instead of a blanket
         # substring search.)
-        for key in ("NAME", "POOL", "IMAGE_REF", "ENTRYPOINT_SCRIPT", "ENTRYPOINT_ARGS", "RUN_DIR"):
+        for key in (
+            "NAME", "POOL", "IMAGE_REF", "ENTRYPOINT_SCRIPT", "ENTRYPOINT_ARGS",
+            "RUN_DIR", "MAX_TRAIN_ITERATIONS",
+        ):
             self.assertNotIn("{{" + key + "}}", rendered)
         self.assertIn("m0-s1", rendered)
         self.assertIn("resource_pool: \"hopper\"", rendered)
+        self.assertIn("ADAGS_MAX_ITERATIONS=6000", rendered)
+
+    def test_default_max_train_iterations_matches_main_py(self):
+        """The submitter's default must be an exact no-op for main.py.
+
+        The rendered template always SETS ADAGS_MAX_ITERATIONS, so a
+        submitter default that drifted from main.py's own
+        DEFAULT_MAX_TRAIN_ITERATIONS would silently raise or lower the
+        train-iteration ceiling for every lane that never asked. Read from
+        main.py's source rather than importing it (importing pulls torch
+        into the CPU unit suite).
+        """
+        source = (REPO_ROOT / "main.py").read_text(encoding="utf-8")
+        match = re.search(
+            r"^DEFAULT_MAX_TRAIN_ITERATIONS\s*=\s*(\d[\d_]*)\s*$",
+            source,
+            re.MULTILINE,
+        )
+        self.assertIsNotNone(match, "main.py no longer defines DEFAULT_MAX_TRAIN_ITERATIONS")
+        self.assertEqual(
+            int(match.group(1).replace("_", "")),
+            wrapper.DEFAULT_MAX_TRAIN_ITERATIONS,
+        )
 
     def test_missing_substitution_raises(self):
         self.template_path.write_text("name: {{NAME}}\npool: {{POOL}}\n", encoding="utf-8")
@@ -694,6 +722,7 @@ class EntrypointScriptTests(unittest.TestCase):
             "ENTRYPOINT_SCRIPT": "scripts/build_m1_census.py",
             "ENTRYPOINT_ARGS": "--scene-dir /apollo/scene --out /apollo/run/census.json",
             "RUN_DIR": "/apollo/users/sri/proj_adags/runs/elgs/x",
+            "MAX_TRAIN_ITERATIONS": "6000",
         }
         rendered = wrapper.render_template(REPO_ROOT / "det_exp_apollo.yaml", substitutions)
         self.assertIn("exec python3 scripts/build_m1_census.py", rendered)

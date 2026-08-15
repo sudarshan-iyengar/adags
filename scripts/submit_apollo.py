@@ -114,6 +114,13 @@ PROJECT_NAME = "elgs"
 #: git-archive context -- "the only non-repo file" per S10.2 item 2.
 MANIFEST_FILENAME = "elgs_run_manifest.json"
 
+#: Mirrors ``main.py``'s ``DEFAULT_MAX_TRAIN_ITERATIONS``. Substituted into
+#: the template's ``ADAGS_MAX_ITERATIONS`` so an unraised ceiling renders to
+#: exactly the value main.py would have used with the variable unset.
+#: ``tests/test_submit_apollo.py`` asserts the two stay equal; duplicated
+#: rather than imported because importing main.py pulls in torch.
+DEFAULT_MAX_TRAIN_ITERATIONS = 6000
+
 MANIFEST_SCHEMA = "elgs-apollo-run-manifest-v1"
 CLAIM_SCHEMA = "elgs-apollo-claim-v1"
 LEDGER_SCHEMA = "elgs-apollo-ledger-v1"
@@ -830,6 +837,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
         "ENTRYPOINT_SCRIPT": "main.py",
         "ENTRYPOINT_ARGS": "--config placeholder --model_path placeholder",
         "RUN_DIR": "placeholder",
+        "MAX_TRAIN_ITERATIONS": str(args.max_train_iterations),
     }
     render_template(args.template, stub_substitutions)
     print(f"template renders cleanly: {args.template}")
@@ -943,6 +951,7 @@ def cmd_submit(args: argparse.Namespace) -> int:
             entrypoint_script=args.entrypoint_script,
         ),
         "RUN_DIR": run_dir,
+        "MAX_TRAIN_ITERATIONS": str(args.max_train_iterations),
     }
 
     # 2. template renders.
@@ -1197,6 +1206,17 @@ def _add_common_submission_args(parser: argparse.ArgumentParser, *, require_proj
         required=require_projected_hours,
         default=0.0,
         help="projected GPU-hours for this run (recorded in the manifest; guard against the M0/M1 ceilings)",
+    )
+    parser.add_argument(
+        "--max-train-iterations",
+        type=int,
+        default=DEFAULT_MAX_TRAIN_ITERATIONS,
+        help=(
+            "value for main.py's ADAGS_MAX_ITERATIONS train-iteration guard. "
+            "The default reproduces main.py's own unset-environment behaviour "
+            "exactly; raise it only for a deliberately long run (e.g. a "
+            "checkpoint continuation past the default ceiling)"
+        ),
     )
 
 

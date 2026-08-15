@@ -34,6 +34,16 @@
 #   {{RUN_DIR}}           absolute run output directory on shared Apollo
 #                         storage, e.g.
 #                         /apollo/users/sri/proj_adags/runs/elgs/<run_id>
+#   {{MAX_TRAIN_ITERATIONS}}
+#                         value for main.py's ADAGS_MAX_ITERATIONS guard.
+#                         The wrapper substitutes main.py's own
+#                         DEFAULT_MAX_TRAIN_ITERATIONS (6000) unless
+#                         --max-train-iterations raises it, so the rendered
+#                         config is an exact no-op for every lane that does
+#                         not ask for a longer run. Templated rather than
+#                         hard-coded so the ceiling a run actually trained
+#                         under is visible in its rendered config instead of
+#                         living in an untracked container environment.
 #
 # -----------------------------------------------------------------------
 # Deviations from det_cfg_apollo_{dgx,hopper}.yaml (recorded here per the
@@ -173,6 +183,7 @@ environment:
     - ADAGS_RUNS_ROOT=/apollo/users/sri/proj_adags/runs
     - ADAGS_LOGS_ROOT=/apollo/users/sri/proj_adags/logs
     - ADAGS_RUN_DIR={{RUN_DIR}}
+    - ADAGS_MAX_ITERATIONS={{MAX_TRAIN_ITERATIONS}}
 entrypoint: >-
   bash -c "python3 -c 'from scripts.submit_apollo import runtime_assertions;
   runtime_assertions()' && exec python3 {{ENTRYPOINT_SCRIPT}} {{ENTRYPOINT_ARGS}}"
