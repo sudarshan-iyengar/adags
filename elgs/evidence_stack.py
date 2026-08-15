@@ -88,7 +88,13 @@ from .energy import (
     stream_log_likelihoods,
 )
 from .evidence import EvidenceHeads, EvidenceParams, Report
-from .observability import QSnapshot, SigmaPoint, compute_q, q_tilde
+from .observability import (
+    QSnapshot,
+    SigmaPoint,
+    compute_q,
+    compute_q_batch,
+    q_tilde,
+)
 from .tracks_loader import SealedTracks
 
 SMOKE_HEADS_FILENAME = "smoke_evidence_heads_v1.json"
@@ -548,17 +554,16 @@ def bridge_point(
     return tuple(start[i] + t * (end[i] - start[i]) for i in range(3))
 
 
-def sigma_points_for(
+def sigma_grid(
     point: tuple[float, float, float],
     sigma: float,
-    project,
-) -> tuple[SigmaPoint, ...]:
-    """The frozen 7-point grid (prereg_observability sigma_points).
+) -> tuple[tuple[tuple[float, float, float], float], ...]:
+    """The frozen 7-point world grid: centre first, then +/- per axis.
 
-    `project(world_point) -> (pixel, depth) | None`; a point that does
-    not project is dropped and its weight is redistributed over the
-    survivors so the weights still sum to one (validate_sigma_points is
-    a hard contract).
+    Pure geometry, no projection. Split out of `sigma_points_for` so a
+    caller that batches projections can obtain the SAME world points in
+    the SAME order and project them together; `sigma_points_for` is that
+    function composed with a per-point projector, unchanged.
     """
     offsets = [(point, SIGMA_CENTER_WEIGHT)]
     for axis in range(3):
@@ -566,10 +571,26 @@ def sigma_points_for(
             shifted = list(point)
             shifted[axis] += sign * sigma
             offsets.append((tuple(shifted), SIGMA_AXIS_WEIGHT))
+    return tuple(offsets)
 
+
+def sigma_points_from_projections(
+    grid: Sequence[tuple[tuple[float, float, float], float]],
+    projections: Sequence,
+) -> tuple[SigmaPoint, ...]:
+    """Assemble sigma points from an already-projected grid.
+
+    `projections[i]` is `(pixel, depth)` or None for `grid[i]`. A point
+    that does not project is dropped and its weight is redistributed
+    over the survivors so the weights still sum to one
+    (validate_sigma_points is a hard contract).
+    """
+    if len(grid) != len(projections):
+        raise ContractError(
+            f"sigma grid has {len(grid)} points but {len(projections)} projections"
+        )
     survivors = []
-    for world, weight in offsets:
-        projected = project(world)
+    for (world, weight), projected in zip(grid, projections):
         if projected is None:
             continue
         pixel, depth = projected
@@ -582,6 +603,24 @@ def sigma_points_for(
     return tuple(
         SigmaPoint(weight=w / total, point=world, pixel=pixel, depth=depth)
         for world, w, pixel, depth in survivors
+    )
+
+
+def sigma_points_for(
+    point: tuple[float, float, float],
+    sigma: float,
+    project,
+) -> tuple[SigmaPoint, ...]:
+    """The frozen 7-point grid (prereg_observability sigma_points).
+
+    `project(world_point) -> (pixel, depth) | None`; a point that does
+    not project is dropped and its weight is redistributed over the
+    survivors so the weights still sum to one (validate_sigma_points is
+    a hard contract).
+    """
+    grid = sigma_grid(point, sigma)
+    return sigma_points_from_projections(
+        grid, [project(world) for world, _ in grid]
     )
 
 
@@ -1010,6 +1049,238 @@ class RoundEvidence:
         return tuple(w for w in self.windows if w.family_id == family_id)
 
 
+@dataclass(frozen=True)
+class _QRequest:
+    """One (report, bridge) pair the round must score, in snapshot order.
+
+    `point` is the bridge's world position at this frame, or None when
+    the report's seed carries no endpoints for this bridge -- the case
+    the scalar loop records as `value = 0.0`, `centre = (0, 0)`.
+    """
+
+    bridge_id: int
+    track_id: int
+    camera_id: int
+    frame: float
+    d_u: float
+    point: tuple[float, float, float] | None
+
+
+def _plan_window_requests(
+    reports,
+    bridge_ids,
+    bridges_by_seed,
+    seed_of_track,
+    d_by_cluster,
+    cluster_of_seed,
+    window,
+) -> list[_QRequest]:
+    """The window's (report, bridge) pairs, REPORT-major then bridge.
+
+    The order is load-bearing: it is the order `snapshot.put` sees, and
+    the double-write contract is defined against it.
+    """
+    requests: list[_QRequest] = []
+    for (track_id, camera_id, frame) in reports:
+        seed_id = seed_of_track[track_id]
+        d_u = d_by_cluster.get(cluster_of_seed.get(seed_id, -1), 0.0)
+        seed_bridges = bridges_by_seed.get(seed_id)
+        for bridge_id in bridge_ids:
+            endpoints = (seed_bridges or {}).get(bridge_id)
+            requests.append(
+                _QRequest(
+                    bridge_id=bridge_id,
+                    track_id=track_id,
+                    camera_id=camera_id,
+                    frame=frame,
+                    d_u=d_u,
+                    point=(
+                        None if endpoints is None
+                        else bridge_point(endpoints, window, frame)
+                    ),
+                )
+            )
+    return requests
+
+
+def _resolve_requests_scalar(
+    requests: Sequence[_QRequest], probe, *, sigma_world: float, family_id: int
+) -> list[tuple[float, tuple[float, float]]]:
+    """(q_tilde, bridge centre) per request, one probe call at a time.
+
+    THE ORACLE. Kept verbatim from the pre-batching implementation and
+    still the path any probe without the batched surface takes.
+    """
+    out: list[tuple[float, tuple[float, float]]] = []
+    for request in requests:
+        value = 0.0
+        center = (0.0, 0.0)
+        if request.point is not None:
+            projected = probe.project(request.camera_id, request.point)
+            if projected is not None:
+                center = projected[0]
+                sigmas = sigma_points_for(
+                    request.point,
+                    sigma_world,
+                    lambda p, cid=request.camera_id: probe.project(cid, p),
+                )
+                if sigmas:
+                    q = compute_q(
+                        sigmas,
+                        probe,
+                        request.camera_id,
+                        request.frame,
+                        exclude_track=request.track_id,
+                        present_family=family_id,
+                        kappa_res=1.0,
+                    )
+                    value = q_tilde(q, request.d_u)
+        out.append((value, center))
+    return out
+
+
+def _resolve_requests_batched(
+    requests: Sequence[_QRequest], probe, *, sigma_world: float, family_id: int
+) -> list[tuple[float, tuple[float, float]]]:
+    """`_resolve_requests_scalar` with the probe calls grouped.
+
+    Two batched passes replace the scalar path's fifteen projections and
+    seven transmittance calls PER q value:
+
+    1. PROJECTION, grouped by camera. Every request's 7-point sigma grid
+       is projected in one call per camera instead of one call per point
+       (the scalar path also re-projects the bridge centre separately;
+       here it is grid element 0, the same world point through the same
+       projector).
+    2. TRANSMITTANCE, grouped by (camera, frame). Every sigma point of
+       every report and bridge sharing a (camera, frame) composites
+       against the SAME geometry and the SAME alpha columns, so one
+       bounded-chunk reduction answers all of them.
+
+    Nothing about WHICH reports, frames, cameras, bridges or sigma
+    points contribute changes -- the request list, the grid, the
+    drop-and-renormalize rule and the accumulation order are the scalar
+    path's own.
+
+    Grouping across reports at one (camera, frame) is valid only because
+    the probe declares `excludes_track_rows = False`: `exclude_track` is
+    recorded but filters no rows, so two reports at the same
+    (camera, frame) composite the identical splat set. A probe that does
+    filter by track does not set the attribute and is grouped per track.
+    """
+    ignores_track = getattr(probe, "excludes_track_rows", True) is False
+
+    # -- pass 1: grids, then one projection call per camera -------------
+    grids: dict[int, tuple] = {}
+    by_camera: dict[int, list[tuple[int, int]]] = {}
+    world_points: dict[int, list] = {}
+    for index, request in enumerate(requests):
+        if request.point is None:
+            continue
+        grid = sigma_grid(request.point, sigma_world)
+        grids[index] = grid
+        slots = by_camera.setdefault(request.camera_id, [])
+        points = world_points.setdefault(request.camera_id, [])
+        for grid_index, (world, _weight) in enumerate(grid):
+            slots.append((index, grid_index))
+            points.append(world)
+
+    projections: dict[int, list] = {
+        index: [None] * len(grid) for index, grid in grids.items()
+    }
+    for camera_id, slots in by_camera.items():
+        results = probe.project_batch(camera_id, world_points[camera_id])
+        for (index, grid_index), projected in zip(slots, results):
+            projections[index][grid_index] = projected
+
+    # -- pass 2: sigma points, then one reduction per (camera, frame) ---
+    sigmas_by_request: dict[int, tuple[SigmaPoint, ...]] = {}
+    centers: dict[int, tuple[float, float]] = {}
+    groups: dict[tuple, list[int]] = {}
+    for index, request in enumerate(requests):
+        if index not in grids:
+            continue
+        projected = projections[index]
+        # The scalar path projects the CENTRE first and, when that fails,
+        # records value 0 / centre (0, 0) without consulting the offsets.
+        if projected[0] is None:
+            continue
+        centers[index] = projected[0][0]
+        sigmas = sigma_points_from_projections(grids[index], projected)
+        if not sigmas:
+            continue
+        sigmas_by_request[index] = sigmas
+        key = (
+            (request.camera_id, request.frame)
+            if ignores_track
+            else (request.camera_id, request.frame, request.track_id)
+        )
+        groups.setdefault(key, []).append(index)
+
+    transmittances: dict[int, list[float]] = {}
+    for key, members in groups.items():
+        camera_id, frame = key[0], key[1]
+        pixels: list[tuple[float, float]] = []
+        depths: list[float] = []
+        for index in members:
+            for point in sigmas_by_request[index]:
+                pixels.append(point.pixel)
+                depths.append(point.depth)
+        values = probe.transmittance_batch(
+            camera_id,
+            frame,
+            pixels,
+            depths,
+            # None is exact when the probe ignores the argument; the
+            # group key carries the track otherwise.
+            exclude_track=None if ignores_track else key[2],
+            present_family=family_id,
+        ).tolist()
+        cursor = 0
+        for index in members:
+            width = len(sigmas_by_request[index])
+            transmittances[index] = values[cursor:cursor + width]
+            cursor += width
+
+    # -- assemble, in request order -------------------------------------
+    out: list[tuple[float, tuple[float, float]]] = []
+    for index, request in enumerate(requests):
+        value = 0.0
+        center = centers.get(index, (0.0, 0.0))
+        sigmas = sigmas_by_request.get(index)
+        if sigmas is not None:
+            # Every surviving sigma point projected, and `project`
+            # rejects on exactly the znear + raster-bounds conditions
+            # `in_frustum` rejects on, so the scalar path's per-point
+            # in_frustum test admits all of them. `ModelProbe`'s two
+            # predicates are pinned equal by test.
+            q = compute_q_batch(
+                sigmas,
+                probe,
+                request.camera_id,
+                request.frame,
+                exclude_track=request.track_id,
+                present_family=family_id,
+                kappa_res=1.0,
+                transmittances=transmittances[index],
+            )
+            value = q_tilde(q, request.d_u)
+        out.append((value, center))
+    return out
+
+
+def resolve_window_requests(
+    requests: Sequence[_QRequest], probe, *, sigma_world: float, family_id: int
+) -> list[tuple[float, tuple[float, float]]]:
+    """Batched when the probe offers the batched surface, else scalar."""
+    batched = all(
+        callable(getattr(probe, name, None))
+        for name in ("project_batch", "transmittance_batch")
+    )
+    resolve = _resolve_requests_batched if batched else _resolve_requests_scalar
+    return resolve(requests, probe, sigma_world=sigma_world, family_id=family_id)
+
+
 def refresh_round_evidence(
     context: EvidenceContext,
     probe,
@@ -1095,53 +1366,48 @@ def refresh_round_evidence(
             cluster_of_seed = {
                 sid: c.cluster_id for c in clusters for sid in c.seed_ids
             }
-            for (track_id, camera_id, frame) in reports:
-                seed_id = context.seed_of_track[track_id]
-                d_u = d_by_cluster.get(cluster_of_seed.get(seed_id, -1), 0.0)
-                seed_bridges = bridges_by_seed.get(seed_id)
-                for bridge_id in bridge_ids:
-                    value = 0.0
-                    center = (0.0, 0.0)
-                    endpoints = (seed_bridges or {}).get(bridge_id)
-                    if endpoints is not None:
-                        point = bridge_point(endpoints, window, frame)
-                        projected = probe.project(camera_id, point)
-                        if projected is not None:
-                            center = projected[0]
-                            sigmas = sigma_points_for(
-                                point,
-                                context.constants.sigma_world,
-                                lambda p, cid=camera_id: probe.project(cid, p),
-                            )
-                            if sigmas:
-                                q = compute_q(
-                                    sigmas,
-                                    probe,
-                                    camera_id,
-                                    frame,
-                                    exclude_track=track_id,
-                                    present_family=family_id,
-                                    kappa_res=1.0,
-                                )
-                                value = q_tilde(q, d_u)
-                    key = (bridge_id, track_id, camera_id, frame)
-                    if key in written:
-                        # With exclusive window endpoints two windows of
-                        # one family cannot share a frame, so this is
-                        # unreachable. It is a HARD failure rather than a
-                        # silent skip: the previous revision skipped, and
-                        # the skip handed the second window a q computed
-                        # under the FIRST window's bridge geometry while
-                        # recomputing its centre -- q and g_pos then
-                        # referred to different world points.
-                        raise ContractError(
-                            f"q snapshot key {key} written twice: two windows "
-                            "of one family share a frame, which the exclusive "
-                            "window-endpoint rule must prevent"
-                        )
-                    snapshot.put(bridge_id, track_id, camera_id, frame, value)
-                    written.add(key)
-                    centers[bridge_id][(track_id, camera_id, frame)] = center
+            requests = _plan_window_requests(
+                reports,
+                bridge_ids,
+                bridges_by_seed,
+                context.seed_of_track,
+                d_by_cluster,
+                cluster_of_seed,
+                window,
+            )
+            resolved = resolve_window_requests(
+                requests,
+                probe,
+                sigma_world=context.constants.sigma_world,
+                family_id=family_id,
+            )
+            for request, (value, center) in zip(requests, resolved):
+                key = (
+                    request.bridge_id, request.track_id,
+                    request.camera_id, request.frame,
+                )
+                if key in written:
+                    # With exclusive window endpoints two windows of
+                    # one family cannot share a frame, so this is
+                    # unreachable. It is a HARD failure rather than a
+                    # silent skip: the previous revision skipped, and
+                    # the skip handed the second window a q computed
+                    # under the FIRST window's bridge geometry while
+                    # recomputing its centre -- q and g_pos then
+                    # referred to different world points.
+                    raise ContractError(
+                        f"q snapshot key {key} written twice: two windows "
+                        "of one family share a frame, which the exclusive "
+                        "window-endpoint rule must prevent"
+                    )
+                snapshot.put(
+                    request.bridge_id, request.track_id,
+                    request.camera_id, request.frame, value,
+                )
+                written.add(key)
+                centers[request.bridge_id][
+                    (request.track_id, request.camera_id, request.frame)
+                ] = center
 
             windows.append(
                 WindowEvidence(
@@ -1290,8 +1556,11 @@ __all__ = [
     "load_evidence_constants",
     "presence_series",
     "resolve_smoke_report_cap",
+    "resolve_window_requests",
     "select_smoke_reports",
     "seed_overlap_edges",
+    "sigma_grid",
     "sigma_points_for",
+    "sigma_points_from_projections",
     "window_phi",
 ]

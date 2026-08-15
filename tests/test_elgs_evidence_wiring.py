@@ -26,6 +26,9 @@ from depth_visibility.errors import ContractError
 from elgs.bridges import Window
 from elgs.clusters import SeedCluster
 from elgs.evidence_stack import (
+    _plan_window_requests,
+    _resolve_requests_batched,
+    _resolve_requests_scalar,
     bridge_point,
     build_bridge_family,
     build_clusters,
@@ -36,10 +39,13 @@ from elgs.evidence_stack import (
     load_evidence_constants,
     presence_series,
     seed_overlap_edges,
+    sigma_grid,
     sigma_points_for,
+    sigma_points_from_projections,
 )
+from elgs.observability import compute_q, compute_q_batch
 from elgs.probe import AnalyticProbe, ProbeGaussian
-from elgs.probe_model import ModelProbe, project_points
+from elgs.probe_model import DEFAULT_QUERY_CHUNK, ModelProbe, project_points
 from elgs.state_io import build_elgs_state, load_elgs_state
 from elgs.tracks_loader import (
     MANIFEST_FILENAME,
@@ -789,6 +795,512 @@ class ProbeParityTests(unittest.TestCase):
             probe.transmittance(
                 1, 9.0, (0.0, 0.0), 2.0, exclude_track=None, present_family=None
             )
+
+
+# ---------------------------------------------------------------------------
+# 2b. Batched q: the batched surface must be the scalar path's answer
+# ---------------------------------------------------------------------------
+#
+# The scalar `transmittance` / `project` / `compute_q` path is the ORACLE.
+# Batching exists only to stop paying one Python call and several
+# device->host syncs per sigma point; it must not move a single number.
+# Everything below compares the two on the same fixture and demands
+# agreement inside the prereg's 1e-6 reference tolerance, plus exact
+# invariance to the (resource-only) chunk size.
+
+
+def _parity_devices():
+    """CPU always; CUDA too when the runner has it.
+
+    Experiment 75 died because the runtime and the model sat on different
+    devices, so device placement is a parity axis here, not an afterthought.
+    """
+    devices = [torch.device("cpu")]
+    if torch.cuda.is_available():
+        devices.append(torch.device("cuda"))
+    return devices
+
+
+def _parity_fixture(device, *, routing: bool, motion: bool, pixel_scale=1.0,
+                    n_splats=40, query_chunk=DEFAULT_QUERY_CHUNK):
+    """A model with FOREGROUND ORDERING: splats spread over depth and
+    screen position so different query depths see different front sets.
+
+    `routing` turns on the static-twin branch the rasterizer composites
+    at canonical positions; `motion` makes `get_dynamic_xyz` genuinely
+    time-dependent so the (camera, frame) geometry key matters.
+    """
+    camera = _StubCamera(width=64, height=48, fl=50.0)
+    rows = []
+    for index in range(n_splats):
+        depth = 1.0 + 0.15 * index
+        x = 0.02 * ((index % 7) - 3)
+        y = 0.02 * ((index % 5) - 2)
+        rows.append([x, y, depth])
+    xyz = torch.tensor(rows, dtype=torch.float32, device=device)
+    opacity = torch.linspace(
+        0.05, 0.95, n_splats, dtype=torch.float32, device=device
+    ).reshape(-1, 1)
+    scaling = torch.full((n_splats, 3), 0.03, dtype=torch.float32, device=device)
+    family_ids = torch.tensor(
+        [index % 3 for index in range(n_splats)], dtype=torch.long, device=device
+    )
+    routing_column = (
+        torch.linspace(0.2, 0.9, n_splats, dtype=torch.float32, device=device).reshape(-1, 1)
+        if routing else None
+    )
+    motion_fn = None
+    if motion:
+        def motion_fn(timestamp):
+            shift = torch.zeros_like(xyz)
+            shift[:, 0] = 0.05 * float(timestamp)
+            shift[:, 1] = -0.03 * float(timestamp)
+            return shift
+
+    gaussians = _StubGaussians(
+        xyz, opacity, scaling, family_ids, motion=motion_fn, routing=routing_column
+    )
+
+    def presence_at(timestamp, present_family):
+        # TEMPORAL PRESENCE: a real, time-varying, per-row column.
+        base = torch.linspace(
+            0.1, 1.0, n_splats, dtype=torch.float32, device=device
+        ).reshape(-1, 1)
+        column = (base * (0.5 + 0.5 * math.cos(float(timestamp)))).clamp(0.0, 1.0)
+        if present_family is None:
+            return column
+        mask = (family_ids == int(present_family)).reshape(-1, 1)
+        return column.clone().masked_fill(mask, 1.0)
+
+    probe = ModelProbe(
+        gaussians,
+        {1: camera},
+        presence_at=presence_at,
+        frame_to_time={0: 0.0, 1: 0.35, 2: 0.9, 3: 1.7},
+        pixel_scale=pixel_scale,
+        query_chunk=query_chunk,
+    )
+    return probe
+
+
+#: Query pixels and depths chosen so the front set is empty for the
+#: nearest depth, partial in the middle, and nearly everything at the far
+#: depth -- i.e. FOREGROUND ORDERING is actually exercised.
+_PARITY_PIXELS = [
+    (32.0, 24.0), (33.5, 24.0), (30.0, 26.5), (32.0, 20.0),
+    (40.0, 30.0), (10.0, 10.0), (32.4, 23.6), (28.0, 27.0),
+    (35.0, 22.0), (32.0, 24.5), (31.0, 25.0), (34.0, 21.0),
+]
+_PARITY_DEPTHS = [0.5, 1.4, 2.0, 3.3, 4.6, 6.0, 7.5]
+
+
+class BatchedTransmittanceParityTests(unittest.TestCase):
+    def _max_difference(self, probe, *, frames, present_family=None, chunk_size=None,
+                        pixel_scale=1.0):
+        worst = 0.0
+        for frame in frames:
+            queries = [
+                (pixel, depth)
+                for depth in _PARITY_DEPTHS
+                for pixel in _PARITY_PIXELS
+            ]
+            scalar = [
+                probe.transmittance(
+                    1, frame, (p[0] * pixel_scale, p[1] * pixel_scale), d,
+                    exclude_track=7, present_family=present_family,
+                )
+                for p, d in queries
+            ]
+            batched = probe.transmittance_batch(
+                1, frame,
+                [(p[0] * pixel_scale, p[1] * pixel_scale) for p, _ in queries],
+                [d for _, d in queries],
+                exclude_track=7, present_family=present_family,
+                chunk_size=chunk_size,
+            ).tolist()
+            self.assertEqual(len(scalar), len(batched))
+            for got, want in zip(batched, scalar):
+                self.assertTrue(math.isfinite(got))
+                self.assertTrue(0.0 <= got <= 1.0)
+                worst = max(worst, abs(got - want))
+        return worst
+
+    def test_matches_scalar_across_depths_pixels_and_devices(self):
+        """Plain model: no routing, no motion. Foreground ordering only."""
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=False, motion=False)
+                worst = self._max_difference(probe, frames=[0.0])
+                self.assertLess(worst, 1e-6, f"max |batched - scalar| = {worst}")
+
+    def test_matches_scalar_with_dynamic_motion_and_temporal_presence(self):
+        """`get_dynamic_xyz(t)` moves the geometry and the presence column
+        varies with t, so every frame is a different reduction."""
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=False, motion=True)
+                worst = self._max_difference(probe, frames=[0.0, 1.0, 2.0, 3.0])
+                self.assertLess(worst, 1e-6, f"max |batched - scalar| = {worst}")
+
+    def test_matches_scalar_with_the_static_twin_branch(self):
+        """Soft routing hands the rasterizer a SECOND opacity column at
+        canonical positions; the batched path must composite both."""
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=True, motion=True)
+                worst = self._max_difference(probe, frames=[0.0, 2.0])
+                self.assertLess(worst, 1e-6, f"max |batched - scalar| = {worst}")
+
+    def test_the_static_branch_actually_changes_the_answer(self):
+        """Guard against the previous class of defect: a test that passes
+        because the branch under test never runs."""
+        with_twins = _parity_fixture(torch.device("cpu"), routing=True, motion=True)
+        without = _parity_fixture(torch.device("cpu"), routing=False, motion=True)
+        a = with_twins.transmittance_batch(
+            1, 2.0, _PARITY_PIXELS, [4.6] * len(_PARITY_PIXELS),
+            exclude_track=None, present_family=None,
+        ).tolist()
+        b = without.transmittance_batch(
+            1, 2.0, _PARITY_PIXELS, [4.6] * len(_PARITY_PIXELS),
+            exclude_track=None, present_family=None,
+        ).tolist()
+        self.assertTrue(
+            any(abs(x - y) > 1e-4 for x, y in zip(a, b)),
+            "static-twin branch made no difference; the fixture does not reach it",
+        )
+
+    def test_matches_scalar_with_a_forced_present_family(self):
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=True, motion=True)
+                worst = self._max_difference(probe, frames=[1.0], present_family=1)
+                self.assertLess(worst, 1e-6, f"max |batched - scalar| = {worst}")
+
+    def test_matches_scalar_at_non_unit_pixel_scale(self):
+        """No test reached `pixel_scale != 1.0` before this one, and the
+        production lane runs at resolution 4."""
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(
+                    device, routing=True, motion=True, pixel_scale=4.0
+                )
+                worst = self._max_difference(
+                    probe, frames=[0.0, 2.0], pixel_scale=4.0
+                )
+                self.assertLess(worst, 1e-6, f"max |batched - scalar| = {worst}")
+
+    def test_empty_front_set_returns_exactly_one(self):
+        """A query in front of every splat composites nothing. The scalar
+        path early-returns 1.0; the batched path sums nothing and
+        exp(0) == 1.0."""
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=True, motion=True)
+                values = probe.transmittance_batch(
+                    1, 0.0, _PARITY_PIXELS, [0.5] * len(_PARITY_PIXELS),
+                    exclude_track=None, present_family=None,
+                ).tolist()
+                self.assertTrue(all(value == 1.0 for value in values))
+                for pixel in _PARITY_PIXELS:
+                    self.assertEqual(
+                        probe.transmittance(
+                            1, 0.0, pixel, 0.5,
+                            exclude_track=None, present_family=None,
+                        ),
+                        1.0,
+                    )
+
+    def test_is_invariant_to_the_chunk_size(self):
+        """Chunk size is a RESOURCE parameter: identical values, bitwise,
+        for every chunking of the same query list."""
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=True, motion=True)
+                queries = [
+                    (pixel, depth)
+                    for depth in _PARITY_DEPTHS
+                    for pixel in _PARITY_PIXELS
+                ]
+                reference = None
+                for chunk in (1, 2, 3, 7, 13, 64, 10_000):
+                    values = probe.transmittance_batch(
+                        1, 1.0,
+                        [p for p, _ in queries], [d for _, d in queries],
+                        exclude_track=None, present_family=None,
+                        chunk_size=chunk,
+                    ).tolist()
+                    if reference is None:
+                        reference = values
+                        continue
+                    self.assertEqual(
+                        values, reference, f"chunk {chunk} changed the result"
+                    )
+
+    def test_constructor_chunk_is_used_and_validated(self):
+        probe = _parity_fixture(torch.device("cpu"), routing=False, motion=False,
+                                query_chunk=3)
+        default = _parity_fixture(torch.device("cpu"), routing=False, motion=False)
+        args = dict(exclude_track=None, present_family=None)
+        self.assertEqual(
+            probe.transmittance_batch(
+                1, 0.0, _PARITY_PIXELS, [4.6] * len(_PARITY_PIXELS), **args
+            ).tolist(),
+            default.transmittance_batch(
+                1, 0.0, _PARITY_PIXELS, [4.6] * len(_PARITY_PIXELS), **args
+            ).tolist(),
+        )
+        with self.assertRaises(ContractError):
+            _parity_fixture(torch.device("cpu"), routing=False, motion=False,
+                            query_chunk=0)
+        with self.assertRaises(ContractError):
+            probe.transmittance_batch(
+                1, 0.0, _PARITY_PIXELS, [4.6] * len(_PARITY_PIXELS),
+                chunk_size=0, **args
+            )
+
+    def test_length_mismatch_and_empty_input(self):
+        probe = _parity_fixture(torch.device("cpu"), routing=False, motion=False)
+        args = dict(exclude_track=None, present_family=None)
+        with self.assertRaises(ContractError):
+            probe.transmittance_batch(1, 0.0, [(1.0, 2.0)], [1.0, 2.0], **args)
+        self.assertEqual(
+            probe.transmittance_batch(1, 0.0, [], [], **args).numel(), 0
+        )
+
+    def test_unmapped_frame_fails_closed_like_the_scalar_path(self):
+        probe = _parity_fixture(torch.device("cpu"), routing=False, motion=False)
+        args = dict(exclude_track=None, present_family=None)
+        with self.assertRaises(ContractError):
+            probe.transmittance(1, 99.0, (32.0, 24.0), 4.0, **args)
+        with self.assertRaises(ContractError):
+            probe.transmittance_batch(1, 99.0, [(32.0, 24.0)], [4.0], **args)
+
+    def test_cross_device_model_and_presence_still_agree(self):
+        """The exp-75 asymmetry, batched. Presence is built on CPU while
+        the model lives on the runtime device."""
+        if not torch.cuda.is_available():
+            self.skipTest("no CUDA device on this runner")
+        probe = _parity_fixture(torch.device("cuda"), routing=True, motion=True)
+        cuda_presence = probe._presence_at
+
+        def cpu_presence(timestamp, present_family):
+            return cuda_presence(timestamp, present_family).cpu()
+
+        probe._presence_at = cpu_presence
+        worst = self._max_difference(probe, frames=[0.0, 2.0])
+        self.assertLess(worst, 1e-6, f"max |batched - scalar| = {worst}")
+
+
+class BatchedProjectionParityTests(unittest.TestCase):
+    #: In front, behind the camera, and outside the raster in both axes.
+    _POINTS = [
+        (0.0, 0.0, 2.0), (0.04, -0.02, 3.0), (-0.3, 0.1, 1.2),
+        (0.0, 0.0, -1.0), (0.0, 0.0, 0.0), (5.0, 0.0, 2.0),
+        (0.0, 5.0, 2.0), (-5.0, -5.0, 2.0), (0.01, 0.01, 12.0),
+    ]
+
+    def test_project_batch_matches_project_point_by_point(self):
+        for device in _parity_devices():
+            for scale in (1.0, 4.0):
+                with self.subTest(device=str(device), pixel_scale=scale):
+                    probe = _parity_fixture(
+                        device, routing=False, motion=False, pixel_scale=scale
+                    )
+                    batched = probe.project_batch(1, self._POINTS)
+                    self.assertEqual(len(batched), len(self._POINTS))
+                    for point, got in zip(self._POINTS, batched):
+                        want = probe.project(1, point)
+                        if want is None:
+                            self.assertIsNone(got)
+                            continue
+                        self.assertIsNotNone(got)
+                        (u, v), d = got
+                        (wu, wv), wd = want
+                        self.assertAlmostEqual(u, wu, delta=1e-6)
+                        self.assertAlmostEqual(v, wv, delta=1e-6)
+                        self.assertAlmostEqual(d, wd, delta=1e-6)
+
+    def test_in_frustum_is_exactly_project_is_not_none(self):
+        """`_resolve_requests_batched` skips a redundant re-projection on
+        the strength of this identity; it is pinned, not assumed."""
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=False, motion=False)
+                for point in self._POINTS:
+                    self.assertEqual(
+                        probe.in_frustum(1, 0.0, point),
+                        probe.project(1, point) is not None,
+                    )
+                self.assertEqual(
+                    probe.in_frustum_batch(1, 0.0, self._POINTS),
+                    [probe.project(1, point) is not None for point in self._POINTS],
+                )
+
+    def test_empty_batch(self):
+        probe = _parity_fixture(torch.device("cpu"), routing=False, motion=False)
+        self.assertEqual(probe.project_batch(1, []), [])
+        self.assertEqual(probe.in_frustum_batch(1, 0.0, []), [])
+
+
+class BatchedQParityTests(unittest.TestCase):
+    def _sigmas(self, probe, point, sigma=0.02):
+        return sigma_points_for(point, sigma, lambda p: probe.project(1, p))
+
+    def test_sigma_grid_decomposition_is_exact(self):
+        probe = _parity_fixture(torch.device("cpu"), routing=True, motion=True)
+        point = (0.01, -0.01, 2.5)
+        grid = sigma_grid(point, 0.02)
+        assembled = sigma_points_from_projections(
+            grid, [probe.project(1, world) for world, _ in grid]
+        )
+        self.assertEqual(assembled, self._sigmas(probe, point))
+
+    def test_compute_q_batch_matches_compute_q(self):
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=True, motion=True)
+                for frame in (0.0, 1.0, 2.0, 3.0):
+                    for point in ((0.0, 0.0, 2.5), (0.05, -0.03, 4.0),
+                                  (-0.02, 0.02, 1.5), (0.0, 0.0, 7.0)):
+                        sigmas = self._sigmas(probe, point)
+                        if not sigmas:
+                            continue
+                        want = compute_q(
+                            sigmas, probe, 1, frame,
+                            exclude_track=3, present_family=1, kappa_res=1.0,
+                        )
+                        got = compute_q_batch(
+                            sigmas, probe, 1, frame,
+                            exclude_track=3, present_family=1, kappa_res=1.0,
+                        )
+                        self.assertLess(
+                            abs(got - want), 1e-6,
+                            f"q mismatch at frame {frame} point {point}: "
+                            f"{got} vs {want}",
+                        )
+
+    def test_compute_q_batch_rejects_a_mismatched_transmittance_list(self):
+        probe = _parity_fixture(torch.device("cpu"), routing=False, motion=False)
+        sigmas = self._sigmas(probe, (0.0, 0.0, 2.5))
+        self.assertTrue(sigmas)
+        with self.assertRaises(ContractError):
+            compute_q_batch(
+                sigmas, probe, 1, 0.0, exclude_track=None, present_family=None,
+                kappa_res=1.0, transmittances=[1.0],
+            )
+
+
+class BatchedWindowResolutionTests(unittest.TestCase):
+    """The (camera, frame) grouping, end to end against the scalar loop."""
+
+    def _requests(self):
+        window = Window(0, 3)
+        # Two seeds, three bridges, several reports per (camera, frame)
+        # so the grouping actually has something to group.
+        bridges_by_seed = {
+            10: {
+                0: ((0.0, 0.0, 2.0), (0.0, 0.0, 2.0)),
+                1: ((0.0, 0.0, 2.0), (0.03, 0.01, 3.0)),
+                2: ((0.03, 0.01, 3.0), (0.03, 0.01, 3.0)),
+            },
+            11: {
+                0: ((-0.02, 0.02, 1.6), (-0.02, 0.02, 1.6)),
+                1: ((-0.02, 0.02, 1.6), (0.05, -0.02, 5.0)),
+                2: ((0.05, -0.02, 5.0), (0.05, -0.02, 5.0)),
+            },
+        }
+        reports = [
+            (100, 1, 1.0), (101, 1, 1.0), (100, 1, 2.0),
+            (101, 1, 2.0), (100, 1, 3.0), (101, 1, 3.0),
+        ]
+        return _plan_window_requests(
+            reports,
+            [0, 1, 2],
+            bridges_by_seed,
+            {100: 10, 101: 11},
+            {500: 0.8, 501: 0.4},
+            {10: 500, 11: 501},
+            window,
+        )
+
+    def test_batched_resolution_matches_the_scalar_loop(self):
+        requests = self._requests()
+        self.assertEqual(len(requests), 18)
+        for device in _parity_devices():
+            with self.subTest(device=str(device)):
+                probe = _parity_fixture(device, routing=True, motion=True)
+                scalar = _resolve_requests_scalar(
+                    requests, probe, sigma_world=0.02, family_id=1
+                )
+                batched = _resolve_requests_batched(
+                    requests, probe, sigma_world=0.02, family_id=1
+                )
+                self.assertEqual(len(scalar), len(batched))
+                for (bv, bc), (sv, sc) in zip(batched, scalar):
+                    self.assertLess(abs(bv - sv), 1e-6, f"{bv} vs {sv}")
+                    self.assertAlmostEqual(bc[0], sc[0], delta=1e-6)
+                    self.assertAlmostEqual(bc[1], sc[1], delta=1e-6)
+                self.assertTrue(
+                    any(value > 0.0 for value, _ in batched),
+                    "fixture produced no nonzero q; the path is not exercised",
+                )
+
+    def test_batched_resolution_is_chunk_invariant(self):
+        requests = self._requests()
+        reference = None
+        for chunk in (1, 2, 5, 17, 128, 100_000):
+            probe = _parity_fixture(
+                torch.device("cpu"), routing=True, motion=True, query_chunk=chunk
+            )
+            resolved = _resolve_requests_batched(
+                requests, probe, sigma_world=0.02, family_id=1
+            )
+            values = [value for value, _ in resolved]
+            if reference is None:
+                reference = values
+                continue
+            self.assertEqual(values, reference, f"chunk {chunk} changed the result")
+
+    def test_a_request_without_endpoints_scores_zero_at_the_origin(self):
+        requests = self._requests()
+        blanked = [
+            request.__class__(
+                bridge_id=request.bridge_id, track_id=request.track_id,
+                camera_id=request.camera_id, frame=request.frame,
+                d_u=request.d_u, point=None,
+            )
+            for request in requests
+        ]
+        probe = _parity_fixture(torch.device("cpu"), routing=True, motion=True)
+        for resolved in (
+            _resolve_requests_scalar(blanked, probe, sigma_world=0.02, family_id=1),
+            _resolve_requests_batched(blanked, probe, sigma_world=0.02, family_id=1),
+        ):
+            self.assertEqual(resolved, [(0.0, (0.0, 0.0))] * len(blanked))
+
+    def test_a_bridge_point_behind_the_camera_scores_zero_in_both_paths(self):
+        """The centre fails to project, so the scalar path records
+        value 0 / centre (0, 0) WITHOUT consulting the offsets. The
+        batched path must reproduce that, not rescue the request from a
+        surviving offset."""
+        requests = self._requests()
+        behind = [
+            request.__class__(
+                bridge_id=request.bridge_id, track_id=request.track_id,
+                camera_id=request.camera_id, frame=request.frame,
+                d_u=request.d_u, point=(0.0, 0.0, -3.0),
+            )
+            for request in requests
+        ]
+        probe = _parity_fixture(torch.device("cpu"), routing=True, motion=True)
+        scalar = _resolve_requests_scalar(
+            behind, probe, sigma_world=0.02, family_id=1
+        )
+        batched = _resolve_requests_batched(
+            behind, probe, sigma_world=0.02, family_id=1
+        )
+        self.assertEqual(scalar, [(0.0, (0.0, 0.0))] * len(behind))
+        self.assertEqual(batched, scalar)
 
 
 # ---------------------------------------------------------------------------

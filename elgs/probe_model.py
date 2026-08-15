@@ -59,6 +59,15 @@ FOOTPRINT_CUTOFF = 1e-7
 #: modeled").
 _MIN_SIGMA_PX = 1e-3
 
+#: How many queries one batched masked reduction materializes at once.
+#: A RESOURCE parameter, NOT a scientific constant and NOT a cap: it
+#: changes only how much of the (queries x gaussians) reduction is
+#: resident at a time, never which queries are evaluated, which reports
+#: or frames or cameras contribute, or what any of them return. Peak
+#: batched memory is therefore O(chunk x N) instead of O(queries x N).
+#: `tests/test_elgs_evidence_wiring.py` asserts chunk-size invariance.
+DEFAULT_QUERY_CHUNK = 256
+
 
 @dataclass(frozen=True)
 class ProjectedGeometry:
@@ -138,6 +147,16 @@ class ModelProbe:
     per (camera_id, frame) and never mutates the model.
     """
 
+    #: DISCLOSED READING (module docstring): `exclude_track` is recorded
+    #: but performs NO row filtering here, so two queries at the same
+    #: (camera, frame) that differ only in `exclude_track` composite the
+    #: identical splat set and may share one batched reduction. Declared
+    #: as an attribute so the batcher groups across reports BY CONTRACT
+    #: rather than by assumption -- a probe that ever does filter rows by
+    #: track simply does not set it, and `getattr(probe, ..., True)`
+    #: makes the batcher fall back to grouping per track.
+    excludes_track_rows = False
+
     def __init__(
         self,
         gaussians,
@@ -148,6 +167,7 @@ class ModelProbe:
         pixel_scale: float = 1.0,
         max_entries: int = 64,
         device: torch.device | str | None = None,
+        query_chunk: int = DEFAULT_QUERY_CHUNK,
     ) -> None:
         """`cameras` maps camera_id -> one Camera carrying that view's
         (static-rig, time-invariant) extrinsics and intrinsics;
@@ -180,9 +200,20 @@ class ModelProbe:
         self._pixel_scale = float(pixel_scale)
         self._device = torch.device(device) if device is not None else None
         self._max_entries = int(max_entries)
+        if int(query_chunk) <= 0:
+            raise ContractError("query_chunk must be positive")
+        self._query_chunk = int(query_chunk)
         self._geometry: dict[tuple[int, float], ProjectedGeometry] = {}
         self._static_geometry: dict[int, ProjectedGeometry] = {}
         self._presence: dict[float, torch.Tensor] = {}
+        # Model-frozen opacity columns. The probe is built per
+        # round-boundary refresh and never mutates the model, so these
+        # are constant for every query in the round; the pre-batching
+        # code rebuilt both (a sigmoid over N rows plus a routing
+        # multiply) on EVERY transmittance call.
+        self._base_alpha_cache: torch.Tensor | None = None
+        self._static_alpha_cache: torch.Tensor | None = None
+        self._static_alpha_ready = False
 
     def _timestamp_for(self, frame: float, camera) -> float:
         index = int(frame)
@@ -247,6 +278,39 @@ class ModelProbe:
         return geometry
 
     @torch.no_grad()
+    def _base_alpha(self) -> torch.Tensor:
+        """`get_opacity * dynamic_probability`: the model-frozen factor.
+
+        THE RENDERER'S COMPOSITION, read off gaussian_renderer, not
+        assumed. `opacity = base_opacity * dynamic_probability`, then
+        for gaussian_dim == 4:
+            marginal_t = get_elgs_presence(t)   if EL-GS is active
+            marginal_t = get_marginal_t(t)      otherwise
+            opacity = opacity * marginal_t
+        So under EL-GS the presence multiplier REPLACES the temporal
+        marginal — it is never multiplied by it. A previous revision
+        multiplied by `get_marginal_t` as well, calling that a
+        faithfulness repair; because that factor decays to ~0 for
+        temporally distant Gaussians it deleted most occluders, drove
+        T toward 1 and q TOO HIGH — treating the evidence as fully
+        informative exactly where the model says the point is occluded.
+        `dynamic_probability` was simultaneously omitted, which the
+        renderer does apply.
+
+        Cached: the probe never mutates the model, so this column is the
+        same for every query in the round.
+        """
+        if self._base_alpha_cache is None:
+            opacity = self._gaussians.get_opacity.detach().reshape(-1)
+            routing = getattr(self._gaussians, "get_dynamic_probability", None)
+            if routing is not None and getattr(routing, "numel", lambda: 0)():
+                routing = routing.detach().reshape(-1).to(opacity.device)
+                if routing.shape == opacity.shape:
+                    opacity = opacity * routing
+            self._base_alpha_cache = opacity
+        return self._base_alpha_cache
+
+    @torch.no_grad()
     def _alpha_for(self, frame: float, camera, present_family: int | None) -> torch.Tensor:
         """Composited per-row opacity at `frame`, family forced present.
 
@@ -260,27 +324,7 @@ class ModelProbe:
             self._presence[timestamp] = column
         presence = self._presence[timestamp]
 
-        opacity = self._gaussians.get_opacity.detach().reshape(-1).to(presence.device)
-        # THE RENDERER'S COMPOSITION, read off gaussian_renderer, not
-        # assumed. `opacity = base_opacity * dynamic_probability`, then
-        # for gaussian_dim == 4:
-        #     marginal_t = get_elgs_presence(t)   if EL-GS is active
-        #     marginal_t = get_marginal_t(t)      otherwise
-        #     opacity = opacity * marginal_t
-        # So under EL-GS the presence multiplier REPLACES the temporal
-        # marginal — it is never multiplied by it. A previous revision
-        # multiplied by `get_marginal_t` as well, calling that a
-        # faithfulness repair; because that factor decays to ~0 for
-        # temporally distant Gaussians it deleted most occluders, drove
-        # T toward 1 and q TOO HIGH — treating the evidence as fully
-        # informative exactly where the model says the point is occluded.
-        # `dynamic_probability` was simultaneously omitted, which the
-        # renderer does apply.
-        routing = getattr(self._gaussians, "get_dynamic_probability", None)
-        if routing is not None and getattr(routing, "numel", lambda: 0)():
-            routing = routing.detach().reshape(-1).to(presence.device)
-            if routing.shape == opacity.shape:
-                opacity = opacity * routing
+        opacity = self._base_alpha().to(presence.device)
 
         if presence.shape[0] != opacity.shape[0]:
             raise ContractError(
@@ -308,7 +352,14 @@ class ModelProbe:
         ignores them reports transmittance too HIGH, hence q too high --
         the same direction as the get_marginal_t defect. Returns None
         when the branch is inactive.
+
+        Cached for the same reason as `_base_alpha`: model-frozen for the
+        round. `_static_alpha_ready` distinguishes "computed, inactive"
+        from "not computed yet", so an inactive branch is decided once.
         """
+        if self._static_alpha_ready:
+            return self._static_alpha_cache
+        self._static_alpha_ready = True
         static_p = getattr(self._gaussians, "get_static_probability", None)
         if static_p is None or not getattr(static_p, "numel", lambda: 0)():
             return None
@@ -319,7 +370,8 @@ class ModelProbe:
         static_column = static_p.detach().reshape(-1).to(opacity.device)
         if static_column.shape != opacity.shape:
             return None
-        return (opacity * static_column).clamp(0.0, 1.0)
+        self._static_alpha_cache = (opacity * static_column).clamp(0.0, 1.0)
+        return self._static_alpha_cache
 
     @torch.no_grad()
     def _static_geometry_for(self, camera_id: int) -> ProjectedGeometry:
@@ -381,6 +433,128 @@ class ModelProbe:
         return float(
             torch.exp(torch.log1p(-contribution.clamp_max(1.0 - 1e-12)).sum())
         )
+
+    def _branch_products(
+        self, geometry: ProjectedGeometry, alpha: torch.Tensor,
+        pixels: torch.Tensor, depths: torch.Tensor,
+    ) -> torch.Tensor:
+        """`_branch_product` for Q queries at once; returns (Q,) float64.
+
+        SAME PRODUCT, SAME FACTORS, SAME ORDER OF OPERATIONS as the
+        scalar path, expressed as a masked reduction instead of a Python
+        call per query:
+
+        * the strict front test is `depth > 0 and depth < query_depth`,
+          identical per row;
+        * the footprint uses the same `exp(-0.5 * (dx^2 + dy^2) / sigma^2)`
+          with the same division (not a reciprocal multiply);
+        * `keep` is the same `footprint > FOOTPRINT_CUTOFF` AND-ed with
+          the front set, so the retained splat set is elementwise equal
+          to the scalar path's `alpha[front][keep]`;
+        * an empty front set or a fully pruned set sums nothing and
+          `exp(0) == 1.0` exactly, matching the scalar early returns.
+
+        The ONE deliberate difference is the accumulator: the scalar path
+        sums float32 over a compacted vector, this one sums in float64
+        over the masked full row. Summation ORDER cannot be preserved
+        across those two shapes (torch block-reduces), so the batched
+        path is made the more accurate of the two rather than trying to
+        reproduce float32 reassociation. Residual disagreement is then
+        bounded by the scalar oracle's own float32 error, which the
+        parity tests measure against the 1e-6 prereg tolerance.
+        """
+        device = geometry.center_px.device
+        dtype = geometry.center_px.dtype
+        pixels = pixels.to(device=device, dtype=dtype)
+        depths = depths.to(device=device, dtype=geometry.depth.dtype)
+        alpha = alpha.to(device)
+
+        # (Q, N) strict front set.
+        front = (geometry.depth > 0.0).unsqueeze(0) & (
+            geometry.depth.unsqueeze(0) < depths.unsqueeze(1)
+        )
+        dx = geometry.center_px[:, 0].unsqueeze(0) - pixels[:, 0].unsqueeze(1)
+        dy = geometry.center_px[:, 1].unsqueeze(0) - pixels[:, 1].unsqueeze(1)
+        sigma = geometry.sigma_px
+        footprint = torch.exp(
+            -0.5 * (dx * dx + dy * dy) / (sigma * sigma).unsqueeze(0)
+        )
+        keep = front & (footprint > FOOTPRINT_CUTOFF)
+        contribution = (alpha.unsqueeze(0) * footprint).clamp(0.0, 1.0)
+        term = torch.log1p(-contribution.clamp_max(1.0 - 1e-12))
+        masked = torch.where(keep, term, torch.zeros_like(term))
+        return torch.exp(masked.sum(dim=1, dtype=torch.float64))
+
+    @torch.no_grad()
+    def transmittance_batch(
+        self,
+        camera_id: int,
+        frame: float,
+        pixels,
+        depths,
+        *,
+        exclude_track: int | None,
+        present_family: int | None,
+        chunk_size: int | None = None,
+    ) -> torch.Tensor:
+        """`transmittance` for Q queries sharing one (camera, frame).
+
+        Returns a (Q,) float64 tensor. Every query composites the SAME
+        two branches against the SAME geometry and the SAME alpha
+        columns the scalar path builds; only the loop moves into torch.
+
+        Queries are evaluated in bounded chunks so peak memory is
+        O(chunk x N), not O(Q x N). The chunk boundary is invisible to
+        the result: chunks share no state and each query's product is
+        computed entirely within its own chunk.
+        """
+        _ = exclude_track
+        # Validate the frame FIRST, exactly as the scalar path does: the
+        # early returns below would otherwise let an unmapped frame index
+        # return 1.0 instead of failing closed.
+        self._timestamp_for(frame, self._camera(camera_id))
+        pixels = torch.as_tensor(pixels, dtype=torch.float32).reshape(-1, 2)
+        depths = torch.as_tensor(depths, dtype=torch.float32).reshape(-1)
+        if pixels.shape[0] != depths.shape[0]:
+            raise ContractError(
+                f"transmittance_batch got {pixels.shape[0]} pixels and "
+                f"{depths.shape[0]} depths"
+            )
+        count = pixels.shape[0]
+        if count == 0:
+            return torch.zeros(0, dtype=torch.float64)
+
+        geometry = self._geometry_for(camera_id, frame)
+        if geometry.depth.numel() == 0:
+            return torch.ones(count, dtype=torch.float64)
+
+        alpha = self._alpha_for(frame, self._camera(camera_id), present_family)
+        static_alpha = self._static_alpha()
+        static_geometry = (
+            self._static_geometry_for(camera_id) if static_alpha is not None else None
+        )
+
+        chunk = int(chunk_size) if chunk_size is not None else self._query_chunk
+        if chunk <= 0:
+            raise ContractError("chunk_size must be positive")
+
+        out = torch.empty(count, dtype=torch.float64)
+        for start in range(0, count, chunk):
+            stop = min(start + chunk, count)
+            values = self._branch_products(
+                geometry, alpha, pixels[start:stop], depths[start:stop]
+            )
+            if static_geometry is not None:
+                values = values * self._branch_products(
+                    static_geometry, static_alpha, pixels[start:stop], depths[start:stop]
+                )
+            out[start:stop] = values.cpu()
+        if not bool(((out >= 0.0) & (out <= 1.0)).all()):
+            raise ContractError(
+                "batched composited transmittance outside [0,1]: "
+                f"min={float(out.min())} max={float(out.max())}"
+            )
+        return out
 
     # -- RenderProbe ------------------------------------------------------
 
@@ -470,5 +644,56 @@ class ModelProbe:
             return None
         return (u, v), d
 
+    @torch.no_grad()
+    def project_batch(self, camera_id: int, points) -> list:
+        """`project` for many world points at once, in input order.
 
-__all__ = ["FOOTPRINT_CUTOFF", "ModelProbe", "ProjectedGeometry", "project_points"]
+        Returns a list of `((u, v), depth)` or `None`, applying the SAME
+        znear and raster-bounds rules `project` applies. One projection
+        and ONE device->host transfer replaces three per point: the
+        scalar `project` calls `float()` on the depth and both pixel
+        components, and the round issues fifteen of those per q value.
+
+        Note the invariant this shares with `in_frustum`: both reject on
+        `depth <= znear` and on the same raster bounds, so
+        `project(p) is not None` and `in_frustum(p)` are the same
+        predicate. `in_frustum_batch` is built on that identity and a
+        test pins it.
+        """
+        camera = self._camera(camera_id)
+        device = self._gaussians.get_xyz.device
+        rows = [list(point) for point in points]
+        if not rows:
+            return []
+        tensor = torch.tensor(rows, device=device, dtype=torch.float32)
+        pixel, depth = project_points(camera, tensor)
+        pixel = pixel * self._pixel_scale
+        width, height = self._report_raster(camera)
+        znear = float(getattr(camera, "znear", 0.01))
+        pixel_rows = pixel.cpu().tolist()
+        depth_rows = depth.cpu().tolist()
+        out: list = []
+        for (u, v), d in zip(pixel_rows, depth_rows):
+            if d <= znear:
+                out.append(None)
+                continue
+            if not (0.0 <= u <= width - 1.0 and 0.0 <= v <= height - 1.0):
+                out.append(None)
+                continue
+            out.append(((u, v), d))
+        return out
+
+    @torch.no_grad()
+    def in_frustum_batch(self, camera_id: int, frame: float, points) -> list:
+        """`in_frustum` for many world points at once, in input order."""
+        _ = frame
+        return [projected is not None for projected in self.project_batch(camera_id, points)]
+
+
+__all__ = [
+    "DEFAULT_QUERY_CHUNK",
+    "FOOTPRINT_CUTOFF",
+    "ModelProbe",
+    "ProjectedGeometry",
+    "project_points",
+]

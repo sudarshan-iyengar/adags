@@ -85,6 +85,71 @@ def compute_q(
     return min(max(total, 0.0), 1.0)
 
 
+def compute_q_batch(
+    sigma_points: Sequence[SigmaPoint],
+    probe,
+    camera_id: int,
+    frame: float,
+    *,
+    exclude_track: int | None,
+    present_family: int | None,
+    kappa_res: float,
+    transmittances: Sequence[float] | None = None,
+    chunk_size: int | None = None,
+) -> float:
+    """`compute_q` with the sigma-point loop issued as ONE batched call.
+
+    Every sigma point of one q shares its camera, frame, geometry and
+    alpha columns and differs only in query pixel and depth, so the
+    seven sequential `transmittance` calls the scalar path makes are
+    seven evaluations of the same reduction. This issues them together.
+
+    `transmittances` lets a caller that has ALREADY batched across many
+    q values (evidence_stack groups every report and bridge sharing a
+    (camera, frame)) pass the pre-computed T values in sigma-point order
+    instead of forcing one probe call per q.
+
+    The accumulation is deliberately the SAME sequential Python `+=`
+    over the SAME points in the SAME order as `compute_q`, so given
+    identical T values the two return bit-identical results.
+    """
+    validate_sigma_points(sigma_points)
+    if not (0.0 <= kappa_res <= 1.0):
+        raise ContractError(f"kappa_res={kappa_res} outside [0,1]")
+
+    if transmittances is None:
+        in_view = probe.in_frustum_batch(
+            camera_id, frame, [point.point for point in sigma_points]
+        )
+        selected = [
+            point for point, visible in zip(sigma_points, in_view) if visible
+        ]
+        if not selected:
+            return 0.0
+        values = probe.transmittance_batch(
+            camera_id,
+            frame,
+            [point.pixel for point in selected],
+            [point.depth for point in selected],
+            exclude_track=exclude_track,
+            present_family=present_family,
+            chunk_size=chunk_size,
+        )
+        pairs = zip(selected, values.tolist())
+    else:
+        if len(transmittances) != len(sigma_points):
+            raise ContractError(
+                f"compute_q_batch got {len(transmittances)} transmittances for "
+                f"{len(sigma_points)} sigma points"
+            )
+        pairs = zip(sigma_points, transmittances)
+
+    total = 0.0
+    for point, t_value in pairs:
+        total += point.weight * float(t_value) * kappa_res
+    return min(max(total, 0.0), 1.0)
+
+
 def q_tilde(q: float, d_u: float) -> float:
     """q_tilde = q * d_u, in [0,1] always."""
     if not (0.0 <= q <= 1.0):
@@ -149,6 +214,7 @@ __all__ = [
     "QSnapshot",
     "SigmaPoint",
     "compute_q",
+    "compute_q_batch",
     "q_tilde",
     "validate_sigma_points",
 ]
