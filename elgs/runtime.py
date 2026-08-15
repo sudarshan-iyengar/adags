@@ -31,6 +31,37 @@ from .intervals import IntervalConfig, IntervalRealization, IntervalState, forwa
 from .presence import episode_presence
 
 
+def align_state_device(
+    state: IntervalState, device: torch.device, dtype: torch.dtype
+) -> IntervalState:
+    """Return `state` with its vector on `device`/`dtype`.
+
+    Candidate intervals arrive from `elgs.ops`' planners, which build
+    them through `elgs.intervals.inverse` with no device argument — so
+    they are CPU tensors. Once the runtime correctly lives on the model's
+    device, scoring such a candidate mixed a CPU `b`/`d` with a CUDA
+    timestamp and `episode_presence` raised
+
+      RuntimeError: Expected all tensors to be on the same device, but
+      found at least two devices, cuda:0 and cpu!
+
+    on the FIRST paired candidate render. The asymmetry was invisible
+    while the runtime itself was (wrongly) on CPU, because then both
+    sides agreed. Normalizing here keeps the planners device-agnostic and
+    is a no-op when the devices already match.
+    """
+    if state.K == 0 or state.a is None:
+        return state
+    if state.a.device == device and state.a.dtype == dtype:
+        return state
+    return IntervalState(
+        K=state.K,
+        latch_pre=state.latch_pre,
+        latch_post=state.latch_post,
+        a=state.a.to(device=device, dtype=dtype),
+    )
+
+
 @dataclass
 class ScheduleAnchors:
     """Category-1 schedule (loaded from prereg, never from lane YAML)."""
@@ -139,7 +170,9 @@ class ElgsRuntime:
                 per_family[family_id] = zero
                 continue
             if overrides is not None and family_id in overrides:
-                candidate = overrides[family_id]
+                candidate = align_state_device(
+                    overrides[family_id], self.device, self.dtype
+                )
                 if candidate.K == 0:
                     per_family[family_id] = zero
                     continue
@@ -201,4 +234,4 @@ class ElgsRuntime:
         return iteration in self.schedule.round_iterations
 
 
-__all__ = ["ElgsRuntime", "ScheduleAnchors"]
+__all__ = ["ElgsRuntime", "ScheduleAnchors", "align_state_device"]

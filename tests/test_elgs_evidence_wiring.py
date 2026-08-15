@@ -1558,6 +1558,103 @@ class SmokeReportBoundTests(unittest.TestCase):
         )
 
 
+class OverrideDeviceTests(unittest.TestCase):
+    """Candidate intervals from the planners must be device-normalized.
+
+    `elgs.ops`' planners build intervals via `elgs.intervals.inverse`
+    with no device argument, so they are CPU tensors. Once the runtime
+    correctly lives on the model's device, scoring such a candidate mixed
+    a CPU b/d with a CUDA timestamp and `episode_presence` raised
+    "Expected all tensors to be on the same device" on the FIRST paired
+    candidate render (experiment 77). Device-agnostic tests below.
+    """
+
+    def _state(self, dtype=torch.float32):
+        from elgs.intervals import IntervalConfig, inverse
+
+        config = IntervalConfig(
+            T=8 / 120.0, w_m=2 / 120.0, w=0.5 / 120.0,
+            floor_len=2.0 * (0.5 / 120.0) + 1 / 120.0,
+            floor_gap=2.0 * (0.5 / 120.0) + 1 / 120.0,
+            delta_tol=0.1 / 120.0,
+        )
+        return inverse(
+            1, True, True, 0.0, [config.omega], [], 0.0, config, dtype=dtype
+        )
+
+    def test_planner_built_intervals_are_normalized_to_the_target(self):
+        from elgs.runtime import align_state_device
+
+        state = self._state(dtype=torch.float64)
+        aligned = align_state_device(
+            state, torch.device("cpu"), torch.float32
+        )
+        self.assertEqual(aligned.a.dtype, torch.float32)
+        self.assertEqual(aligned.a.device, torch.device("cpu"))
+        self.assertEqual(aligned.K, state.K)
+        self.assertEqual(aligned.latch_pre, state.latch_pre)
+        self.assertEqual(aligned.latch_post, state.latch_post)
+        torch.testing.assert_close(
+            aligned.a.double(), state.a.double(), rtol=1e-6, atol=1e-6
+        )
+
+    def test_alignment_is_a_no_op_when_already_matching(self):
+        from elgs.runtime import align_state_device
+
+        state = self._state()
+        self.assertIs(
+            align_state_device(state, state.a.device, state.a.dtype), state
+        )
+
+    def test_empty_program_passes_through(self):
+        from elgs.runtime import align_state_device
+
+        empty = _EMPTY_INTERVAL()
+        self.assertIs(
+            align_state_device(empty, torch.device("cpu"), torch.float32), empty
+        )
+
+    def test_presence_multiplier_scores_a_planner_built_override(self):
+        """The end-to-end path that crashed: an override whose tensor was
+        built by a planner, scored against the runtime's own timestamp."""
+        from elgs.families import FamilyRegistry
+        from elgs.intervals import IntervalConfig, inverse
+        from elgs.runtime import ElgsRuntime, ScheduleAnchors
+
+        config = IntervalConfig(
+            T=8 / 120.0, w_m=2 / 120.0, w=0.5 / 120.0,
+            floor_len=2.0 * (0.5 / 120.0) + 1 / 120.0,
+            floor_gap=2.0 * (0.5 / 120.0) + 1 / 120.0,
+            delta_tol=0.1 / 120.0,
+        )
+        registry = FamilyRegistry()
+        spanning = inverse(
+            1, True, True, 0.0, [config.omega], [], 0.0, config,
+            dtype=torch.float32,
+        )
+        record = registry.create_family(
+            birth_time=0.0, birth_site=(0.0, 0.0, 1.0),
+            lineage_key="x", interval=spanning, tau=(0.0,),
+        )
+        runtime = ElgsRuntime(
+            registry, config,
+            ScheduleAnchors(100, 150, (200,), 600),
+            dtype=torch.float32,
+        )
+        ids = torch.tensor([record.family_id, record.family_id], dtype=torch.long)
+        # A float64 planner-built override stands in for a foreign device.
+        override = inverse(
+            1, True, True, 0.0, [config.omega], [], 0.0, config,
+            dtype=torch.float64,
+        )
+        column = runtime.presence_multiplier(
+            ids, 0.01, overrides={record.family_id: override}
+        )
+        self.assertEqual(column.shape, (2, 1))
+        self.assertEqual(column.device, runtime.device)
+        self.assertTrue(torch.isfinite(column).all())
+
+
 class SequenceIdentityTests(unittest.TestCase):
     """The identity the cross-sequence guard compares against.
 
