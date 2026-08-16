@@ -120,6 +120,60 @@ per-keyframe hull voxel counts, union occupancy, points per union voxel,
 early pruning, point-count evolution, convergence speed, final metrics,
 and qualitative failure modes.
 
+## Companion: the FROZEN per-frame Gaussian oracle
+
+**FROZEN BEFORE ANY ORACLE TRAINING RAN.** Implementation:
+`scripts/make_diva360_frame_slice.py`.
+
+The oracle asks one question: how well can THIS renderer and THIS
+initialization fit a scissor frame when the temporal representation is
+removed entirely? Each selected frame becomes an independent static
+multi-view problem — 35 training views of one instant, 6 official
+held-out views of the same instant.
+
+| element | frozen value |
+|---|---|
+| frames | **8**, `np.linspace(0, N-1, 8)` rounded over the sorted frame indices |
+| resulting indices | **0, 80, 160, 240, 320, 400, 480, 560** |
+| cameras | untouched: whatever the splits already declare (35 train / 6 held-out per slice, verified) |
+| initialization | **visual hull**, inherited by symlinking the hull scene's `points3d.ply` |
+| renderer / config | experiment 84's `diva360_scissor_bench30.yaml`, UNCHANGED |
+| metrics | the official conventions (`--official-metrics`) |
+
+The frame rule is deliberately the SAME rule the hull keyframes use, so
+the oracle frames and the hull keyframes COINCIDE and the two lanes
+cannot drift apart. `time` is not renormalized on a slice: one timestamp
+makes any rescaling arbitrary, so a slice differs from its source in
+exactly one way — which frames are present.
+
+**Why the config is unchanged rather than tuned down.** The directive
+requires "the same renderer", and reusing experiment 84's config
+verbatim is the only way to guarantee that no part of a gap is a
+renderer or schedule difference. It also makes the oracle a genuine
+upper bound rather than a like-for-like run: 6000 iterations at batch 4
+is ~686 epochs over a 35-image slice against ~4.9 epochs over the
+4,935-image window, so the oracle is optimized two orders of magnitude
+harder per image. That asymmetry is the point.
+
+**Ordering, and why the first frame is not a choice.** The eight are run
+in frozen index order, starting at frame 0, and frame 0 is run first
+because it is first — not because of anything observed about it. Its
+hull is the smallest of the eight (2,301 voxels against ~7,000-8,000 for
+the rest), so it is if anything the least favourable starting point.
+Per-frame wall cost is MEASURED on it before committing to the remaining
+seven, rather than estimated.
+
+### Interpretation, fixed in advance
+
+* strong per-frame results with weak dynamic results ⇒ the temporal
+  representation or the motion optimization is implicated;
+* weak per-frame results ⇒ initialization, rendering, training or
+  evaluation is implicated BEFORE any temporal question.
+
+Frame selection is never revisited after seeing a result. If fewer than
+eight frames complete, the completed subset is reported as a subset with
+its size stated, and the frames are NOT re-chosen.
+
 ## Recorded in advance: what a negative result would and would not mean
 
 If the hull initialization does not help, that does NOT restore the
