@@ -563,3 +563,111 @@ could not say so before.
   which units confirm a decision changes what the §7 confirmation
   measure means and is preregistration-adjacent; it is not an
   implementation defect to be quietly fixed. It is a deferred item.
+## The q path is exactly batched; throughput measured, not extrapolated (2026-08-16)
+
+EXPLORATORY. Commit `0cb1026`, dgx/V100, cell `elgs_q_benchmark`,
+experiments 80 (family 226) and 81 (family 219 — experiment 78's own
+population). `evidence_bearing: false` throughout.
+
+### What changed, and what could not
+
+Experiment 78 measured ~10 q/s and the uncapped first round of family
+219 needs 407,340 q values, so ~11.3 hours per round. None of that cost
+was arithmetic. Per q value the pre-batching path issued **15
+projections** — one for the bridge centre, seven inside
+`sigma_points_for`, seven more inside `compute_q`'s `in_frustum`
+re-check — and **7 `transmittance` calls**, each rebuilding the opacity
+column (a sigmoid over every row) and returning a Python float, which is
+a blocking device read. Peak GPU memory during the whole thing is ~110
+MiB on a 32 GB card: the path was synchronization-bound, not
+compute-bound.
+
+Three exact changes:
+
+* `ModelProbe.transmittance_batch` evaluates Q queries at one
+  (camera, frame) as ONE masked reduction over the same two branches, in
+  bounded chunks. Strict front test, footprint (same division, not a
+  reciprocal), `FOOTPRINT_CUTOFF` prune and clamps are elementwise
+  identical to the scalar path; an empty front set sums nothing and
+  `exp(0) == 1.0` exactly, matching its early return. The ONE deliberate
+  difference is a float64 accumulator, because summation order cannot be
+  preserved between a compacted vector and a masked row.
+* `project_batch` / `in_frustum_batch` project many world points in one
+  call and one transfer. `project(p) is not None` and `in_frustum(p)`
+  reject on exactly the same znear and raster-bounds conditions, so they
+  are the same predicate; that identity is pinned by test and is what
+  lets the batched resolver skip the redundant re-projection.
+* `refresh_round_evidence`'s inner loop became an ordered request plan
+  plus a resolver. `_resolve_requests_scalar` IS the previous loop
+  verbatim and still runs for any probe without the batched surface;
+  `_resolve_requests_batched` groups projections by camera and
+  transmittance by (camera, frame), in blocks so the PLAN is bounded too
+  (the uncapped window is 406,464 requests and 2.8M world points).
+
+Grouping across reports at one (camera, frame) is legal only because
+`exclude_track` filters no rows. The probe now DECLARES that
+(`excludes_track_rows = False`) instead of the batcher assuming it; a
+probe that does filter is grouped per track.
+
+**Nothing changed about which reports, frames, cameras, bridges or sigma
+points contribute**, the drop-and-renormalize rule, the accumulation
+order, the snapshot write order or the double-write contract. No cap, no
+deduplication, no changed heads, no changed candidate selection, no new
+estimator, no CUDA extension, no new scientific constant.
+
+### Parity — the scalar path is the oracle and it is preserved
+
+Both timed passes go through the identical production code with the
+identical probe object; the scalar pass is forced by withholding
+`project_batch` / `transmittance_batch` from the capability check, so
+nothing but the resolver differs.
+
+Experiment 80 (family 226, 288 retained reports of 106,329, 864 q):
+
+```
+max |q_batched - q_scalar|      1.657e-08     (tolerance 1e-6)
+keys compared                   864, sets equal, 0 non-finite
+chunk invariance (64/256/1024)  0.0 EXACTLY
+peak GPU memory                 139.9 MiB
+downstream family_phi           differ by 2.174e-08
+downstream exact_deltas         differ by 0.0
+GPU parity unit tests           36/36, 0 skipped, cuda_available true
+```
+
+The GPU parity suite is the one the CPU unit cell cannot run: its
+cross-device case skips for want of a device, so the benchmark cell
+executes the parity classes itself and refuses to report a speedup it
+has not first shown exact on that device.
+
+### The finding that outranks throughput
+
+Experiment 80 also measured, on family 226's own reports:
+
+```
+family_phi(226)            0.052924152357775256    NONZERO
+exact_deltas(FISSION:226)  0.0                     EXACTLY zero
+```
+
+`evidence_exact_delta = beta * (Phi_candidate - Phi_incumbent)`, so an
+exactly-zero delta with a nonzero Phi means the candidate and incumbent
+intervals give the SAME Phi to full float precision. That is mechanical,
+not coincidental: the smoke fission opens a gap of
+`floor_gap = 2w + 1 * frame_dt` — one to two frame intervals — at the
+interval MIDPOINT, while the smoke report bound retains reports at
+evenly spaced frames (98 of 464). A one-frame gap almost never contains
+a retained frame, so presence at every retained report is unchanged and
+Phi cannot move.
+
+Combined with the confirmation-slot finding above — all eight paired
+renders at one timestamp, so `delta_render` is exactly zero too — the
+smoke round's acceptance is carried by `transaction_increment` alone.
+**Under the smoke report bound, neither arm of the decision can express
+an opinion about a mid-plateau fission.** The bound was introduced as a
+cost control and is documented as SMOKE-ONLY; this is a second, separate
+reason it cannot stand in for the real thing, and it is the strongest
+available argument for running the round uncapped: uncapped reports
+cover the frames inside the gap, which is the only way Phi can differ
+between candidate and incumbent at all.
+
+This is a DIAGNOSTIC about the smoke lane. It is not a claim about EL-GS
+and does not reopen experiment 78.
