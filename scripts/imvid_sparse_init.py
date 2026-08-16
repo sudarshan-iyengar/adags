@@ -95,6 +95,15 @@ from depth_visibility.errors import ContractError  # noqa: E402
 COLMAP = "colmap"
 NATIVE_WIDTH = 5312
 
+#: Pose agreement required between the supplied text model and COLMAP's
+#: binary output. NOT a refinement tolerance — it forgives ONLY the
+#: decimal-string-to-double parse, where two parsers may differ by one
+#: ULP (measured worst case 1.11e-16 = 2^-53 on a quaternion component
+#: near 0.87). Any bundle adjustment that actually moved a pose would
+#: exceed this by many orders of magnitude. Intrinsics get no tolerance
+#: at all and are required to match exactly, which they do.
+POSE_REPRESENTATION_TOL = 1e-12
+
 
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -381,14 +390,33 @@ def _finish(args, images, supplied, work, model_out, model_txt,
           + (f" (worst {worst_image})" if worst_image else ""), flush=True)
     print(f"[imvid]   per-parameter: "
           + ", ".join(f"{d:.2e}" for d in param_deltas), flush=True)
-    if cam_delta != 0.0 or pose_delta != 0.0:
+
+    # INTRINSICS: exact equality, and it IS achieved -- COLMAP copies the
+    # camera block through untouched when the refine flags are off, so
+    # there is no representation step to forgive.
+    #
+    # POSES: exact equality is NOT achievable and demanding it would be
+    # wrong. The supplied model is TEXT, so both COLMAP and this script
+    # parse the same decimal strings into doubles, and the two parsers
+    # may land one unit-in-the-last-place apart. The measured worst case
+    # is 1.11e-16 on a quaternion component near 0.87 -- exactly 2^-53,
+    # one ULP. `POSE_REPRESENTATION_TOL` forgives that and nothing more:
+    # it is roughly four orders of magnitude above the observed ULP noise
+    # and many orders BELOW any pose change a bundle adjustment could
+    # produce, so a real refinement still fails this test loudly.
+    if cam_delta != 0.0:
         raise ContractError(
-            f"COLMAP ALTERED THE SUPPLIED CALIBRATION (intrinsics delta "
-            f"{cam_delta:.6e} per-param {param_deltas}, pose delta "
-            f"{pose_delta:.6e} on {worst_image}). The result is REFUSED: it "
-            "is consistent with a different camera than the one the renderer "
-            "will use. NOTE: this check reads cameras.bin/images.bin, so it "
-            "is NOT a text-precision artifact."
+            f"COLMAP ALTERED THE SUPPLIED INTRINSICS (delta {cam_delta:.6e}, "
+            f"per-param {param_deltas}). REFUSED: the cloud would be "
+            "consistent with a different camera than the renderer's. This "
+            "check reads cameras.bin, so it is NOT a text-precision artifact."
+        )
+    if pose_delta > POSE_REPRESENTATION_TOL:
+        raise ContractError(
+            f"COLMAP ALTERED THE SUPPLIED POSES (delta {pose_delta:.6e} on "
+            f"{worst_image}, tolerance {POSE_REPRESENTATION_TOL:.1e}). "
+            "REFUSED. The tolerance forgives decimal-to-double parsing only "
+            "(~1e-16); this is far larger and is real movement."
         )
 
     # --- statistics ---------------------------------------------------
@@ -422,8 +450,23 @@ def _finish(args, images, supplied, work, model_out, model_txt,
         },
         "calibration_preserved": {
             "intrinsics_max_abs_delta": cam_delta,
+            "intrinsics_per_param_delta": param_deltas,
+            "intrinsics_rule": "EXACT equality required, no tolerance",
             "pose_max_abs_delta": pose_delta,
-            "verified_by": "direct numeric diff (model_comparer absent in 3.6)",
+            "pose_worst_image": worst_image,
+            "pose_tolerance": POSE_REPRESENTATION_TOL,
+            "pose_rule": (
+                "decimal-to-double parse tolerance ONLY; the observed value is "
+                "ULP-scale (2^-53), and any real pose refinement would exceed "
+                "this by many orders of magnitude"
+            ),
+            "verified_by": (
+                "cameras.bin / images.bin (raw doubles). The TEXT export is "
+                "NOT usable for this: COLMAP 3.6 writes ~6 significant "
+                "figures, which manufactures ~4e-3 of phantom drift. "
+                "model_comparer does not exist in 3.6 and would only estimate "
+                "a best-fit alignment anyway."
+            ),
         },
         "points": len(xyz),
         "mean_track_length": (sum(track_lengths) / len(track_lengths)) if track_lengths else 0.0,
