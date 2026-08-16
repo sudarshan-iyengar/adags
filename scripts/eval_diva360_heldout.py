@@ -84,6 +84,10 @@ def main() -> int:
     parser.add_argument("--out", type=str, default=None)
     parser.add_argument("--lpips-net", type=str, default="alex",
                         choices=["alex", "vgg", "squeeze"])
+    parser.add_argument("--torch-home", type=str, default=None,
+                        help="writable torch.hub cache; defaults to "
+                             "<model_path>/.torchhub. The template's shared "
+                             "XDG_CACHE_HOME is not writable by this run.")
     parser.add_argument("--gaussian_dim", type=int, default=3)
     parser.add_argument("--time_duration", nargs=2, type=float, default=[-0.5, 0.5])
     parser.add_argument("--num_pts", type=int, default=100_000)
@@ -136,9 +140,32 @@ def main() -> int:
         dtype=torch.float32, device="cuda",
     )
 
+    # LPIPS pulls two sets of weights through `torch.hub`: torchvision's
+    # backbone and richzhang's linear layers. The template exports
+    # XDG_CACHE_HOME=/tmp/adags_cache, which a previous container in this
+    # image already created under a different owner — so the hub write
+    # fails with PermissionError before either download starts
+    # (experiment 85). Point the hub at a directory this run owns, and do
+    # it BEFORE the first weight load rather than trusting the shared one.
+    hub_dir = Path(args.torch_home) if args.torch_home else Path(args.model_path) / ".torchhub"
+    hub_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["TORCH_HOME"] = str(hub_dir)
+    torch.hub.set_dir(str(hub_dir / "hub"))
+    print(f"[eval] torch hub dir: {hub_dir}", flush=True)
+
     from lpipsPyTorch.modules.lpips import LPIPS
 
-    criterion = LPIPS(args.lpips_net, "0.1").to("cuda").eval()
+    try:
+        criterion = LPIPS(args.lpips_net, "0.1").to("cuda").eval()
+    except Exception as exc:
+        raise ContractError(
+            "LPIPS weights could not be obtained "
+            f"({exc!r}). Both the torchvision backbone and richzhang's "
+            "linear layers are fetched over the network by torch.hub; if "
+            "this container has no egress, LPIPS cannot be computed here "
+            "and the protocol gap stands until the weights are staged on "
+            "/apollo."
+        ) from exc
 
     test_cams = scene.getTestCameras()
     if not len(test_cams):
