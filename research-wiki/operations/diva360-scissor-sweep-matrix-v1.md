@@ -107,3 +107,83 @@ the 30-camera model directly would understate it for a reason unrelated
 to the axis under test.
 
 Every cell's outcome is preserved, including negative ones.
+
+---
+
+## RESULTS (appended after all six cells completed; matrix above unchanged)
+
+Experiments 92-97, commit `4aded51`, dgx/V100, all six concurrent on the
+same 6-slot agent, same seed, image, dataset, validation schedule and
+hardware class. Ranking statistic as frozen: development-split PSNR.
+
+| cell | dev PSNR | delta vs S0 | dev SSIM | best iter | points at best | final points | runtime |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **S3 cap 300k** | **23.3310** | **+0.909** | 0.93333 | 6000 | 299,829 | 299,829 | 108.9 min |
+| S2 stop densify 4000 | 22.5366 | +0.115 | 0.93108 | 6000 | 205,579 | 205,579 | 96.1 min |
+| S0 control | 22.4217 | — | 0.92653 | 6000 | 534,873 | 534,873 | 126.7 min |
+| S4 routing off | 21.8221 | -0.600 | 0.92379 | 5000 | 448,317 | 599,841 | 139.7 min |
+| S5 init 200k + stop 4000 | 18.9065 | -3.515 | 0.91397 | 5000 | 321,758 | 321,758 | 142.3 min |
+| S1 init 200k | 18.4459 | -3.976 | 0.91434 | 5000 | 444,646 | 577,066 | — |
+
+**Winner: S3.** It is better AND cheaper than the control — +0.909 dB
+while running 14% faster and holding 235,044 fewer points.
+
+### The capacity axis is confirmed
+
+Both mechanisms on that axis improved on the control, and the ordering
+is the one experiment 84's curve predicted when validation fell between
+338k and 507k points. The control itself ran to 534,873 points and was
+beaten by a model with 299,829. Capping capacity is not a compromise
+here; it is the improvement.
+
+### The initialization axis is STRONGLY NEGATIVE, and that is informative
+
+S1 lost **3.976 dB** alone. S5 lost 3.515 and tracked S1 rather than its
+beneficial S2 component, so the initialization change dominates anything
+the schedule change contributes.
+
+This does NOT weaken the diagnosis that the synthesized initialization is
+bad — it sharpens it. The matrix disclosed in advance that S1 is "more of
+the same coarse prior, not a better one", and the result says filling a
+wrong volume more densely is actively harmful rather than merely useless.
+The defect is the VOLUME (+/-6.5 world units against about +/-1.2 of
+content), not the seed count. S1 also ended at 577,066 points and
+`percent_uncertain 0.3603` — an order of magnitude more routing
+uncertainty than any other cell — consistent with 200,000 seeds spread
+through empty space producing many rows the model cannot classify.
+
+### Removing collapsed routing HURT
+
+S4 lost **0.600 dB** even though the control's router had collapsed to
+`mean_dynamic_prob 0.99931` / `percent_uncertain 0.0099`. With soft
+routing off, `mean_dynamic_prob` is exactly 1.0 and `percent_uncertain`
+exactly 0.0, the cell hit the 600,000-point cap, and it became the
+second-slowest. A collapsed router is evidently not dead weight that can
+simply be deleted. Preserved as a negative result; no follow-up cell was
+added.
+
+### What these numbers are not
+
+Development-split SSIM (0.926-0.933) sits ABOVE the benchmark baseline's
+official-split 0.907 because the five development cameras interpolate
+among training views and are an easier set than the official held-out
+six. These values rank configurations and nothing else; they are not
+comparable to official-split numbers and are never reported as such.
+
+### Not recorded
+
+**LPIPS per cell** and **peak GPU memory per cell** are absent.
+`main.py` logs neither — the training loop computes PSNR and SSIM only
+(parity audit M3), and it records no GPU memory high-water mark. Point
+count stands in for capacity. Neither gap is filled by estimation.
+
+### Submission failures preserved
+
+Experiments 86-91 were the same six cells at retry 0 and all six ERRORed
+in about twenty seconds at scene load, on
+`assert False, "Could not recognize scene type!"`. Cause: a PowerShell
+quoting bug in the submission loop (`--extra-arg=$c[2]` expanded as the
+whole array plus a literal `[2]`), so every cell received a malformed
+`--source_path`. No GPU work occurred and six claim indices were
+consumed. The matrix was unaffected — the failure was submission
+plumbing caught by a fail-closed assertion, not a scientific change.
