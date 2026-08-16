@@ -159,6 +159,19 @@ class EvidenceIndex:
     nonzero_track_frames:   the (j, t) carrying q_tilde != 0.0 under AT
         LEAST ONE bridge — derived from the q maps, not from the report
         keys, because `segment_is_censored` scans the q maps.
+
+    ONE DOMAIN CAVEAT, recorded rather than papered over. The scanning
+    oracles test `jj == j and tt == t`, which is False for a NaN frame
+    even against itself; a dict/set lookup short-circuits on IDENTITY
+    first, so an index would MATCH a NaN frame the oracle skips. The two
+    therefore differ on NaN frames. That input is unreachable here —
+    `_reports_in_window` admits a report only when
+    `start_frame < frame < end_frame`, which is False for NaN;
+    `window_phi` takes its segment frames from the surviving report keys;
+    and `presence_series` calls `int(frame)`, which raises on NaN — so
+    every production frame is an ordinary float. The equivalence claimed
+    by the parity tests is over the reachable domain, not over every
+    value the type admits.
     """
 
     cameras_by_track_frame: Mapping[tuple[int, float], tuple[int, ...]]
@@ -227,7 +240,14 @@ def _capped_keys_for_scan(
 ) -> tuple[ReportKey, ...]:
     """REFERENCE ORACLE for `_capped_keys_for` — the pre-index body,
     preserved verbatim. Kept so parity is checked against the behaviour
-    that actually shipped, not against a re-derivation of it."""
+    that actually shipped, not against a re-derivation of it.
+
+    DO NOT "clean up", optimize or refactor this function. Its value is
+    that it is the code experiments 78-83 ran, character for character;
+    the parity suite compares against it and cannot detect an edit to the
+    oracle itself, so any change here silently turns those tests into a
+    tautology. If it must ever change, re-derive it from the commit
+    before the indexing repair rather than from the indexed version."""
     q_b = batch.q_tilde[bridge_id]
     keys: list[ReportKey] = []
     for j in track_ids:
@@ -252,6 +272,12 @@ def segment_is_censored(
 ) -> bool:
     """True iff q_tilde == 0.0 exactly for ALL bridges over the
     segment's eligible reports (PROP 1 antecedent)."""
+    # `bridges()` is the fail-closed check on a batch carrying no
+    # bridges, and it is called unconditionally: a caller-supplied index
+    # would otherwise skip it and return True for a batch every other
+    # path refuses. It sorts a dict of a few bridge ids, so restoring the
+    # guard costs nothing against the reduction below.
+    batch.bridges()
     nonzero = (
         index.nonzero_track_frames if index is not None else _nonzero_track_frames(batch)
     )
@@ -268,7 +294,8 @@ def _segment_is_censored_scan(
     segment: Segment,
 ) -> bool:
     """REFERENCE ORACLE for `segment_is_censored` — the pre-index body,
-    preserved verbatim."""
+    preserved verbatim. The do-not-refactor note on
+    `_capped_keys_for_scan` applies here identically."""
     for bridge_id in batch.bridges():
         q_b = batch.q_tilde[bridge_id]
         for j in track_ids:

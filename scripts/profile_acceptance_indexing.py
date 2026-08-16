@@ -14,10 +14,15 @@ it runs BOTH paths on the SAME batch and refuses to report a speedup it
 has not first shown exact:
 
   * `--sweep` runs the scanning oracle and the indexed path at growing
-    sizes, checks bit-exact parity of the capped key tuples, the
-    censoring verdicts, both stream log-likelihood dicts and Phi, and
-    fits the scan's cost law so its cost at full scale is a measured
-    extrapolation rather than a guess.
+    sizes, and checks bit-exact parity of the capped key tuples, the
+    censoring verdicts, both stream log-likelihood dicts and Phi. It also
+    calibrates the scan's per-inner-iteration cost. That calibration is a
+    ROUGH ORDER-OF-MAGNITUDE PROJECTION and is labelled as one wherever
+    it is emitted: the coefficient is still falling row over row across
+    the sweep, so a single largest-row fit extrapolated by three orders
+    of magnitude in iteration count bounds the scan's cost loosely, it
+    does not measure it. The claim this script exists to support is the
+    PARITY, which is exact and gates the exit code.
   * `--full` runs the INDEXED path alone at experiment 83's shape. The
     oracle is not run there -- that is the whole point -- so this pass
     reports wall time and memory only, and parity for that shape rests
@@ -93,7 +98,21 @@ HEADS = EvidenceHeads(
 def build_batch(n_tracks: int, n_frames: int, n_cameras: int, n_bridges: int):
     """One report per (track, frame), its camera cycling through the
     camera set -- experiment 83's measured density (135,780 reports over
-    292 x 464 (track, frame) pairs with 23 cameras covered)."""
+    292 x 464 (track, frame) pairs with 23 cameras covered).
+
+    ONE camera per (track, frame) is FAITHFUL, not a simplification: a
+    sealed track record carries a single `camera_id` per report
+    (`scripts/build_elgs_tracks.py`), so the production
+    `cameras_by_track_frame` bucket is a 1-tuple and the cap operator
+    never has more than one candidate to rank. The consequence is that
+    this generator does NOT exercise the multi-camera cap-selection or
+    key-ordering limbs; those are covered by
+    `tests/test_elgs_acceptance_indexing.py`, which puts four cameras on
+    every (track, frame), not here.
+
+    The generated total is 135,488 against experiment 83's 135,780 --
+    that run's second, one-frame window contributes the remaining 292.
+    Every reported field uses the ACTUAL generated count."""
     reports: dict = {}
     q_tilde = {b: {} for b in range(n_bridges)}
     centers = {b: {} for b in range(n_bridges)}
@@ -193,7 +212,14 @@ def run_sweep(sizes, c_cap: int) -> list[dict]:
                 "frames": n_frames,
                 "reports": len(batch.reports),
                 "bridges": EXP83["bridges"],
-                "scan_iterations_model": n_tracks * n_frames * len(batch.reports),
+                # The bridge loop is INSIDE `_scan_stream`, so it belongs
+                # in the iteration model too. Omitting it here while
+                # multiplying by `bridges` again in the projection
+                # inflated the projected scan cost by exactly the bridge
+                # count; that is corrected.
+                "scan_iterations_model": (
+                    n_tracks * n_frames * len(batch.reports) * EXP83["bridges"]
+                ),
                 "capped_keys_exact": keys_equal,
                 "censoring_exact": censor_equal,
                 "seconds_indexed": t_fast,
@@ -274,7 +300,7 @@ def run_full(c_cap: int) -> dict:
     )
     value = phi(stream, 0.7)
     scan_iterations = (
-        EXP83["tracks"] * EXP83["frames"] * len(batch.reports) * EXP83["bridges"] * 2
+        EXP83["tracks"] * EXP83["frames"] * len(batch.reports) * EXP83["bridges"]
     )
     return {
         "shape": dict(EXP83),
@@ -316,37 +342,57 @@ def main(argv=None) -> int:
         report["max_abs_stream_diff_over_sweep"] = max(
             r["max_abs_stream_diff"] for r in rows
         )
-        # Cost law: fit seconds_scan = k * (tracks*frames*reports) through
-        # the largest row, then project it onto experiment 83's shape.
+        # Cost calibration: seconds_scan = k * scan_iterations_model,
+        # where the model now includes the bridge loop that
+        # `_scan_stream` actually runs. Calibrated on the largest row and
+        # projected onto experiment 83's shape.
         big = rows[-1]
         k = big["seconds_scan"] / big["scan_iterations_model"]
-        exp83_reports = EXP83["tracks"] * EXP83["frames"]
-        report["scan_cost_law"] = {
+        k_by_row = [r["seconds_scan"] / r["scan_iterations_model"] for r in rows]
+        exp83_inner = (
+            EXP83["tracks"]
+            * EXP83["frames"]
+            * (EXP83["tracks"] * EXP83["frames"])
+            * EXP83["bridges"]
+        )
+        report["scan_cost_calibration"] = {
             "seconds_per_inner_iteration": k,
+            "seconds_per_inner_iteration_by_row": k_by_row,
+            "coefficient_is_converged": (
+                abs(k_by_row[-1] - k_by_row[-2]) / k_by_row[-2] < 0.02
+                if len(k_by_row) > 1
+                else False
+            ),
             "fit_from": {
                 "tracks": big["tracks"],
                 "frames": big["frames"],
                 "reports": big["reports"],
+                "bridges": EXP83["bridges"],
                 "seconds_scan": big["seconds_scan"],
+                "inner_iterations": big["scan_iterations_model"],
             },
-            "projected_scan_seconds_at_exp83_shape": (
-                k
-                * EXP83["tracks"]
-                * EXP83["frames"]
-                * exp83_reports
-                * EXP83["bridges"]
-            ),
+            "exp83_inner_iterations": exp83_inner,
+            "extrapolation_factor": exp83_inner / big["scan_iterations_model"],
+            "projected_scan_seconds_at_exp83_shape": k * exp83_inner,
             "note": (
-                "PROJECTION, not a measurement: the scanning oracle was "
-                "never run at experiment 83's shape."
+                "ROUGH ORDER-OF-MAGNITUDE PROJECTION, not a measurement. The "
+                "scanning oracle was never run at experiment 83's shape, and "
+                "`seconds_per_inner_iteration_by_row` is still falling at the "
+                "end of the sweep, so a single largest-row calibration "
+                "extrapolated by `extrapolation_factor` bounds the cost "
+                "loosely and most likely OVERSTATES it. Only the parity "
+                "result on this page is exact."
             ),
         }
         print(
-            "  scan cost law: {:.3e} s per inner iteration -> projected "
-            "{:.0f} s ({:.2f} h) at experiment 83's shape".format(
+            "  scan cost: {:.3e} s/inner-iteration (converged={}) -> projected "
+            "~{:.0f} s (~{:.2f} h) at experiment 83's shape, "
+            "extrapolating {:.0f}x -- ORDER OF MAGNITUDE ONLY".format(
                 k,
-                report["scan_cost_law"]["projected_scan_seconds_at_exp83_shape"],
-                report["scan_cost_law"]["projected_scan_seconds_at_exp83_shape"] / 3600.0,
+                report["scan_cost_calibration"]["coefficient_is_converged"],
+                k * exp83_inner,
+                k * exp83_inner / 3600.0,
+                report["scan_cost_calibration"]["extrapolation_factor"],
             )
         )
 
@@ -372,6 +418,9 @@ def main(argv=None) -> int:
             report["all_capped_keys_exact"]
             and report["all_censoring_exact"]
             and report["all_phi_bit_identical"]
+            # the stream dicts are what Phi is built from; gate on them
+            # too rather than trusting Phi to expose every divergence.
+            and report["max_abs_stream_diff_over_sweep"] == 0.0
         )
         print(f"\nPARITY: {'EXACT at every swept size' if ok else 'FAILED'}")
     return 0 if ok else 1

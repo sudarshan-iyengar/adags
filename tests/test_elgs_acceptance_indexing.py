@@ -345,6 +345,18 @@ class CensoringParityTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             build_evidence_index(batch)
 
+    def test_a_supplied_index_cannot_bypass_the_no_bridges_refusal(self):
+        """`EvidenceIndex` is exported, so a caller can hand one in. It
+        must not become a way to get an answer out of a batch that every
+        other path refuses -- the empty-bridge refusal is the PROP 1
+        precondition, not a convenience check."""
+        from elgs.energy import EvidenceIndex
+
+        batch = EvidenceBatch(reports={}, q_tilde={}, bridge_centers={})
+        forged = EvidenceIndex(cameras_by_track_frame={}, nonzero_track_frames=frozenset())
+        with self.assertRaises(ContractError):
+            segment_is_censored(batch, (0,), Segment(frames=(0.0,), z=True), forged)
+
 
 class DownstreamEnergyParityTests(unittest.TestCase):
     """Parity must survive all the way to the numbers acceptance reads:
@@ -493,11 +505,18 @@ class IndexStructureTests(unittest.TestCase):
         }
         self.assertEqual(set(index.nonzero_track_frames), expected)
 
-    def test_energy_layer_is_device_free(self):
-        """elgs.energy holds no tensors and selects no device, so there
-        is no CPU/GPU behaviour to diverge at this layer. Pinned rather
-        than assumed: if a tensor ever enters this module, the missing
-        GPU test becomes a real gap and this fails."""
+    def test_energy_layer_does_not_import_torch_itself(self):
+        """elgs.energy does its own arithmetic in `math`, so nothing in
+        THIS module holds a tensor or selects a device and there is no
+        CPU/GPU split to test here.
+
+        Stated precisely, because the weaker reading would be wrong: the
+        module is not torch-FREE. It does `from .clusters import
+        SeedCluster`, and elgs.clusters imports torch at module level, so
+        importing elgs.energy imports torch transitively. What is pinned
+        is narrower and is the part that matters — energy.py neither
+        imports torch directly nor binds it in its own namespace, so no
+        value computed here can depend on a device."""
         import elgs.energy as energy
 
         self.assertNotIn("torch", vars(energy))
