@@ -174,3 +174,49 @@ Net ground truth: **`rgb * alpha`** — the standard black composite.
   construction two lines earlier, so the branch can never be taken and
   the `else` multiply is a no-op — so it is RECORDED, NOT PATCHED, per
   the standing rule on unrelated code.
+
+## Addendum — M3 CLOSED for the evaluation path (2026-08-16)
+
+LPIPS has been computed. Experiment 99, `scripts/eval_diva360_heldout.py`,
+commit `cf3b34d`, on the benchmark baseline's iteration-5000 checkpoint,
+over the six official held-out cameras at 1160x550 on black — 846 units:
+
+```
+PSNR   21.3567
+SSIM   0.90701
+LPIPS  0.14685   (AlexNet v0.1, inputs in [-1,1] — reference convention)
+LPIPS  0.12398   (AlexNet v0.1, inputs in [0,1]  — the convention 3DGS
+                  metrics.py ships, which many published GS numbers inherit)
+```
+
+The container DOES have network egress: both
+`alexnet-owt-7be5be79.pth` and richzhang's `v0.1/alex.pth` downloaded
+successfully once the hub cache was pointed at a directory the run owns.
+The earlier `PermissionError` on `/tmp/adags_cache/torch` (experiment 85)
+was solely the shared `XDG_CACHE_HOME` being owned by another container,
+not an egress restriction.
+
+**M3 is closed for the evaluation path only.** `main.py`'s training loop
+still computes PSNR and SSIM and no LPIPS; the metric is available
+post-hoc from a checkpoint, which is what a protocol comparison needs,
+but an in-training LPIPS curve remains unavailable.
+
+Both conventions are reported because this repository still cannot
+establish which one DiVa-360's own script uses — there is still no
+DiVa-360 paper page. The distinction matters here: 0.147 versus 0.124 is
+larger than the gap between them and the 0.08-0.10 target, so which
+convention is meant changes how far short the model is, but not WHETHER
+it is short.
+
+Two measurement notes recorded rather than glossed:
+
+* The evaluator reports PSNR 21.3567 where the training loop's summary
+  says 21.3705, a 0.014 dB difference. The evaluator clamps the render
+  to [0,1] before scoring and the training loop does not. Neither is
+  wrong; they are different conventions and the smaller one is the
+  clamped one.
+* Experiment 99's `per_camera` block grouped on `Camera.image_name`,
+  which for this converter is the eight-digit FRAME index, so it
+  reported 141 "cameras". The aggregates are means over all 846 units
+  and are unaffected. Fixed at `4dac984` to group on the camera
+  directory in `image_path`.
