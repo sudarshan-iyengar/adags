@@ -913,13 +913,73 @@ def _run_round(state, gaussians, scene, iteration, render_unit_loss) -> None:
             "units": drawn_units.get(id(plan), []),
             "n_samples": record.n_samples,
             "se": record.se,
+            # OBSERVABILITY ONLY — nothing below enters a decision.
+            # `decide` returns the whole AcceptanceRecord and the round
+            # previously kept only `n_samples` and `se`, so the terms the
+            # rule actually adds up were discarded at the end of the
+            # round. Experiment 78 committed with se = 0.0 and its
+            # `delta_render` / `exact_deltas` split was then
+            # unrecoverable from the checkpoint, the trial log and the
+            # tfevents file alike -- "the photometric arm carried no
+            # signal" and "the evidence term carried the decision" were
+            # indistinguishable. Recording what was already computed
+            # costs nothing and closes that.
+            "delta_render": record.delta_render,
+            "exact_deltas": record.exact_deltas,
+            "transaction_increment": record.transaction_increment,
+            "delta_total": record.delta_total,
+            "k": record.k,
+            "ess": record.ess,
+            "n_units": record.n_units,
         }
         state.committed_decisions.append(decision)
+        print(json.dumps({"elgs_acceptance": {
+            "candidate_id": candidate_id,
+            "committed": True,
+            "delta_render": record.delta_render,
+            "exact_deltas": record.exact_deltas,
+            "transaction_increment": record.transaction_increment,
+            "delta_total": record.delta_total,
+            "se": record.se,
+            "k": record.k,
+            "ess": record.ess,
+            "n_samples": record.n_samples,
+            "n_units": record.n_units,
+            "unit_timestamps": sorted(
+                {float(u[1]) for u in decision["units"]}
+            ),
+        }}, sort_keys=True))
         # confirmation_refs feeds the §8 post-refit classification
         # pass and persists in the checkpoint.
         gaussians._elgs_checkpoint_extras["confirmation_refs"][candidate_id] = [
             tuple(u) for u in decision["units"]
         ]
+    # Same observability for REJECTIONS, which have no `decision` entry
+    # at all. A candidate rejected by the acceptance machinery raises
+    # before a record exists and is absent here; one rejected by the
+    # RULE has a record, and without this its terms were as invisible as
+    # a commit's. That matters most for the failure mode the evidence
+    # wiring is expected to have: "every candidate rejected" is a
+    # publishable-looking null result, and only the split says whether
+    # the evidence term produced it.
+    for candidate_id in outcome.rejected:
+        record = outcome.acceptance_records.get(candidate_id)
+        if record is None:
+            continue
+        print(json.dumps({"elgs_acceptance": {
+            "candidate_id": candidate_id,
+            "committed": False,
+            "delta_render": record.delta_render,
+            "exact_deltas": record.exact_deltas,
+            "transaction_increment": record.transaction_increment,
+            "delta_total": record.delta_total,
+            "se": record.se,
+            "k": record.k,
+            "ess": record.ess,
+            "n_samples": record.n_samples,
+            "n_units": record.n_units,
+        }}, sort_keys=True))
+
     if outcome.committed:
         _refresh_logit_param_group(state, gaussians, iteration=iteration, op="round_commit")
         _refresh_routing_pins(state, gaussians)

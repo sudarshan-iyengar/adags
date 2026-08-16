@@ -8,6 +8,7 @@ slot-grid draws -> routing pins -> post-refit classification ->
 checkpoint state build.
 """
 
+import math
 import types
 import unittest
 
@@ -211,6 +212,32 @@ class RoundAndPostRefitTests(unittest.TestCase):
         # confirmation_refs persisted for the §8 pass.
         refs = gaussians._elgs_checkpoint_extras["confirmation_refs"]
         self.assertIn(decision["candidate_id"], refs)
+
+        # OBSERVABILITY: every term the acceptance rule adds up is
+        # persisted, not just n_samples and se. Experiment 78 committed
+        # with se = 0.0 and its delta_render / exact_deltas split was
+        # then unrecoverable from checkpoint, trial log and tfevents
+        # alike, so "the photometric arm was silent" and "the evidence
+        # term decided it" could not be told apart after the fact.
+        for field in ("delta_render", "exact_deltas", "transaction_increment",
+                      "delta_total", "k", "ess", "n_units"):
+            self.assertIn(field, decision, f"{field} is not persisted")
+            self.assertTrue(
+                math.isfinite(float(decision[field])),
+                f"{field} persisted non-finite",
+            )
+        # The rule itself, restated against the persisted numbers: a
+        # commit means delta_total + k*se < 0, and delta_total is the
+        # sum of the three recorded terms.
+        self.assertAlmostEqual(
+            decision["delta_total"],
+            decision["delta_render"] + decision["exact_deltas"]
+            + decision["transaction_increment"],
+            places=12,
+        )
+        self.assertLess(
+            decision["delta_total"] + decision["k"] * decision["se"], 0.0
+        )
 
         # Routing-pin application zeroes pinned rows' grads and fails
         # closed on a row-count desync (N4 guard).

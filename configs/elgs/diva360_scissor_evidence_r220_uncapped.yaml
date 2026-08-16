@@ -1,0 +1,76 @@
+# DiVa-360 evidence, 220 iterations, UNCAPPED reports — EXPLORATORY.
+#
+# Byte-identical to diva360_scissor_evidence_r220.yaml except that
+# `elgs_smoke_max_reports_per_window` is ABSENT, which
+# elgs.evidence_stack.resolve_smoke_report_cap treats as an exact no-op:
+# every report in every window is evaluated, full-report semantics.
+#
+# What that costs, measured rather than assumed. The family the
+# evidence-aware smoke proposer selects (219) carries two windows:
+#
+#   window (45, 47)      1 interior frame        292 reports
+#   window (47, 512)   464 interior frames   135,488 reports
+#   total              135,780 reports x 3 bridges = 407,340 q values
+#
+# Experiment 78 ran the SAME family with a 96-report-per-window smoke
+# bound: 192 retained of 135,780, 576 q values in ~58 s = ~10 q/s. At
+# that rate the uncapped round is ~11.3 hours, which is why experiment
+# 76 was cancelled rather than allowed to finish. This lane is
+# authorized only once a measured batched throughput makes the first
+# round fit in three hours.
+#
+# NOTHING ELSE CHANGES. Same scene, same sealed artifact, same smoke
+# heads (unchanged and NOT tuned toward any outcome), same schedule,
+# same 220 iterations crossing seeding and exactly one structural round
+# at iteration 200, same beta/tau_b/c_cap/candidate_cap/confirmation
+# samples. The removal of the smoke bound is the entire difference, so
+# any change in the round's reports, q values, Phi or decision is
+# attributable to report coverage alone.
+#
+# EXPLORATORY, never claim-grade: submit with --exploratory, which
+# stamps evidence_bearing false and is also what permits the smoke-tier
+# heads. The frozen heads remain unfrozen, so no evidence-bearing run
+# can reach this path at all.
+
+gaussian_dim: 4
+time_duration: [0, 4.7]
+num_pts: 50_000
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+
+ModelParams:
+  sh_degree: 3
+  resolution: 4
+  frame_ratio: 1
+  eval: True
+
+OptimizationParams:
+  iterations: 220              # crosses seeding + round 0 at iteration 200
+  densify_until_iter: 400
+  densify_until_num_points: 60_000
+  opacity_reset_interval: 30_000
+  motion_model: "lora"
+
+  elgs_enable: True
+  elgs_smoke_schedule: True    # seed 100, audit 150, rounds 200/350/500
+  elgs_prereg_dir: "configs/elgs"
+  elgs_tracks_dir: "/apollo/users/sri/proj_adags/data/diva360_derived/scissor_screen_w0_561_tracks"
+
+  elgs_beta: 0.1
+  elgs_kappa: 0.01
+  elgs_chi: 0.01
+  elgs_mu: 0.01
+  elgs_tau_b: 1.0
+  elgs_k_se: 1.0
+  elgs_lambda_u: 1.0
+  elgs_c_cap: 4
+  elgs_candidate_cap: 2
+  elgs_confirmation_samples: 8
+  elgs_a_lr: 0.002
+  elgs_r_site: 0.05
+  elgs_binding_threshold: 0.25
+
+  # NO elgs_smoke_max_reports_per_window. Absent = disabled = full-report
+  # semantics; `resolve_smoke_report_cap` returns 0 and
+  # `select_smoke_reports` is a bit-identical pass-through.
