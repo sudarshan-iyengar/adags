@@ -14,7 +14,11 @@ What it does, in order:
    Scene, same GaussianModel, same `--start_checkpoint` restore, same
    `setup_elgs`, which itself calls `attach_evidence`);
 2. asks the SAME smoke proposer the round asks which family to score, so
-   the report population is the round's, not a benchmark's;
+   the report population is the round's, not a benchmark's. `--family`
+   overrides that, and is REQUIRED to reproduce a past round taken from a
+   checkpoint written after its own commit: the proposer only considers
+   K == 1 families, so a checkpoint in which the fission already landed
+   can never re-select the family it landed on;
 3. runs the q refresh once through the BATCHED probe surface and once
    through the SCALAR one -- the frozen oracle -- timing both and
    comparing every q value key-by-key;
@@ -117,8 +121,16 @@ def _sync(device) -> None:
         torch.cuda.synchronize(device)
 
 
-def _run_refresh(state, gaussians, scene, family_ids, probe_class, device):
-    """One timed q refresh under `probe_class`, returning (evidence, seconds)."""
+def _run_refresh(state, gaussians, scene, family_ids, probe_class, device,
+                 profile: bool = False):
+    """One timed q refresh under `probe_class`.
+
+    Returns (evidence, seconds, peak_bytes, profile_rows). `profile`
+    wraps the SAME call in cProfile so that a run which misses the
+    throughput gate still says WHERE the time went, rather than leaving
+    the next step to guesswork. Profiling inflates the wall time, so a
+    profiled pass is never the one whose seconds are reported.
+    """
     import elgs.probe_model as probe_module
     import elgs.trainer_hooks as hooks
 
@@ -126,17 +138,42 @@ def _run_refresh(state, gaussians, scene, family_ids, probe_class, device):
     probe_module.ModelProbe = probe_class
     gc.collect()
     _reset_peak_memory(device)
+    profiler = None
     try:
         _sync(device)
+        if profile:
+            import cProfile
+
+            profiler = cProfile.Profile()
+            profiler.enable()
         started = time.perf_counter()
         evidence = hooks._refresh_round_evidence(
             state, gaussians, scene, 0, family_ids=family_ids
         )
         _sync(device)
         elapsed = time.perf_counter() - started
+        if profiler is not None:
+            profiler.disable()
     finally:
         probe_module.ModelProbe = original
-    return evidence, elapsed, _peak_memory_bytes(device)
+
+    rows = None
+    if profiler is not None:
+        import pstats
+
+        stats = pstats.Stats(profiler)
+        stats.sort_stats("cumulative")
+        rows = []
+        for func, (calls, _nc, total, cumulative, _callers) in list(
+            sorted(stats.stats.items(), key=lambda kv: -kv[1][3])
+        )[:25]:
+            rows.append({
+                "function": f"{func[0].rsplit('/', 1)[-1]}:{func[1]}:{func[2]}",
+                "calls": calls,
+                "tottime": round(total, 4),
+                "cumtime": round(cumulative, 4),
+            })
+    return evidence, elapsed, _peak_memory_bytes(device), rows
 
 
 def _q_map(evidence) -> dict:
@@ -146,30 +183,64 @@ def _q_map(evidence) -> dict:
     }
 
 
-def _downstream(state, evidence, proposals) -> dict:
-    """Per-family Phi and each candidate's exact_deltas under `evidence`."""
+def _downstream(state, evidence, proposals, scope) -> dict:
+    """The quantities the DECISION consumes, recomputed under `evidence`.
+
+    * `family_phi` per scoped family under its live interval realization;
+    * `family_phi_absent` under `realization=None`, the TRUNCATE_DELETE /
+      retirement hypothesis the exact delta is built from;
+    * `truncate_exact_delta` = beta * (Phi_absent - Phi_present), a real
+      decision quantity computable for ANY family with windows, including
+      one already fissioned out of the proposer's K == 1 eligibility;
+    * `exact_deltas` for each proposal whose families are inside the
+      scope -- outside it the q snapshot has no values for them, so the
+      delta is not defined and is reported as skipped rather than 0.
+    """
     from elgs.evidence_stack import evidence_exact_delta, family_phi
 
-    phis = {}
+    beta = float(state.evidence.beta)
+    phis, phis_absent, truncate = {}, {}, {}
     for family_id in sorted({w.family_id for w in evidence.windows}):
-        phis[str(family_id)] = float(
+        present = float(
             family_phi(
                 state.evidence, evidence, family_id,
                 state.runtime.realization(family_id),
                 frame_time=state.evidence_frame_time,
             )
         )
-    deltas = {}
+        absent = float(
+            family_phi(
+                state.evidence, evidence, family_id, None,
+                frame_time=state.evidence_frame_time,
+            )
+        )
+        phis[str(family_id)] = present
+        phis_absent[str(family_id)] = absent
+        truncate[str(family_id)] = beta * (absent - present)
+
+    deltas, skipped = {}, []
+    scope = {int(f) for f in scope}
     for proposal in proposals:
         plan = proposal.plan
-        deltas[str(plan.op) + ":" + ",".join(str(f) for f in plan.family_ids)] = float(
+        key = str(plan.op) + ":" + ",".join(str(f) for f in plan.family_ids)
+        if not {int(f) for f in plan.family_ids} <= scope:
+            skipped.append(key)
+            continue
+        deltas[key] = float(
             evidence_exact_delta(
                 state.evidence, evidence, plan,
                 state.runtime.registry, state.config,
                 frame_time=state.evidence_frame_time,
             )
         )
-    return {"family_phi": phis, "exact_deltas": deltas}
+    return {
+        "beta": beta,
+        "family_phi": phis,
+        "family_phi_absent": phis_absent,
+        "truncate_exact_delta": truncate,
+        "exact_deltas": deltas,
+        "exact_deltas_skipped_outside_scope": skipped,
+    }
 
 
 def _run_parity_tests() -> dict:
@@ -263,6 +334,22 @@ def main() -> int:
              "large to time scalar-side; the parity gate then cannot be met)",
     )
     parser.add_argument(
+        "--family", type=str, default=None,
+        help=(
+            "comma-separated family ids to scope the q refresh to, "
+            "OVERRIDING the smoke proposer. Needed to reproduce a past "
+            "round's report population: the proposer only considers K == 1 "
+            "families, so a checkpoint taken AFTER a fission committed can "
+            "never re-select the family that fission was on."
+        ),
+    )
+    parser.add_argument(
+        "--profile", action="store_true",
+        help="add one EXTRA cProfile'd batched pass and report the top 25 "
+             "cumulative-time frames; its wall time is never reported as a "
+             "throughput measurement",
+    )
+    parser.add_argument(
         "--parity-tests", action="store_true",
         help="run the batched-vs-scalar parity unit tests first, ON THIS "
              "DEVICE. The CPU cell skips the CUDA case by construction, so "
@@ -324,10 +411,17 @@ def main() -> int:
         raise ContractError("no evidence context; this lane cannot be benchmarked")
 
     proposals = _propose_smoke_candidates(state, int(first_iter))
-    family_ids = sorted({int(f) for p in proposals for f in p.plan.family_ids})
+    proposed_families = sorted({int(f) for p in proposals for f in p.plan.family_ids})
+    if args.family:
+        family_ids = sorted({int(v) for v in str(args.family).split(",") if v.strip()})
+        scope_source = "explicit --family"
+    else:
+        family_ids = proposed_families
+        scope_source = "smoke proposer"
     if not family_ids:
-        raise ContractError("the smoke proposer produced no candidate families")
-    print(f"[bench] scoped families {family_ids}", flush=True)
+        raise ContractError("no families to scope the q refresh to")
+    print(f"[bench] scoped families {family_ids} ({scope_source}); "
+          f"proposer offered {proposed_families}", flush=True)
 
     chunks = [int(v) for v in str(args.chunk_sizes).split(",") if v.strip()]
     report = {
@@ -339,6 +433,8 @@ def main() -> int:
         "device": str(device),
         "model_rows": int(gaussians.get_xyz.shape[0]),
         "scoped_families": family_ids,
+        "scope_source": scope_source,
+        "proposer_families": proposed_families,
         "smoke_max_reports_per_window": int(
             state.evidence.smoke_max_reports_per_window
         ),
@@ -351,7 +447,7 @@ def main() -> int:
     baseline_downstream = None
     for chunk in chunks:
         batched_class, _ = _probe_classes(chunk)
-        evidence, seconds, peak = _run_refresh(
+        evidence, seconds, peak, _rows = _run_refresh(
             state, gaussians, scene, family_ids, batched_class, device
         )
         values = _q_map(evidence)
@@ -365,7 +461,7 @@ def main() -> int:
             "reports": dict(evidence.report_accounting),
             "peak_gpu_bytes": peak,
         }
-        entry["downstream"] = _downstream(state, evidence, proposals)
+        entry["downstream"] = _downstream(state, evidence, proposals, family_ids)
         if baseline_q is None:
             baseline_q, baseline_downstream = values, entry["downstream"]
         else:
@@ -378,7 +474,7 @@ def main() -> int:
     # -- scalar oracle pass ---------------------------------------------
     if not args.skip_scalar:
         _, scalar_class = _probe_classes(chunks[0])
-        evidence, seconds, peak = _run_refresh(
+        evidence, seconds, peak, _rows = _run_refresh(
             state, gaussians, scene, family_ids, scalar_class, device
         )
         scalar_values = _q_map(evidence)
@@ -391,17 +487,13 @@ def main() -> int:
             "windows": len(evidence.windows),
             "reports": dict(evidence.report_accounting),
             "peak_gpu_bytes": peak,
-            "downstream": _downstream(state, evidence, proposals),
+            "downstream": _downstream(state, evidence, proposals, family_ids),
         }
         entry["vs_batched"] = _max_difference(baseline_q, scalar_values)
         entry["downstream_vs_batched"] = {
-            "family_phi": _max_difference(
-                baseline_downstream["family_phi"], entry["downstream"]["family_phi"]
-            ),
-            "exact_deltas": _max_difference(
-                baseline_downstream["exact_deltas"],
-                entry["downstream"]["exact_deltas"],
-            ),
+            name: _max_difference(baseline_downstream[name], entry["downstream"][name])
+            for name in ("family_phi", "family_phi_absent",
+                         "truncate_exact_delta", "exact_deltas")
         }
         report["passes"].append(entry)
         print(f"[bench] scalar: {evidence.n_q_values} q in {seconds:.3f}s = "
@@ -414,6 +506,23 @@ def main() -> int:
         report["max_q_difference"] = entry["vs_batched"].get("max_abs_difference")
         print(f"[bench] SPEEDUP {report['speedup_vs_scalar']:.2f}x   "
               f"max |dq| {report['max_q_difference']}", flush=True)
+
+    # -- optional profile of the batched path ---------------------------
+    if args.profile:
+        batched_class, _ = _probe_classes(chunks[0])
+        _, seconds, _, rows = _run_refresh(
+            state, gaussians, scene, family_ids, batched_class, device,
+            profile=True,
+        )
+        report["profile"] = {
+            "chunk_size": chunks[0],
+            "profiled_seconds_NOT_a_throughput_measurement": seconds,
+            "top_cumulative": rows,
+        }
+        for row in (rows or [])[:15]:
+            print(f"[bench] profile {row['cumtime']:9.3f}s cum "
+                  f"{row['tottime']:9.3f}s tot {row['calls']:8d} calls  "
+                  f"{row['function']}", flush=True)
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
