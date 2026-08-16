@@ -44,10 +44,23 @@ rule that raw datasets are read-only.
 it reports the entry inventory and the uncompressed total so the real
 extraction cost is MEASURED before any extraction is authorized.
 
+`--extract` unpacks the archive's members beside it. This is a small
+operation and is NOT the large one people expect: the members are H.264
+MP4s, so the zip is a container rather than a compressor (measured ratio
+1.00x) and the extracted total is under 1 GiB. The ~557 GB figure from
+the preflight describes DECODED FRAMES, which this does not produce.
+
+Extraction is required rather than optional, and the reason was measured:
+`ffprobe` on a 4 MiB prefix of `cam00.mp4` returns `moov atom not found`,
+so these files are not `faststart` and their index sits at the END. A
+reader cannot stream-decode them from inside the zip; the whole file has
+to be present.
+
 Usage:
   python3 scripts/fetch_imvid_sample.py --dest /apollo/users/sri/proj_adags/data/imvid
   python3 scripts/fetch_imvid_sample.py --dest <dir> --inspect
   python3 scripts/fetch_imvid_sample.py --dest <dir> --verify-only
+  python3 scripts/fetch_imvid_sample.py --dest <dir> --verify-only --extract
 """
 
 from __future__ import annotations
@@ -179,12 +192,70 @@ def _inspect(archive: Path) -> dict:
     }
 
 
+def _extract(archive: Path, dest: Path) -> dict:
+    """Unpack members beside the archive, then hash what landed.
+
+    Refuses a member whose normalized path escapes `dest` (the zip-slip
+    guard) and refuses to overwrite an existing non-empty tree, so a
+    second run is a no-op rather than a silent re-extract.
+    """
+    root = dest / "scene1_opera"
+    if root.exists() and any(root.iterdir()):
+        files = sorted(p for p in root.rglob("*") if p.is_file())
+        return {
+            "action": "already-extracted",
+            "root": str(root),
+            "files": len(files),
+            "bytes": sum(p.stat().st_size for p in files),
+        }
+    written: list[dict] = []
+    with zipfile.ZipFile(archive) as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            target = (dest / info.filename).resolve()
+            if dest.resolve() not in target.parents:
+                raise ContractError(
+                    f"archive member {info.filename!r} escapes {dest}; refusing"
+                )
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info) as src, open(target, "wb") as out:
+                while True:
+                    block = src.read(_CHUNK)
+                    if not block:
+                        break
+                    out.write(block)
+            if target.stat().st_size != info.file_size:
+                raise ContractError(
+                    f"{info.filename}: wrote {target.stat().st_size} bytes, "
+                    f"central directory declares {info.file_size}"
+                )
+            try:
+                os.chmod(target, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            except OSError:
+                pass
+            written.append({
+                "name": info.filename,
+                "bytes": int(info.file_size),
+                "sha256": _sha256(target)[0],
+            })
+    return {
+        "action": "extracted",
+        "root": str(root),
+        "files": len(written),
+        "bytes": sum(entry["bytes"] for entry in written),
+        "members": written,
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dest", required=True,
                         help="persistent directory OUTSIDE the git repository")
     parser.add_argument("--inspect", action="store_true",
                         help="also read the zip central directory (no extraction)")
+    parser.add_argument("--extract", action="store_true",
+                        help="unpack the members (under 1 GiB; NOT frame decoding)")
     parser.add_argument("--verify-only", action="store_true",
                         help="never download; hash whatever is already present")
     parser.add_argument("--timestamp", default=None,
@@ -252,6 +323,14 @@ def main(argv=None) -> int:
         for suffix, slot in sorted(inventory["by_suffix"].items()):
             print(f"    {suffix:8s} n={slot['n']:5d}  {slot['bytes'] / 2**30:8.3f} GiB",
                   flush=True)
+
+    if args.extract:
+        print("[imvid] extracting members (H.264 MP4s; NOT frame decoding)", flush=True)
+        extraction = _extract(archive, dest)
+        report["extraction"] = extraction
+        print(f"  {extraction['action']}: {extraction['files']} files, "
+              f"{extraction['bytes'] / 2**30:.3f} GiB -> {extraction['root']}",
+              flush=True)
 
     manifest = dest / "MANIFEST.imvid_sample.json"
     manifest.write_text(json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
