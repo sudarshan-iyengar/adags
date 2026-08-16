@@ -170,6 +170,79 @@ single smooth Gaussian visibility bump around one temporal centre `tᵢ` is
 not a substitute for EL-GS's latched multi-episode presence; it is the
 single-interval family EL-GS's novelty record already lists as occupied.
 
+## COLMAP is IN the Determined runtime — and its defaults would destroy the calibration
+
+Probed directly at zero GPU slots, so this is the installed authority
+rather than documentation:
+
+```
+/usr/bin/colmap                     PRESENT
+colmap -h banner                    COLMAP 3.6
+dpkg                                ii  colmap  3.6+dev2+git20191105-1build1
+point_triangulator                  PRESENT
+model_analyzer, model_converter     PRESENT
+pycolmap                            MISSING
+/usr/bin/ffmpeg, /usr/bin/ffprobe   PRESENT
+```
+
+`colmap --version` is NOT a valid flag in 3.6 (`ERROR: Command
+'--version' not recognized`); the version comes from the `-h` banner and
+from dpkg.
+
+**Apollo-side execution is therefore the route**, and the workstation
+fallback (local `colmap.bat`, hashed transfer, destination manifest) is
+NOT needed. The data is already on Apollo and provenance stays in one
+place. `ffmpeg` being present also settles the decode question — frames
+come out through ffmpeg rather than through `cv2.VideoCapture`, which
+was the only option identified before this probe.
+
+### The trap, verified from the installed help text
+
+`point_triangulator` runs a bundle adjustment, and in 3.6 its DEFAULTS
+refine the intrinsics:
+
+```
+--Mapper.ba_refine_focal_length     arg (=1)    <-- WOULD ALTER fx, fy
+--Mapper.ba_refine_extra_params     arg (=1)    <-- WOULD ALTER k1,k2,p1,p2
+--Mapper.ba_refine_principal_point  arg (=0)
+```
+
+The ImViD sample's supplied intrinsics and extrinsics are FIXED
+AUTHORITY. Running `point_triangulator` at its defaults would silently
+return a *different* camera than the one shipped, and the resulting
+cloud would be consistent with that different camera rather than with
+the calibration the renderer will use. All three must be set to `0`
+explicitly. Pose fixing is structural — `point_triangulator` triangulates
+under given poses rather than estimating them, unlike `mapper` — but
+intrinsic fixing is a flag, not a property, and the default is the wrong
+way round.
+
+Two further defaults matter and are recorded before any run:
+
+* `feature_extractor` defaults to `--ImageReader.camera_model
+  SIMPLE_RADIAL` with `--ImageReader.single_camera 0`. Left alone it
+  would create 39 separate SIMPLE_RADIAL cameras and none of them would
+  be the shipped `2 OPENCV ...` camera. `--ImageReader.existing_camera_id`
+  (default `-1`) is the flag that binds extracted images to an existing
+  camera entry instead.
+* `--SiftExtraction.max_image_size` defaults to **3200**, while ImViD
+  frames are **5312x2988**. At the default, features would be detected
+  on a downscaled image while the supplied intrinsics describe the full
+  raster — a scale mismatch between the correspondences and the
+  calibration. This has to be raised to the native width or the
+  consequence has to be handled explicitly.
+* `SiftExtraction.use_gpu` and `SiftMatching.use_gpu` both default to
+  `1`, so a zero-slot cell cannot run them unmodified.
+
+### Discipline for this lane
+
+Any COLMAP step that COULD alter poses or intrinsics runs on a
+disposable copy first, and its output camera is compared numerically
+against the shipped `cameras.txt` before anything is promoted. No
+altered calibration enters the ImViD baseline without explicit review
+and authorization. Unrestricted `mapper` / bundle adjustment / pose
+estimation is not run at all.
+
 ## Open
 
 The ingestion smoke past calibration — extraction of the 39 MP4s, a
