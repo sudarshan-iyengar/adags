@@ -344,6 +344,20 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--report-bounds", type=str, default=None,
+        help=(
+            "comma-separated SMOKE report bounds to sweep, each timed with "
+            "the batched path. Throughput is NOT workload-independent: the "
+            "smoke bound spreads its retained reports evenly over frames, so "
+            "at bound 96 a (camera, frame) group holds about one report and "
+            "batching has almost nothing to batch, while the uncapped window "
+            "holds about a dozen. This measures q/s against report density "
+            "instead of extrapolating the uncapped round from the sparsest "
+            "point on the curve. Goes through resolve_smoke_report_cap, so "
+            "the SMOKE-ONLY fail-closed conditions still apply."
+        ),
+    )
+    parser.add_argument(
         "--profile", action="store_true",
         help="add one EXTRA cProfile'd batched pass and report the top 25 "
              "cumulative-time frames; its wall time is never reported as a "
@@ -506,6 +520,51 @@ def main() -> int:
         report["max_q_difference"] = entry["vs_batched"].get("max_abs_difference")
         print(f"[bench] SPEEDUP {report['speedup_vs_scalar']:.2f}x   "
               f"max |dq| {report['max_q_difference']}", flush=True)
+
+    # -- optional report-density sweep ----------------------------------
+    if args.report_bounds:
+        from elgs.evidence_stack import resolve_smoke_report_cap
+
+        original_cap = int(state.evidence.smoke_max_reports_per_window)
+        sweep = []
+        batched_class, _ = _probe_classes(chunks[0])
+        try:
+            for raw in str(args.report_bounds).split(","):
+                if not raw.strip():
+                    continue
+                cap = resolve_smoke_report_cap(
+                    int(raw), smoke_schedule=True, evidence_bearing=False
+                )
+                state.evidence.smoke_max_reports_per_window = cap
+                evidence, seconds, peak, _rows = _run_refresh(
+                    state, gaussians, scene, family_ids, batched_class, device
+                )
+                entry = {
+                    "report_bound": cap,
+                    "seconds": seconds,
+                    "q_values": evidence.n_q_values,
+                    "q_per_second": (
+                        evidence.n_q_values / seconds if seconds > 0 else None
+                    ),
+                    "reports_retained": evidence.report_accounting["retained"],
+                    "reports_total": evidence.report_accounting["total"],
+                    "frames_covered": evidence.report_accounting["frames_covered"],
+                    "cameras_covered": evidence.report_accounting["cameras_covered"],
+                    "peak_gpu_bytes": peak,
+                }
+                # Mean queries per (camera, frame) reduction: the quantity
+                # the batching win is actually proportional to.
+                groups = max(1, entry["frames_covered"] * entry["cameras_covered"])
+                entry["approx_queries_per_group"] = entry["q_values"] * 7 / groups
+                sweep.append(entry)
+                print(f"[bench] sweep bound={cap}: {entry['q_values']} q in "
+                      f"{seconds:.3f}s = {entry['q_per_second']:.2f} q/s, "
+                      f"retained {entry['reports_retained']}, "
+                      f"~{entry['approx_queries_per_group']:.1f} queries/group, "
+                      f"peak {peak / 2**20:.1f} MiB", flush=True)
+        finally:
+            state.evidence.smoke_max_reports_per_window = original_cap
+        report["report_bound_sweep"] = sweep
 
     # -- optional profile of the batched path ---------------------------
     if args.profile:
