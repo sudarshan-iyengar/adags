@@ -752,3 +752,74 @@ error — which is why experiment 82 measures the curve instead.
 `truncate_exact_delta = +0.02554757138075843`. Phi is a live, finite,
 data-dependent quantity here; that is a measurement on an EXPLORATORY
 run and is not a claim.
+### Throughput is a property of REPORT DENSITY, and the curve was measured
+
+Experiment 82, commit `4cf43ce`, dgx/V100, idle node, family 219, same
+checkpoint and config. The baseline pass reproduced experiment 81 to
+within noise (17.45 vs 17.57 q/s at chunk 256), then the SAME code ran
+the SAME family at four smoke report bounds.
+
+| bound | reports | frames | q values | seconds | q/s | queries per group | peak GPU |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 96 | 192 | 97 | 576 | 33.148 | 17.38 | 1.8 | 121.1 MiB |
+| 384 | 676 | 385 | 2,028 | 130.403 | 15.55 | 1.6 | 229.2 MiB |
+| 1536 | 1,684 | 465 | 5,052 | 162.696 | 31.05 | 3.3 | 229.2 MiB |
+| 6144 | 6,324 | 465 | 18,972 | 175.704 | **107.98** | 12.4 | 229.2 MiB |
+
+`q/s` moves by a factor of SEVEN across rows of identical code, on the
+same family, same checkpoint, same commit. It is not a property of the
+implementation.
+
+Two parameters explain every row. Fitting `t = a * frames + b * q_values`
+to the first two rows gives `a = 0.3150` s per timestamp and
+`b = 0.004508` s per q, which predicts 169.2 s for bound 1536 against
+162.7 s measured. The last two rows share 465 frames, so they isolate
+the per-q cost exactly:
+
+```
+a = 0.339731 s per distinct timestamp   (presence over 512 families)
+b = 0.00093448 s per q value            (everything else)
+```
+
+`b` fell 4.8x between the two fits as the mean group grew from 1.6 to
+12.4 queries — that IS the batching, showing up only where there is
+something to batch. The profile is why the fit is this clean: `a` is
+`presence_multiplier`, charged once per distinct timestamp regardless of
+how many reports that timestamp carries.
+
+**The uncapped round, extrapolated on the measured coefficients:**
+
+```
+family 219 uncapped: 465 timestamps, 407,340 q values
+  presence  465 x 0.339731     =  158.0 s
+  remainder 407,340 x 0.00093448 = 380.7 s
+  total                        ~=  538.6 s = 9.0 minutes  (~756 q/s)
+```
+
+against the authorization's 3-hour budget (>= 37.72 q/s) and 4-hour
+cancellation threshold (28.29 q/s). `b` is measured at 12.4 queries per
+group and the uncapped round runs at ~267, so nine minutes is an UPPER
+bound on the q side; the presence term is already exact.
+
+For contrast, experiment 78's own extrapolation from 9.93 q/s gave 11.3
+hours for the same round. The discrepancy is not a modelling
+disagreement: it is that 95% of the measured second was a fixed
+per-timestamp cost being charged 707 times too often in the projection.
+
+Peak GPU memory plateaus at 229.2 MiB from bound 384 onward — the
+request-block bound doing its job — while reports grow 2.5x between
+those rows. Host-side plan memory is bounded by the same block; what
+still scales with the window is the q snapshot, the `written` key set
+and the bridge-centre maps, all of which are host dictionaries of order
+400k entries for the uncapped round.
+
+**The uncapped run was NOT launched, and the authorization is why.**
+Two conditions were set. "Measured throughput at least 37.7 q/s" now
+PASSES at bound 6144 (107.98 q/s, on a workload carrying the uncapped
+round's full 465-frame coverage and 33x the benchmark's q values) but
+FAILS on the workload the brief named, the exact 192 reports (17.38
+q/s). "If batching does not clear the 3.8x gate, stop after profiling
+the next exact bottleneck" is unconditional, and the measured speedup on
+that workload is 1.30x. Two gates, one satisfied and one not, is a
+decision for the authorizer rather than for the executor to reconcile;
+the evidence for either choice is recorded above.
