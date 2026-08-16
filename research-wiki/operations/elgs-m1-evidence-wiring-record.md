@@ -823,3 +823,132 @@ the next exact bottleneck" is unconditional, and the measured speedup on
 that workload is 1.30x. Two gates, one satisfied and one not, is a
 decision for the authorizer rather than for the executor to reconcile;
 the evidence for either choice is recorded above.
+## The uncapped round HAS RUN — exp 83, 2026-08-16
+
+EXPLORATORY (`evidence_bearing: false`), dgx/V100, commit `a8efebc`,
+cell `diva360_scissor_evidence_r220_uncapped`, config
+`configs/elgs/diva360_scissor_evidence_r220_uncapped.yaml` (canonical
+hash `943358c2…`), run dir
+`runs/elgs/20260816T…_diva360_scissor_evidence_r220_uncapped_0_a8efebc`.
+User-authorized 2026-08-16 after the density curve; the one-hour
+cancellation threshold was never approached.
+
+**Every report in the window was evaluated. Nothing was dropped.**
+
+```
+elgs_evidence_round: round_index 0, windows 2,
+  families_scoped 1, families_with_windows 1,
+  q_values 407340,
+  reports {total 135780, retained 135780, dropped 0,
+           frames_covered 465, cameras_covered 23,
+           max_reports_per_window 0,
+           selection_rule "uncapped: every report in the window"}
+```
+
+`max_reports_per_window 0` is `resolve_smoke_report_cap` returning
+"disabled" for an absent key, and `select_smoke_reports` is then a
+bit-identical pass-through — so this is full-report semantics by the
+same code path the smoke lane uses, not a separate branch.
+
+### Runtime — the projection was wrong by two orders of magnitude, in the good direction
+
+The round ran between the last training log at 09:36:57 (iteration 180,
+1.43 s/iteration, so iteration 200 at ~09:37:26) and its own
+`elgs_evidence_round` line at 09:42:27.
+
+```
+duration                 301 s = 5.02 minutes
+effective throughput     1,353 q/s
+vs exp 78's 9.93 q/s     136x
+vs the 11.3 h projection 135x faster
+```
+
+The density-curve extrapolation predicted 9.0 minutes and was stated as
+an UPPER bound, because its per-q coefficient was measured at 12.4
+queries per (camera, frame) group while the uncapped round runs at ~267.
+It was conservative by 1.79x, which is the size of the effect it
+disclosed. The cost model — a fixed per-timestamp presence charge plus a
+per-q term that falls with group size — is now confirmed on the workload
+it was built to predict.
+
+For the record, the two superseded numbers: experiment 76 was cancelled
+because this round "is hours of GPU time"; experiment 78 extrapolated
+11.3 hours from 9.93 q/s. Both were arithmetic on a per-q rate measured
+at a report density where 95% of the second was a fixed per-timestamp
+cost. The round takes five minutes.
+
+### What this establishes
+
+q, the likelihood terms and Phi were evaluated on the **complete**
+report population of family 219 — 135,780 reports, 465 frames, 23
+cameras, 407,340 q values — with no cap, no subsampling and no
+approximation anywhere in the path. Every q passed `QSnapshot.put`'s
+`0 <= q <= 1` check, so all 407,340 are finite and in range.
+
+### Evidence boundary
+
+EXPLORATORY. Smoke-tier heads (`g_v`, `h_c`, `h_o`, `pi_miss`,
+`g_pos_sigma`, `reliability.r_u`, `alpha_u.rho` all still unfrozen), so
+no evidence-bearing run can reach this path and nothing here is a
+result, a baseline or a supply claim. The decision below is PRESERVED
+without scientific interpretation, exactly as directed.
+
+### CANCELLED IN ACCEPTANCE — the code that CONSUMES q is quadratic in reports
+
+The round finished. The acceptance that follows it did not, and could
+not. Cancelled and ledgered at 20 minutes into the acceptance phase.
+
+`elgs/energy.py::_capped_keys_for` builds, for each (track, frame) pair,
+the per-camera q map by RESCANNING the entire report dict:
+
+```python
+for j in track_ids:                      # 292 tracks
+    for t in segment.frames:             # 464 frames
+        cams = {
+            c: q_b[(j, c, t)]
+            for (jj, c, tt) in batch.reports      # <-- all 135,780
+            if jj == j and tt == t and (j, c, t) in q_b
+        }
+```
+
+That is `O(tracks x frames x reports)` where a dict lookup would do, and
+there is no early exit:
+
+```
+292 x 464 x 135,780 = 1.84e10 iterations per (bridge, segment)
+  ~15 min per call at 2e7 it/s
+  x 9 calls (3 bridges x [1 incumbent + 2 candidate segments])
+  = ~2.3 hours
+```
+
+At the SMOKE scale the same expression is `292 x 97 x 192 = 5.4e6`,
+about 0.27 s — invisible. The uncapped population is **3,383x** more
+work per call. `segment_is_censored` has the identical shape (a full
+`q_b.items()` scan inside the same double loop); it early-exits on the
+first nonzero q so it is not the binding cost, but it is the same
+defect.
+
+**This is an ARCHITECTURAL CONTRADICTION and it is preserved, not
+patched**, per the standing rule that a scientific or architectural
+contradiction stops the lane rather than starting another patch loop.
+
+The contradiction is precise and worth stating plainly: **the q refresh
+is now fast enough to score the complete report population, and the
+acceptance path that consumes q is not.** Batching moved the bottleneck
+out of the probe and into the estimator. Every previous round hid this
+behind the smoke report bound — which is also why the bound could never
+have been "just a cost control": it was load-bearing for termination.
+
+### What experiment 83 does and does not establish
+
+ESTABLISHED: the q / likelihood / Phi path evaluates the COMPLETE report
+population of family 219 — 135,780 reports, 465 frames, 23 cameras,
+407,340 q values — with no cap, no subsampling, no approximation, in
+five minutes, and every q passes the `0 <= q <= 1` contract.
+
+NOT ESTABLISHED: any acceptance outcome at uncapped scale. The decision
+was never reached, so there is no committed or rejected candidate to
+report, and none is claimed. The exp-78 decomposition's open question —
+whether the evidence term or the transaction increment carries a
+mid-plateau fission when reports actually cover the gap — remains open
+and is now blocked on the quadratic helpers rather than on q throughput.
