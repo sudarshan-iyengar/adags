@@ -117,6 +117,71 @@ def _run(args: list[str], label: str) -> dict:
             "stdout_tail": out.stdout[-4000:]}
 
 
+#: COLMAP camera model ids -> (name, n_params). Only what this lane uses.
+_CAMERA_MODELS = {0: ("SIMPLE_PINHOLE", 3), 1: ("PINHOLE", 4),
+                  2: ("SIMPLE_RADIAL", 4), 3: ("RADIAL", 5), 4: ("OPENCV", 8)}
+
+
+def read_cameras_bin(path: Path) -> dict[int, dict]:
+    """Exact doubles from `cameras.bin`.
+
+    THE TEXT EXPORT CANNOT BE USED FOR THE EXACTNESS CHECK. COLMAP 3.6's
+    text writer emits about SIX SIGNIFICANT FIGURES —
+    `2602.2436600602796` comes back as `2602.24` — so a numeric diff
+    against `model_txt/cameras.txt` reports ~4e-3 of apparent "drift" on
+    a focal length that never moved. That is a property of the writer,
+    not of the reconstruction. The binary model stores the raw doubles.
+    """
+    import struct
+
+    data = path.read_bytes()
+    offset = 0
+    (n_cameras,) = struct.unpack_from("<Q", data, offset)
+    offset += 8
+    cameras: dict[int, dict] = {}
+    for _ in range(n_cameras):
+        camera_id, model_id, width, height = struct.unpack_from("<iiQQ", data, offset)
+        offset += 24
+        if model_id not in _CAMERA_MODELS:
+            raise ContractError(f"unhandled COLMAP camera model id {model_id}")
+        name, n_params = _CAMERA_MODELS[model_id]
+        params = struct.unpack_from("<" + "d" * n_params, data, offset)
+        offset += 8 * n_params
+        cameras[camera_id] = {"model": name, "width": width, "height": height,
+                              "params": list(params)}
+    return cameras
+
+
+def read_images_bin(path: Path) -> dict[str, dict]:
+    """Exact quaternions/translations from `images.bin`, keyed by NAME."""
+    import struct
+
+    data = path.read_bytes()
+    offset = 0
+    (n_images,) = struct.unpack_from("<Q", data, offset)
+    offset += 8
+    images: dict[str, dict] = {}
+    for _ in range(n_images):
+        image_id = struct.unpack_from("<i", data, offset)[0]
+        offset += 4
+        qvec = struct.unpack_from("<dddd", data, offset)
+        offset += 32
+        tvec = struct.unpack_from("<ddd", data, offset)
+        offset += 24
+        camera_id = struct.unpack_from("<i", data, offset)[0]
+        offset += 4
+        end = data.index(b"\x00", offset)
+        name = data[offset:end].decode("utf-8")
+        offset = end + 1
+        (n_points2d,) = struct.unpack_from("<Q", data, offset)
+        offset += 8
+        offset += n_points2d * 24  # (x, y, point3D_id) per observation
+        images[name] = {"image_id": image_id, "camera_id": camera_id,
+                        "qvec": list(qvec), "tvec": list(tvec),
+                        "n_points2d": n_points2d}
+    return images
+
+
 def parse_cameras(path: Path) -> list[list[str]]:
     rows = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -149,6 +214,11 @@ def main(argv=None) -> int:
     parser.add_argument("--workdir", required=True, help="all outputs land here")
     parser.add_argument("--max-image-size", type=int, default=NATIVE_WIDTH)
     parser.add_argument("--use-gpu", type=int, default=0)
+    parser.add_argument("--verify-only", action="store_true",
+                        help="re-run the calibration check and statistics over an "
+                             "EXISTING workdir; runs no COLMAP step. Exists so a "
+                             "corrected check does not have to repay the "
+                             "20-minute exhaustive match.")
     args = parser.parse_args(argv)
 
     if shutil.which(COLMAP) is None:
@@ -159,7 +229,7 @@ def main(argv=None) -> int:
     work = Path(args.workdir)
     if work.resolve() == REPO_ROOT or REPO_ROOT in work.resolve().parents:
         raise ContractError(f"--workdir {work} is inside the repository")
-    if work.exists() and any(work.iterdir()):
+    if not args.verify_only and work.exists() and any(work.iterdir()):
         raise ContractError(f"workdir is not empty: {work}")
 
     cam_rows = parse_cameras(supplied / "cameras.txt")
@@ -181,6 +251,15 @@ def main(argv=None) -> int:
         directory.mkdir(parents=True, exist_ok=True)
 
     steps = []
+    if args.verify_only:
+        print("[imvid] --verify-only: reusing the existing workdir artifacts",
+              flush=True)
+        analyzer = _run([COLMAP, "model_analyzer", "--path", str(model_out)],
+                        "model_analyzer")
+        steps.append(analyzer)
+        return _finish(args, images, supplied, work, model_out, model_txt,
+                       cam_params, img_rows, analyzer, steps)
+
     steps.append(_run([COLMAP, "database_creator", "--database_path", str(db)],
                       "database_creator"))
     steps.append(_run([
@@ -254,33 +333,62 @@ def main(argv=None) -> int:
     analyzer = _run([COLMAP, "model_analyzer", "--path", str(model_out)],
                     "model_analyzer")
     steps.append(analyzer)
+    return _finish(args, images, supplied, work, model_out, model_txt,
+                   cam_params, img_rows, analyzer, steps)
 
+
+def _finish(args, images, supplied, work, model_out, model_txt,
+            cam_params, img_rows, analyzer, steps) -> int:
+    """Calibration check, statistics and manifest.
+
+    Split out so `--verify-only` can re-run it over existing artifacts
+    without repaying the exhaustive match.
+    """
     # --- the decisive check: did anything move? -----------------------
-    out_cams = parse_cameras(model_txt / "cameras.txt")
-    out_imgs = parse_images(model_txt / "images.txt")
+    # Against the BINARY model, never the text export. See
+    # `read_cameras_bin` -- 3.6's text writer keeps ~6 significant
+    # figures, which manufactures ~4e-3 of phantom "drift" on a focal
+    # length that never moved.
+    out_cams = read_cameras_bin(model_out / "cameras.bin")
+    out_imgs = read_images_bin(model_out / "images.bin")
     if len(out_cams) != 1:
         raise ContractError(f"output holds {len(out_cams)} cameras, expected 1")
-    cam_delta = max(
-        abs(float(a) - float(b)) for a, b in zip(cam_params, out_cams[0][4:])
-    )
+    out_cam = next(iter(out_cams.values()))
+    supplied_params = [float(v) for v in cam_params]
+    if len(out_cam["params"]) != len(supplied_params):
+        raise ContractError(
+            f"output camera has {len(out_cam['params'])} params, supplied has "
+            f"{len(supplied_params)}"
+        )
+    param_deltas = [abs(a - b) for a, b in zip(supplied_params, out_cam["params"])]
+    cam_delta = max(param_deltas)
+
     supplied_by_name = {row[9]: row for row in img_rows}
     pose_delta = 0.0
-    for row in out_imgs:
-        ref = supplied_by_name.get(row[9])
+    worst_image = None
+    for name, entry in out_imgs.items():
+        ref = supplied_by_name.get(name)
         if ref is None:
-            raise ContractError(f"output image {row[9]!r} is not in the supplied model")
-        pose_delta = max(
-            pose_delta,
-            max(abs(float(a) - float(b)) for a, b in zip(ref[1:8], row[1:8])),
-        )
-    print(f"[imvid] calibration drift: intrinsics {cam_delta:.3e}, "
-          f"poses {pose_delta:.3e}", flush=True)
+            raise ContractError(f"output image {name!r} is not in the supplied model")
+        supplied_pose = [float(v) for v in ref[1:8]]
+        produced_pose = entry["qvec"] + entry["tvec"]
+        local = max(abs(a - b) for a, b in zip(supplied_pose, produced_pose))
+        if local > pose_delta:
+            pose_delta, worst_image = local, name
+
+    print(f"[imvid] calibration drift (BINARY model): intrinsics "
+          f"{cam_delta:.3e}, poses {pose_delta:.3e}"
+          + (f" (worst {worst_image})" if worst_image else ""), flush=True)
+    print(f"[imvid]   per-parameter: "
+          + ", ".join(f"{d:.2e}" for d in param_deltas), flush=True)
     if cam_delta != 0.0 or pose_delta != 0.0:
         raise ContractError(
             f"COLMAP ALTERED THE SUPPLIED CALIBRATION (intrinsics delta "
-            f"{cam_delta:.6e}, pose delta {pose_delta:.6e}). The result is "
-            "REFUSED: it is consistent with a different camera than the one "
-            "the renderer will use."
+            f"{cam_delta:.6e} per-param {param_deltas}, pose delta "
+            f"{pose_delta:.6e} on {worst_image}). The result is REFUSED: it "
+            "is consistent with a different camera than the one the renderer "
+            "will use. NOTE: this check reads cameras.bin/images.bin, so it "
+            "is NOT a text-precision artifact."
         )
 
     # --- statistics ---------------------------------------------------
