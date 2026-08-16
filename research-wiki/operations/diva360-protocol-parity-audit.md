@@ -208,6 +208,121 @@ larger than the gap between them and the 0.08-0.10 target, so which
 convention is meant changes how far short the model is, but not WHETHER
 it is short.
 
+## Addendum — the official conventions are now READ, not inferred (2026-08-16)
+
+The statement above that "this repository still cannot establish which
+one DiVa-360's own script uses" is CLOSED. The evaluator was located and
+read: **`utils/benchmark.py` in `brown-ivl/DiVa360`, branch `main`** —
+the only branch. The paper is arXiv **2307.16897**, "DiVa-360: The
+Dynamic Visual Dataset for Immersive Neural Fields", CVPR 2024
+(Highlight).
+
+```python
+psnr  = cv.PSNR(gt, pred)                                # L52, uint8
+ssim  = structural_similarity(gt, pred, channel_axis=2)  # L53, uint8
+lpips_net = LearnedPerceptualImagePatchSimilarity(net_type='vgg')  # L30
+image_pred = image_pred * 2 - 1;  image_gt = image_gt * 2 - 1      # L18-19
+avg_* / count                                            # L65-67
+```
+
+| element | official | this repository (exp 99/100) | verdict |
+|---|---|---|---|
+| PSNR | `cv.PSNR` on **uint8**, R=255, per-image mean | float domain | MISMATCH (minor) |
+| SSIM | skimage **defaults**: uniform **7x7**, `data_range` 255, `K1` 0.01, `K2` 0.03, sample covariance, `channel_axis=2` | 3DGS **11x11 Gaussian** | **MISMATCH (material)** |
+| LPIPS backbone | **VGG** (torchmetrics) | AlexNet | **MISMATCH** |
+| LPIPS input range | **[-1,1]** (`normalize=False` default) | [-1,1] | **MATCH** |
+| background | black (`--wh_bg` omitted in the scissor scripts) | black | match |
+| test cameras | `[0, 16, 17, 33, 43, 44]` (`utils/splitJson.py` L25) | same | match |
+| train cameras | 35 = 53 − 12 discarded − 6 test | 35 | match |
+| resolution | 1160x550 (paper §5.1/§5.2, "original resolution") | 1160x550 | match |
+| frame rate | **30 FPS**, downsampled from 120 (`utils/moveVideo.py` L34, 33333 µs) | 30 FPS | match |
+
+**The SSIM finding changes how the earlier gap should be read.** skimage's
+own docstring states that the Wang-et-al (3DGS-style) form requires
+`gaussian_weights=True, use_sample_covariance=False` — which DiVa-360
+does **not** set. So 0.90701 against a published 0.937-0.944 was partly a
+CONVENTION gap, not purely a quality gap. Likewise the `[0,1]` LPIPS
+variant (0.12398) corresponds to nothing official and should be
+discarded; the `[-1,1]` convention was right and only the backbone was
+wrong.
+
+**Published scissor rows** — CVPR 2024 supplementary **Table 5**
+(= arXiv v2 Table 12), the only three methods the paper reports:
+
+| scissor | PSNR | SSIM | LPIPS |
+|---|---:|---:|---:|
+| PF I-NGP (black bg) | 25.346 | 0.944 | 0.076 |
+| MixVoxels (black bg) | 25.090 | 0.937 | 0.086 |
+| K-Planes (**white** bg) | 25.883 | 0.936 | 0.168 |
+
+The K-Planes row is **white background** and must not be used as a target
+for a black-background model. **There is still no Gaussian-splatting
+baseline**: the official README's TODO `add Gaussian Splatting to the
+benchmark` is unchecked, which corroborates [[gap_map]]'s "DiVa-360 is
+the event-dense benchmark with no GS baselines".
+
+### M1 is now QUANTIFIED, and it is larger than recorded
+
+The audit above recorded M1 as "temporal sampling is 4x too dense" and
+the parity requirement as a 30-FPS materialization. That materialization
+exists (`scissor_screen_w0_561_s4_30fps`) and experiments 84-100 use it.
+**It does not close M1.** DiVa-360's scissor configuration covers
+**1125 frames** at 30 FPS — 37.5 s — verified three independent ways:
+`objects_scripts/scissor/eval_mixvoxels.sh` passes `--num_frames 1125`;
+`undistortion.sh` produces 625 + 500 = 1125 undistorted frames; and the
+MixVoxels chunk configs sum to 7x150 + 75 = 1125. The `FRAMES=1200` in
+`move.sh` / `test_ingp.sh` is **stale** — only 1125 frames have
+undistorted ground truth on disk.
+
+The scene evaluated here is **141 frames**, the first **4.7 s**. So the
+published rows are a pooled mean over 1125 frames x 6 cameras and every
+ADAGS scissor number is over 141 x 6 = 846 units covering an eighth of
+the sequence. **Metric parity does not repair this**, and no scissor
+number produced on this materialization may be placed beside a published
+row as like-for-like, whichever convention is used.
+
+Version pinning is UNAVAILABLE: DiVa-360's `environment.yml` pins only
+`python=3.9`, `colmap=3.8` and `awscli`; scikit-image, torchmetrics,
+opencv and torch are all unpinned.
+
+### Implementation, and one environment constraint
+
+`utils/diva360_official_metrics.py` + `scripts/eval_diva360_heldout.py
+--official-metrics` (commit `b94a83e`) compute all three official
+metrics alongside the existing ones, on the SAME images.
+
+**scikit-image is NOT installed in the Apollo image.** Probed directly
+at zero GPU slots: `skimage MISSING ModuleNotFoundError`, while
+`cv2 4.10.0`, `torchmetrics 0.11.4`, `torch 2.0.1+cu118`,
+`torchvision 0.15.2+cu118` and `numpy 1.24.4` are present. Rather than
+let a score depend on whether an optional package happens to be
+installed, skimage's defaults are reproduced exactly and pinned against
+the real library by `tests/test_diva360_official_metrics.py` — matching
+to 10 decimal places on random pairs, identical images, flat and
+structured content, and at the official 1160x550 aspect. Those tests
+SKIP where skimage is absent and RUN where it is (the workstation base
+environment, scikit-image 0.24.0); one test reports the skip explicitly
+so an all-green Apollo suite is never misread as having verified the
+reimplementation there.
+
+No scipy is needed: skimage crops the SSIM map by `(win_size-1)//2`
+before averaging, which for a 7-tap filter is exactly the region whose
+window lies wholly inside the image, so boundary padding never reaches a
+surviving pixel and a valid-region box mean is identical.
+
+The render is quantized as `torchvision.utils.save_image` would write it
+(`x*255 + 0.5`, truncated, clamped) because the official evaluator reads
+PNG FILES for both images; all three official metrics derive from the
+quantized data, LPIPS included.
+
+**Compositing, stated precisely.** The official evaluator applies
+`rgb*alpha + (1-alpha)*bg` to gt AND pred using each image's OWN alpha.
+Here the ground truth is already black-composited once by the lazy
+dataset path and the render is produced against a black background by
+the rasterizer, so it is composited by construction. The GT's alpha is
+NEVER applied to the prediction — that would leak ground-truth geometry
+into the score.
+
 Two measurement notes recorded rather than glossed:
 
 * The evaluator reports PSNR 21.3567 where the training loop's summary
