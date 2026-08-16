@@ -1048,6 +1048,40 @@ matters: the full q / likelihood / Phi / acceptance path executes
 end-to-end on a complete report population, reaches a decision, and does
 so in minutes.
 
+### Terminal verification, and a correction about the post-training gap
+
+`STATE_COMPLETED`, audited in-container (`/apollo` is not mounted on the
+workstation, so `submit_apollo.py audit` runs as a zero-GPU-slot command
+cell). `terminal.json` written, manifest sha256
+`ea1c8bc3e0b04aee…`. Provenance verified against the submission: commit
+`b94a83e` — the exact pushed commit — `evidence_bearing: false`, image
+`sudarshaniyengar/adags:apollo-v100-v1`, pool `dgx`, seed 0.
+
+Run summary: `elgs = {candidates_tried 1, candidates_accepted 1,
+families 512, rounds_run [200], ledger_events 2}`, final iteration 220,
+20,000 points, artifacts `chkpnt220.pth`, `chkpnt_best.pth`,
+`point_cloud/iteration_220/`, `summary.json`.
+
+**Correction, recorded because it was nearly acted on.** Training
+finished at 20:49:34 and the run then emitted NOTHING for twenty
+minutes, writing no artifact. That was read during the session as a
+possible stall in the §8 post-refit pass — which would have been the
+first time §8 ever executed, since it requires a committed decision —
+and a cancellation was being prepared against the 1.0 GPU-h projection.
+**It was not a stall.** The run completed on its own at 21:10:04, a
+total of 42 minutes, comfortably INSIDE its projection. The silent
+interval is the final validation over the full 3,372-unit held-out set
+on the eager (non-`dataloader`) image path, which `best_val_iter: 220`
+confirms ran. No §8 classification output appears anywhere in the trial
+log, so the post-refit pass evidently did not fire at 220 and remains
+un-exercised.
+
+The general lesson is the one this page keeps re-learning from the other
+direction: silence is not evidence of failure any more than a plausible
+number is evidence of correctness. Experiment 76 was cancelled for a
+cost that turned out to be real; this one was nearly cancelled for a
+cost that turned out to be ordinary validation.
+
 ### Correction to the projected cost of the scanning oracle
 
 `82cc0ce`'s commit message projected ~5,073 s for the pre-index scan at
