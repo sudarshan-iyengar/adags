@@ -323,6 +323,65 @@ the rasterizer, so it is composited by construction. The GT's alpha is
 NEVER applied to the prediction — that would leak ground-truth geometry
 into the score.
 
+## Addendum — the rescore RAN, and it corrects the section above (2026-08-16)
+
+Experiment **103**, commit `a824ae3`, dgx/V100, on experiment 84's
+iteration-5000 checkpoint (338,528 points), the six official held-out
+cameras, 846 units over 141 frames at 1160x550 on black. Both metric
+sets computed on the SAME images in the same pass.
+
+| metric | ADAGS internal convention | DiVa-360 OFFICIAL convention | delta |
+|---|---:|---:|---:|
+| PSNR | 21.3567 (float domain) | **21.3565** (`cv.PSNR`, uint8) | −0.0002 |
+| SSIM | 0.90701 (3DGS 11x11 Gaussian) | **0.90034** (skimage default 7x7 uniform) | **−0.00667** |
+| LPIPS | 0.14685 (AlexNet, [-1,1]) | **0.12284** (VGG, [-1,1]) | **−0.02401** |
+
+Zero units hit the infinite-PSNR branch, as expected.
+
+### CORRECTION to this page's own prediction
+
+The addendum above states: *"So 0.90701 against a published 0.937-0.944
+was partly a CONVENTION gap, not purely a quality gap."* **That is WRONG,
+and the measurement refutes it.** The official SSIM convention gives
+**0.90034**, which is LOWER than the 3DGS convention's 0.90701, so
+switching to DiVa-360's own SSIM does not close any of the distance to
+the published numbers — it widens it by 0.0067. The reasoning was
+plausible (a uniform 7x7 window is less forgiving than an 11x11 Gaussian
+one) but the direction was assumed rather than measured, and it went the
+other way. The sentence stands as written above, as history; this is the
+correction of record.
+
+The two conventions that DID matter behaved as follows:
+
+* **PSNR convention is immaterial here.** 0.0002 dB. Quantizing the
+  render to uint8 changes essentially nothing, which retires the "minor
+  mismatch" as a genuine non-issue rather than an unquantified one.
+* **The LPIPS backbone was the real one.** VGG gives 0.12284 against
+  AlexNet's 0.14685 — a 0.024 improvement purely from using the backbone
+  the official evaluator uses. The `[0,1]` variant (0.12398) is now
+  formally retired: it corresponds to nothing official, and its
+  numerical closeness to the correct VGG figure is a coincidence, not a
+  justification.
+
+### Distance to published, under the OFFICIAL conventions
+
+| | ADAGS (exp 103) | PF I-NGP | MixVoxels |
+|---|---:|---:|---:|
+| PSNR | 21.357 | 25.346 | 25.090 |
+| SSIM | 0.9003 | 0.944 | 0.937 |
+| LPIPS | 0.1228 | 0.076 | 0.086 |
+
+Short on every metric: about **3.7-4.0 dB** of PSNR, **0.037-0.044** of
+SSIM, and **0.037-0.047** of LPIPS. The metric-definition question is now
+CLOSED and it was not the explanation — the gap is real and it is large.
+
+**Still NOT parity, and this does not become a like-for-like comparison
+by fixing metrics.** M1 stands: the published rows pool 1125 frames at
+30 FPS; this scores 141 frames, the first eighth of the sequence. Both
+numbers are recorded so the metric axis can be reasoned about
+separately, but no ADAGS scissor figure may be placed beside a published
+row as a comparison until the temporal extent matches too.
+
 Two measurement notes recorded rather than glossed:
 
 * The evaluator reports PSNR 21.3567 where the training loop's summary
