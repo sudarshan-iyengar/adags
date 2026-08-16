@@ -1139,8 +1139,24 @@ def _resolve_requests_scalar(
     return out
 
 
+#: How many (report, bridge) requests one batched pass plans at a time.
+#: A RESOURCE parameter like the probe's query chunk, and for the same
+#: reason: without it the plan itself -- one sigma grid, seven world
+#: points and seven projections per request -- would scale with the
+#: WINDOW. The uncapped window this lane exists to run holds 135,488
+#: reports x 3 bridges = 406,464 requests and 2.8M world points, so
+#: materializing the whole plan would cost gigabytes of host objects
+#: however small the GPU chunk was. Blocks are independent: each one
+#: resolves its own requests completely, so the boundary is invisible to
+#: the result and `test_batched_resolution_is_block_invariant` pins that.
+#: Large enough that a block still spans many reports of one
+#: (camera, frame) and the grouping keeps its value.
+DEFAULT_REQUEST_BLOCK = 4096
+
+
 def _resolve_requests_batched(
-    requests: Sequence[_QRequest], probe, *, sigma_world: float, family_id: int
+    requests: Sequence[_QRequest], probe, *, sigma_world: float, family_id: int,
+    block_size: int = DEFAULT_REQUEST_BLOCK,
 ) -> list[tuple[float, tuple[float, float]]]:
     """`_resolve_requests_scalar` with the probe calls grouped.
 
@@ -1167,7 +1183,26 @@ def _resolve_requests_batched(
     recorded but filters no rows, so two reports at the same
     (camera, frame) composite the identical splat set. A probe that does
     filter by track does not set the attribute and is grouped per track.
+
+    Both passes run per BLOCK of `block_size` requests, so peak host
+    memory scales with the block and peak device memory with the probe's
+    query chunk -- neither with the window's report count.
     """
+    if int(block_size) <= 0:
+        raise ContractError("block_size must be positive")
+    block_size = int(block_size)
+    if len(requests) > block_size:
+        out: list[tuple[float, tuple[float, float]]] = []
+        for start in range(0, len(requests), block_size):
+            out.extend(
+                _resolve_requests_batched(
+                    requests[start:start + block_size], probe,
+                    sigma_world=sigma_world, family_id=family_id,
+                    block_size=block_size,
+                )
+            )
+        return out
+
     ignores_track = getattr(probe, "excludes_track_rows", True) is False
 
     # -- pass 1: grids, then one projection call per camera -------------
@@ -1555,6 +1590,7 @@ __all__ = [
     "SMOKE_SELECTION_RULE",
     "load_evidence_constants",
     "presence_series",
+    "DEFAULT_REQUEST_BLOCK",
     "resolve_smoke_report_cap",
     "resolve_window_requests",
     "select_smoke_reports",

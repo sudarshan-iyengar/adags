@@ -1261,6 +1261,26 @@ class BatchedWindowResolutionTests(unittest.TestCase):
                 continue
             self.assertEqual(values, reference, f"chunk {chunk} changed the result")
 
+    def test_batched_resolution_is_block_invariant(self):
+        """The request block bounds HOST memory the way the query chunk
+        bounds device memory. Blocks are independent, so the boundary
+        must not be visible in any q value or bridge centre."""
+        requests = self._requests()
+        probe = _parity_fixture(torch.device("cpu"), routing=True, motion=True)
+        reference = None
+        for block in (1, 2, 3, 7, 18, 4096):
+            resolved = _resolve_requests_batched(
+                requests, probe, sigma_world=0.02, family_id=1, block_size=block
+            )
+            if reference is None:
+                reference = resolved
+                continue
+            self.assertEqual(resolved, reference, f"block {block} changed the result")
+        with self.assertRaises(ContractError):
+            _resolve_requests_batched(
+                requests, probe, sigma_world=0.02, family_id=1, block_size=0
+            )
+
     def test_a_request_without_endpoints_scores_zero_at_the_origin(self):
         requests = self._requests()
         blanked = [
