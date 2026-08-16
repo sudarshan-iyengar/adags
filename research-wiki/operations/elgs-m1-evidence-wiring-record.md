@@ -384,3 +384,182 @@ Third repair cycle authorized by the user. Targets: point the probe at
 likelihood floor instead of a fatal raise, implement the binding restore,
 fix `__all__`, and add tests that bind the probe to the renderer's actual
 composition rather than to a stub that cannot exercise it.
+
+## Photometric continuation to 10,000 iterations — exp 79, 2026-08-16
+
+EXPLORATORY (`evidence_bearing: false`), dgx/V100, commit `d47754e`,
+cell `diva360_scissor_photo_c10k`, run dir
+`runs/elgs/20260815T233850Z_diva360_scissor_photo_c10k_0_d47754e`,
+audited (`terminal.json` written).
+
+Exp 71's `best_val_iter == 3000` was cited here as "still improving at
+the final iteration". **CORRECTION: that inference was not available
+from exp 71.** Its `test_iterations` normalized to a SINGLE validation,
+at iteration 3000, so `best_val_iter == 3000` was true by having nothing
+to compare against. The continuation validates every 1000 iterations —
+measurement cadence, not tuning — and answers the question properly.
+
+Resumed exp 71's `chkpnt3000.pth`; every photometric setting identical
+(scene, resolution 4, initialization, `elgs_enable: False`, learning
+rates, `densify_until_iter: 2000`, `opacity_reset_interval: 30000`,
+lora routing). `position_lr_max_steps` is 30,000 and independent of
+`iterations`, so the run continues along exp 71's own decay rather than
+rescaling it. Densification is behind the resumed `first_iter`, so no
+densification ran and the point count held at **10,806 for all 7,000
+iterations** — the capacity is exactly exp 71's.
+
+| iteration | val PSNR | val SSIM | delta PSNR |
+|---:|---:|---:|---:|
+| 3000 (exp 71) | 19.6523 | 0.85525 | — |
+| 4000 | 19.9689 | 0.86027 | +0.3166 |
+| 5000 | 20.1636 | 0.86310 | +0.1946 |
+| 6000 | 20.3671 | 0.86399 | +0.2035 |
+| 7000 | 20.4459 | 0.86527 | +0.0788 |
+| 8000 | 20.5758 | 0.86586 | +0.1299 |
+| 9000 | 20.6567 | 0.86591 | +0.0809 |
+| **10000** | **20.6983** | **0.86714** | +0.0416 |
+
+**Still improving, and decelerating.** `best_val_iter == 10000` is now a
+real statement: validation rose monotonically at every one of the seven
+checks. But the per-1000-iteration gain fell from +0.32 dB to +0.04 dB,
+and 3000->6000 bought +0.715 dB against 7000->10000's +0.252 dB. A
+further extension buys progressively less; the curve has not turned
+over, so nothing here says the model has converged.
+
+Total +1.046 dB PSNR / +0.0119 SSIM over exp 71 at IDENTICAL capacity
+(10,806 points), which is the useful part: the gain is optimization, not
+capacity. Routing drifted slightly more dynamic (mean_dynamic_prob
+0.9762 -> 0.9817, percent_uncertain 4.65% -> 3.24%). Runtime ~35 min
+wall for 7,000 iterations plus seven validations.
+
+The `points3d.ply` scale problem recorded above is INHERITED, not
+retried: this lane starts from exp 71's trained state. A better
+initialization remains a separate question and is untouched.
+
+Operationally, `main.py`'s `DEFAULT_MAX_TRAIN_ITERATIONS` (6000) guard
+had no reachable override: the template hard-coded the container
+environment and the wrapper had no env passthrough. The ceiling is now a
+template placeholder defaulting to main.py's own 6000, so every existing
+lane renders the identical value it already got implicitly, and a
+deliberate long run states its ceiling in its own rendered config.
+## Experiment 78's decision decomposed — the photometric arm could not contribute (2026-08-16)
+
+DIAGNOSTIC. This decomposes an EXPLORATORY run's already-recorded
+decision; it establishes nothing scientific about EL-GS and does not
+reopen exp 78's reading.
+
+The open question this page left was "`delta_render` and `exact_deltas`
+are not separable from the artifacts". That is TRUE as stated and is now
+measured rather than asserted, and one further fact turned up that the
+`se = 0.0` line alone did not show.
+
+### What the artifact holds, and what it discards
+
+`elgs.acceptance.decide` returns nine quantities: `delta_render`,
+`exact_deltas`, `transaction_increment`, `se`, `k`, `n_samples`, `ess`,
+`n_units`, `accepted`. `elgs.round_driver.run_pass` kept the record only
+in the in-memory `RoundOutcome`, and `elgs.trainer_hooks` persisted
+**`n_samples`, `se` and the drawn `units`** — nothing else. Nothing
+EL-GS-side calls `tb_writer.add_scalar`, so the tfevents file has none
+of it either, and the trial log carries only the `elgs_round` /
+`elgs_evidence_round` summaries. Recovered from
+`chkpnt220.pth` by `scripts/decompose_elgs_decision.py`:
+
+```
+candidate FISSION:219:a5395116   op FISSION   family 219
+round_index 0   iteration 200
+n_samples 8   n_units_drawn 8   se 0.0 (repr "0.0", exactly zero)
+incumbent interval 219: K=1, a=[0.0], latch_pre/post true
+```
+
+The eight paired renders are deterministic given the model state AT
+iteration 200. That state was never checkpointed — `chkpnt220.pth` is
+after the fission was applied and after twenty further training
+iterations — so exp 78's own per-unit deltas can be neither recovered
+nor recomputed. That is a property of the run, not of the analysis.
+
+### What `se = 0.0` does and does not pin down
+
+`delta_render = sum_i w_i d_i / sum_i w_i` over the SHARED CRN weights,
+so it IS the weight-normalized mean of the eight per-unit paired
+photometric deltas `d_i`. `se` is the standard deviation of 200 paired
+cluster-bootstrap replicates, each a weighted mean of a resampled
+multiset of those same `d_i`. A common NONZERO `d` therefore also
+collapses the spread — which is exactly why `se = 0` may not be read as
+"the photometric contribution was zero".
+
+Measured over 8 units with UNEQUAL SNIS weights and four bootstrap seeds:
+
+| common per-unit delta | resulting `se` |
+|---|---|
+| `0.0` | `0.0` exactly, all seeds |
+| `1e-12` … `1e-1` | `~4e-17` to `~6e-17`, never exactly zero |
+| genuine spread (control) | `8.17e-3` |
+
+So `se == 0.0` bit-exactly is the signature of an identically zero
+photometric arm, and a nonzero common delta would have serialized as
+`~5e-17`, not `0.0`. This is corroboration, not proof: it rests on the
+two arms' SNIS ratios being accumulated separately, so only identical
+inputs give a bit-identical difference.
+
+### The mechanism: every confirmation unit was at one instant
+
+The persisted `units` settle it independently. All eight are
+`(index, 0.0)` — `distinct_unit_timestamps 1` — while the sequence spans
+`time_span 4.675` at `frame_dt 1/120` (both from exp 78's own
+`elgs_setup` log line, so the cameras do carry distinct timestamps).
+
+The chain, read off source:
+
+1. `setup_elgs` builds `reserved_pool` by iterating `sorted(by_time)` —
+   ASCENDING TIMESTAMP. Frame 0 contributes 9 units under the
+   `(f + c) % 4 == 0` diagonal with 35 cameras.
+2. `SlotGrid.draw` returns a CONTIGUOUS slice,
+   `reserved_pool[start : start + units_per_slot]`, and slot
+   `(round 0, pass 0, rank 0)` has `start = 0`. So the first confirmation
+   slot is eight of frame 0's nine reserved units.
+3. The candidate is a mid-plateau FISSION: `_propose_smoke_candidates`
+   opens a gap at `mid +/- half_gap` with `mid` the interval midpoint
+   (~2.34 s for a spanning K=1 family) and
+   `half_gap = 0.5 * 1.5 * floor_gap`, where
+   `floor_gap = 2*w + 1.0 * frame_dt` is a few frame intervals.
+4. `t = 0.0` is therefore ~2.3 s outside the only region where the
+   candidate changes presence. Both arms render the identical image at
+   every confirmation unit, so `d_i = 0` EXACTLY for all eight,
+   `delta_render = 0.0` exactly, and `se = 0.0` exactly — which is what
+   the artifact records.
+
+The stratification guard in `setup_elgs` is not violated: it checks that
+the reserved POOL spans at least half the sequence, which it does. It
+does not check that a drawn SLOT does, and a contiguous slice of a
+time-ordered pool is the one draw that systematically cannot.
+
+### Consequence for the decision
+
+With `delta_render = 0` and `k*se = 0`, acceptance reduces to
+
+```
+exact_deltas + transaction_increment < 0
+```
+
+so the commit was carried ENTIRELY by the non-photometric terms. It does
+not follow that Phi is nonzero: `transaction_increment` is the other
+term and is equally unrecorded. What is now excluded is the reading that
+the photometric arm supported the fission — it was structurally
+incapable of expressing an opinion.
+
+**NOT a reinterpretation of exp 78.** Exp 78's recorded finding stands:
+the real q/likelihood/Phi path executed on 192 real reports. This says
+only which term could have moved its acceptance, and why the artifact
+could not say so before.
+
+### Recorded and repaired
+
+- `elgs/trainer_hooks.py` now persists every `AcceptanceRecord` term in
+  `committed_decisions` and emits an `elgs_acceptance` log line for
+  commits AND rejections. Observability only: every field is an output
+  of `decide`, written after the fact, and no decision changes.
+- The confirmation-slot time collapse is RECORDED, NOT PATCHED. Changing
+  which units confirm a decision changes what the §7 confirmation
+  measure means and is preregistration-adjacent; it is not an
+  implementation defect to be quietly fixed. It is a deferred item.
