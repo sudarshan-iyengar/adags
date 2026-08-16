@@ -209,7 +209,13 @@ def main() -> int:
             ssims.append(s)
             lpipss.append(l)
             lpipss01.append(l01)
-            key = str(getattr(cam, "image_name", "?")).rsplit("/", 1)[0]
+            # `image_name` is Path(file_path).stem -- the FRAME index, not
+            # the camera. Grouping on it yields 141 "cameras" (the frame
+            # count) instead of 6. The camera lives in the parent
+            # directory of image_path (".../undist/cam17/00000000.png").
+            path = str(getattr(cam, "image_path", "") or "").replace("\\", "/")
+            parts = [p for p in path.split("/") if p.startswith("cam")]
+            key = parts[-1] if parts else str(getattr(cam, "image_name", "?"))
             slot = per_camera.setdefault(
                 key, {"n": 0, "psnr": 0.0, "ssim": 0.0, "lpips": 0.0, "lpips_01_input": 0.0}
             )
