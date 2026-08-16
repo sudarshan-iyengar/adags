@@ -952,3 +952,111 @@ report, and none is claimed. The exp-78 decomposition's open question —
 whether the evidence term or the transaction increment carries a
 mid-plateau fission when reports actually cover the gap — remains open
 and is now blocked on the quadratic helpers rather than on q throughput.
+
+## The uncapped ACCEPTANCE has completed — exp 102, 2026-08-16
+
+EXPLORATORY (`evidence_bearing: false`), dgx/V100, commit `b94a83e`,
+cell `diva360_scissor_evidence_r220_uncapped` retry 2, config
+`configs/elgs/diva360_scissor_evidence_r220_uncapped.yaml` **byte-identical
+to experiment 83's**. The config is unchanged on purpose: the only
+difference between the two runs is the acceptance-path indexing, so any
+difference in outcome is attributable to it and to nothing else.
+
+### The architectural contradiction is resolved
+
+```
+20:48:40  elgs_evidence_round: q_values 407340, windows 2,
+            families_scoped 1, families_with_windows 1,
+            reports {total 135780, retained 135780, dropped 0,
+                     frames_covered 465, cameras_covered 23,
+                     selection_rule "uncapped: every report in the window"}
+
+20:49:02  elgs_acceptance: candidate FISSION:219:a5395116  committed TRUE
+            delta_render            0.0
+            exact_deltas           -0.10279193744936493
+            transaction_increment   0.0
+            delta_total            -0.10279193744936493
+            se 0.0   k 1.0   n_samples 8   n_units 8   ess 8.0
+            unit_timestamps [0.0]
+```
+
+**Acceptance took 22 seconds.** Experiment 83 was cancelled 20 minutes
+into the same phase with an estimated ~2.3 hours still to run. The
+report population is identical — 135,780 retained, 0 dropped, 465 frames,
+23 cameras, 407,340 q values — so this is the same work, finished.
+
+The repair is `82cc0ce` + `2ed38af`: `_capped_keys_for` and
+`segment_is_censored` answer their (track, frame) questions by lookup
+instead of rescanning the whole report dict, and `stream_log_likelihoods`
+memoizes the bridge-independent censoring verdict. Parity against the
+preserved pre-index bodies is EXACT — ordered key tuples, both stream
+dicts, Phi, `total_energy` and the candidate-minus-incumbent difference,
+all bit-identical at every swept size — so nothing about which reports,
+frames, cameras, bridges or sigma points contribute has changed. No
+sampling, no approximation, no cap, no quantization, no changed heads, no
+changed constants.
+
+### Phi is NONZERO, and it carried the decision alone
+
+This is the finding, and it closes the question the exp-78 decomposition
+left open.
+
+`delta_render` is **exactly 0.0** and `transaction_increment` is
+**exactly 0.0**, so
+
+```
+delta_total = exact_deltas = beta * (Phi_candidate - Phi_incumbent)
+            = -0.10279193744936493
+```
+
+The commit was carried **entirely by the evidence term**. Not inferred
+from `se = 0.0` this time — every term is recorded directly, by the
+`elgs_acceptance` observability line added after the exp-78
+decomposition. That instrumentation was written to answer exactly this
+question and did.
+
+**Why it is nonzero now when it was exactly zero before.** Experiment
+80 measured `exact_deltas(FISSION:226) = 0.0 EXACTLY` under the smoke
+report bound, with a nonzero `family_phi`, and the recorded reason was
+mechanical: the smoke fission opens a gap of one to two frame intervals
+at the interval midpoint, while the smoke bound retains reports at evenly
+spaced frames, so a one-frame gap almost never contains a retained frame
+and presence at every retained report is unchanged. That page predicted
+the consequence — "uncapped reports cover the frames inside the gap,
+which is the only way Phi can differ between candidate and incumbent at
+all" — and this run confirms it. Under full report coverage the gap
+contains real reports and Phi moves.
+
+### What is still NOT established
+
+`delta_render = 0.0` is NOT evidence that the photometric arm disagreed
+or agreed. `unit_timestamps [0.0]` shows all eight confirmation units sat
+at ONE instant, which is the confirmation-slot time collapse this page
+already recorded and deliberately did NOT patch (changing which units
+confirm a decision changes what the §7 confirmation measure means and is
+preregistration-adjacent). The photometric arm remains structurally
+incapable of expressing an opinion about a mid-plateau fission, exactly
+as recorded. That defect is unchanged and still deferred; what changed is
+only that it is now visible in the artifact rather than inferred.
+
+Nothing here is claim-grade. The heads are still smoke-tier and unfrozen
+(`g_v`, `h_c`, `h_o`, `pi_miss`, `g_pos_sigma`, `reliability.r_u`,
+`alpha_u.rho`), so no evidence-bearing run can reach this path, and the
+sign and magnitude of `exact_deltas` are properties of unfrozen constants
+on one exploratory candidate. What IS established is mechanical and
+matters: the full q / likelihood / Phi / acceptance path executes
+end-to-end on a complete report population, reaches a decision, and does
+so in minutes.
+
+### Correction to the projected cost of the scanning oracle
+
+`82cc0ce`'s commit message projected ~5,073 s for the pre-index scan at
+experiment 83's shape. That figure was too large by exactly the bridge
+count: the fitted per-iteration coefficient already contained
+`_scan_stream`'s three-bridge loop while the iteration model omitted it,
+and the projection then multiplied by `bridges` a second time. Corrected
+from the same data: **~1,618 s (~0.45 h)** on the workstation CPU, and it
+is an order-of-magnitude projection rather than a measurement — the
+coefficient is still falling across the sweep and is extrapolated ~1945x.
+Recorded at `2ed38af` after a fresh-context adversarial review found it.
+The parity result is unaffected and is exact.
