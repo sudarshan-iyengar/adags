@@ -151,9 +151,27 @@ class PsnrTests(unittest.TestCase):
         gt, pred = _pair(7)
         self.assertAlmostEqual(psnr_official(gt, pred), float(_cv2.PSNR(gt, pred)), places=9)
 
-    def test_identical_images_are_infinite_not_capped(self):
+    def test_identical_images_are_infinite_in_every_environment(self):
+        """The answer must not depend on whether cv2 is installed.
+
+        This test previously asserted `inf` and passed only because the
+        environment it ran in had no cv2; on Apollo, which does,
+        `cv2.PSNR` returned 361.202 and it failed. That was a real defect
+        in the module rather than in the test — the same input gave two
+        different numbers in two environments — so the module now settles
+        the case itself."""
         gt, _ = _pair(4)
         self.assertEqual(psnr_official(gt, gt), float("inf"))
+
+    @unittest.skipUnless(HAVE_CV2, "cv2 not installed")
+    def test_opencvs_own_zero_mse_guard_is_finite_and_is_not_used(self):
+        """Pins the divergence rather than leaving it as folklore: this
+        is the value delegation would have produced."""
+        gt, _ = _pair(4)
+        raw = float(_cv2.PSNR(gt, gt))
+        self.assertTrue(raw < float("inf"))
+        self.assertGreater(raw, 100.0)
+        self.assertNotEqual(psnr_official(gt, gt), raw)
 
     def test_uint8_domain_differs_from_float_domain(self):
         """The float-domain PSNR this repository used is 20*log10(1/rmse)

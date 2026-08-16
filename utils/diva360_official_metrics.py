@@ -101,23 +101,34 @@ def to_uint8_hwc(image) -> np.ndarray:
 def psnr_official(gt_u8: np.ndarray, pred_u8: np.ndarray) -> float:
     """`cv.PSNR(gt, pred)` on uint8 with R=255, for ONE image.
 
-    OpenCV's `PSNR(src1, src2, R=255)` is `10*log10(R^2/MSE)` with the
-    MSE taken over every element of both arrays. `cv2` is used when it is
-    importable so the published convention is executed rather than
-    imitated; the fallback computes the identical expression in float64
-    and exists only so this module is testable where cv2 is not
-    installed. An exactly-equal pair gives infinity in OpenCV; that is
-    preserved rather than being capped at some finite decibel value.
+    OpenCV's `PSNR(src1, src2, R=255)` is `10*log10(R^2/MSE)` over every
+    element of both arrays. `cv2` executes the published convention
+    rather than imitating it whenever it is importable; the closed-form
+    fallback exists only so this module is testable where cv2 is not
+    installed, and the two agree to 9 decimal places for every MSE > 0
+    (pinned by `tests/test_diva360_official_metrics.py`).
+
+    THE IDENTICAL-IMAGE CASE IS HANDLED HERE, NOT DELEGATED, and that is
+    a deliberate divergence from OpenCV. `cv2.PSNR` guards its zero
+    denominator with an epsilon and so returns a large FINITE value
+    (~361.2 dB) for a bit-identical pair, while the closed form returns
+    infinity. Delegating would make this function's answer depend on
+    whether cv2 happens to be installed — which is exactly the failure
+    mode this module exists to avoid, since scikit-image's absence from
+    the Apollo image is why the SSIM below is reimplemented at all. The
+    mathematical value is taken. The case is unreachable on real data:
+    it needs a render bit-identical to the ground truth at uint8
+    precision over every pixel.
     """
     if gt_u8.shape != pred_u8.shape:
         raise ValueError(f"shape mismatch {gt_u8.shape} vs {pred_u8.shape}")
+    if np.array_equal(gt_u8, pred_u8):
+        return float("inf")
     try:
         import cv2
     except ImportError:
         diff = gt_u8.astype(np.float64) - pred_u8.astype(np.float64)
         mse = float(np.mean(diff * diff))
-        if mse == 0.0:
-            return float("inf")
         return float(10.0 * np.log10((255.0 ** 2) / mse))
     return float(cv2.PSNR(gt_u8, pred_u8))
 
