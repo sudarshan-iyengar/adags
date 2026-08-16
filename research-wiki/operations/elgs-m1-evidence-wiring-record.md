@@ -671,3 +671,84 @@ between candidate and incumbent at all.
 
 This is a DIAGNOSTIC about the smoke lane. It is not a claim about EL-GS
 and does not reopen experiment 78.
+
+### Measured on experiment 78's EXACT population — the gate fails, and why
+
+Experiment 81, commit `0cb1026`, dgx/V100, **idle node** (experiment 80
+shared its node with the photometric continuation, which is why its
+chunk sweep spread 2x on provably identical work). Family 219 forced via
+`--family`, because the only checkpoint is `chkpnt220` — written after
+experiment 78's fission committed — and the proposer only considers
+K == 1 families, so it offers 226 instead and would have benchmarked a
+different workload.
+
+Report population reproduced EXACTLY:
+
+```
+total 135780 | retained 192 | dropped 135588
+frames_covered 97 | cameras_covered 23 | q_values 576 | windows 2
+```
+
+— key for key the `elgs_evidence_round` line experiment 78 logged. Track
+hashes, tracker weights hash and 334/512 bindings all match as well.
+
+```
+batched chunk 64      576 q in 32.396 s = 17.78 q/s   peak 104.3 MiB
+batched chunk 256     576 q in 32.775 s = 17.57 q/s   peak 121.1 MiB
+batched chunk 1024    576 q in 32.624 s = 17.66 q/s   peak 121.1 MiB
+scalar (oracle)       576 q in 42.110 s = 13.68 q/s   peak 102.5 MiB
+SPEEDUP 1.30x         max |q_batched - q_scalar| 3.233e-08
+```
+
+Chunk invariance is EXACT (0.0 across all three) and now also holds in
+wall time. Downstream: `family_phi(219)` agrees to 3.07e-07 and
+`truncate_exact_delta(219)` to 3.07e-08, both inside 1e-6.
+
+**GATE FAILED, and the uncapped round was NOT launched.** The
+authorization required >= 37.7 q/s measured (3.8x); measured is 17.78
+q/s (1.30x over the scalar oracle, 1.79x over experiment 78's 9.93 q/s —
+part of that from caching the model-frozen opacity columns, which helps
+BOTH paths).
+
+### The next exact bottleneck, profiled
+
+`--profile` on the same pass (cProfile, so its wall time is inflated and
+is not a throughput number):
+
+```
+35.694 s cum   _refresh_round_evidence                    1 call
+34.653 s cum   ModelProbe.transmittance_batch           115 calls
+34.309 s cum     -> ModelProbe._alpha_for               115 calls
+34.028 s cum        -> ElgsRuntime.presence_multiplier   95 calls
+16.057 s cum           -> ElgsRuntime.realization     48,640 calls
+10.725 s cum           -> intervals.forward           48,640 calls
+ 9.675 s cum           -> presence.episode_presence   48,640 calls
+ 6.312 s cum           -> presence.smoothstep         97,280 calls
+ 4.848 s cum           -> torch.stack                146,280 calls
+```
+
+**95% of the round is `presence_multiplier`.** It is called 95 times —
+once per distinct timestamp, so the probe's presence cache is doing its
+job — and each call walks **all 512 families in a Python loop**:
+48,640 = 95 x 512 per-family `realization()` / `forward` /
+`episode_presence` evaluations, and 146,280 `torch.stack` calls.
+
+The reduction this work batched is now **~0.34 s of 35.7 s, about 1%**.
+The batching did exactly what it was for; it simply uncovered a larger
+cost that was always there and was previously hidden behind the
+per-sigma-point synchronizations.
+
+**The naive projection is therefore wrong.** `407,340 / 17.78 = 6.4
+hours` assumes q/s is a property of the code. It is not:
+`presence_multiplier` scales with (distinct timestamps x families) and
+NOT with reports, while the batched reduction scales with reports. Going
+uncapped multiplies reports by 707 (192 -> 135,780) but timestamps by
+only ~4.8 (97 -> 464). Extrapolating the uncapped round from the
+sparsest point on that curve is not a projection, it is a category
+error — which is why experiment 82 measures the curve instead.
+
+`family_phi(219) = -0.25547571380758427` on those 192 reports —
+**nonzero**, with `family_phi_absent = 0.0` and
+`truncate_exact_delta = +0.02554757138075843`. Phi is a live, finite,
+data-dependent quantity here; that is a measurement on an EXPLORATORY
+run and is not a claim.
