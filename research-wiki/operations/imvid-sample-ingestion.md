@@ -258,6 +258,70 @@ direction, so colour detail at 5312x2988 is really carried at
 2656x1494. That is a property of the source, not of any processing here,
 but it bounds what colour-based initialization could recover.
 
+### RECONCILIATION — the runtime is 3.6 and it does NOT behave like 3.9+
+
+An independent documentation mapping was obtained and is thorough, but
+it inspected **COLMAP 3.11.1** (`C:\Users\sucar\colmap\bin\colmap.exe`,
+commit `682ea9a`) on the WORKSTATION, tracing the actual Ceres
+parameterization in the pinned source. Its conclusions are correct for
+3.11.1. **They are not transferable to the runtime**, and its own
+version-boundary section says so, naming COLMAP 3.9 (2024-01-06) as the
+divide. A targeted re-probe of `/usr/bin/colmap` confirms the divide is
+real and lands on the wrong side for us:
+
+| | 3.11.1 (workstation) | **3.6 (Determined runtime)** |
+|---|---|---|
+| `--refine_intrinsics` | exists, default `0` | **ABSENT** — passing it is a hard error |
+| pose fixing | `fix_existing_images = true` hardcoded in `RunPointTriangulatorImpl` | **`--Mapper.fix_existing_images arg (=0)`** — a live flag defaulting to NOT fixing poses |
+| `--clear_points` | default `1`, with filename-based `TranscribeImageIdsToDatabase` | **default `0`**, help text has no transcription clause |
+| `ba_refine_focal_length` | overridden internally, inert | listed, `(=1)`, no known override in 3.6 |
+| `model_comparer` | present | **ABSENT** |
+
+**The pose row is the dangerous one.** The 3.11 analysis concluded
+"extrinsics cannot be modified at all, by construction, no flag needed".
+On 3.6 that is FALSE: `fix_existing_images` defaults to `0`, so the
+post-triangulation global bundle adjustment is free to move the supplied
+poses. Trusting the newer version's guarantee is exactly how supplied
+calibration gets silently replaced — the failure the directive names.
+
+**The 3.6 invocation must therefore be explicit about all four:**
+
+```
+colmap point_triangulator \
+  --database_path DB --image_path IMAGES \
+  --input_path MODEL_IN --output_path MODEL_OUT \
+  --Mapper.fix_existing_images 1 \
+  --Mapper.ba_refine_focal_length 0 \
+  --Mapper.ba_refine_principal_point 0 \
+  --Mapper.ba_refine_extra_params 0
+```
+
+Whether `ba_refine_*` is live or inert on 3.6's `point_triangulator` is
+NOT established from here — the 3.11 override may or may not exist in
+3.6, and reading 3.6's source was not done. Passing `0` is correct under
+both readings, which is why it is passed rather than reasoned about.
+
+**Image-ID matching is a 3.6 problem that does not exist in 3.11.** With
+`--clear_points` defaulting to `0` and no transcription clause in the
+3.6 help, image IDs in the supplied `images.txt` cannot be assumed to be
+remapped by filename. The plan is therefore to read the database's
+`image_id`/`name` table after feature extraction and REWRITE the input
+model's `images.txt` to those IDs, changing ONLY the ID column and
+preserving every pose and camera reference — a deterministic, auditable
+remap rather than a hope that the versions agree.
+
+**Verification is by direct numeric diff**, not `model_comparer` (absent
+in 3.6) — parse the 8 OPENCV parameters and every image's
+`QW,QX,QY,QZ,TX,TY,TZ` from input and output, match by NAME, and assert
+the maximum absolute difference is zero. The 3.11 analysis recommended
+this as the rigorous check independently of the version question, and it
+is the only option here.
+
+The workstation's 3.11.1 remains available as a fallback with better
+semantics, but Apollo-side execution is preferred (the directive's
+instruction, and the data is already there), so the 3.6 constraints are
+the ones that bind.
+
 ### Discipline for this lane
 
 Any COLMAP step that COULD alter poses or intrinsics runs on a
