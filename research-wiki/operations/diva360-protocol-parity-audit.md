@@ -124,3 +124,53 @@ exists to compare against.
    declared.
 4. A development split drawn from the 35 training cameras, leaving the
    6 official held-out cameras sealed.
+
+## Addendum — M4: the eager path applies alpha TWICE
+
+Found while pre-flighting `dataloader: True` for the benchmark-aligned
+baseline. This is a fourth mismatch and it is not in the table above
+because it was not visible until the two image paths were compared
+directly.
+
+**Eager path** (`dataloader: False` — what experiments 71 and 79 used):
+
+1. `scene/dataset_readers.py:409-414` composites
+   `arr = rgb*alpha + bg*(1-alpha)`, which with `bg = 0` is `rgb*alpha`,
+   then — because `alpha.min() < 1` — CONCATENATES alpha back on, so the
+   `CameraInfo` image is RGBA `[rgb*alpha, alpha]`.
+2. `utils/camera_utils.py:62-66` splits that into
+   `gt_image = resized[:3]` (already `rgb*alpha`) and
+   `loaded_mask = resized[3:4]` (alpha).
+3. `scene/cameras.py:55-56`, with `meta_only=False`, then applies
+   `self.image *= gt_alpha_mask`.
+
+Net ground truth: **`rgb * alpha^2`**.
+
+**Lazy path** (`dataloader: True`): `utils/data_utils.py:24-25`
+composites the same `rgb*alpha` but converts to `"RGB"`, dropping alpha.
+Its `if resized_image_rgb.shape[1] == 4` guard tests the HEIGHT axis
+rather than the channel axis, so for any image taller than 4 pixels it
+takes the `else` branch and multiplies by ones. `Camera` skips the mask
+entirely under `meta_only=True`.
+
+Net ground truth: **`rgb * alpha`** — the standard black composite.
+
+### What this means
+
+* Experiments 71 and 79 were scored against a **doubly-matted** ground
+  truth. DiVa-360's alpha is "continuous ... 99.9% concentrated at the
+  extremes", so `alpha^2 == alpha` on ~99.9% of pixels and the effect is
+  confined to matte boundaries — but it is a real deviation from the
+  official black-composite convention, and boundary pixels are exactly
+  where a dynamic-object benchmark is decided.
+* The benchmark-aligned baseline runs `dataloader: True` (required at
+  1160x550 for memory) and therefore uses `rgb * alpha`. It is the
+  CORRECT convention, and it is **not GT-identical to experiments 71 and
+  79**. Those runs were already non-comparable for the three reasons
+  above; this is a fourth, and it means the new baseline is not a
+  like-for-like continuation of them either.
+* The `shape[1] == 4` channel/height confusion in `utils/data_utils.py`
+  is a latent defect. It is INERT today — the image is RGB by
+  construction two lines earlier, so the branch can never be taken and
+  the `else` multiply is a no-op — so it is RECORDED, NOT PATCHED, per
+  the standing rule on unrelated code.
