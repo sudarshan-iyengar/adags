@@ -1,0 +1,177 @@
+# DiVa-360 scissor -- UNCHANGED photometric continuation of experiment 84
+# from iteration 5000 to 15,000.
+#
+# EXPLORATORY (`--exploratory`, evidence_bearing false). Photometric only;
+# the evidence path stays off.
+#
+# ---------------------------------------------------------------------
+# PURPOSE: isolate ADDITIONAL OPTIMIZATION EXPOSURE, and nothing else.
+#
+# Experiment 84 (`configs/elgs/diva360_scissor_bench30.yaml`, commit
+# `bb7bc52`) peaked at iteration 5000 -- best_val PSNR 21.3705 / SSIM
+# 0.90698 at 338,528 points -- and then DECLINED at 6000 (21.3079 /
+# 0.90488) while densification grew the model to 507,178 points. The
+# frozen sweep matrix read that decline on the capacity axis and was
+# right on the development split and wrong on the official one
+# (`research-wiki/operations/diva360-scissor-sweep-matrix-v1.md`). This
+# lane asks the other question the curve leaves open: whether the model
+# was simply under-optimized at 5000.
+#
+# It resumes experiment 84's OWN `chkpnt_best.pth`, which `main.py:1573`
+# writes as `(gaussians.capture(), iteration)` at the best validation --
+# iteration 5000, verified against that run's `summary.json`
+# (`best_val_iter: 5000`, `best_val/points/total: 338528`). Restoring it
+# through `gaussians.restore(model_params, opt)` carries the OPTIMIZER
+# STATE with it, so there is no optimizer reset.
+#
+# ---------------------------------------------------------------------
+# EVERY deviation from `diva360_scissor_bench30.yaml`, and no others:
+#
+#   1. `iterations: 15_000`  (was 6_000). The variable under test.
+#
+#   2. `densify_until_iter: 5_000`  (was 6_000). DENSIFICATION IS FROZEN
+#      for the whole continuation. `main.py:1580` guards the entire
+#      densification block with `iteration < opt.densify_until_iter`, and
+#      the loop resumes AT 5000, so the block never executes: no cloning,
+#      no splitting, no pruning, no size-threshold culling, and -- since
+#      `main.py:1636`'s opacity-reset check is nested INSIDE that block --
+#      no opacity reset either. The point count therefore holds at
+#      338,528 for all 10,000 iterations and any change is optimization,
+#      not capacity. Leaving this at 6000 would have let 1,000 further
+#      iterations of densification run and confounded exactly the two
+#      effects this lane separates.
+#
+#   3. `test_iterations: [6000, 8000, 10000, 12000, 15000]`. Measurement
+#      cadence only. 6000 is included because it is the one point where
+#      this curve can be read against experiment 84's own 6000 -- same
+#      iteration count, same optimizer trajectory, differing ONLY in
+#      whether densification ran.
+#
+#   4. `save_iterations: [10_000, 15_000]`. Artifacts for the milestones
+#      that do not already have one.
+#
+# DELIBERATELY NOT CHANGED, though it would be easy to justify:
+#
+#   * `position_lr_max_steps: 6_000` stays at 6,000. The position
+#     learning rate therefore reaches `position_lr_final` at iteration
+#     6000 and stays there for the remaining 9,000 iterations. That IS
+#     experiment 84's schedule, run past its end; rescaling it to 15,000
+#     would stretch the decay and change the learning-rate schedule,
+#     which this lane is required not to do. Extension is not
+#     mechanically required -- the decay helper clamps at `max_steps`.
+#   * scene, split, 141-frame window, initialization, resolution, losses,
+#     every other learning rate, routing and motion configuration,
+#     `densify_until_num_points`, `opacity_reset_interval`, and the seed.
+#   * No new supervision of any kind.
+#
+# Dataset: `scissor_screen_w0_561_s4_30fps` (the 30-FPS materialization),
+# identical to experiment 84.
+#
+# `main.py`'s `DEFAULT_MAX_TRAIN_ITERATIONS` guard is 6000, so this lane
+# must be submitted with `--max-train-iterations 15000`; the rendered
+# Determined config then states the ceiling it actually trained under.
+
+gaussian_dim: 4
+time_duration: [0, 4.7]
+num_pts: 300_0000
+num_pts_ratio: 1.0
+rot_4d: False
+force_sh_3d: True
+batch_size: 4
+exhaust_test: False
+
+test_iterations: [6000, 8000, 10000, 12000, 15000]
+save_iterations: [10_000, 15_000]
+
+ModelParams:
+  sh_degree: 3
+  images: "images"
+  resolution: 1                # 1160x550 -- the official evaluation size
+  white_background: False      # black background; GT is alpha-composited on it
+  data_device: "cuda"
+  eval: True                   # official 35-train / 6-held-out shipped split
+  extension: ".png"
+  num_extra_pts: 0
+  loaded_pth: ""
+  frame_ratio: 1
+  dataloader: True             # lazy decode -- required at this resolution
+
+PipelineParams:
+  convert_SHs_python: False
+  compute_cov3D_python: False
+  debug: False
+  env_map_res: 0
+  env_optimize_until: 5000000000
+  env_optimize_from: 0
+  eval_shfs_4d: True
+
+OptimizationParams:
+  iterations: 15_000
+  position_lr_init: 0.00016
+  position_t_lr_init: -1.0
+  position_lr_final: 0.0000016
+  position_lr_delay_mult: 0.01
+  position_lr_max_steps: 6_000   # experiment 84's schedule, NOT rescaled
+  feature_lr: 0.0025
+  opacity_lr: 0.05
+  scaling_lr: 0.005
+  rotation_lr: 0.001
+  percent_dense: 0.01
+  lambda_dssim: 0.2
+  thresh_opa_prune: 0.005
+  densification_interval: 100
+  opacity_reset_interval: 30000
+  densify_from_iter: 500
+  densify_until_iter: 5_000      # FROZEN: the resume point, so no densification runs
+  densify_grad_threshold: 0.0002
+  densify_grad_t_threshold: 0.000005
+  densify_until_num_points: 600000
+  final_prune_from_iter: -1
+  sh_increase_interval: 1000
+  lambda_opa_mask: 0.0
+  lambda_rigid: 0.0
+  enable_hard_static_conversion: false
+  lambda_sparsity: 0.0
+  lambda_motion_gate: 0.0
+  static_conversion_threshold: 0.99
+  gate_activation_iter: 1000
+  gate_warmup_until_iter: 2000
+  enable_soft_routing: true
+  route_logit_init: 0.0
+  route_lr: -1.0
+  motion_model: "lora"
+  motion_poly_order: 2
+  motion_lr_init: -1.0
+  motion_reg_lambda: 0.0
+  motion_lora_rank: 8
+  motion_lora_anchors: 32
+  motion_lora_init_scale: 0.01
+  motion_lora_coeff_lr: -1.0
+  motion_lora_basis_lr: -1.0
+  motion_prior_root: ""
+  dynamic_mask_from_residual: true
+  dynamic_mask_residual_quantile: 0.85
+  dynamic_mask_dilate: 2
+  lambda_dynamic_roi: 0.5
+  lambda_static_exclusion: 0.02
+  lambda_track_flow: 0.0
+  lambda_scaffold_smooth: 0.0
+  lambda_scaffold_reg: 0.0
+  motion_scaffold_enable: false
+  motion_scaffold_count: 512
+  motion_scaffold_rank: 8
+  motion_scaffold_anchors: 32
+  motion_scaffold_knn: 4
+  motion_scaffold_init_scale: 0.01
+  motion_scaffold_weight_temp: 0.05
+  motion_scaffold_chunk: 65536
+  motion_scaffold_coeff_lr: -1.0
+  motion_scaffold_basis_lr: -1.0
+  motion_track_dt: 0.0333333333   # 1/30 s -- matches the 30-FPS sampling
+  enable_rendered_flow: false
+  enable_motion_aware_densify: false
+  motion_aware_densify_boost: 1.0
+  blur_until_iter: 0
+  blur_start_sigma: 8.0
+  histogram_log_interval: 100
+  elgs_enable: False              # PHOTOMETRIC ONLY
