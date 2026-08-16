@@ -331,6 +331,72 @@ altered calibration enters the ImViD baseline without explicit review
 and authorization. Unrestricted `mapper` / bundle adjustment / pose
 estimation is not run at all.
 
+## CALIBRATION VALIDATED — fixed-pose triangulation succeeds (frame 0)
+
+`scripts/imvid_sparse_init.py`, zero GPU slots, CPU SIFT, frozen frame 0
+of the {0, 150, 299} set. COLMAP 3.6 with all four guarantees passed
+explicitly.
+
+```
+Cameras 1        Images 39        Registered images 39
+Points 6,075     Observations 25,220
+Mean track length 4.151          Mean reprojection error 1.2127 px
+observations per camera:  min 46   median 503   max 1,923
+spatial support (p01..p99):  x -35.2..34.0   y -20.9..16.7   z -3.8..31.4
+```
+
+**This is the numerical calibration check the lane needed, and it
+passes.** Triangulation ran under FIXED supplied poses and intrinsics —
+nothing was free to absorb a calibration error — and it still placed
+6,075 points at **1.21 px** mean reprojection on a 5312x2988 raster,
+which is 0.02% of image width, with **every one of the 39 cameras
+contributing observations**. A wrong extrinsic or a mis-parsed
+distortion model could not produce that: rays would not meet, and the
+fixed-pose solver would either drop the tracks or report large residuals.
+
+Calibration preservation, verified against the BINARY model:
+
+```
+intrinsics  all 8 OPENCV parameters differ by EXACTLY 0.0
+poses       max 1.110e-16 (cam34.png) = 2^-53, one ULP
+```
+
+Cost, measured rather than estimated, per frame at zero GPU slots:
+feature_extractor 72 s, exhaustive_matcher 1,204 s, point_triangulator
+8.2 s, converter + analyzer ~1 s — about **21 minutes**, essentially all
+of it CPU matching.
+
+### The instrument was wrong first, and that is worth recording
+
+The first frame-0 run REFUSED with "COLMAP ALTERED THE SUPPLIED
+CALIBRATION, intrinsics delta 3.660e-03". The refusal was correct
+behaviour from a defective check. **COLMAP had altered nothing.** COLMAP
+3.6's text writer emits about six significant figures, so
+`2602.2436600602796` is exported as `2602.24` — and the difference
+between those two numbers is 3.660060e-03, exactly the reported
+"drift". The pose figure of 4.962e-06 on quaternion components near 0.87
+was the same effect.
+
+The check was comparing supplied doubles against a lossy export and
+calling the loss drift. The 3.11.1 analysis had flagged precisely this
+risk and suggested a 1e-12 epsilon — six orders tighter than 3.6's
+writer actually delivers, so that advice would not have rescued it
+either.
+
+**The fix was not a looser threshold.** Loosening would have made a real
+refinement indistinguishable from a formatting artifact, destroying the
+one property the check exists to guarantee. The check now reads
+`cameras.bin` / `images.bin`, which store raw doubles, and keeps exact
+equality for intrinsics. Poses keep a 1e-12 tolerance that forgives the
+decimal-to-double parse and nothing else — four orders above the
+observed ULP noise, many orders below any movement a bundle adjustment
+could produce.
+
+General lesson, and the second time this session has produced it: a
+verification instrument can fail in the safe direction and still be
+wrong. Refusing on a defective measurement looks like diligence and is
+indistinguishable from it until the measurement itself is checked.
+
 ## Open
 
 The ingestion smoke past calibration — extraction of the 39 MP4s, a
