@@ -136,13 +136,98 @@ class EvidenceBatch:
                 )
 
 
+@dataclass(frozen=True)
+class EvidenceIndex:
+    """Exact (track, frame)-keyed lookups over one EvidenceBatch.
+
+    The scoring loops below are driven by (track, frame) pairs, but the
+    batch is keyed by (track, camera, frame). Recovering "the cameras of
+    this (j, t)" by rescanning the whole report population makes the two
+    consumers O(tracks x frames x reports); at the smoke report bound
+    that is invisible, and on a full window it is the binding cost of
+    the entire acceptance path. These two structures answer the same two
+    questions by lookup.
+
+    Nothing here is a cap, a sample, an approximation or a quantization:
+    both fields are total functions of the batch, and every consumer
+    that accepts an index also accepts `None` and derives the same
+    structure itself, so the indexed and scanning paths are
+    interchangeable at any call site.
+
+    cameras_by_track_frame: (j, t) -> the cameras c with (j, c, t) in
+        `batch.reports`, in the batch's own report iteration order.
+    nonzero_track_frames:   the (j, t) carrying q_tilde != 0.0 under AT
+        LEAST ONE bridge — derived from the q maps, not from the report
+        keys, because `segment_is_censored` scans the q maps.
+    """
+
+    cameras_by_track_frame: Mapping[tuple[int, float], tuple[int, ...]]
+    nonzero_track_frames: frozenset[tuple[int, float]]
+
+
+def _cameras_by_track_frame(
+    batch: EvidenceBatch,
+) -> dict[tuple[int, float], tuple[int, ...]]:
+    grouped: dict[tuple[int, float], list[int]] = {}
+    for (j, c, t) in batch.reports:
+        grouped.setdefault((j, t), []).append(c)
+    return {key: tuple(cams) for key, cams in grouped.items()}
+
+
+def _nonzero_track_frames(batch: EvidenceBatch) -> frozenset[tuple[int, float]]:
+    nonzero: set[tuple[int, float]] = set()
+    for bridge_id in batch.bridges():
+        for (j, _c, t), q in batch.q_tilde[bridge_id].items():
+            if q != 0.0:
+                nonzero.add((j, t))
+    return frozenset(nonzero)
+
+
+def build_evidence_index(batch: EvidenceBatch) -> EvidenceIndex:
+    """Both lookup structures, in one O(reports + bridges*|q|) pass."""
+    return EvidenceIndex(
+        cameras_by_track_frame=_cameras_by_track_frame(batch),
+        nonzero_track_frames=_nonzero_track_frames(batch),
+    )
+
+
 def _capped_keys_for(
     batch: EvidenceBatch,
     bridge_id: int,
     track_ids: Sequence[int],
     segment: Segment,
     c_cap: int,
+    index: EvidenceIndex | None = None,
 ) -> tuple[ReportKey, ...]:
+    q_b = batch.q_tilde[bridge_id]
+    cameras = (
+        index.cameras_by_track_frame if index is not None else _cameras_by_track_frame(batch)
+    )
+    keys: list[ReportKey] = []
+    for j in track_ids:
+        for t in segment.frames:
+            cams = {
+                c: q_b[(j, c, t)]
+                for c in cameras.get((j, t), ())
+                if (j, c, t) in q_b
+            }
+            if not cams:
+                continue
+            for c in cap_select(cams, c_cap):
+                keys.append((j, c, t))
+    return tuple(keys)
+
+
+def _capped_keys_for_scan(
+    batch: EvidenceBatch,
+    bridge_id: int,
+    track_ids: Sequence[int],
+    segment: Segment,
+    c_cap: int,
+) -> tuple[ReportKey, ...]:
+    """REFERENCE ORACLE for `_capped_keys_for` — the pre-index body,
+    preserved verbatim. Kept so parity is checked against the behaviour
+    that actually shipped, not against a re-derivation of it."""
     q_b = batch.q_tilde[bridge_id]
     keys: list[ReportKey] = []
     for j in track_ids:
@@ -163,9 +248,27 @@ def segment_is_censored(
     batch: EvidenceBatch,
     track_ids: Sequence[int],
     segment: Segment,
+    index: EvidenceIndex | None = None,
 ) -> bool:
     """True iff q_tilde == 0.0 exactly for ALL bridges over the
     segment's eligible reports (PROP 1 antecedent)."""
+    nonzero = (
+        index.nonzero_track_frames if index is not None else _nonzero_track_frames(batch)
+    )
+    for j in track_ids:
+        for t in segment.frames:
+            if (j, t) in nonzero:
+                return False
+    return True
+
+
+def _segment_is_censored_scan(
+    batch: EvidenceBatch,
+    track_ids: Sequence[int],
+    segment: Segment,
+) -> bool:
+    """REFERENCE ORACLE for `segment_is_censored` — the pre-index body,
+    preserved verbatim."""
     for bridge_id in batch.bridges():
         q_b = batch.q_tilde[bridge_id]
         for j in track_ids:
@@ -197,6 +300,13 @@ def stream_log_likelihoods(
     constant in each — see module docstring), which realizes PROP 1
     as an exact 0.0 rather than a float cancellation."""
     batch.validate_bridge_independent_eligibility()
+    index = build_evidence_index(batch)
+    # The censoring test reads only (track_ids, segment) — it loops every
+    # bridge internally — so recomputing it inside the bridge loop asks
+    # the same question |bridges| times. Memoized here, not inlined into
+    # `segment_is_censored`, so the function stays pure for its other
+    # callers and for the reference oracle.
+    censored_by_unit: dict[tuple[tuple[int, ...], Segment], bool] = {}
     scored: dict[int, float] = {}
     censored: dict[int, float] = {}
     for bridge_id in batch.bridges():
@@ -211,9 +321,16 @@ def stream_log_likelihoods(
             # silent clamping (spec §2 range is a constraint).
             r_u = cluster.r_u
             for segment in segments:
-                if segment_is_censored(batch, track_ids, segment):
+                unit = (track_ids, segment)
+                if unit not in censored_by_unit:
+                    censored_by_unit[unit] = segment_is_censored(
+                        batch, track_ids, segment, index
+                    )
+                if censored_by_unit[unit]:
                     continue
-                for key in _capped_keys_for(batch, bridge_id, track_ids, segment, c_cap):
+                for key in _capped_keys_for(
+                    batch, bridge_id, track_ids, segment, c_cap, index
+                ):
                     report = batch.reports[key]
                     q = batch.q_tilde[bridge_id][key]
                     if segment.z:
@@ -331,10 +448,12 @@ def total_energy(
 
 __all__ = [
     "EvidenceBatch",
+    "EvidenceIndex",
     "PriorTerms",
     "Segment",
     "StreamLogLik",
     "TransactionCharges",
+    "build_evidence_index",
     "build_segments",
     "cap_select",
     "phi",
