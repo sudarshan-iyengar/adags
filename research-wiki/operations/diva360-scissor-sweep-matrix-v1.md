@@ -187,3 +187,63 @@ whole array plus a literal `[2]`), so every cell received a malformed
 `--source_path`. No GPU work occurred and six claim indices were
 consumed. The matrix was unaffected — the failure was submission
 plumbing caught by a fail-closed assertion, not a scientific change.
+
+## THE DEVELOPMENT RANKING DID NOT TRANSFER (the decisive result)
+
+The winner was retrained on the full 35-camera official scene
+(experiment 98, config `diva360_scissor_bench30_S3cap300k.yaml`, commit
+`cf3b34d`) and evaluated ONCE on the six official held-out cameras
+(experiment 100, 846 units, AlexNet v0.1 LPIPS).
+
+| | baseline (exp 84) | S3 winner retrained (exp 98/100) | delta |
+|---|---:|---:|---:|
+| official PSNR | 21.3705 | **21.1967** | **-0.174** |
+| official SSIM | 0.90698 | **0.91024** | +0.0033 |
+| official LPIPS `[-1,1]` | 0.14685 | **0.14267** | -0.0042 (better) |
+| official LPIPS `[0,1]` | 0.12398 | **0.12116** | -0.0028 (better) |
+| points | 507,178 | **299,815** | -207,363 |
+| best iteration | 5000 | 6000 | |
+
+**S3 won the development split by +0.909 dB and is 0.174 dB WORSE on the
+official split.** The ranking did not transfer.
+
+This is precisely the failure the held-out split exists to catch, and the
+discipline caught it. `main.py`'s training loop reads
+`transforms_test.json` for its validation, which on the FULL scene IS the
+official six — so ranking six configurations "the obvious way" would have
+selected on the sealed split and reported a +0.9 dB improvement that does
+not exist on it. Ranking on 5 development cameras carved from the 35
+TRAINING cameras is what made the non-transfer visible instead of
+invisible.
+
+Why it plausibly fails: the 5 development cameras interpolate among the
+35 training views, while the official six are a different view set. A
+capacity reduction that suppresses floaters visible from nearby
+interpolated views does not help the official views, which appear to want
+the capacity.
+
+### What survives, and what does not
+
+**Does NOT survive:** "capping capacity at 300k improves scissor quality".
+On the official split it does not. The +0.909 dB is a development-split
+number and is not a quality claim.
+
+**DOES survive:** the capacity finding as an EFFICIENCY result. The
+retrained model reaches -0.174 dB PSNR with **207,363 fewer points**
+(41% fewer), BETTER SSIM (+0.0033) and BETTER LPIPS on both conventions,
+in 14% less training time. That is a real and useful trade, and all three
+perceptual/structural metrics move the right way while only PSNR moves
+the wrong way — a pattern consistent with fewer floaters and slightly
+less raw fidelity.
+
+**Caveat on precision.** The retrain fits 35 cameras where the sweep
+cells fit 30, by design. So the -0.174 dB compares two runs differing in
+BOTH the capacity cap and the training-camera count. The direction is
+clear; the magnitude is not isolated.
+
+### Distance to parity is unchanged in kind
+
+Neither model is near published scissor parity (~25-26 PSNR, ~0.94 SSIM,
+LPIPS 0.08-0.10). Best of the two on each metric: PSNR 21.371,
+SSIM 0.9102, LPIPS 0.1212-0.1427. Every metric is short, consistently,
+and no configuration in this matrix closes a gap of that size.
