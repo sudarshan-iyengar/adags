@@ -234,6 +234,30 @@ Two further defaults matter and are recorded before any run:
 * `SiftExtraction.use_gpu` and `SiftMatching.use_gpu` both default to
   `1`, so a zero-slot cell cannot run them unmodified.
 
+### Stream validation — and a correction to "60 FPS"
+
+All 39 videos were `ffprobe`d before any frame was decoded:
+
+```
+39/39   5312x2988   nb_frames 300   codec h264   pix_fmt yuv420p
+        r_frame_rate 60000/1001
+```
+
+Every declared figure holds — 39 cameras, 300 frames, 5312x2988 — with
+one correction. The rate is **60000/1001 = 59.94 FPS**, not 60. The
+paper and README say "60 FPS" and this page repeated it; the container
+metadata says NTSC-rate 59.94. The difference is 0.1%, which is
+irrelevant to a 300-frame sample viewed as an index range and
+potentially relevant to anything that converts frame index to seconds —
+`index/60` drifts from `index * 1001/60000` by about 5 ms over 300
+frames. Recorded so a later timestamping step uses the measured rate
+rather than the advertised one.
+
+`pix_fmt yuv420p` is worth noting too: chroma is subsampled 2x in each
+direction, so colour detail at 5312x2988 is really carried at
+2656x1494. That is a property of the source, not of any processing here,
+but it bounds what colour-based initialization could recover.
+
 ### Discipline for this lane
 
 Any COLMAP step that COULD alter poses or intrinsics runs on a
