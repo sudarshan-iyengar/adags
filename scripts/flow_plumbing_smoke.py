@@ -354,6 +354,41 @@ def main(argv=None) -> int:
             else ("SEVERED GRADIENT PATH -- field responds but no gradient"
                   if perturb["rendered_flow_nonzero"]
                   else "FIELD DOES NOT RESPOND TO MOTION -- renderer branch not taken"))
+        # ---------- H: LOCALIZE the break ----------
+        # Two candidates: the projection chain
+        # (coeff -> get_dynamic_xyz -> project_points_to_screen -> flow_2d)
+        # or the rasterizer boundary (flow_2d -> pkg["flow"]). Test the
+        # projection chain on its own, with no rasterizer involved, and
+        # ask whether the rendered flow output even carries a grad_fn.
+        from utils.motion_prior_utils import project_points_to_screen
+
+        localize = {
+            "rendered_flow_requires_grad": bool(pkg2["flow"].requires_grad),
+            "rendered_flow_has_grad_fn": bool(pkg2["flow"].grad_fn is not None),
+        }
+        for p in (coeff, basis):
+            if p is not None and getattr(p, "grad", None) is not None:
+                p.grad = None
+        now = gaussians.get_dynamic_xyz(float(cam.timestamp))
+        nxt3 = gaussians.get_dynamic_xyz(
+            float(cam.timestamp) + float(getattr(opt, "motion_track_dt", 1.0 / 30.0)))
+        s_now, _ = project_points_to_screen(now, cam)
+        s_nxt, _ = project_points_to_screen(nxt3, cam)
+        proxy = (s_nxt - s_now).abs().mean()
+        localize["projection_proxy_value"] = float(proxy)
+        localize["projection_proxy_requires_grad"] = bool(proxy.requires_grad)
+        if proxy.requires_grad:
+            proxy.backward()
+        for name, p in (("coeff", coeff), ("basis", basis)):
+            g = getattr(p, "grad", None) if p is not None else None
+            localize[f"projection_only_{name}_grad_absmax"] = (
+                float(g.abs().max()) if g is not None else 0.0)
+        localize["verdict"] = (
+            "RASTERIZER BOUNDARY -- the projection chain is differentiable "
+            "but no gradient survives the rasterizer's flow output"
+            if localize.get("projection_only_coeff_grad_absmax", 0.0) > 0.0
+            else "PROJECTION CHAIN -- gradient does not even reach flow_2d")
+        perturb["H_localization"] = localize
         with torch.no_grad():
             coeff.copy_(saved)
     report["G_perturbation"] = perturb
@@ -378,6 +413,14 @@ def main(argv=None) -> int:
               f"coeff={perturb['coeff_grad_absmax']:.3e} "
               f"basis={perturb['basis_grad_absmax']:.3e}", flush=True)
         print(f"[flow] VERDICT {perturb['verdict']}", flush=True)
+        loc = perturb.get("H_localization", {})
+        if loc:
+            print(f"[flow] rendered flow grad_fn={loc['rendered_flow_has_grad_fn']} "
+                  f"requires_grad={loc['rendered_flow_requires_grad']}", flush=True)
+            print(f"[flow] projection-only coeff grad="
+                  f"{loc['projection_only_coeff_grad_absmax']:.3e} basis="
+                  f"{loc['projection_only_basis_grad_absmax']:.3e}", flush=True)
+            print(f"[flow] LOCALIZED: {loc['verdict']}", flush=True)
     print(f"[flow] -> {out_dir}", flush=True)
     return 0
 
