@@ -179,6 +179,14 @@ def prove_flow_gradient_is_live() -> dict:
     Deliberately independent of the unittest suite, so that a collection
     error or an over-broad skip in the suite cannot let this pass
     silently.
+
+    A zero gradient has SEVERAL possible causes and only one of them is
+    "the image lacks the patch". If the scene rasterizes nothing, or the
+    forward flow is zero, or the upstream gradient is zero, then dL_dflows
+    is zero for reasons that say nothing about the binary. Each of those
+    is therefore measured and reported BEFORE any conclusion is drawn, so
+    that a scene-construction mistake can never be misattributed to the
+    kernel. Every measurement is returned even on failure.
     """
     import torch
 
@@ -195,16 +203,53 @@ def prove_flow_gradient_is_live() -> dict:
         (2, scene.height, scene.width), generator=generator, device="cuda"
     )
     flows = scene.flows.clone().requires_grad_(True)
-    out = scene.render(flows=flows)
+    opacities = scene.opacities.clone().requires_grad_(True)
+    out = scene.render(flows=flows, opacities=opacities)
+
+    measured = {
+        "radii": [int(value) for value in out["radii"].reshape(-1).tolist()],
+        "rasterized_primitives": int((out["radii"].reshape(-1) > 0).sum()),
+        "forward_flow_absmax": float(out["flow"].abs().max()),
+        "forward_alpha_absmax": float(out["alpha"].abs().max()),
+        "forward_render_absmax": float(out["render"].abs().max()),
+        "flow_requires_grad": bool(out["flow"].requires_grad),
+        "flow_has_grad_fn": out["flow"].grad_fn is not None,
+        "upstream_absmax": float(upstream.abs().max()),
+    }
+
+    # Ordered so the FIRST failure names the actual cause.
+    if measured["rasterized_primitives"] == 0:
+        raise RuntimeError(
+            f"the probe scene rasterizes nothing (all radii zero): {measured}. "
+            "This is a scene-construction fault in the test harness, NOT "
+            "evidence about the compiled kernel."
+        )
+    if measured["forward_flow_absmax"] == 0.0:
+        raise RuntimeError(
+            f"the forward flow image is exactly zero: {measured}. A zero "
+            "gradient is then expected and says nothing about the backward "
+            "kernel. Fix the probe scene before drawing any conclusion."
+        )
+    if not measured["flow_has_grad_fn"]:
+        raise RuntimeError(
+            f"the flow output is not in the autograd graph: {measured}"
+        )
+
     (out["flow"] * upstream).sum().backward()
 
     if flows.grad is None:
-        raise RuntimeError("flow_2d received no gradient at all")
-    observed = float(flows.grad.abs().max())
-    if observed == 0.0:
+        raise RuntimeError(f"flow_2d received no gradient at all: {measured}")
+    measured["max_abs_grad_flows"] = float(flows.grad.abs().max())
+    measured["max_abs_grad_opacities"] = (
+        float(opacities.grad.abs().max()) if opacities.grad is not None else None
+    )
+
+    if measured["max_abs_grad_flows"] == 0.0:
         raise RuntimeError(
-            "dL_dflows is EXACTLY zero: this is the pre-repair binary. The "
-            "image does not contain the flow VJP patch."
+            "dL_dflows is EXACTLY zero while the forward flow is nonzero and "
+            f"the upstream gradient is nonzero: {measured}. With those "
+            "confounders excluded, the compiled backward kernel is not "
+            "writing the flow gradient."
         )
 
     alphas = scene.per_gaussian_alphas()
@@ -213,16 +258,15 @@ def prove_flow_gradient_is_live() -> dict:
     )
     expected = expected[: scene.count]
     scale = max(float(expected.abs().max()), 1.0)
-    relative_error = float((flows.grad - expected).abs().max()) / scale
-    if relative_error > 5e-3:
+    measured["max_relative_error_vs_oracle"] = (
+        float((flows.grad - expected).abs().max()) / scale
+    )
+    if measured["max_relative_error_vs_oracle"] > 5e-3:
         raise RuntimeError(
-            f"flow gradient is nonzero but disagrees with the independent "
-            f"oracle by {relative_error:.3e} relative"
+            "flow gradient is nonzero but disagrees with the independent "
+            f"oracle: {measured}"
         )
-    return {
-        "max_abs_grad": observed,
-        "max_relative_error_vs_oracle": relative_error,
-    }
+    return measured
 
 
 def run_test_modules() -> dict:
@@ -280,24 +324,45 @@ def main() -> int:
     else:
         report["cuda_sources"]["matches"] = None
 
-    report["environment"] = describe_environment()
-    report["binary"] = describe_binary()
-    report["functional_proof"] = prove_flow_gradient_is_live()
-    report["tests"] = run_test_modules()
+    # Each stage records its own result. A stage that raises records the
+    # failure and stops the run, but the report is STILL printed: losing
+    # the diagnostics to a traceback is how a cheap misdiagnosis turns
+    # into an expensive one.
+    stages = (
+        ("environment", describe_environment),
+        ("binary", describe_binary),
+        ("functional_proof", prove_flow_gradient_is_live),
+        ("tests", run_test_modules),
+    )
+    failure = None
+    for name, stage in stages:
+        try:
+            report[name] = stage()
+        except Exception as exc:  # noqa: BLE001 - reported, then re-raised
+            report[name] = {"error": f"{type(exc).__name__}: {exc}"}
+            failure = f"{name}: {type(exc).__name__}: {exc}"
+            break
 
-    if args.expect_cuda_sha256 and combined != args.expect_cuda_sha256:
-        raise RuntimeError(
+    if failure is None and args.expect_cuda_sha256 and combined != args.expect_cuda_sha256:
+        failure = (
             "the run context's rasterizer sources do not match the expected "
             f"hash: {combined} != {args.expect_cuda_sha256}"
         )
 
-    report["verified"] = True
+    report["verified"] = failure is None
+    if failure is not None:
+        report["failure"] = failure
+
     payload = json.dumps(report, indent=2, sort_keys=True)
     print("\n=== FLOW VJP RUNTIME VERIFICATION ===")
     print(payload)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(payload, encoding="utf-8")
+
+    if failure is not None:
+        print(f"\nFAILED: {failure}")
+        return 1
     return 0
 
 
