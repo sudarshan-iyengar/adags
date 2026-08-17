@@ -397,6 +397,68 @@ verification instrument can fail in the safe direction and still be
 wrong. Refusing on a defective measurement looks like diligence and is
 indistinguishable from it until the measurement itself is checked.
 
+## INITIALIZATION FROZEN — and the box fallback would repeat DiVa's mistake
+
+All three frozen frames triangulated, calibration exactly preserved in
+each, and the union built by `scripts/imvid_build_initialization.py`:
+
+| frame | points | mean reprojection |
+|---:|---:|---:|
+| 0 | 6,075 | 1.2127 px |
+| 150 | 9,256 | 1.1697 px |
+| 299 | 8,668 | 1.2061 px |
+| **union** | **23,999** | — |
+
+Reprojection is stable across the sequence (1.17-1.21 px on a 5312x2988
+raster), and all three frames reached 39/39 camera coverage, so the
+supplied calibration is self-consistent at the start, middle AND end of
+the clip — not only at the frame that happened to be checked first.
+
+### The declared fallback comparison — 12.8x
+
+The initialization is compared against a deliberately FAIR simple
+baseline: uniform random points inside the union's OWN p01-p99 box, same
+23,999 points, same seed. Not the camera-frustum-union box that failed
+on DiVa-360 — comparing against that would be a straw man.
+
+```
+32^3 grid occupancy over the same box:
+  COLMAP union   1,334 cells of 32,768   (4.1%)
+  uniform box   17,082 cells of 32,768   (52.1%)
+```
+
+**The COLMAP cloud is 12.8x more concentrated.** Spreading the same
+point budget uniformly through the box would place roughly 96% of the
+mass in cells the triangulated evidence says are empty.
+
+That is the DiVa-360 failure restated in advance: there, a frustum-union
+volume spanning +/-6.5 world units against content at +/-1.2 had 84% of
+its seeds destroyed by iteration 990, and adding MORE seeds to it cost
+3.976 dB while a content-derived hull gained 1.15 dB. ImViD's box
+fallback is a tighter box than DiVa's frustum — it is derived from the
+content's own percentiles — and it is STILL 12.8x too diffuse. The
+lesson transfers, and it is now measured on ImViD before any training
+rather than after.
+
+`points3d_colmap_union.ply` is therefore the ImViD baseline
+initialization, hashed and manifested, with the fallback preserved
+beside it as the recorded comparison rather than as an option.
+
+### Frozen rules, and the one disclosed consequence
+
+Union by concatenation in ascending frame order; NO deduplication, NO
+subsampling. Dedup is excluded because it needs a distance threshold, a
+threshold is a tuned parameter, and tuning one would make the
+initialization a fitted object rather than a frozen one.
+
+The consequence is disclosed rather than hidden: static content is
+triangulated in all three frames and so appears about three times, which
+makes the union denser on static content than on the performer at any
+one instant. For an initialization that is a density prior rather than
+an error, and pruning is free to remove it. Colours are COLMAP's own
+per-point RGB — the DiVa hull randomized colours to isolate geometry in
+an A/B, and there is no A/B here.
+
 ## Open
 
 The ingestion smoke past calibration — extraction of the 39 MP4s, a
