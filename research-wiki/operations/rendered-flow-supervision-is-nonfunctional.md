@@ -324,3 +324,95 @@ Tests: 36 in this file, collection verified. All CUDA tests SKIP on the
 workstation, which has no GPU and no working torch. **A skip is not a
 pass.** Nothing here is validated until it runs on a V100 against the
 rebuilt image.
+
+## V100 runtime verification, experiments 132-136 (2026-08-17)
+
+Image `sudarshaniyengar/adags@sha256:aaddebe080c11ec02b489af7fde88e565f47d518170dcff2a10ef19d8c286bfa`
+(tag `apollo-v100-flow-vjp-c15ef19`), built from the patched commit,
+`TORCH_CUDA_ARCH_LIST="7.0 8.9"`, Dockerfile UNCHANGED (the patch adds no
+build dependency). `apollo-v100-v1` was NOT overwritten and remains at
+`sha256:51f8a852...`. All cells DGX/V100, exploratory,
+`evidence_bearing: false`. Total cost ~0.5 GPU-hours.
+
+### The headline: the flow VJP is still UNVERIFIED
+
+Not confirmed, not refuted. Five runs produced no scientific result about
+flow supervision. Recorded as a negative outcome rather than dressed up.
+
+### What each run established
+
+| exp | question | result |
+|---|---|---|
+| 132 | does the repaired gradient run? | FAILED, and the failure message was WRONG (see below) |
+| 133 | is the zero a confounder? | scene renders (radii 7, 6), forward flow absmax 1.339, upstream 0.996, flow in the graph — and gradient still 0.0 |
+| 134 | where does the gradient go? | a COLOUR loss also gives 0.0 on opacities, means3D, means2D |
+| 135 | is the backward grid empty? | NO — `num_buckets` 4 / 4 / 12 and `num_rendered` 8 / 32 / 288 at 2 / 8 / 72 primitives; all gradients still 0.0 |
+| 136 | is this the patch's fault? | **NO** — the OLD pre-patch image behaves IDENTICALLY |
+
+### The patch is exonerated, and one thing is established in passing
+
+Experiment 136 ran the identical probe against the pre-patch image. It
+returned the same zeros, the same `num_buckets: 4`, the same
+`num_rendered: 8`, and a **bit-identical** colour forward
+(`0.519281804561615` on both images). So:
+
+* the CUDA patch did NOT break the colour, alpha or depth path;
+* forward equivalence between the two images is directly MEASURED on this
+  scene, which is a small independent addition to the disabled-flow
+  equivalence argument (it is one scene, not a proof over all inputs).
+
+### The real defect: the test harness, and it is PRE-EXISTING
+
+`TinyScene` in `tests/test_flow_backward_vjp.py` produces **zero
+gradients for every loss** — colour included — on BOTH images, at every
+scene size, with a valid bucket count and a correct forward. The real
+training path does not have this problem: experiments 84, 104 and 123 all
+trained through the colour gradient, and the earlier N3V smoke measured
+nonzero gradients through the projection chain.
+
+So the harness constructs a call the real renderer never makes. The cause
+is NOT yet identified, and this page does not guess at it. Every argument
+position from Python to the kernel WAS read end to end and matches:
+autograd input 4 = `flow_2d` ↔ grads 4 = `grad_flows`; C++ return 6 =
+`dL_dflows` ↔ unpack 6 = `grad_flows`; `grad_flow` → `dL_dout_flow` →
+`dL_dpix_flow`; launch and kernel parameter lists agree positionally.
+
+### CORRECTION: the 36 tests are not evidence
+
+The previous entry on this page reported "36 tests, collection verified"
+after adding `CheckpointBoundaryTests`. That count stands, and its
+evidential value does not. **Every CUDA test in that file is built on
+`TinyScene`, and `TinyScene` cannot currently produce a gradient at all.**
+Had they run, they would have failed for a harness reason and said
+nothing about the VJP. They must not be cited as verification of the flow
+repair until the harness is fixed and the colour-gradient control passes.
+
+The adversarial review's item 10 asked whether these tests would catch a
+wrong sign, a wrong suffix, a missing shuffle or dropped static coupling,
+and concluded they would. That assessment was STATIC and could not have
+known the harness returns zero at runtime. The honest answer to item 10
+today is: they would catch none of it, because they cannot distinguish
+any gradient from any other.
+
+### CORRECTION: experiment 132's failure message asserted what it had not shown
+
+132 died with "dL_dflows is EXACTLY zero: this is the pre-repair binary.
+The image does not contain the flow VJP patch." Both sentences were
+unfounded and the second is now known false. The image was pulled by
+digest; its sources carry the patch (`arflow` x10 in `backward.cu`); the
+wheel rebuilt (55 s of nvcc, 383 KB, installed over the old one); and the
+resulting `.so` differs from the old image's (1,301,952 vs 1,301,920
+bytes; `db6c3025...` vs `95819edf...`).
+
+The script now measures radii, rasterized count, forward flow, autograd
+connectivity and upstream magnitude BEFORE concluding anything, and
+reports every measurement even when a stage raises. Recorded because a
+verifier that misattributes its own failure is worse than no verifier: it
+manufactures false confidence in a wrong diagnosis.
+
+### What is NOT concluded
+
+That the flow VJP is correct, or incorrect. That flow supervision helps
+or hurts. F and X remain BLOCKED — not because a gradient term is known
+missing, but because no instrument has yet demonstrated the gradient is
+live on the real path.
