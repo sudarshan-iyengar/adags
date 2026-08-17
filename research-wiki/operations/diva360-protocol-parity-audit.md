@@ -382,6 +382,106 @@ numbers are recorded so the metric axis can be reasoned about
 separately, but no ADAGS scissor figure may be placed beside a published
 row as a comparison until the temporal extent matches too.
 
+## Addendum — ten-cell rescore, and the convention deltas are NOT constants (2026-08-17)
+
+Experiments **113-122**, commit `0946345`, dgx/V100, all audited `rc=0`
+with artifacts present, identical image, pool and seed, all
+`evidence_bearing: false`. Both metric sets computed on the SAME images
+in one pass, and **both are preserved** — neither replaces the other and
+they are never averaged together.
+
+| cell | units | ckpt | ADAGS PSNR | ADAGS SSIM | Alex LPIPS | OFFICIAL PSNR | OFFICIAL SSIM | VGG LPIPS |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| oracle f0 | 6 | 2000 | 27.4896 | 0.95968 | 0.05469 | 27.4893 | 0.95744 | 0.05176 |
+| oracle f80 | 6 | 2000 | 25.0994 | 0.93515 | 0.09566 | 25.0991 | 0.92959 | 0.09808 |
+| oracle f160 | 6 | 2000 | 25.1254 | 0.93870 | 0.08660 | 25.1251 | 0.93341 | 0.08844 |
+| oracle f240 | 6 | 2000 | 25.8813 | 0.94216 | 0.08346 | 25.8808 | 0.93707 | 0.08466 |
+| oracle f320 | 6 | 2000 | 25.7636 | 0.94652 | 0.07751 | 25.7634 | 0.94176 | 0.07844 |
+| oracle f400 | 6 | 3000 | 26.4665 | 0.95258 | 0.06996 | 26.4661 | 0.94860 | 0.07516 |
+| oracle f480 | 6 | 3000 | 24.9266 | 0.93984 | 0.08451 | 24.9263 | 0.93541 | 0.09114 |
+| oracle f560 | 6 | 3000 | 25.0035 | 0.94006 | 0.08178 | 25.0032 | 0.93532 | 0.08682 |
+| **exp 104** hull | 846 | 6000 | 22.4384 | 0.92022 | 0.13552 | **22.4382** | **0.91381** | **0.11305** |
+| **exp 101** 15k | 846 | 15000 | 22.3541 | 0.91767 | 0.12819 | **22.3539** | **0.91155** | **0.11184** |
+
+**Oracle aggregate (8 frames, official conventions):**
+
+| | mean | median | mean excl. frame 0 |
+|---|---:|---:|---:|
+| PSNR | 25.7192 | 25.4442 | 25.4663 |
+| SSIM | 0.93982 | 0.93624 | 0.93731 |
+| VGG LPIPS | 0.08181 | 0.08574 | 0.08611 |
+
+### The convention deltas depend on the QUALITY REGIME
+
+This is the methodological finding, and it is why estimating a
+correction would have been wrong:
+
+* **PSNR: immaterial, confirmed on ten more cells.** Every cell agrees
+  to <= 0.0005 dB. The uint8 quantization changes nothing measurable.
+* **SSIM: official is always LOWER, but by a varying amount** — 0.0045
+  at SSIM ~0.944, 0.0061-0.0067 at SSIM ~0.907-0.918. Not a fixed
+  offset.
+* **LPIPS: the backbone delta CHANGES SIGN with quality.** On the
+  high-quality oracle frames VGG is slightly WORSE than AlexNet
+  (0.07927 -> 0.08181 mean). On the lower-quality dynamic models VGG is
+  markedly BETTER (0.13552 -> 0.11305; 0.12819 -> 0.11184; and
+  0.14685 -> 0.12284 for exp 84). A single "AlexNet-to-VGG correction"
+  does not exist.
+
+An earlier note here predicted the SSIM convention gap direction and got
+it right only by luck of sign; the magnitude varies by 50% across the
+range measured. Convention deltas are measured per model from now on,
+never applied as constants.
+
+### CORRECTION to the parity statement
+
+An interim reading of the ADAGS-convention numbers described the
+per-frame oracle as reaching published parity, "above PF I-NGP on PSNR
+and level on SSIM". **Under the official conventions that is wrong on
+SSIM.** The oracle sits INSIDE the published range rather than at its
+top:
+
+| official conventions | PSNR | SSIM | LPIPS |
+|---|---:|---:|---:|
+| oracle mean (8 frames) | 25.719 | 0.9398 | 0.0818 |
+| oracle excl. frame 0 | 25.466 | 0.9373 | 0.0861 |
+| PF I-NGP (published) | 25.346 | 0.944 | 0.076 |
+| MixVoxels (published) | 25.090 | 0.937 | 0.086 |
+
+* versus **MixVoxels**: the oracle is above on all three.
+* versus **PF I-NGP**: above on PSNR (+0.37, or +0.12 excluding frame
+  0), **BELOW** on SSIM (-0.0042, or -0.0067) and **worse** on LPIPS
+  (+0.0058, or +0.0101).
+
+So the defensible statement is that a single-instant fit reaches the
+published BAND, not that it matches the best published row.
+
+### The boundary that does not move
+
+**The oracle is an EIGHT-FRAME DIAGNOSTIC, not a reproduction of the
+published protocol.** Each oracle cell scores 6 units — six held-out
+cameras at ONE instant — against a published row pooling 1125 frames x 6
+cameras. Its purpose is to bound what the renderer, initialization,
+training and evaluation can achieve with the temporal representation
+removed; it is NOT a scissor result and may not be reported as one. The
+141-frame dynamic numbers (exps 84/101/104) carry the same M1 boundary
+as before.
+
+### The two dynamic models, official conventions, reported separately
+
+| | PSNR | SSIM | VGG LPIPS | vs exp 84 |
+|---|---:|---:|---:|---|
+| exp 84 baseline | 21.3565 | 0.90034 | 0.12284 | — |
+| **exp 104** hull init | **22.4382** | **0.91381** | **0.11305** | +1.082 dB, +0.0135, -0.0098 |
+| **exp 101** 15k exposure | **22.3539** | **0.91155** | **0.11184** | +0.997 dB, +0.0112, -0.0110 |
+
+Both interventions improve all three official metrics over the baseline.
+They are close to each other and NOT identical: the hull model is better
+on PSNR and SSIM, the extended-exposure model is very slightly better on
+LPIPS. Neither is promoted over the other; they are two independent
+single-factor measurements, and the combination is being tested
+separately (experiment 123).
+
 Two measurement notes recorded rather than glossed:
 
 * The evaluator reports PSNR 21.3567 where the training loop's summary
