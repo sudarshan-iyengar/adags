@@ -92,6 +92,121 @@ to pixels whose flow magnitude is well above the noise floor. Recorded
 because an unestablished sign is exactly the error that presents as
 "flow supervision hurts".
 
+## CORRECTION and exact diagnosis (2026-08-17, same day)
+
+Two statements above are WRONG and are corrected here rather than
+rewritten. A dedicated investigation, independently re-verified against
+source by this author, settled the class of the defect.
+
+**CORRECTION 1.** This page says the rasterizer's CUDA backward "is not
+in this repository". **It is.** `diff-gaussian-rasterization/` is TRACKED
+(`git ls-files` returns `cuda_rasterizer/backward.cu`, `forward.cu`,
+`CMakeLists.txt`), `Dockerfile.apollo-{v100,h100}` COPY it into the image
+and `pip install` it, and `backward.cu` is unmodified since the initial
+commit. The claim was load-bearing for the "out of scope" conclusion and
+was false.
+
+**CORRECTION 2.** This page implies the repair means writing new kernel
+arithmetic. It does not. **The flow gradient is already implemented and
+correct — it lives in a kernel that is never launched.**
+
+### The defect, verified line by line
+
+`backward.cu` contains exactly ONE `<<<...>>>` launch, at `:1599`:
+
+```cuda
+PerGaussianRenderCUDA<NUM_CHANNELS> <<<((B*32) + THREADS - 1) / THREADS, THREADS>>>(
+```
+
+Every flow computation in the file — `:995` through `:1164`, including
+the only accumulation
+
+```cuda
+:1164   atomicAdd(&(dL_dflows[global_id * 2 + ch]), dchannel_dcolor * dL_dchannelflow);
+```
+
+— lives inside `renderCUDA`, defined at `:984` and **NEVER LAUNCHED**.
+The only `renderCUDA<...><<<>>>` in the codebase is `forward.cu:825`,
+which instantiates forward.cu's OWN `renderCUDA` at `forward.cu:602`.
+backward.cu's is an uninstantiated template: it emits no code, no linker
+error and NO COMPILER WARNING.
+
+The kernel that does run declares the flow parameters at `:1244`,
+`:1254`, `:1259` and then contains **zero** flow references in its whole
+body (`:1260`-`:1575`). It computes colour only. So `dL_dflows` returns
+exactly as allocated at `rasterize_points.cu:241`,
+`torch::zeros({P, 2})`.
+
+That is why the failure was silent: no exception, no shape mismatch, no
+illegal access — just a zero tensor.
+
+### Wrapper and binding are BOTH correct
+
+Ruled out with counting, not impression. Forward returns 10 values and
+`backward` takes 10 grads, with `flow` as output #5 and `grad_flow` as
+arg #5. Forward has 19 inputs and the returned `grads` tuple has 19
+entries with `grad_flows` at position 5, matching `flow_2d` at position
+5. `flow_2d` IS passed to C++ and IS in `save_for_backward`; there is no
+`mark_non_differentiable`. On the binding side `rasterize_points.cu`
+allocates `dL_dflows` (`:241`), passes `dL_dout_flow` (`:316`) and
+`dL_dflows` (`:324`), and returns it in the right tuple slot (`:343`),
+matching `backward.h:52-53`. Pointer threading is intact all the way to
+the dead kernel.
+
+The forward path is also genuinely differentiable in principle —
+`forward.cu:756-757` composites flow with standard `alpha * T` weighting
+and writes it at `:794`. No argmax, no nearest-Gaussian, no detach.
+
+### Which extension runs — settled statically
+
+`gaussian_renderer/diff_gaussian_rasterization.py:18` imports
+`_adags_diff_gaussian_rasterization`, a PROJECT-UNIQUE module name that
+no PyPI package can shadow, and the JIT fallback compiles the SAME
+in-repo sources. So the in-repo `.cu` files ARE what ran.
+
+### All three rasterizer trees are the same
+
+| tree | verdict |
+|---|---|
+| `D:\adags\diff-gaussian-rasterization` | reference |
+| `apollo:.../proj_adags/repo/adags/diff-gaussian-rasterization` | identical (size deltas are exactly line counts, i.e. CRLF vs LF; `diff` returns 0 after stripping `\r`) |
+| `apollo:.../project_adags/experiments/budget_match/diff-gaussian-rasterization` | byte-identical to local |
+
+**No tree implements a flow gradient another lacks** — all three carry
+the same 30 flow identifiers at the same lines, and the same defect. The
+one real difference is tree C's `setup.py`, which builds a stock-named
+extension with `nvcc -g -G` (device debug, optimization off); relevant
+only if C was ever used for timing, irrelevant to flow.
+
+### The minimal repair, and its one disclosed approximation
+
+Purely additive inside `PerGaussianRenderCUDA`, about six lines, no
+forward change and no new buffers: a `Register_dL_dflows[2]`
+accumulator beside `:1324`, reading `dL_dpix_flow[ch * H * W + pix_id]`
+and accumulating `weight * dL_dchannelflow` after `:1394` (mirroring the
+colour path at `:1402`), then an `atomicAdd` into `dL_dflows` in the
+`gaussian_idx < P` epilogue (mirroring `:1449`). `weight = alpha * T` is
+already in hand.
+
+**Disclosed approximation:** the dead kernel also fed flow into
+`dL_dalpha` (`:1160`). Reproducing that in the per-bucket kernel needs a
+running `ar_flow[2]` reconstruction, which requires a flow analogue of
+`sampled_ar` in the forward — `SampleState` (`rasterizer_impl.h:81-88`)
+carries only `bucket_to_tile, T, ar, ard`. Omitting it means the flow
+loss shapes flow VALUES (hence motion) but does not push opacity, conic
+or mean2D. That is a defensible scope for flow supervision and must be
+recorded rather than glossed.
+
+### What still stands
+
+The lane remains STOPPED pending authorization, but for a smaller and
+better-understood reason than this page originally gave: the change is a
+`.cu` edit requiring an image REBUILD and a NEW DIGEST, plus the
+directive's own precondition that the disabled-flow path be proven
+numerically unchanged before experiments 104 and 123 may still serve as
+controls. The verification gate is `scripts/flow_plumbing_smoke.py`
+probes F and G, which already fail today and must pass after the repair.
+
 ## What is NOT concluded
 
 That flow supervision would or would not help. Nothing about the idea
