@@ -177,10 +177,10 @@ def main(argv=None) -> int:
     }
 
     probed = 0
-    for data in train_cams:
+    for index in range(len(train_cams)):
         if probed >= args.n_cameras:
             break
-        cam, gt_image = _unpack(data)
+        cam, gt_image = _unpack(train_cams[index])
         cam = cam.cuda()
         gt = (gt_image.cuda() if gt_image is not None else cam.original_image.cuda())
         gt = gt[:3]
@@ -229,14 +229,16 @@ def main(argv=None) -> int:
             }
 
         # B: direction/sign, by RGB warp against the NEXT frame
-        # BOUNDED scan. The dataset is lazily decoded, so walking all of
-        # it to find the next frame would decode thousands of images for
-        # one probe. Entries are ordered camera-major, so the successor
-        # is a few steps away; 64 is generous and caps the cost.
+        # BOUNDED scan by INTEGER index. The dataset is lazily decoded,
+        # so walking all of it would decode thousands of images for one
+        # probe -- and it must not be SLICED either: a slice reaches the
+        # lazy dataset's __getitem__ as a slice object and comes back as
+        # a list, which is not a Camera. Entries are camera-major, so the
+        # successor is a few steps away; 64 caps the cost.
         nxt = None
         this_cam_dir = str(getattr(cam, "image_path", "")).replace("\\", "/").rsplit("/", 2)[-2:-1]
-        for other in train_cams[probed - 1: probed - 1 + 64]:
-            ocam, ogt = _unpack(other)
+        for j in range(index + 1, min(index + 65, len(train_cams))):
+            ocam, ogt = _unpack(train_cams[j])
             other_dir = str(getattr(ocam, "image_path", "")).replace("\\", "/").rsplit("/", 2)[-2:-1]
             if other_dir == this_cam_dir and float(ocam.timestamp) > float(cam.timestamp):
                 nxt = (ocam, ogt)
