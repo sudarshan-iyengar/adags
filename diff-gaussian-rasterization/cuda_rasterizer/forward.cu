@@ -604,7 +604,7 @@ renderCUDA(
 	const uint2* __restrict__ ranges,
 	const uint32_t* __restrict__ point_list,
 	const uint32_t* __restrict__ per_tile_bucket_offset, uint32_t* __restrict__ bucket_to_tile,
-	float* __restrict__ sampled_T, float* __restrict__ sampled_ar, float* __restrict__ sampled_ard,
+	float* __restrict__ sampled_T, float* __restrict__ sampled_ar, float* __restrict__ sampled_arflow, float* __restrict__ sampled_ard,
 	int W, int H,
 	const float2* __restrict__ points_xy_image,
 	const float* __restrict__ features,
@@ -708,6 +708,9 @@ renderCUDA(
 				for (int ch = 0; ch < CHANNELS; ++ch) {
 					sampled_ar[(bbm * BLOCK_SIZE * CHANNELS) + ch * BLOCK_SIZE + block.thread_rank()] = C[ch];
 				}
+				for (int ch = 0; ch < 2; ++ch) {
+					sampled_arflow[(bbm * BLOCK_SIZE * 2) + ch * BLOCK_SIZE + block.thread_rank()] = Flow[ch];
+				}
 				sampled_ard[(bbm * BLOCK_SIZE) + block.thread_rank()] = expected_invdepth;
 				++bbm;
 			}
@@ -802,7 +805,7 @@ void FORWARD::render(
 	const uint2* ranges,
 	const uint32_t* point_list,
 	const uint32_t* per_tile_bucket_offset, uint32_t* bucket_to_tile,
-	float* sampled_T, float* sampled_ar, float* sampled_ard,
+	float* sampled_T, float* sampled_ar, float* sampled_arflow, float* sampled_ard,
 	int W, int H,
 	const float2* means2D,
 	const float* colors,
@@ -826,7 +829,7 @@ void FORWARD::render(
 		P, ranges,
 		point_list,
 		per_tile_bucket_offset, bucket_to_tile,
-		sampled_T, sampled_ar, sampled_ard,
+		sampled_T, sampled_ar, sampled_arflow, sampled_ard,
 		W, H,
 		means2D,
 		colors,

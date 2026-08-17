@@ -26,7 +26,6 @@ from pathlib import Path
 from omegaconf import OmegaConf
 from omegaconf.dictconfig import DictConfig
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
 from gaussian_renderer import render
 from scene import Scene, GaussianModel
@@ -40,6 +39,7 @@ from utils.motion_prior_utils import (
     masked_l1,
     masked_psnr,
     normalize_flow_tensor,
+    resize_flow,
     sample_mask_at_points,
 )
 from utils.mesh_utils import GaussianExtractor
@@ -113,7 +113,10 @@ def compute_flow_loss(pred_flow, target_flow, flow_mask):
     if pred_flow is None or target_flow is None:
         return None
     if pred_flow.shape[-2:] != target_flow.shape[-2:]:
-        pred_flow = F.interpolate(pred_flow[None], size=target_flow.shape[-2:], mode="bilinear", align_corners=False)[0]
+        # Resampling a flow field must rescale the vector MAGNITUDES as well as
+        # the grid; a bare interpolate leaves a 2x downsample predicting 2x the
+        # displacement it should. resize_flow applies both.
+        pred_flow = resize_flow(pred_flow, tuple(target_flow.shape[-2:]))
     return masked_l1(pred_flow, target_flow, flow_mask)
 
 

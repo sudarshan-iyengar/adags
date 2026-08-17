@@ -61,7 +61,7 @@ namespace FORWARD
 		const uint2* ranges,
 		const uint32_t* point_list,
 		const uint32_t* per_tile_bucket_offset, uint32_t* bucket_to_tile,
-		float* sampled_T, float* sampled_ar, float* sampled_ard,
+		float* sampled_T, float* sampled_ar, float* sampled_arflow, float* sampled_ard,
 		int W, int H,
 		const float2* means2D,
 		const float* colors,

@@ -1233,7 +1233,7 @@ PerGaussianRenderCUDA(
 	int W, int H, int B,
 	const uint32_t* __restrict__ per_tile_bucket_offset,
 	const uint32_t* __restrict__ bucket_to_tile,
-	const float* __restrict__ sampled_T, const float* __restrict__ sampled_ar, const float* __restrict__ sampled_ard,
+	const float* __restrict__ sampled_T, const float* __restrict__ sampled_ar, const float* __restrict__ sampled_arflow, const float* __restrict__ sampled_ard,
 	const float* __restrict__ bg_color,
 	const float2* __restrict__ points_xy_image,
 	const float4* __restrict__ conic_opacity,
@@ -1246,6 +1246,7 @@ PerGaussianRenderCUDA(
 	const uint32_t* __restrict__ n_contrib,
 	const uint32_t* __restrict__ max_contrib,
 	const float* __restrict__ pixel_colors,
+	const float* __restrict__ pixel_flows,
 	const float* __restrict__ pixel_invDepths,
 	const float* __restrict__ dL_dpixels,
 	const float* __restrict__ dL_invdepths,
@@ -1296,6 +1297,7 @@ PerGaussianRenderCUDA(
 	float2 xy = {0.0f, 0.0f};
 	float4 con_o = {0.0f, 0.0f, 0.0f, 0.0f};
 	float c[C] = {0.0f};
+	float f[2] = {0.0f};
 	float invd = 0.f;
 	if (valid_splat) {
 		gaussian_idx = point_list[splat_idx_global];
@@ -1305,12 +1307,16 @@ PerGaussianRenderCUDA(
 			con_o = conic_opacity[gaussian_idx];
 			for (int ch = 0; ch < C; ++ch)
 				c[ch] = colors[gaussian_idx * C + ch];
+			for (int ch = 0; ch < 2; ++ch)
+				f[ch] = flows_2d[gaussian_idx * 2 + ch];
 
 		}
 		else{
 			con_o = conic_opacity_static[gaussian_idx - P];
 			for (int ch = 0; ch < C; ++ch)
 				c[ch] = colors_static[(gaussian_idx - P) * C + ch];
+			// Static Gaussians carry no flow of their own; f stays zero so
+			// the flow VJP below reduces to its suffix (transmittance) term.
 		}
 	}
 
@@ -1322,6 +1328,7 @@ PerGaussianRenderCUDA(
 	float Register_dL_dconic2D_w = 0.0f;
 	float Register_dL_dopacity = 0.0f;
 	float Register_dL_dcolors[C] = {0.0f};
+	float Register_dL_dflows[2] = {0.0f};
 	float Register_dL_dinvdepths = 0.0f;
 
 	// tile metadata
@@ -1334,8 +1341,10 @@ PerGaussianRenderCUDA(
 	float T_final;
 	float last_contributor;
 	float ar[C];
+	float arflow[2];
 	float ard;
 	float dL_dpixel[C];
+	float dL_dpixflow[2];
 	float dL_invdepth;
 	const float ddelx_dx = 0.5 * W;
 	const float ddely_dy = 0.5 * H;
@@ -1353,6 +1362,10 @@ PerGaussianRenderCUDA(
 			ar[ch] = my_warp.shfl_up(ar[ch], 1);
 			dL_dpixel[ch] = my_warp.shfl_up(dL_dpixel[ch], 1);
 		}
+		for (int ch = 0; ch < 2; ++ch) {
+			arflow[ch] = my_warp.shfl_up(arflow[ch], 1);
+			dL_dpixflow[ch] = my_warp.shfl_up(dL_dpixflow[ch], 1);
+		}
 		ard = my_warp.shfl_up(ard, 1);
 		dL_invdepth = my_warp.shfl_up(dL_invdepth, 1);
 
@@ -1369,11 +1382,16 @@ PerGaussianRenderCUDA(
 			T = sampled_T[global_bucket_idx * BLOCK_SIZE + idx];
 			for (int ch = 0; ch < C; ++ch)
 				ar[ch] = -pixel_colors[ch * H * W + pix_id] + sampled_ar[global_bucket_idx * BLOCK_SIZE * C + ch * BLOCK_SIZE + idx];
+			for (int ch = 0; ch < 2; ++ch)
+				arflow[ch] = -pixel_flows[ch * H * W + pix_id] + sampled_arflow[global_bucket_idx * BLOCK_SIZE * 2 + ch * BLOCK_SIZE + idx];
 			ard = -pixel_invDepths[pix_id] + sampled_ard[global_bucket_idx * BLOCK_SIZE + idx];
 			T_final = final_Ts[pix_id];
 			last_contributor = n_contrib[pix_id];
 			for (int ch = 0; ch < C; ++ch) {
 				dL_dpixel[ch] = dL_dpixels[ch * H * W + pix_id];
+			}
+			for (int ch = 0; ch < 2; ++ch) {
+				dL_dpixflow[ch] = dL_dpix_flow[ch * H * W + pix_id];
 			}
 			dL_invdepth = dL_invdepths[pix_id];
 		}
@@ -1403,6 +1421,18 @@ PerGaussianRenderCUDA(
 				dL_dalpha += ((c[ch] * T) - (1.0f / (1.0f - alpha)) * (-ar[ch])) * dL_dchannel;
 
 				bg_dot_dpixel += bg_color[ch] * dL_dpixel[ch];
+			}
+
+			// add the gradient contribution of this pixel's flow to the gaussian.
+			// out_flow carries NO background term, so unlike colour there is no
+			// T_final background correction here. Static Gaussians have f == 0,
+			// which leaves only the suffix term: their alpha still scales T for
+			// every later dynamic Gaussian and therefore changes the flow.
+			for (int ch = 0; ch < 2; ++ch) {
+				arflow[ch] += weight * f[ch];
+				const float &dL_dchannel_flow = dL_dpixflow[ch];
+				Register_dL_dflows[ch] += weight * dL_dchannel_flow;
+				dL_dalpha += ((f[ch] * T) - (1.0f / (1.0f - alpha)) * (-arflow[ch])) * dL_dchannel_flow;
 			}
 
 			// // add the gradient contribution of this pixel's depth to the gaussian
@@ -1447,6 +1477,9 @@ PerGaussianRenderCUDA(
 			atomicAdd(&dL_dopacity[gaussian_idx], Register_dL_dopacity);
 			for (int ch = 0; ch < C; ++ch) {
 				atomicAdd(&dL_dcolors[gaussian_idx * C + ch], Register_dL_dcolors[ch]);
+			}
+			for (int ch = 0; ch < 2; ++ch) {
+				atomicAdd(&dL_dflows[gaussian_idx * 2 + ch], Register_dL_dflows[ch]);
 			}
 		}
 		else{
@@ -1565,7 +1598,7 @@ void BACKWARD::render(
 	int W, int H, int R, int B,
 	const uint32_t* per_bucket_tile_offset,
 	const uint32_t* bucket_to_tile,
-	const float* sampled_T, const float* sampled_ar, const float* sampled_ard,
+	const float* sampled_T, const float* sampled_ar, const float* sampled_arflow, const float* sampled_ard,
 	const float* bg_color,
 	const float2* means2D,
 	const float4* conic_opacity,
@@ -1578,6 +1611,7 @@ void BACKWARD::render(
 	const uint32_t* n_contrib,
 	const uint32_t* max_contrib,
 	const float* pixel_colors,
+	const float* pixel_flows,
 	const float* pixel_invdepths,
 	const float* dL_dpixels,
 	const float* dL_invdepths,
@@ -1602,7 +1636,7 @@ void BACKWARD::render(
 		W, H, B,
 		per_bucket_tile_offset,
 		bucket_to_tile,
-		sampled_T, sampled_ar, sampled_ard,
+		sampled_T, sampled_ar, sampled_arflow, sampled_ard,
 		bg_color,
 		means2D,
 		conic_opacity,
@@ -1615,6 +1649,7 @@ void BACKWARD::render(
 		n_contrib,
 		max_contrib,
 		pixel_colors,
+		pixel_flows,
 		pixel_invdepths,
 		dL_dpixels,
 		dL_invdepths,

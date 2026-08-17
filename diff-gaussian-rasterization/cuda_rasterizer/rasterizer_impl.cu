@@ -207,6 +207,7 @@ CudaRasterizer::ImageState CudaRasterizer::ImageState::fromChunk(char*& chunk, s
 
 	obtain(chunk, img.max_contrib, N, 128);
 	obtain(chunk, img.pixel_colors, N * NUM_CHANNELS, 128);
+	obtain(chunk, img.pixel_flows, N * 2, 128);
 	obtain(chunk, img.pixel_invDepths, N, 128);
 	obtain(chunk, img.bucket_count, N, 128);
 	obtain(chunk, img.bucket_offsets, N, 128);
@@ -236,6 +237,7 @@ CudaRasterizer::SampleState CudaRasterizer::SampleState::fromChunk(char *& chunk
 	obtain(chunk, sample.bucket_to_tile, C * BLOCK_SIZE, 128);
 	obtain(chunk, sample.T, C * BLOCK_SIZE, 128);
 	obtain(chunk, sample.ar, NUM_CHANNELS * C * BLOCK_SIZE, 128);
+	obtain(chunk, sample.arflow, 2 * C * BLOCK_SIZE, 128);
 	obtain(chunk, sample.ard, C * BLOCK_SIZE, 128);
 	return sample;
 }
@@ -449,7 +451,7 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 		imgState.ranges,
 		binningState.point_list,
 		imgState.bucket_offsets, sampleState.bucket_to_tile,
-		sampleState.T, sampleState.ar, sampleState.ard,
+		sampleState.T, sampleState.ar, sampleState.arflow, sampleState.ard,
 		width, height,
 		geomState.means2D,
 		feature_ptr,
@@ -471,6 +473,7 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 
 	CHECK_CUDA(cudaMemcpy(out_T, imgState.accum_alpha, width * height * sizeof(float), cudaMemcpyDeviceToDevice), debug);
 	CHECK_CUDA(cudaMemcpy(imgState.pixel_colors, out_color, sizeof(float) * width * height * NUM_CHANNELS, cudaMemcpyDeviceToDevice), debug);
+	CHECK_CUDA(cudaMemcpy(imgState.pixel_flows, out_flow, sizeof(float) * width * height * 2, cudaMemcpyDeviceToDevice), debug);
 	CHECK_CUDA(cudaMemcpy(imgState.pixel_invDepths, invdepth, sizeof(float) * width * height, cudaMemcpyDeviceToDevice), debug);
 	return std::make_tuple(num_rendered, bucket_sum);
 }
@@ -571,6 +574,7 @@ void CudaRasterizer::Rasterizer::backward(
 		sampleState.bucket_to_tile,
 		sampleState.T,
 		sampleState.ar,
+		sampleState.arflow,
 		sampleState.ard,
 		background,
 		geomState.means2D,
@@ -584,6 +588,7 @@ void CudaRasterizer::Rasterizer::backward(
 		imgState.n_contrib,
 		imgState.max_contrib,
 		imgState.pixel_colors,
+		imgState.pixel_flows,
 		imgState.pixel_invDepths,
 		dL_dpix,
 		dL_invdepths,
