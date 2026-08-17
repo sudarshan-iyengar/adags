@@ -356,6 +356,87 @@ Note that it did NOT appear in the hull dynamic run (exp 104 peaked at
 capacity is added relative to how much the model still needs, rather
 than by an absolute point count.
 
+### 5. THE COMBINED RUN — experiment 123, and the effects are SUB-ADDITIVE
+
+Experiment 123, commit `479ee07`, dgx/V100, resumed experiment 104's
+`chkpnt_best.pth` (iteration 6000, 416,599 points) with optimizer state
+carried and densification frozen — the point count held at **416,599 for
+all 9,000 iterations**, so no capacity was added.
+
+Milestones read from the tfevents series, NOT inferred from
+"Saving best checkpoint":
+
+| iteration | val PSNR | delta |
+|---:|---:|---:|
+| 6000 (exp 104) | 22.4553 | — |
+| 8000 | 22.7804 | +0.3251 |
+| 10000 | 22.9175 | +0.1371 |
+| 12000 | 23.0438 | +0.1263 |
+| **15000** | **23.1834** | +0.1396 |
+
+`best_val_iter == 15000`: monotonic, and **still improving at the end**.
+
+Both saved checkpoints were evaluated under the official conventions
+(experiments 124 and 125) and are **bit-identical** — 23.1678 / 0.92247 /
+0.10507 from each — which is expected since `best_val_iter` equals
+`final_iteration`, and is recorded as the consistency check it is.
+
+#### Official-convention comparison, 846 held-out units throughout
+
+| model | PSNR | SSIM | VGG LPIPS |
+|---|---:|---:|---:|
+| exp 84 baseline (6k, frustum) | 21.3565 | 0.90034 | 0.12284 |
+| exp 101 (15k, frustum, frozen capacity) | 22.3539 | 0.91155 | 0.11184 |
+| exp 104 (6k, hull) | 22.4382 | 0.91381 | 0.11305 |
+| **exp 123 (15k, hull, frozen capacity)** | **23.1678** | **0.92247** | **0.10507** |
+| oracle mean (8 frames) | 25.7192 | 0.93982 | 0.08181 |
+| oracle excl. frame 0 | 25.4663 | 0.93731 | 0.08611 |
+
+Experiment 123 deltas: **+1.811 dB / +0.0221 / -0.0178** over exp 84;
++0.814 / +0.0109 / -0.0068 over exp 101; +0.730 / +0.0087 / -0.0080 over
+exp 104. It is the best dynamic model on all three official metrics.
+
+#### The two effects do NOT add
+
+```
+exp 84 baseline                             21.3565
+  initialization alone (104 - 84)            +1.0817
+  exposure alone      (101 - 84)             +0.9974
+  naive sum                                  23.4356
+  MEASURED (exp 123)                         23.1678
+  SUB-ADDITIVE BY                            -0.2678   (~13% overlap)
+```
+
+The same figure comes out of the ADAGS conventions (-0.269), so it is not
+a metric artifact. Read directly: adding exposure to the hull model buys
+**+0.730 dB**, while adding the same exposure to the frustum model bought
+**+0.997 dB**. The hull had already removed part of the under-fitting
+that longer training was otherwise compensating for. That is what
+overlap looks like, and it was recorded as a possibility before the run
+rather than after.
+
+#### Residual to the oracle — this is interpretation case 2
+
+| residual, official | PSNR | SSIM | LPIPS |
+|---|---:|---:|---:|
+| vs oracle mean | **2.551** | 0.0174 | 0.0233 |
+| vs oracle excl. frame 0 | **2.299** | 0.0148 | 0.0190 |
+
+Against the frame-0-excluded oracle, the total baseline-to-oracle gap is
+4.110 dB, of which experiment 123 has closed **1.811 dB (44%)**, leaving
+**2.299 dB (56%)**.
+
+Per the frozen decision tree this is **case 2**: materially below the
+per-frame oracle DESPITE continued improvement. It is NOT case 3 —
+nothing has plateaued; the last interval still gained +0.140 dB. So the
+residual is quantified and is explicitly NOT all assigned to the
+representation: exposure has not saturated, and how much further it
+would run is unmeasured because exposure experiments are now stopped by
+directive.
+
+**Exposure experiments end here.** The next discriminator is a mechanism
+audit plus a supervision test, not more iterations.
+
 ## Recorded in advance: what a negative result would and would not mean
 
 If the hull initialization does not help, that does NOT restore the
