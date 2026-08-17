@@ -316,6 +316,48 @@ def main(argv=None) -> int:
         and grad_report.get("basis_grad_absmax", 0.0) > 0.0)
     report["F_gradients"] = grad_report
 
+    # ---------- G: is a zero field a DEGENERATE INIT or a SEVERED PATH?
+    # A freshly initialized model can have exactly-zero motion, in which
+    # case screen_next == screen_now and the rendered field is legitimately
+    # zero. That is indistinguishable at the output from a gradient path
+    # that does not connect. Perturbing the coefficients to a definitely
+    # nonzero motion separates the two: if the field becomes nonzero AND
+    # gradients appear, the zero was the init; if the field becomes
+    # nonzero and gradients stay zero, the path is severed and no
+    # supervision cell would learn anything.
+    perturb = {"attempted": False}
+    if coeff is not None and coeff.numel():
+        perturb["attempted"] = True
+        with torch.no_grad():
+            saved = coeff.detach().clone()
+            gen = torch.Generator(device=coeff.device).manual_seed(0)
+            coeff.copy_(torch.randn(coeff.shape, generator=gen,
+                                    device=coeff.device, dtype=coeff.dtype) * 0.1)
+        for p in (coeff, basis):
+            if p is not None and getattr(p, "grad", None) is not None:
+                p.grad = None
+        pkg2 = render(cam, gaussians, pipe, background)
+        perturb["rendered_flow_absmax"] = float(pkg2["flow"].abs().max())
+        perturb["rendered_flow_nonzero"] = perturb["rendered_flow_absmax"] > 0.0
+        loss2 = compute_flow_loss(pkg2["flow"], target, mask)
+        perturb["flow_loss"] = float(loss2)
+        loss2.backward()
+        for name, p in (("coeff", coeff), ("basis", basis)):
+            g = getattr(p, "grad", None) if p is not None else None
+            perturb[f"{name}_grad_absmax"] = float(g.abs().max()) if g is not None else 0.0
+        perturb["BOTH_PATHS_RECEIVE_GRADIENT"] = bool(
+            perturb.get("coeff_grad_absmax", 0.0) > 0.0
+            and perturb.get("basis_grad_absmax", 0.0) > 0.0)
+        perturb["verdict"] = (
+            "DEGENERATE INIT -- path is live once motion is nonzero"
+            if perturb["rendered_flow_nonzero"] and perturb["BOTH_PATHS_RECEIVE_GRADIENT"]
+            else ("SEVERED GRADIENT PATH -- field responds but no gradient"
+                  if perturb["rendered_flow_nonzero"]
+                  else "FIELD DOES NOT RESPOND TO MOTION -- renderer branch not taken"))
+        with torch.no_grad():
+            coeff.copy_(saved)
+    report["G_perturbation"] = perturb
+
     (out_dir / "flow_plumbing_smoke.json").write_text(
         json.dumps(report, indent=2, sort_keys=True), encoding="utf-8")
     p0 = report["probes"][0]
@@ -331,6 +373,11 @@ def main(argv=None) -> int:
     print(f"[flow] GRADIENTS coeff={grad_report['coeff_grad_absmax']:.3e} "
           f"basis={grad_report['basis_grad_absmax']:.3e} "
           f"BOTH={grad_report['BOTH_PATHS_RECEIVE_GRADIENT']}", flush=True)
+    if perturb.get("attempted"):
+        print(f"[flow] PERTURBED flow_absmax={perturb['rendered_flow_absmax']:.3e} "
+              f"coeff={perturb['coeff_grad_absmax']:.3e} "
+              f"basis={perturb['basis_grad_absmax']:.3e}", flush=True)
+        print(f"[flow] VERDICT {perturb['verdict']}", flush=True)
     print(f"[flow] -> {out_dir}", flush=True)
     return 0
 
