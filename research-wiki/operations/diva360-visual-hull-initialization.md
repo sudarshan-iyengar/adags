@@ -285,6 +285,61 @@ two. Experiment 101 — the unchanged 15k continuation at frozen capacity
 matters now: if 10,000 further iterations at fixed capacity buy little,
 exposure is not the explanation and the temporal representation is.
 
+### 3b. CORRECTION — experiment 101 lands, and exposure is a real term
+
+Experiment 101 (the unchanged 15k continuation, densification frozen,
+capacity pinned at 338,528 points for all 10,000 iterations) COMPLETED
+while the decomposition above was being written. It changes the reading.
+
+| iteration | val PSNR | delta |
+|---:|---:|---:|
+| 5000 (exp 84 checkpoint) | 21.3705 | — |
+| 6000 | 21.6014 | +0.2309 |
+| 8000 | 21.8694 | +0.2680 |
+| 10000 | 22.0471 | +0.1777 |
+| 12000 | 22.1165 | +0.0694 |
+| **15000** | **22.3679** | +0.2514 |
+
+**+0.997 dB from OPTIMIZATION EXPOSURE ALONE**, at identical
+initialization, identical capacity and identical everything else. The
+point count is 338,528 at every one of those rows, so the densification
+freeze did exactly what it was for and none of this is capacity.
+`best_val_iter == 15000`: it was still improving at the end.
+
+**This weakens the attribution in section 3, and the correction is
+recorded rather than quietly absorbed.** That section assigned +3.273 dB
+to "temporal representation", flagging per-image exposure as a confound
+it could not separate. Exposure is now measured and it is NOT small: a
+full decibel, unsaturated. The three interventions measured so far are:
+
+```
+exp 84 baseline (frustum, 6000)                 21.308
+  + hull initialization        (exp 104, 6000)  22.455   +1.147
+  + exposure to 15k, capacity frozen (exp 101)  22.368   +0.997 (over 21.371 @5000)
+  + per-frame, hull init, ~686 epochs/image     25.728
+published PF I-NGP / MixVoxels                  25.346 / 25.090
+```
+
+Two independent single-factor interventions both land at about **22.4**,
+and NEITHER reaches published parity. The per-frame oracle does.
+
+How much of the oracle's remaining +3.27 dB over the hull dynamic run is
+still exposure cannot be settled from here. The honest bound: exposure
+bought +0.997 dB over 10,000 iterations and its per-interval gains are
+decelerating overall (+0.23, +0.27, +0.18, +0.07, +0.25 — noisy but
+averaging ~0.1 dB per 1,000), so extrapolating even generously does not
+obviously close a further 2+ dB. That is an EXTRAPOLATION and is labelled
+as one. What is measured is that neither better initialization nor 2.5x
+the optimization closes the gap, and removing the temporal representation
+does.
+
+One further reading falls out. Experiment 84 at iteration 6000, with
+densification running, scored 21.3079 at 507,178 points. Experiment 101
+at iteration 6000, with densification FROZEN at 338,528, scored 21.6014
+— **+0.29 dB with 169,000 fewer points**, from the same checkpoint
+lineage. That is the capacity-overshoot finding again, from a fourth
+direction.
+
 ### 4. Capacity overshoot, now seen in ten runs
 
 Every one of the eight oracle frames PEAKED before its final iteration —
