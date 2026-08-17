@@ -286,26 +286,61 @@ def diagnose_gradient_routing() -> dict:
     loss moves the wrong tensor, it is an autograd position bug and the
     kernel is fine.
     """
+    import math
+
     import torch
 
+    import gaussian_renderer.diff_gaussian_rasterization as wrapper
     from tests.test_flow_backward_vjp import TinyScene
 
-    def fresh():
-        scene = TinyScene(
-            means3D=[(0.0, 0.0, -0.5), (0.05, -0.05, 0.5)],
-            opacities=[0.6, 0.7],
-            flows=[(3.0, -2.0), (-1.5, 2.5)],
-        )
+    # `num_buckets` decides the backward render grid: BACKWARD::render
+    # launches ((B*32)+31)/32 == B blocks, so B == 0 launches NOTHING and,
+    # with debug off, the invalid-configuration error is never surfaced.
+    # Every render-stage gradient would then be silently zero. That is a
+    # measurement, not a guess, so capture it at the boundary.
+    captured: dict = {}
+    original_module = wrapper._C
+
+    class _Spy:
+        """Delegates everything, and records the two counts on the way past.
+
+        The module-level name is rebound rather than an attribute set on
+        the extension module itself, because a C extension is not
+        obliged to accept attribute assignment.
+        """
+
+        def __getattr__(self, name):
+            return getattr(original_module, name)
+
+        def rasterize_gaussians(self, *args):
+            result = original_module.rasterize_gaussians(*args)
+            captured["num_rendered"] = int(result[0])
+            captured["num_buckets"] = int(result[1])
+            return result
+
+    def build(count):
+        if count == 2:
+            means3D = [(0.0, 0.0, -0.5), (0.05, -0.05, 0.5)]
+            opacities = [0.6, 0.7]
+            flows = [(3.0, -2.0), (-1.5, 2.5)]
+        else:
+            means3D, opacities, flows = [], [], []
+            for index in range(count):
+                z = -0.6 + 1.2 * index / max(count - 1, 1)
+                means3D.append((0.0, 0.0, z))
+                opacities.append(0.08)
+                flows.append((2.0 * math.cos(0.7 * index), 2.0 * math.sin(0.7 * index)))
+        return TinyScene(means3D=means3D, opacities=opacities, flows=flows)
+
+    def run(count, loss_key):
+        scene = build(count)
         leaves = {
             "flows": scene.flows.clone().requires_grad_(True),
             "opacities": scene.opacities.clone().requires_grad_(True),
             "means3D": scene.means3D.clone().requires_grad_(True),
         }
-        return scene, leaves
-
-    def run(loss_key):
-        scene, leaves = fresh()
         means2D = torch.zeros_like(leaves["means3D"], requires_grad=True)
+        captured.clear()
         out = scene.render(
             means3D=leaves["means3D"],
             opacities=leaves["opacities"],
@@ -322,21 +357,22 @@ def diagnose_gradient_routing() -> dict:
             None if means2D.grad is None else float(means2D.grad.abs().max())
         )
         grads["_output_absmax"] = float(target.abs().max())
+        grads["_rasterized"] = int((out["radii"].reshape(-1) > 0).sum())
+        grads.update(captured)
         return grads
 
     report = {}
-    for loss_key in ("flow", "render", "alpha"):
-        try:
-            report[f"loss_on_{loss_key}"] = run(loss_key)
-        except Exception as exc:  # noqa: BLE001 - diagnostic, never fatal
-            report[f"loss_on_{loss_key}"] = {"error": f"{type(exc).__name__}: {exc}"}
-
-    # Output/gradient ordering of the autograd Function, read at runtime
-    # rather than assumed from the source.
-    scene, leaves = fresh()
-    out = scene.render(flows=leaves["flows"])
-    report["flow_output_shape"] = list(out["flow"].shape)
-    report["flow_grad_fn"] = type(out["flow"].grad_fn).__name__
+    wrapper._C = _Spy()
+    try:
+        for count in (2, 8, 72):
+            for loss_key in ("render", "flow"):
+                key = f"n{count}_loss_on_{loss_key}"
+                try:
+                    report[key] = run(count, loss_key)
+                except Exception as exc:  # noqa: BLE001 - diagnostic only
+                    report[key] = {"error": f"{type(exc).__name__}: {exc}"}
+    finally:
+        wrapper._C = original_module
     return report
 
 
