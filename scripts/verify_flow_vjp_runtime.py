@@ -269,6 +269,77 @@ def prove_flow_gradient_is_live() -> dict:
     return measured
 
 
+def diagnose_gradient_routing() -> dict:
+    """Where does the gradient actually GO?
+
+    Experiment 133 established that the scene renders, the forward flow is
+    nonzero, the upstream gradient is nonzero, and yet BOTH the flow-value
+    and the flow-mediated opacity gradients are exactly zero. Every
+    argument position from Python through to the kernel has been read and
+    matches. So the next thing to measure is routing: does a flow loss
+    deposit its gradient on some OTHER input (an off-by-one in the
+    autograd Function's returned tuple would do exactly that), and does
+    the same machinery work at all for a colour loss?
+
+    The colour loss is the control. If colour moves opacity and flow moves
+    nothing anywhere, the defect is specific to the flow path. If a flow
+    loss moves the wrong tensor, it is an autograd position bug and the
+    kernel is fine.
+    """
+    import torch
+
+    from tests.test_flow_backward_vjp import TinyScene
+
+    def fresh():
+        scene = TinyScene(
+            means3D=[(0.0, 0.0, -0.5), (0.05, -0.05, 0.5)],
+            opacities=[0.6, 0.7],
+            flows=[(3.0, -2.0), (-1.5, 2.5)],
+        )
+        leaves = {
+            "flows": scene.flows.clone().requires_grad_(True),
+            "opacities": scene.opacities.clone().requires_grad_(True),
+            "means3D": scene.means3D.clone().requires_grad_(True),
+        }
+        return scene, leaves
+
+    def run(loss_key):
+        scene, leaves = fresh()
+        means2D = torch.zeros_like(leaves["means3D"], requires_grad=True)
+        out = scene.render(
+            means3D=leaves["means3D"],
+            opacities=leaves["opacities"],
+            flows=leaves["flows"],
+            means2D=means2D,
+        )
+        target = out[loss_key]
+        (target * torch.ones_like(target)).sum().backward()
+        grads = {
+            name: (None if leaf.grad is None else float(leaf.grad.abs().max()))
+            for name, leaf in leaves.items()
+        }
+        grads["means2D"] = (
+            None if means2D.grad is None else float(means2D.grad.abs().max())
+        )
+        grads["_output_absmax"] = float(target.abs().max())
+        return grads
+
+    report = {}
+    for loss_key in ("flow", "render", "alpha"):
+        try:
+            report[f"loss_on_{loss_key}"] = run(loss_key)
+        except Exception as exc:  # noqa: BLE001 - diagnostic, never fatal
+            report[f"loss_on_{loss_key}"] = {"error": f"{type(exc).__name__}: {exc}"}
+
+    # Output/gradient ordering of the autograd Function, read at runtime
+    # rather than assumed from the source.
+    scene, leaves = fresh()
+    out = scene.render(flows=leaves["flows"])
+    report["flow_output_shape"] = list(out["flow"].shape)
+    report["flow_grad_fn"] = type(out["flow"].grad_fn).__name__
+    return report
+
+
 def run_test_modules() -> dict:
     """Run the suites and treat a SKIP as a failure, because here it is."""
     loader = unittest.TestLoader()
@@ -331,6 +402,7 @@ def main() -> int:
     stages = (
         ("environment", describe_environment),
         ("binary", describe_binary),
+        ("gradient_routing", diagnose_gradient_routing),
         ("functional_proof", prove_flow_gradient_is_live),
         ("tests", run_test_modules),
     )
