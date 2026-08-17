@@ -212,3 +212,115 @@ probes F and G, which already fail today and must pass after the repair.
 That flow supervision would or would not help. Nothing about the idea
 has been tested — only that the machinery cannot currently express it.
 The N3V targets themselves are sound on every axis measured.
+
+## Focused adversarial review of the repair (2026-08-17)
+
+**Reviewer substitution, recorded rather than glossed.** The directive
+asked for Codex `gpt-5.6-sol-xhigh`. That identifier is REJECTED by the
+API on this account: `HTTP 400, "The 'gpt-5.6-sol-xhigh' model is not
+supported when using Codex with a ChatGPT account."` The review was run
+instead on Codex at default model with `model_reasoning_effort: high`,
+`sandbox: read-only`, `approval-policy: never`, carrying the identical
+12-item prompt. **The requested reviewer did not run.** The review that
+did run is a real independent read of the diff, but it is not the one
+specified, and no claim here rests on it having been the specified one.
+
+Scope given: the actual CUDA/Python diff at 6550772, the reference
+oracle, the gradient tests, the active build/import path and
+disabled-flow equivalence. No file modification, no unrelated renderer
+refactoring.
+
+### Result: 9 of 12 OK, 3 defects, verdict REJECT
+
+OK, and these are the load-bearing ones: the implemented derivative IS
+the VJP of the ACTIVE forward compositor (item 1); `T` is `T_{i-1}` and
+`weight` is `w_i` (2); the `arflow` checkpoint reconstruction has NO
+off-by-one-batch error and its index arithmetic matches `ar` (3); both
+`arflow` and `dL_dpixflow` are shuffled (4); static coupling is correct
+and `dL_dflows` is correctly restricted to `gaussian_idx < P` (5); the
+background omission is correct (6); buffer sizing and aliasing are sound
+(7); positional threading agrees at every declaration, definition, launch
+and call site (8); disabled-flow equivalence HOLDS, so experiments 104
+and 123 remain valid controls (11); `resize_flow` semantics and its
+autograd safety are correct (12).
+
+The reviewer independently confirmed the point that decides the patch:
+the dead `renderCUDA` is NOT a better oracle. It does not assign the
+flow-mediated alpha derivative to static contributors, so relative to the
+active forward the patch is right and the dead kernel is wrong. Not
+reviving it was correct.
+
+### Finding 1, ranked HIGH by the reviewer — verified real, NOT fixable here
+
+`alpha = min(0.99f, con_o.w * G)` (`backward.cu:1410`), but `dL_dG =
+con_o.w * dL_dalpha` and `Register_dL_dopacity += G * dL_dalpha` both use
+`d(alpha)/d(con_o.w*G) = 1`. In the saturated regime the true derivative
+is zero, so opacity and geometry gradients are nonzero where they should
+vanish.
+
+Verified in source, and the reviewer's own text concedes it "predates the
+patch for other channels". The structural fact that settles the
+disposition: `dL_dalpha` is a **single shared accumulator**. Colour, flow,
+depth and the background term all add into it, and ONE `dL_dG` is formed
+from the total. Therefore:
+
+* gating the clamp changes **colour and depth** gradients, which
+  numerically invalidates experiments 104 and 123 as disabled-flow
+  controls — a precondition this lane is explicitly bound by;
+* gating only the flow share would be incoherent, because the clamp is a
+  property of alpha, not of a channel.
+
+So the fix is forbidden by a binding constraint, not merely declined. It
+is also out of scope under the surgical-change rule: pre-existing,
+shared, and inherited identically by every channel. It was already
+disclosed in 6550772's own commit body before the review ran.
+
+**The claim is narrowed rather than defended.** The patch delivers an
+exact VJP **with respect to alpha** — which is what the reviewer's item 1
+confirms. It does NOT deliver an exact gradient to opacity and geometry
+in the saturated-alpha regime, and the word "complete" in the commit
+subject overstates that by exactly this much. Recorded here because the
+commit message cannot be rewritten.
+
+### Finding 2, B == 0 — verified real, pre-existing, untouched
+
+`rasterize_points.cu:273` guards `P != 0` only, while the launch grid is
+`((B*32) + 31) / 32 = B`, so `B == 0` with `P > 0` is a zero-grid launch
+(`cudaErrorInvalidConfiguration`). Reachable in principle when every
+primitive touches zero tiles. Shared with colour, untouched by this
+patch, mentioned and not fixed.
+
+### Finding 3, checkpoint boundary untested — ACCEPTED and FIXED
+
+The only finding inside this patch's own scope, and it targets precisely
+its novel part. Every existing scene ran entirely inside bucket 0, where
+`sampled_arflow` is zero, so a wrong bucket stride, a wrong channel
+stride or a checkpoint taken one batch late would all have PASSED.
+
+Fixed by `CheckpointBoundaryTests` in `tests/test_flow_backward_vjp.py`
+(5 tests): 72 primitives at strictly increasing depth in one tile,
+crossing the stride-32 checkpoint twice.
+
+* `dL_dflows` alone would NOT have caught this — it is `weight *
+  upstream` and reads no `arflow`. Only the alpha path consumes the
+  reconstructed suffix, so the opacity tests are the ones that bite.
+* One test is a guard on the test itself: it asserts the scene really
+  does exceed 32 contributors, AND that no pixel hits the kernel's
+  `T < 1e-4` early-out, which the oracle does not model. Per-primitive
+  opacity is held at 0.08 for that reason.
+* The strongest check is oracle-independent: central differences on the
+  opacity of primitive 50, which lies past the first checkpoint and whose
+  gradient therefore comes from a RECONSTRUCTED `arflow`, not a
+  zero-initialised bucket.
+
+Also noted by the reviewer and accepted as a stated limitation: the
+saturated-alpha test asserts only finiteness. That is deliberate and now
+consistent with finding 1 — asserting correctness there would assert
+behaviour the patch does not and may not provide.
+
+### Status
+
+Tests: 36 in this file, collection verified. All CUDA tests SKIP on the
+workstation, which has no GPU and no working torch. **A skip is not a
+pass.** Nothing here is validated until it runs on a V100 against the
+rebuilt image.

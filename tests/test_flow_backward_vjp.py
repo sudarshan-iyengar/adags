@@ -723,6 +723,157 @@ class StaticGaussianFlowCouplingTests(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_RASTERIZER, GPU_REASON)
+class CheckpointBoundaryTests(unittest.TestCase):
+    """Cross the 32-stride checkpoint, which is the novel part of the VJP.
+
+    The forward writes `sampled_arflow` every 32nd step of the tile's batch
+    loop (`forward.cu:709-713`, guarded by `j % 32 == 0`), and the backward
+    reconstructs the suffix sum from it as
+    `-pixel_flows + sampled_arflow[bucket]`. Every other test in this file
+    uses a handful of primitives, so the whole reconstruction runs inside
+    bucket 0 with `sampled_arflow == 0` and a wrong bucket stride, a wrong
+    channel stride or a checkpoint taken one batch late would all still
+    pass. These scenes put >32 primitives in every tile so the boundary is
+    crossed two or three times per pixel.
+
+    The scene is built to stay inside the oracle's modelling assumptions:
+    `composite_flow` implements no early termination, whereas the kernel
+    stops a pixel once `T < 1e-4` (`forward.cu:746`). Per-primitive opacity
+    is therefore held low enough that `T` survives the whole stack, and
+    `test_the_scene_is_a_valid_model_of_the_kernel` asserts that rather
+    than assuming it.
+    """
+
+    CONTRIBUTORS = 72
+    OPACITY = 0.08
+
+    def _scene(self):
+        means3D, opacities, flows = [], [], []
+        for index in range(self.CONTRIBUTORS):
+            # Strictly increasing depth: the tile sort is then unambiguous
+            # and the oracle's `depth_order()` cannot disagree with the
+            # kernel's over a tie.
+            z = -0.6 + 1.2 * index / (self.CONTRIBUTORS - 1)
+            means3D.append((0.0, 0.0, z))
+            opacities.append(self.OPACITY)
+            # Distinct per primitive, so a suffix sum taken from the wrong
+            # bucket lands on visibly wrong values instead of averaging out.
+            angle = 0.7 * index
+            flows.append((2.0 * math.cos(angle), 2.0 * math.sin(angle)))
+        return TinyScene(means3D=means3D, opacities=opacities, flows=flows)
+
+    def test_the_scene_is_a_valid_model_of_the_kernel(self):
+        """Guards the test itself: boundary crossed, no early termination."""
+        scene = self._scene()
+        alphas = scene.per_gaussian_alphas()
+
+        # Contributors are the primitives the kernel does not cull at
+        # `alpha < 1/255`. `per_gaussian_alphas` renders each one through
+        # the same kernel, so that cull is already baked into `alphas`.
+        contributors = (alphas > 1.0 / 255.0).sum(dim=0)
+        self.assertGreater(
+            int(contributors.max()),
+            32,
+            "scene never crosses a checkpoint boundary, so it tests nothing",
+        )
+
+        _, transmittance = composite_flow(
+            alphas, scene.unified_flows(), order=scene.depth_order()
+        )
+        self.assertGreater(
+            float(transmittance.min()),
+            1e-4,
+            "a pixel terminated early, which the reference oracle does not "
+            "model, so any parity failure here would be the test's fault",
+        )
+
+    def test_forward_matches_the_reference_across_buckets(self):
+        scene = self._scene()
+        rendered = scene.render()["flow"]
+        expected, _ = scene.reference_flow()
+        self.assertLess(_max_rel_error(rendered, expected), 2e-3)
+
+    def test_flow_gradient_matches_the_reference_across_buckets(self):
+        scene = self._scene()
+        generator = torch.Generator(device="cuda").manual_seed(17)
+        upstream = torch.rand(
+            (2, scene.height, scene.width), generator=generator, device="cuda"
+        )
+        flows = scene.flows.clone().requires_grad_(True)
+        out = scene.render(flows=flows)
+        (out["flow"] * upstream).sum().backward()
+
+        alphas = scene.per_gaussian_alphas()
+        expected, _ = flow_vjp(
+            alphas, scene.unified_flows(), upstream, order=scene.depth_order()
+        )
+        self.assertLess(_max_rel_error(flows.grad, expected[: scene.count]), 2e-2)
+
+    def test_opacity_gradient_matches_the_reference_across_buckets(self):
+        """The suffix term, which is what the checkpoint reconstructs.
+
+        `dL_dflows` needs no `arflow` at all — it is `weight * upstream`.
+        Only the alpha path reads the reconstructed suffix, so this is the
+        test that a bucket-indexing defect actually fails.
+        """
+        scene = self._scene()
+        generator = torch.Generator(device="cuda").manual_seed(19)
+        upstream = torch.rand(
+            (2, scene.height, scene.width), generator=generator, device="cuda"
+        )
+        opacities = scene.opacities.clone().requires_grad_(True)
+        out = scene.render(opacities=opacities)
+        (out["flow"] * upstream).sum().backward()
+
+        alphas = scene.per_gaussian_alphas()
+        _, dL_dalphas = flow_vjp(
+            alphas, scene.unified_flows(), upstream, order=scene.depth_order()
+        )
+        expected = dL_dopacity_from_dL_dalpha(
+            dL_dalphas, alphas, scene.unified_opacities()
+        )
+        self.assertLess(_max_rel_error(opacities.grad.reshape(-1), expected), 2e-2)
+
+    def test_opacity_gradient_past_the_boundary_matches_central_differences(self):
+        """Independent of the oracle: perturb a primitive in a later bucket.
+
+        Index 50 is reached after the checkpoint at stride 32, so its
+        gradient is computed from a reconstructed `arflow`, not from the
+        zero-initialised bucket 0.
+        """
+        scene = self._scene()
+        index = 50
+        self.assertGreater(index, 32)
+        generator = torch.Generator(device="cuda").manual_seed(23)
+        upstream = torch.rand(
+            (2, scene.height, scene.width), generator=generator, device="cuda"
+        )
+
+        opacities = scene.opacities.clone().requires_grad_(True)
+        out = scene.render(opacities=opacities)
+        (out["flow"] * upstream).sum().backward()
+        analytic = float(opacities.grad[index, 0])
+
+        step = 5e-3
+        plus = scene.opacities.clone()
+        minus = scene.opacities.clone()
+        plus[index, 0] += step
+        minus[index, 0] -= step
+        with torch.no_grad():
+            loss_plus = float((scene.render(opacities=plus)["flow"] * upstream).sum())
+            loss_minus = float((scene.render(opacities=minus)["flow"] * upstream).sum())
+        numeric = (loss_plus - loss_minus) / (2.0 * step)
+
+        self.assertGreater(
+            abs(numeric),
+            1e-3,
+            "central difference is at the float32 noise floor, so this "
+            "comparison would pass for a zero gradient too",
+        )
+        self.assertLess(abs(analytic - numeric) / abs(numeric), 5e-2)
+
+
+@unittest.skipUnless(HAVE_RASTERIZER, GPU_REASON)
 class DegenerateSceneTests(unittest.TestCase):
     def test_empty_scene_renders_zero_flow(self):
         device = "cuda"
