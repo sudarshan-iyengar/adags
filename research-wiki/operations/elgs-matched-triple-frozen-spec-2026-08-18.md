@@ -201,3 +201,108 @@ The experiment ends when four cells are terminal, `S` is measured, `D` is
 computed for T-2 and T-3, and the section 3 rule is applied. No further cells
 are authorised by this page under any outcome, and a disappointing result
 licenses no follow-up run without a new spec.
+
+---
+
+## REVIEW ROUND 1 (2026-08-18) — VERDICT: **BLOCKED**, and the blocker is a THIRD one this spec did not know about
+
+A fresh-context adversarial reviewer with no prior project context read this
+spec and the implementation and returned **BLOCKED**. Recorded append-only.
+**Section 6's rounds blocker is not the binding one.**
+
+### BLOCKING — the `elgs_a` optimizer parameter group crashes ordinary densification
+
+**Verified independently in source by the primary agent before recording.**
+
+`elgs/trainer_hooks.py:684` registers the a-logits as an optimizer parameter
+group named `elgs_a` whose `params` is `list(state.runtime.logit_parameters()
+.values())` — **one tensor per family**, so its length is the family count, not
+1. `scene/gaussian_model.py`'s `cat_tensors_to_optimizer` (`:1654-1664`) asserts
+
+```
+assert len(group["params"]) == 1, f"Group {name} has more than one param"
+```
+
+and its skip-list is `("gate_mlp", "gate_params", "motion_lora_basis",
+"motion_scaffold_coeff", "motion_scaffold_basis")` — **`elgs_a` is not in it.**
+`_prune_optimizer` (`:1545-1580`) has the same skip-list and indexes
+`group["params"][0][mask]`, which is equally wrong for a per-family tensor.
+
+And the group exists from the start: `setup_elgs` calls `seed_families(...,
+iteration=0)` at `:311`, which calls `_refresh_logit_param_group` at `:650`.
+The M0 smoke reports **131 families** on a 50k-point cloud, so
+`len(group["params"])` is 131 at iteration 0.
+
+Under **this spec's own capacity policy** — `densify_from_iter` 500,
+`densification_interval` 100, from scratch — the first densification fires at
+**iteration 600** and hits that assert. **T-2 and T-3 as specified crash at
+iteration 600.**
+
+**Why it has never been seen:** no configuration in the repository has ever
+combined `elgs_enable: True` with active densification. Every EL-GS config sets
+`densify_until_iter` below `densify_from_iter` (`smoke_elgs.yaml`: 400 vs the
+default 500), and every densifying config sets `elgs_enable: False`. No test
+covers it either — `tests/test_elgs_trainer_setup.py` stubs the Gaussian model
+and never calls the real `densify_and_prune`.
+
+**Section 6's proposed `elgs_rounds_enabled` repair does not touch this.**
+Disabling rounds stops the structural search; it does not remove the `elgs_a`
+group, which is created at seeding.
+
+This is the most valuable finding of the block: the spec would have consumed a
+GPU-slot claim, crashed 600 iterations in, and the failure would have looked
+like an infrastructure problem rather than a design one.
+
+### MATERIAL — and the second one is a trap this spec set for itself
+
+1. **The mandatory 500-iteration preflight stops one densification interval
+   short of the crash.** Densification begins at 500 and the first interval
+   boundary is 600, so a 500-iteration preflight would complete cleanly and
+   **falsely appear to validate the configuration**. Any preflight must run past
+   the first densification boundary — at least 700 iterations.
+2. **"Temporal-support collapse" is degenerate for T-2/T-3 as specified.** With
+   K = 1 latched full-span families and rounds off, per-primitive temporal
+   support is constant by construction, so the pathology cannot be observed on
+   the cells it is meant to discriminate. The definition needs replacing with
+   one that is measurable under the actual cell configuration, or the branch it
+   feeds needs restating.
+3. **The reserved-unit parity test's decisive assertion is weaker than this
+   spec claims.** `tests/test_elgs_reserved_parity.py`'s
+   `test_both_paths_drop_identical_indices` compares the control path against a
+   hand-built state carrying the shared pool, and pins the link to `setup_elgs`
+   by **source-text pattern matching** rather than by executing `setup_elgs`.
+   The reviewer traced the mechanism manually and found it correct, so the claim
+   is true — but the test does not prove it end to end, and this spec should say
+   so rather than cite the test as if it did.
+4. **The decision rule's formula is symmetric while its outcome table is
+   one-sided.** `|D| <= max(0.5 dB, S)` treats a large POSITIVE `D` (presence
+   much better) as "not comparable", yet the table's first row is "comparable
+   **or better**". A large positive `D` is therefore technically undefined.
+   Needs a one-sided union: comparable iff `D >= -max(0.5 dB, S)`.
+5. **`S` is a single-replicate estimate with no ceiling.** One pair gives one
+   difference; an unlucky T-1/T-1' pair with a large `|D|` would inflate `S` and
+   could launder a real regression as "comparable". Needs a stated ceiling above
+   which `S` is treated as evidence of an unstable configuration rather than as
+   a tolerance.
+
+MINOR: the endpoint-degradation definition is operational as written, and the
+cost estimate's transparency is fine once the blocking finding is closed.
+
+### Status
+
+**BLOCKED. Not repaired in this block.** Unlike the audit preregistration, this
+spec's blocker is a code defect in `scene/gaussian_model.py`, and repairing it
+means changing the optimizer's densification path for every EL-GS run — which
+is a larger and more consequential change than a flag, and one that should not
+be improvised at the end of a block against an unsigned spec.
+
+**The launch preconditions are now three, not two:**
+
+1. the `elgs_a` densify/prune defect repaired **and tested against real
+   `densify_and_prune`**, not a stub;
+2. the `elgs_rounds_enabled` flag landed (section 6);
+3. the MATERIAL findings 1–5 addressed in a revised spec, and a second review
+   round.
+
+Only then does user compute authorization become meaningful. **Do not launch
+the triple.**

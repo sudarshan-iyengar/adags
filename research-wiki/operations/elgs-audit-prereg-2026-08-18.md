@@ -216,3 +216,93 @@ This preregistration is complete when section 3's blocking finding is
 resolved in a signed revision, a fresh-context statistical reviewer has
 signed, and the user has authorized stage 1. Until all three hold, no
 candidate frame may be displayed to anyone.
+
+---
+
+## REVIEW ROUND 1 (2026-08-18) — VERDICT: **BLOCKED**, repaired to revision 2, re-review NOT obtained
+
+A fresh-context adversarial statistical reviewer with no prior project context
+read this page and the JSON and returned **BLOCKED**. Recorded append-only.
+
+### What the reviewer independently REPRODUCED
+
+Every number in section 4, recomputed in Python without `scipy` (Clopper-Pearson
+verified two ways — the closed form at `k = 0` and bisection on the exact
+binomial CDF, agreeing to < 1e-13):
+
+* kill fires in **2,580 of 7,000** attainable outcomes, survives in 4,420 —
+  exact match;
+* per-sequence minimum A3-positives to reach `U_s >= 12`: pour_tea 0 of 9,
+  tambourine 1 of 6, put_candy 3 of 9, tea 6 of 9 — exact match;
+* the minimal surviving outcome `{pour_tea 2, tambourine 1, put_candy 3,
+  tea 0}` — exact match;
+* the tripwire's `U_s` = 93.72 / 44.97 / 30.12 at m = 12, sum 168.805 — exact
+  match;
+* the "Bonferroni is not the cause" check at an uncorrected 90%:
+  48.81 / 24.61 / 16.48, sum 89.89, still unkillable — exact match.
+
+Found **SOUND with no defect**: the Bonferroni construction, including the
+question of whether the 3-subset maximisation introduces a multiplicity the
+per-sequence correction fails to cover (it does not); the estimand definitions;
+and section 3's applicable-camera analysis, with nothing that overturns D3 as
+the least-bad choice.
+
+### BLOCKING finding — the human spot-check could never touch a real candidate
+
+Revision 1 specified the spot-check sample only as "20 windows the auditors
+labelled VISIBLE", without naming the population. The stream is 73 candidates
+plus >= 20 decoys plus 20 recall probes, and **decoys are engineered to be
+unambiguous** — so the entire spot-check could be satisfied from decoys,
+confirming only that an auditor can recognise an obviously present object.
+
+Why that specific gap matters: it is the **only** gate that can catch the
+failure direction producing a **wrongful kill**. An auditor calling a
+genuinely-visible-but-occluded candidate NOT VISIBLE deflates A3, deflates
+every `U_s`, and pushes the decision toward firing the kill. And that is not a
+hypothetical failure mode — it is exactly what
+[[elgs-absence-diagnostic-result]] found in the TRACKER instrument this audit
+exists to check: 96.6% of the 597 candidates have a multi-view-consistent
+foreground component the tracker simply failed to associate.
+
+**Repaired in revision 2:** the sample is drawn ONLY from the 73 real candidate
+windows labelled VISIBLE, decoys and recall probes explicitly excluded, and a
+shortfall is recorded as a diagnostic fact about auditor behaviour rather than
+backfilled with easy decoys.
+
+### MATERIAL findings, all repaired in revision 2
+
+1. **UNSURE verdicts were unchecked by any gate.** An UNSURE anywhere prevents
+   A3, so it has the same suppressive effect as a wrong NOT VISIBLE call, and an
+   auditor that defaults to UNSURE under uncertainty would deflate A3 invisibly.
+   A 10-window UNSURE spot-check is added, **deliberately without a numeric
+   threshold** — none can be justified before the instrument has run once — and
+   a high rate is a VOID candidate adjudicated by the user, not an automatic
+   failure.
+2. **An m = 11 / m = 12 inconsistency**, and it was real rather than a rounding
+   artifact: section 4's `U_s` values are at m = 12 (correctly — the tripwire
+   scenario ADDS scissor and poker to a 10-member `E_select`) while the adjacent
+   "required `n_s`" table was computed at m = 11. Corrected to **135 / 42 / 27**
+   at m = 12; the superseded m = 11 values (132 / 41 / 27) are recorded in the
+   JSON rather than deleted.
+3. **No finite-population correction.** Clopper-Pearson assumes i.i.d. binomial
+   sampling, but stage 1 samples WITHOUT replacement at fractions up to 100%
+   (`put_fruit` 4/4, `slice_apple` 4/4, `writing_2` 2/2, `maracas` 1/1, `soda`
+   1/1) and 69% (`tea` 9/13). The direction is now disclosed: an FPC would
+   TIGHTEN `UB_s` and make the kill EASIER, so omitting it is conservative with
+   respect to killing and anti-conservative with respect to passing. Applying
+   one needs a signed revision.
+4. **The amendment policy's protected list omitted** the frozen sample and its
+   stratification, the decoy construction, the recall-probe construction, and
+   the spot-check protocol — all now protected.
+
+### Status after the repair
+
+`revision: 2`, `status: frozen_pending_signoff`, **unchanged**. The directive's
+rule is repair once and resubmit; **the re-review was NOT obtained** because the
+block ended first. So this preregistration now carries one reviewer's BLOCKED
+verdict plus repairs that reviewer has not seen, which is weaker than a
+sign-off and must not be read as one.
+
+**Two things still gate execution**: the section 3 applicable-camera-set choice
+(a scientific-semantic decision for the user or a reviewer) and a second review
+round on revision 2.

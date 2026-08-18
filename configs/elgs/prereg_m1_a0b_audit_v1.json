@@ -1,26 +1,77 @@
 {
-  "schema_version": "elgs-prereg-a0b-audit-v1",
-  "revision": 1,
-  "status": "frozen_pending_signoff",
-  "cell": "M1-A0b two-stage blinded visual audit",
+  "amendment_policy": {
+    "after_outcome_changes_prohibited": [
+      "floors 12 and 72",
+      "alpha and the simultaneity method",
+      "E_select membership",
+      "the estimand definitions",
+      "S_seq or B_seq",
+      "the validity gates",
+      "the frozen 73-window sample and its stratification",
+      "the decoy construction rule and count",
+      "the recall-probe construction rule and count",
+      "the human spot-check population, size and threshold"
+    ],
+    "append_only": true
+  },
+  "anchor_association": {
+    "independent_recomputation": "must use this same frozen rule, or a hashed byte-equivalent implementation of it",
+    "prohibition": "no new association rule may be introduced by this audit",
+    "rule": "the sealed M-2 anchor definition and artifact, unchanged: the frozen candidate's ltp and ltp_frame from audit_sample_B8"
+  },
+  "applicable_camera_set": {
+    "BLOCKING_IF": "if the adopted definition leaves fewer than 3 applicable cameras for a window, that window is excluded from both the A3 numerator and its denominator, and the exclusion count is reported per sequence; a sequence left with no admissible window is removed from E_select and the removal is reported.",
+    "candidate_definitions_measured": {
+      "D1_all_cameras_fixed_triple": {
+        "candidate_independent": true,
+        "definition": "S_seq = all 26 tracking cameras; the 3 audit cameras are the triple maximising minimum pairwise optical-axis separation, which is (7, 37, 46) at 116.2 degrees for every sequence",
+        "measurement": "the fixed triple's frusta contain all three of a candidate's anchor in only 14 of E_select's 49 frozen windows (28.6%), and 32 of 73 (43.8%) across all 12 sequences",
+        "verdict": "AVAILABLE BUT DESTRUCTIVE. Applying the geometric-admissibility exclusion would cut the stage-1 sample from 49 to 14 windows in E_select, which by the power analysis collapses the kill rule's decidability."
+      },
+      "D2_predeclared_volume": {
+        "candidate_independent": true,
+        "definition": "cameras whose frustum contains a ball centred at the tracking-camera centroid of radius k * rig_radius, tested on a 26-point lattice",
+        "measurement": "|S_seq| is 13 at k=0.10, 7 at k=0.15, 6 at k=0.20, 2 at k=0.25 and 0 at k=0.30, identically for all 12 sequences (one shared rig, rig_radius 5.028). The frozen anchors sit at 0.26 to 0.69 * rig_radius from the centroid (soda's single anchor at 1.955). So containing the anchors needs k >= 0.69 while retaining 3 cameras needs k <= 0.20.",
+        "verdict": "REFUTED. The feasible set of radii is empty."
+      },
+      "D3_census_per_candidate_frustum": {
+        "candidate_independence_qualified": "candidate-SPECIFIC but strictly OUTCOME-INDEPENDENT: purely geometric, frozen in a signed prereg, computed from the sealed candidate record, and incapable of responding to an auditor verdict",
+        "candidate_independent": false,
+        "definition": "the census generator's own rule: cameras whose frustum contains the candidate's FROZEN anchor (prereg_m1_census_v1 frustum_containment)",
+        "external_corroboration": "recomputing this rule from sealed calibration reproduces the sealed audit_sample_B8 containing_cameras on 73 of 73 windows",
+        "measurement": "|S| per window is 3 to 26 with pooled median 23, and 100% of the 73 windows have at least 3 applicable cameras. The best-separated triple within each candidate's own set has minimum axis separation 104-116 degrees for every sequence except soda (28.7 degrees, whose single window has |S| = 3 exactly).",
+        "verdict": "USABLE. Recommended, with the candidate-dependence disclosed as a limitation on what A_S may be said to mean."
+      }
+    },
+    "data_quality_flag": "soda_screen_w0_171's single frozen window has its anchor at 1.955 * rig_radius from the centroid, i.e. outside the camera sphere, with |S| = 3 and a best triple separation of 28.7 degrees. Under any definition this window is near-degenerate and must be reported separately rather than pooled silently.",
+    "finding": "On the DiVa-360 rig, with this candidate set, a FULLY candidate-independent applicable-camera set that is also geometrically usable does not exist. Measured, not argued -- see the evidence block below.",
+    "prohibited_regardless_of_choice": [
+      "selecting cameras using auditor verdicts",
+      "selecting cameras using per-report visibility flags",
+      "selecting cameras using candidate mask occupancy",
+      "changing the definition after any A3 verdict is seen"
+    ],
+    "recommendation_requiring_SIGN_OFF": "adopt D3, and state in every A_S claim that the applicable set was determined by the frozen candidate's own triangulated anchor, so A_S is unobservability across the cameras the CANDIDATE GENERATOR considered applicable -- not across an independently defined camera set",
+    "requirement_as_stated": "frozen before any candidate outcome is viewed; derived from sealed calibration and camera validity only; never from auditor verdicts, candidate-specific track visibility, or candidate mask occupancy",
+    "status": "BLOCKING FINDING -- UNRESOLVED. Stage 1 may not execute until a reviewer or the user selects a definition in a signed revision."
+  },
   "authority": "research-wiki/operations/elgs-audit-prereg-2026-08-18.md",
-  "execution_authorization": "NOT GRANTED. No candidate frame may be rendered, displayed, or transmitted to any auditor, agent or panel until the user authorizes stage 1 in writing. Building and testing extraction tooling on synthetic inputs is permitted.",
-
+  "cell": "M1-A0b two-stage blinded visual audit",
   "estimands": {
     "A3": {
       "definition": "A window is A3-positive iff both blinded auditors return NOT VISIBLE for every audited frame in every one of the 3 audit cameras. An UNSURE verdict anywhere prevents A3.",
-      "interpretation": "3-view unobservability. An UPPER BOUND on physical absence and NEVER a certification of it: invisibility in 3 of the applicable cameras is implied by absence but does not imply it.",
-      "grade": "diagnostic"
+      "grade": "diagnostic",
+      "interpretation": "3-view unobservability. An UPPER BOUND on physical absence and NEVER a certification of it: invisibility in 3 of the applicable cameras is implied by absence but does not imply it."
     },
     "A_S": {
       "definition": "An A3-positive window is A_S-positive iff every camera in the sequence's applicable set S_seq returns NOT VISIBLE from both auditors at at least 3 audited frames including the window midpoint and the last v==0 frame.",
-      "interpretation": "full-applicable-camera unobservability. This is NOT literal physical absence and may not be described as such anywhere. Human confirmation validates the OPERATIONAL VISUAL LABEL only; it does not observe physical ground truth.",
-      "grade": "claim-grade ONLY with per-positive human confirmation"
+      "grade": "claim-grade ONLY with per-positive human confirmation",
+      "interpretation": "full-applicable-camera unobservability. This is NOT literal physical absence and may not be described as such anywhere. Human confirmation validates the OPERATIONAL VISUAL LABEL only; it does not observe physical ground truth."
     },
     "R_S": {
       "definition": "An A_S-positive window is R_S-positive iff, in the post-window frames, the same identity reappears within r_site_census of its disappearance position under the sealed census return rule.",
-      "interpretation": "same-identity return following full-applicable-camera unobservability.",
-      "grade": "claim-grade ONLY with per-positive human confirmation"
+      "grade": "claim-grade ONLY with per-positive human confirmation",
+      "interpretation": "same-identity return following full-applicable-camera unobservability."
     },
     "prohibited_phrasings": [
       "physical absence (for A3 or A_S)",
@@ -28,33 +79,78 @@
       "route dead"
     ]
   },
-
+  "evidence_grading": {
+    "claim_grade_requires": "preregistered human confirmation of EVERY counted A_S or R_S positive",
+    "decoys_do_NOT_validate": "sensitivity to difficult absence-like events, enclosure, reveal, or identity-ambiguous cases. Presence decoys bound the FALSE-POSITIVE side of the instrument only, and no sensitivity claim may rest on them.",
+    "model_auditor_output": "diagnostic",
+    "unmeasured": "the instrument's miss rate on genuine full-view absence, which this design does not estimate because no window is known to be genuinely absent"
+  },
+  "execution_authorization": "NOT GRANTED. No candidate frame may be rendered, displayed, or transmitted to any auditor, agent or panel until the user authorizes stage 1 in writing. Building and testing extraction tooling on synthetic inputs is permitted.",
   "population": {
-    "frame": "the 597 corrected screened-half true-absence candidate windows of tranche 1",
-    "generator": "configs/elgs/prereg_m1_census_v1.json revision 3 true_absence_candidate predicate, UNCHANGED",
-    "all_conclusions_are_relative_to": "the frozen candidate generator; a scarcity finding is about THIS candidate set, never about the scene or the dataset",
-    "N_s_source": "the 20 sealed screening censuses runs/elgs/m1c2_screen_<seq>_r0/census.json, with the corrected conversions substituted for writing_2 and xylophone",
     "N_s": {
-      "scissor_screen_w0_561": 343,
+      "maracas_screen_w0_134": 1,
+      "pan_screen_w0_114": 11,
       "poker_screen_w0_267": 109,
       "pour_tea_screen_w0_225": 73,
-      "tambourine_screen_w0_127": 18,
       "put_candy_screen_w0_233": 18,
-      "tea_screen_w0_164": 13,
-      "pan_screen_w0_114": 11,
       "put_fruit_screen_w0_162": 4,
+      "scissor_screen_w0_561": 343,
       "slice_apple_screen_w0_233": 4,
-      "writing_2_screen_w0_239_fix79ae5b7": 2,
-      "maracas_screen_w0_134": 1,
-      "soda_screen_w0_171": 1
+      "soda_screen_w0_171": 1,
+      "tambourine_screen_w0_127": 18,
+      "tea_screen_w0_164": 13,
+      "writing_2_screen_w0_239_fix79ae5b7": 2
     },
-    "N_total": 597
+    "N_s_source": "the 20 sealed screening censuses runs/elgs/m1c2_screen_<seq>_r0/census.json, with the corrected conversions substituted for writing_2 and xylophone",
+    "N_total": 597,
+    "all_conclusions_are_relative_to": "the frozen candidate generator; a scarcity finding is about THIS candidate set, never about the scene or the dataset",
+    "frame": "the 597 corrected screened-half true-absence candidate windows of tranche 1",
+    "generator": "configs/elgs/prereg_m1_census_v1.json revision 3 true_absence_candidate predicate, UNCHANGED"
   },
-
+  "recall_probe": {
+    "prohibited_uses": [
+      "coverage",
+      "confidence bounds",
+      "event counts",
+      "route decisions",
+      "candidate expansion"
+    ],
+    "purpose": "diagnostic only",
+    "reporting": "reported as a standalone diagnostic with its own denominator, never combined with A3, A_S or R_S"
+  },
+  "review_history": [
+    {
+      "blocking": [
+        "the human spot-check population was unspecified"
+      ],
+      "found_sound": [
+        "the Bonferroni construction, with no uncovered subset-selection multiplicity",
+        "the estimand definitions",
+        "the applicable-camera-set analysis and its D3 recommendation"
+      ],
+      "material": [
+        "the m=11/m=12 inconsistency",
+        "UNSURE verdicts unchecked by any gate",
+        "no finite-population correction",
+        "the amendment policy's protected list omitted the sample, decoys and spot-check"
+      ],
+      "re_review": "NOT OBTAINED -- the block ended before a second round could run. This file therefore remains frozen_pending_signoff.",
+      "repairs_applied_in_revision_2": "all of the above",
+      "reproduced_independently": "the full stage-1 power analysis -- 2,580 of 7,000 outcomes fire the kill; per-sequence minimum A3-positives 0/1/3/6; the minimal surviving outcome; the tripwire U_s of 93.72/44.97/30.12 at m=12; and the 'Bonferroni is not the cause' check at an uncorrected 90% (48.81/24.61/16.48, sum 89.89)",
+      "reviewer": "fresh-context adversarial statistical reviewer, no prior project context",
+      "round": 1,
+      "verdict": "BLOCKED"
+    }
+  ],
+  "revision": 2,
+  "schema_version": "elgs-prereg-a0b-audit-v1",
   "sequence_sets": {
-    "source": "research-wiki/operations/elgs-coverage-bounding-pair-result.md (A1), classes frozen there",
     "E_eligible": "sequences classed eligible by A1, restricted to those with N_s > 0",
-    "E_indeterminate": ["scissor_screen_w0_561", "poker_screen_w0_267"],
+    "E_indeterminate": [
+      "scissor_screen_w0_561",
+      "poker_screen_w0_267"
+    ],
+    "E_select_change_requires": "a new signed revision of this file; E_select may never be widened after any audit outcome is seen",
     "E_select_initial": [
       "pour_tea_screen_w0_225",
       "tambourine_screen_w0_127",
@@ -67,170 +163,109 @@
       "maracas_screen_w0_134",
       "soda_screen_w0_171"
     ],
-    "m_initial": 10,
     "indeterminate_rule": "E_indeterminate sequences MAY be audited descriptively and their per-sequence numbers reported, but they CANNOT enter a winning 3-subset unless a deterministic, statistically justified coverage-adjudication rule is separately frozen, signed, and passed BEFORE any event frame of theirs is inspected.",
-    "E_select_change_requires": "a new signed revision of this file; E_select may never be widened after any audit outcome is seen"
+    "m_initial": 10,
+    "source": "research-wiki/operations/elgs-coverage-bounding-pair-result.md (A1), classes frozen there"
   },
-
-  "applicable_camera_set": {
-    "status": "BLOCKING FINDING -- UNRESOLVED. Stage 1 may not execute until a reviewer or the user selects a definition in a signed revision.",
-    "requirement_as_stated": "frozen before any candidate outcome is viewed; derived from sealed calibration and camera validity only; never from auditor verdicts, candidate-specific track visibility, or candidate mask occupancy",
-    "finding": "On the DiVa-360 rig, with this candidate set, a FULLY candidate-independent applicable-camera set that is also geometrically usable does not exist. Measured, not argued -- see the evidence block below.",
-    "candidate_definitions_measured": {
-      "D2_predeclared_volume": {
-        "definition": "cameras whose frustum contains a ball centred at the tracking-camera centroid of radius k * rig_radius, tested on a 26-point lattice",
-        "candidate_independent": true,
-        "measurement": "|S_seq| is 13 at k=0.10, 7 at k=0.15, 6 at k=0.20, 2 at k=0.25 and 0 at k=0.30, identically for all 12 sequences (one shared rig, rig_radius 5.028). The frozen anchors sit at 0.26 to 0.69 * rig_radius from the centroid (soda's single anchor at 1.955). So containing the anchors needs k >= 0.69 while retaining 3 cameras needs k <= 0.20.",
-        "verdict": "REFUTED. The feasible set of radii is empty."
-      },
-      "D1_all_cameras_fixed_triple": {
-        "definition": "S_seq = all 26 tracking cameras; the 3 audit cameras are the triple maximising minimum pairwise optical-axis separation, which is (7, 37, 46) at 116.2 degrees for every sequence",
-        "candidate_independent": true,
-        "measurement": "the fixed triple's frusta contain all three of a candidate's anchor in only 14 of E_select's 49 frozen windows (28.6%), and 32 of 73 (43.8%) across all 12 sequences",
-        "verdict": "AVAILABLE BUT DESTRUCTIVE. Applying the geometric-admissibility exclusion would cut the stage-1 sample from 49 to 14 windows in E_select, which by the power analysis collapses the kill rule's decidability."
-      },
-      "D3_census_per_candidate_frustum": {
-        "definition": "the census generator's own rule: cameras whose frustum contains the candidate's FROZEN anchor (prereg_m1_census_v1 frustum_containment)",
-        "candidate_independent": false,
-        "candidate_independence_qualified": "candidate-SPECIFIC but strictly OUTCOME-INDEPENDENT: purely geometric, frozen in a signed prereg, computed from the sealed candidate record, and incapable of responding to an auditor verdict",
-        "measurement": "|S| per window is 3 to 26 with pooled median 23, and 100% of the 73 windows have at least 3 applicable cameras. The best-separated triple within each candidate's own set has minimum axis separation 104-116 degrees for every sequence except soda (28.7 degrees, whose single window has |S| = 3 exactly).",
-        "external_corroboration": "recomputing this rule from sealed calibration reproduces the sealed audit_sample_B8 containing_cameras on 73 of 73 windows",
-        "verdict": "USABLE. Recommended, with the candidate-dependence disclosed as a limitation on what A_S may be said to mean."
-      }
-    },
-    "recommendation_requiring_SIGN_OFF": "adopt D3, and state in every A_S claim that the applicable set was determined by the frozen candidate's own triangulated anchor, so A_S is unobservability across the cameras the CANDIDATE GENERATOR considered applicable -- not across an independently defined camera set",
-    "prohibited_regardless_of_choice": [
-      "selecting cameras using auditor verdicts",
-      "selecting cameras using per-report visibility flags",
-      "selecting cameras using candidate mask occupancy",
-      "changing the definition after any A3 verdict is seen"
-    ],
-    "data_quality_flag": "soda_screen_w0_171's single frozen window has its anchor at 1.955 * rig_radius from the centroid, i.e. outside the camera sphere, with |S| = 3 and a best triple separation of 28.7 degrees. Under any definition this window is near-degenerate and must be reported separately rather than pooled silently.",
-    "BLOCKING_IF": "if the adopted definition leaves fewer than 3 applicable cameras for a window, that window is excluded from both the A3 numerator and its denominator, and the exclusion count is reported per sequence; a sequence left with no admissible window is removed from E_select and the removal is reported."
-  },
-
   "stage_1": {
-    "purpose": "a cheap validity screen plus a possible kill; never an admission",
+    "estimator": {
+      "also_reported_descriptively": "the stratified Horvitz-Thompson estimate of the A3 count, which carries no decision weight",
+      "direction_note": "raising per-sequence confidence RAISES UB_s and therefore makes the kill HARDER; Bonferroni is conservative with respect to killing",
+      "finite_population_disclosure": "Clopper-Pearson assumes i.i.d. binomial sampling, but the stage-1 sample is drawn WITHOUT replacement from small finite populations at sampling fractions up to 100% (put_fruit 4/4, slice_apple 4/4, writing_2 2/2, maracas 1/1, soda 1/1) and 69% (tea 9/13). No finite-population correction is applied. The direction is disclosed: an FPC would TIGHTEN UB_s and therefore make the kill EASIER, so omitting it is conservative with respect to killing and anti-conservative with respect to passing. Applying one would require a signed revision.",
+      "overall_alpha": 0.1,
+      "per_sequence_bound": "one-sided Clopper-Pearson UPPER bound UB_s on the A3 proportion among the sequence's audited windows",
+      "simultaneity": "Bonferroni: each per-sequence bound is computed at confidence 1 - alpha/m with m = |E_select|, giving at least 90% simultaneous coverage",
+      "simultaneity_alternatives": "a different simultaneous method is permitted only if mathematically specified, power-checked, and accepted by the fresh-context reviewer in a signed revision"
+    },
     "instrument": {
+      "auditors": "two blinded auditors drawn from DIFFERENT model families",
       "candidates": "the frozen 73-window M1-A0b stratified sample from audit_sample_B8 of runs/elgs/m1absdiag_primary_fix4acb0fc_r0/diagnostic.json, UNCHANGED (seed 20260814, 3 rounds, per-stratum fresh RNG)",
+      "context_given_to_the_auditor": "the identity's pre-window reference crop only",
       "n_s": {
-        "scissor_screen_w0_561": 15,
+        "maracas_screen_w0_134": 1,
+        "pan_screen_w0_114": 4,
         "poker_screen_w0_267": 9,
         "pour_tea_screen_w0_225": 9,
         "put_candy_screen_w0_233": 9,
-        "tea_screen_w0_164": 9,
-        "tambourine_screen_w0_127": 6,
-        "pan_screen_w0_114": 4,
         "put_fruit_screen_w0_162": 4,
+        "scissor_screen_w0_561": 15,
         "slice_apple_screen_w0_233": 4,
-        "writing_2_screen_w0_239_fix79ae5b7": 2,
-        "maracas_screen_w0_134": 1,
-        "soda_screen_w0_171": 1
+        "soda_screen_w0_171": 1,
+        "tambourine_screen_w0_127": 6,
+        "tea_screen_w0_164": 9,
+        "writing_2_screen_w0_239_fix79ae5b7": 2
       },
       "presence_decoys": "at least 20 windows ASSOCIATED at v == 1 in at least 3 cameras with consensus reprojection RMS at most 2 px, drawn from the same sequences and the same frame ranges",
-      "recall_probe": "20 windows, DIAGNOSTIC ONLY",
       "presentation": "all candidates, decoys and recall probes shuffled into one indistinguishable stream; no auditor may be told which class a window belongs to, and no per-class counts may be disclosed before all verdicts are returned",
-      "views": "the 3 audit cameras of S_seq x 5 uniformly strided frames of the window, endpoints included",
-      "context_given_to_the_auditor": "the identity's pre-window reference crop only",
-      "auditors": "two blinded auditors drawn from DIFFERENT model families",
-      "verdict_vocabulary": ["VISIBLE_with_box", "NOT_VISIBLE", "UNSURE"],
-      "verdict_granularity": "per frame per camera"
-    },
-    "validity_gates": {
-      "decoy_false_A3_max": 0.05,
-      "decoy_false_A3_max_as_count": "at most 1 of 20",
-      "inter_auditor_window_agreement_min": 0.8,
-      "inter_auditor_agreement_scope": "candidate and recall-probe windows only; decoys HELD OUT of this statistic",
-      "human_spot_check": {
-        "sample": "20 windows the auditors labelled VISIBLE",
-        "confirmed_min": 18,
-        "performed_by": "the user",
-        "estimated_effort_minutes": 30
-      },
-      "on_failure": "VOID. No route inference of any kind is permitted from a void stage 1, in either direction."
-    },
-    "estimator": {
-      "per_sequence_bound": "one-sided Clopper-Pearson UPPER bound UB_s on the A3 proportion among the sequence's audited windows",
-      "overall_alpha": 0.1,
-      "simultaneity": "Bonferroni: each per-sequence bound is computed at confidence 1 - alpha/m with m = |E_select|, giving at least 90% simultaneous coverage",
-      "simultaneity_alternatives": "a different simultaneous method is permitted only if mathematically specified, power-checked, and accepted by the fresh-context reviewer in a signed revision",
-      "direction_note": "raising per-sequence confidence RAISES UB_s and therefore makes the kill HARDER; Bonferroni is conservative with respect to killing",
-      "also_reported_descriptively": "the stratified Horvitz-Thompson estimate of the A3 count, which carries no decision weight"
+      "recall_probe": "20 windows, DIAGNOSTIC ONLY",
+      "verdict_granularity": "per frame per camera",
+      "verdict_vocabulary": [
+        "VISIBLE_with_box",
+        "NOT_VISIBLE",
+        "UNSURE"
+      ],
+      "views": "the 3 audit cameras of S_seq x 5 uniformly strided frames of the window, endpoints included"
     },
     "kill_rule": {
       "U_s": "N_s * UB_s, capped at N_s",
       "fires_iff": "there exists NO three-sequence subset T of E_select with U_s >= 12 for every s in T AND sum of U_s over T >= 72",
+      "floors_provenance": "12 and 72 are the frozen cycle-2 selection-inequality floors and are NOT re-derived here",
       "on_fire": "record 'physical-absence-bearing candidates are scarce ON THE FROZEN CANDIDATE SET' and route the DiVa tranche-1 claim family to R3, stated relative to the candidate generator and carrying the recall caveat. The words 'route dead' are prohibited.",
-      "on_not_fire": "proceed to stage 2",
-      "floors_provenance": "12 and 72 are the frozen cycle-2 selection-inequality floors and are NOT re-derived here"
+      "on_not_fire": "proceed to stage 2"
     },
     "power_ANALYSED_BEFORE_EXECUTION": {
-      "method": "enumerate every attainable outcome vector over the sequences that can reach the per-sequence floor and ask whether the kill can both fire and not fire",
-      "E_select_of_10_result": "DECIDABLE. Only 4 of the 10 have N_s >= 12 and can ever reach U_s >= 12 (pour_tea 73, tambourine 18, put_candy 18, tea 13). Over the 7,000 attainable outcome vectors the kill fires in 2,580 and does not in 4,420. The minimal surviving outcome is pour_tea >= 2, tambourine >= 1, put_candy >= 3 A3-positives.",
       "DEGENERACY_TRIPWIRE": "if a future adjudication rule admits scissor, poker AND pour_tea to E_select simultaneously, the kill CANNOT FIRE under any outcome: at zero observed A3-positives those three alone give U = 93.7 + 45.0 + 30.1 = 168.8 >= 72 with each >= 12. Bonferroni is not the cause; the same holds at an uncorrected 90%.",
-      "why": "U_s = N_s * UB_s scales with the candidate count while UB_s is floored by the sample size, so a LARGER candidate population makes the kill harder, not easier",
+      "E_select_of_10_result": "DECIDABLE. Only 4 of the 10 have N_s >= 12 and can ever reach U_s >= 12 (pour_tea 73, tambourine 18, put_candy 18, tea 13). Over the 7,000 attainable outcome vectors the kill fires in 2,580 and does not in 4,420. The minimal surviving outcome is pour_tea >= 2, tambourine >= 1, put_candy >= 3 A3-positives.",
+      "consequence": "admitting scissor turns stage 1 from a cheap screen into a near-census of that sequence. Any revision that admits scissor or poker MUST re-specify stage 1 before execution.",
+      "method": "enumerate every attainable outcome vector over the sequences that can reach the per-sequence floor and ask whether the kill can both fire and not fire",
       "n_s_required_to_remove_the_tripwire": {
-        "scissor": "n_s >= 132 of 343 (38.5%) at m=11",
-        "poker": "n_s >= 41 of 109 (37.6%) at m=11",
-        "pour_tea": "n_s >= 27 of 73 (37.0%) at m=11"
+        "m": 12,
+        "note": "CORRECTED in revision 2. Revision 1 tabulated these at m=11 while the U_s values one paragraph above are at m=12, which is the right basis (the tripwire scenario ADDS scissor and poker to the 10-member E_select, giving 12). The m=11 values were 132 / 41 / 27.",
+        "poker": "n_s >= 42 of 109 (38.5%)",
+        "pour_tea": "n_s >= 27 of 73 (37.0%)",
+        "scissor": "n_s >= 135 of 343 (39.4%)"
       },
-      "consequence": "admitting scissor turns stage 1 from a cheap screen into a near-census of that sequence. Any revision that admits scissor or poker MUST re-specify stage 1 before execution."
+      "why": "U_s = N_s * UB_s scales with the candidate count while UB_s is floored by the sample size, so a LARGER candidate population makes the kill harder, not easier"
+    },
+    "purpose": "a cheap validity screen plus a possible kill; never an admission",
+    "validity_gates": {
+      "decoy_false_A3_max": 0.05,
+      "decoy_false_A3_max_as_count": "at most 1 of 20",
+      "human_spot_check": {
+        "confirmed_min": 18,
+        "estimated_effort_minutes": 30,
+        "if_too_few_real_candidates_are_labelled_VISIBLE": "record the shortfall as a diagnostic fact about auditor behaviour and report it; NEVER backfill the sample with decoys",
+        "performed_by": "the user",
+        "sample": "20 windows drawn ONLY from the 73 REAL CANDIDATE windows the auditors labelled VISIBLE. Presence decoys and recall probes are EXCLUDED from this sample.",
+        "why_the_population_is_specified": "revision 1 said only '20 windows the auditors labelled VISIBLE', which the fresh-context statistical review found could be satisfied entirely from decoys -- and decoys are engineered to be unambiguous, so a spot-check confined to them confirms only that an auditor can recognise an obviously present object. This is the ONLY gate capable of catching the failure direction that causes a WRONGFUL KILL (an auditor calling a genuinely-visible-but-occluded candidate NOT VISIBLE deflates A3, deflates every U_s, and pushes toward firing the kill), and that exact failure mode is already documented in the TRACKER instrument this audit exists to check."
+      },
+      "inter_auditor_agreement_scope": "candidate and recall-probe windows only; decoys HELD OUT of this statistic",
+      "inter_auditor_window_agreement_min": 0.8,
+      "on_failure": "VOID. No route inference of any kind is permitted from a void stage 1, in either direction.",
+      "unsure_spot_check": {
+        "gate": "no numeric threshold is set, because none can be justified before the instrument has run once. A high rate is a VOID candidate, adjudicated by the user, not an automatic failure.",
+        "rationale": "an UNSURE anywhere prevents A3, so it has the SAME suppressive effect as a wrong NOT VISIBLE call, and no revision-1 gate sampled it. An auditor that defaults to UNSURE under uncertainty deflates A3 in the wrongful-kill direction invisibly.",
+        "reported_as": "diagnostic; the fraction a human judges should have been decidable",
+        "sample": "10 candidate windows carrying an UNSURE verdict anywhere"
+      }
     }
   },
-
   "stage_2": {
-    "population": "ALL candidate windows of every sequence in E_select",
+    "counts": "exact per-sequence R_s from human-confirmed R_S-positives",
+    "decision": "the frozen cycle-2 selection inequality: there exists a 3-subset T of E_select with R_s >= 12 for every s in T and sum of R_s over T >= 72",
+    "no_partial_credit": "a model-auditor A_S or R_S positive that a human does not confirm is not counted, in either direction",
     "pipeline_order": [
       "3-view pass -> A3",
       "A_S pass on A3-positives: every camera in S_seq at >= 3 frames including the window midpoint and the last v == 0 frame",
       "return pass on A_S-positives: post-window frames, same identity reappearing within r_site_census",
       "human confirmation of EVERY A_S-positive and EVERY R_S-positive"
     ],
-    "counts": "exact per-sequence R_s from human-confirmed R_S-positives",
-    "decision": "the frozen cycle-2 selection inequality: there exists a 3-subset T of E_select with R_s >= 12 for every s in T and sum of R_s over T >= 72",
-    "no_partial_credit": "a model-auditor A_S or R_S positive that a human does not confirm is not counted, in either direction"
+    "population": "ALL candidate windows of every sequence in E_select"
   },
-
-  "recall_probe": {
-    "purpose": "diagnostic only",
-    "prohibited_uses": [
-      "coverage",
-      "confidence bounds",
-      "event counts",
-      "route decisions",
-      "candidate expansion"
-    ],
-    "reporting": "reported as a standalone diagnostic with its own denominator, never combined with A3, A_S or R_S"
-  },
-
-  "evidence_grading": {
-    "model_auditor_output": "diagnostic",
-    "claim_grade_requires": "preregistered human confirmation of EVERY counted A_S or R_S positive",
-    "decoys_do_NOT_validate": "sensitivity to difficult absence-like events, enclosure, reveal, or identity-ambiguous cases. Presence decoys bound the FALSE-POSITIVE side of the instrument only, and no sensitivity claim may rest on them.",
-    "unmeasured": "the instrument's miss rate on genuine full-view absence, which this design does not estimate because no window is known to be genuinely absent"
-  },
-
-  "anchor_association": {
-    "rule": "the sealed M-2 anchor definition and artifact, unchanged: the frozen candidate's ltp and ltp_frame from audit_sample_B8",
-    "prohibition": "no new association rule may be introduced by this audit",
-    "independent_recomputation": "must use this same frozen rule, or a hashed byte-equivalent implementation of it"
-  },
-
+  "status": "frozen_pending_signoff",
   "tooling_boundary": {
+    "gate": "explicit user authorization of stage 1",
     "permitted_now": "build and test the frame-extraction and panel-assembly tooling on SYNTHETIC or DECOY-FREE inputs",
-    "prohibited_now": "rendering, displaying, transmitting or storing any candidate window's imagery for auditor consumption",
-    "gate": "explicit user authorization of stage 1"
-  },
-
-  "amendment_policy": {
-    "append_only": true,
-    "after_outcome_changes_prohibited": [
-      "floors 12 and 72",
-      "alpha and the simultaneity method",
-      "E_select membership",
-      "the estimand definitions",
-      "S_seq or B_seq",
-      "the validity gates"
-    ]
+    "prohibited_now": "rendering, displaying, transmitting or storing any candidate window's imagery for auditor consumption"
   }
 }
