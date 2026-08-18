@@ -559,7 +559,15 @@ from `k = 7`. Capping `U_s` at that maximum moves the kill from **2,580 to
 *direction* is correct and the omission is conservative with respect to killing;
 the *magnitude* was undisclosed while the power table was presented as exact.
 And `tea`'s published "6 of 9" threshold is **unattainable in fact**: 6 of 9
-drawn from 13 permits at most 10 true positives, below the floor of 12.
+drawn from 13 permits at most 10 true positives, below the floor of 12. Under the
+cap `tea`'s threshold moves from the published **6 of 9 to 8 of 9** (it needs
+`k + 4 >= 12`); the other three reachable sequences are unchanged.
+
+*(The round-2 reviewer's backgrounded first run later completed and reproduced
+every figure identically. It is a re-execution of the same code — it confirms
+determinism and adds no independent corroboration. The independence in the
+round-2 arithmetic is the reviewer's implementation being separate from the
+primary's, plus its two-way Clopper-Pearson cross-check.)*
 
 Further material findings — D3's undisclosed statistical direction (M4), the
 undisclosed supersession of another frozen prereg's still-binding camera and
