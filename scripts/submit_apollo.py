@@ -98,6 +98,7 @@ ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
     "scripts/build_m1_census.py",
     "scripts/apply_cycle3_gate.py",
     "scripts/build_absence_diagnostic.py",
+    "scripts/build_coverage_bounding_pair.py",
     "scripts/benchmark_elgs_q.py",
     "scripts/eval_diva360_heldout.py",
     "scripts/audit_mechanism.py",
