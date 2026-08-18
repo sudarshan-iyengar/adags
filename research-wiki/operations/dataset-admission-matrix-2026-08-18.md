@@ -226,3 +226,195 @@ Inventory: [[immersive-inventory-2026-08-18]].
 ### MeetRoom and MPEG-GSC
 
 Unchanged.
+
+---
+
+## APPEND-ONLY (2026-08-18, block 4) — ImViD access is OPEN, and the Immersive camera-count gap is resolved
+
+Nothing above is rewritten. Two facts arrived that change what is *reachable*
+and what a prior page *claimed*; neither changes an event-supply verdict.
+
+### C1. ImViD: the full release IS reachable — the block-3 "no access path" record is CORRECTED
+
+`overnight-handover-18aug-block3.md` recorded, on five probes, that the full
+ImViD release "is not reachable from this environment at all". **That was
+true of the probes and false of the world:** that session did not have the
+release URL. With the user-supplied folder id `1TrhrOrmFdvw-wTRPiVqlyWUWZrJJgHZe`
+the folder is **world-readable and needs no credential, no OAuth and no
+cookie**. The correction is recorded here rather than by editing the earlier
+finding.
+
+Verified by the primary directly (`curl` on the public
+`embeddedfolderview` endpoint returned 8 top-level entries), and enumerated by
+a bounded worker two independent ways — a stdlib crawl and a pinned
+`gdown==5.2.0` in an isolated throwaway venv — which agreed on **325 files
+exactly**, so nothing was lost to pagination. Exact sizes came from 1-byte
+HTTP `Range` probes (HTTP 206 + `Content-Range`), i.e. **no bulk bytes were
+transferred**; ~340 requests drew zero 403 and zero rate-limiting.
+
+**The structure is flat: 8 folders, one per scene plus `moving_rig`, no
+take-level subdivision.**
+
+| folder | files | mp4 | bytes | GiB |
+|---|---:|---:|---:|---:|
+| `moving_rig` | 39 | 39 | 131,492,109,120 | 122.46 |
+| `scene1_opera` | 41 | 39 | 125,649,776,270 | 117.02 |
+| `scene2_laboratory` | 41 | 39 | 81,340,649,443 | 75.75 |
+| `scene3_classroom` | 40 | **38** | 409,317,428,086 | 381.21 |
+| `scene4_meeting` | 41 | 39 | 122,672,447,671 | 114.25 |
+| `scene5_rendition` | 41 | 39 | 113,041,967,198 | 105.28 |
+| `scene6_puppy` | 41 | 39 | 115,934,621,018 | 107.97 |
+| `scene7_playing` | 41 | 39 | 81,627,960,479 | 76.02 |
+| **total** | **325** | **310** | **1,181,076,959,285** | **1,099.96** |
+
+**Four discrepancies against the published release, recorded rather than
+reconciled away:**
+
+1. **9 of the 16 published takes are absent.** The README documents 16 takes
+   totalling 2,069.3 GiB; the folder exposes one folder per scene — **7 takes,
+   977.50 GiB, 47.2% of the published bytes**. With exactly 39 files per
+   folder (one per camera) there is no room for a second take unless takes
+   were concatenated. `scene4_meeting` is the anchor that fixes the reading:
+   it is the only 1-take scene and its 114.25 GiB matches the README's 114.0
+   to 0.2%, which also establishes that the README's "GB" column is **GiB**.
+2. **`scene3_classroom` is missing `cam38.mp4`** — 38 videos against a
+   39-line calibration.
+3. **`moving_rig` (122.46 GiB) is not in the README total** (226 + 137.3 +
+   497 + 114 + 516 + 359 + 220 = 2,069.3 exactly). It is extra, uncalibrated
+   by the authors' own statement, and its source scene is not identified.
+4. **The paper says 46 cameras; the README and the shipped data say 39.**
+
+**No checksums are obtainable.** The anonymous endpoints return no ETag, no
+Content-MD5 and no `X-Goog-Hash`; Drive's `md5Checksum` needs the
+authenticated API. Any transfer must be verified against the byte counts
+above and nothing stronger.
+
+**Calibration, read from data** (one 6,309-byte probe of
+`scene1_opera/cameras.txt`): 39 identical lines, model **`OPENCV`**,
+5312×2988, `fx` 2603.333, `fy` 2602.244, `cx` 2656.0, `cy` 1494.0,
+`k1` −0.0245469, `k2` +0.0035148, `p1` −0.00045080, `p2` −0.00023832.
+Non-zero distortion, so undistortion is required — consistent with the
+pilot's own measured 14.7 px median / 90.5 px max displacement.
+
+**One inference, flagged as such and NOT acted on:** `scene4_meeting`'s
+`cameras.txt` is 70 bytes and `scene7_playing`'s 72, against 6,309–6,348 for
+the three known 39-line `OPENCV` files. A single `PINHOLE` line at the same
+float precision computes to exactly 70 bytes. So Meeting and Playing very
+likely ship **one** camera line, distortion-free — but that is arithmetic on
+a file size, not a read, and it must be read before any Meeting pilot is
+designed.
+
+**Transfer feasibility, for the two priority takes.** Opera
+125,649,776,270 B + Meeting 122,672,447,671 B = **248,322,223,941 B
+(231.27 GiB)**. `Accept-Ranges: bytes` is served and arbitrary offsets were
+empirically honoured (HTTP 206 at both 1e9 and 3.224e9), so `curl -C -`
+resumes correctly and non-destructively. The unmeasured risk is Drive's
+undocumented per-file daily download cap, which typically surfaces as a 403
+partway through a multi-file take; the resumable loop tolerates it, parallel
+connections trip it sooner. **Transfers should run cluster-side, not through
+this workstation, to avoid a 248 GB double hop.**
+
+**What this does NOT change.** ImViD's event-supply verdict is untouched:
+still **NOT ADMITTED for event supply**, for the reasons in the narrowing
+section above. Access being open changes cost and reachability, not
+admissibility.
+
+### C2. Google Immersive: 46 videos vs 45 calibrations — RESOLVED, and it is not a held-out convention
+
+**Verified by the primary against the sealed Apollo artifacts**, not from
+prose: the exp-157 archive inventory and the exp-162 extracted `models.json`
+(sha256 `199afc790c274f4782b7786fd6014137286d05eec152d845e31d92ddc8ea8908`)
+were enumerated and diffed directly.
+
+* zip mp4 entries: **46**, `camera_0001` … `camera_0046`, contiguous, **1-based
+  — there is no `camera_0000`**;
+* `models.json` entries: **45**, `camera_0001` … `camera_0045`;
+* in the zip but uncalibrated: **exactly `camera_0046`**;
+* calibrated with no video: **none**.
+
+**It is a per-scene calibration failure, not a designated held-out camera.**
+The official README states plainly that some scenes have a small number of
+missing cameras, and the missing index varies by scene (`01_Welder` →
+`camera_0036`, a mid-sequence gap; `04_Truck` → `camera_0003`), with
+`12_Cave` showing the other failure mode — 45 videos and 45 matching
+calibrations. **The conventional held-out camera is `camera_0001`, and it is
+present and calibrated here**, so the earlier working hypothesis that the
+uncalibrated file *was* the held-out view is refuted.
+
+STG absorbs the mismatch silently by construction: frame extraction and the
+symlink stage enumerate the **directory** (all 46), while undistortion and
+COLMAP conversion iterate **`models.json`** (45). The uncalibrated camera's
+extracted frames become an orphan directory that never reaches the database
+or the trainer, and **no assertion checks that the two counts agree**.
+
+**Consequence for any ADAGS visibility bookkeeping on this dataset:** key on
+`models.json` `name` fields and treat the mp4 set as a superset. A ledger
+built by enumerating `camera_*.mp4` will mis-index, and *will do so
+differently on different scenes*.
+
+### C3. The loader-incompatibility blocker recorded at §5 is NOT a blocker
+
+Section 5 above records that `scene/dataset_readers.py` accepts only
+`SIMPLE_PINHOLE`/`PINHOLE`, so "Google Immersive is fisheye → incompatible as
+shipped". True of the raw data, **but it does not gate use**: STG's
+preprocessing performs the fisheye→pinhole conversion offline
+(`cv2.fisheye.initUndistortRectifyMap` + `cv2.remap`, Kannala–Brandt with
+Google's two radial terms in `k1,k2` and `k3=k4=0`) and writes the COLMAP
+camera line itself as `PINHOLE`. The trainer never sees a fisheye model.
+**What Immersive is disqualified for is event supply, not loader
+compatibility.**
+
+Two further protocol facts that bear on cost and on any reproduction:
+
+* **Poses are never solved.** COLMAP runs `feature_extractor` →
+  `exhaustive_matcher` → `point_triangulator` against poses written from
+  `models.json` into `manual/`. There is no `mapper` and no pose bundle
+  adjustment; `models.json` `orientation` is axis-angle world→camera and
+  `position` is the camera centre, converted as `(q, −R·C)`.
+* **Extraction cost is invariant to the requested frame range.** The frame
+  extractor is called with the path only, so its `startframe`/`endframe`
+  defaults apply and **every run decodes frames 0–299 of all 46 videos at full
+  2560×1920 as PNG** regardless of the `--startframe/--endframe` passed to the
+  preprocessing script. Estimated **≈131 GB** of raw PNG for `02_Flames`
+  alone, and STG's own published protocol (`duration: 50`, `colmap_0`) still
+  pays it: **≈170 GB total**, against ≈270–470 GB for a full 300-offset run.
+  These are estimates over an unconfirmed PNG compression level and are marked
+  as such.
+
+### C4. The dome limitation, now with a number
+
+The parallax bound is the quantitative form of the existing verdict. The rig
+is a hemispherical dome of radius ≈0.46 m (corroborated by `models.json`'s
+first camera at 0.420 m from the origin), so for a scene point at distance
+*d* the maximum angular separation between any two viewing rays across the
+**entire 46-camera rig** is ≈ 2·arctan(0.46/*d*):
+
+| *d* | max parallax, whole rig |
+|---|---|
+| 0.5 m | ≈85° |
+| 1 m | ≈50° |
+| 2 m | ≈26° |
+| 5 m | ≈10.5° |
+
+DiVa-360's inward-facing 53-camera surround reaches 180°. Because the dome is
+**convex and outward-facing**, the cameras that see any exterior point form a
+contiguous patch with near-parallel axes: adding cameras raises sampling
+density, not viewpoint diversity. So the corroboration that the ELGS absence
+instrument needs — an eligible foreground component holding the anchor *from a
+different azimuth* — has no geometric support here. The test does not fail on
+this rig; **it is undefined on it.** The NOT-ADMITTED verdict for event supply
+is unchanged and now has a stated mechanism.
+
+### C5. Provenance and residual uncertainty
+
+The STG protocol map and the ImViD enumeration were produced by two bounded
+read-only workers. The primary independently verified the two load-bearing
+claims — the ImViD folder listing, and the `camera_0046` diff against the
+sealed Apollo artifacts. **Not verified by the primary, and carried as the
+workers' reporting:** the STG line-level protocol details, the published
+per-scene PSNR table (transcribed via an HTML rendering rather than the CVF
+PDF, and marked medium-confidence by the worker), the ImViD per-file byte
+counts beyond the folder-level totals, and the decoded-size estimates. Two
+malformed-command defects the worker reports in STG's own source
+(a `SiftExtraction.max_image_size` flag missing its `--`, and an unreachable
+`04_Trucks`/`04_Truck` branch) are recorded as reported and unconfirmed.
