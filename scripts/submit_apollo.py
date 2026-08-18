@@ -99,6 +99,7 @@ ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
     "scripts/apply_cycle3_gate.py",
     "scripts/build_absence_diagnostic.py",
     "scripts/build_coverage_bounding_pair.py",
+    "scripts/indep_coverage_recompute.py",
     "scripts/imvid_pilot_prepare.py",
     "scripts/imvid_sparse_init.py",
     "scripts/imvid_build_initialization.py",
