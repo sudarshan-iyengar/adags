@@ -202,43 +202,7 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
     # Built BEFORE the trainer state that references it.
     from .acceptance import SlotGrid
 
-    # Stratified reservation: within each timestamp group (the
-    # cameras of one frame, stably ordered), reserve the diagonal
-    # (frame_order + camera_order) % 4 == 0 — ~25% of units, rotating
-    # across cameras AND spreading over time, so the §7 confirmation
-    # measure can never collapse onto one view regardless of the
-    # dataset's index ordering.
-    n_units_total = len(cameras)
-    by_time: dict = {}
-    for i in range(n_units_total):
-        t = float(getattr(cameras[i], "timestamp", 0.0))
-        by_time.setdefault(t, []).append(i)
-    reserved_list = []
-    reserved_cam_positions = set()
-    for f, t in enumerate(sorted(by_time)):
-        group = sorted(
-            by_time[t], key=lambda i: str(getattr(cameras[i], "image_name", i))
-        )
-        for c, index in enumerate(group):
-            if (f + c) % 4 == 0:
-                reserved_list.append((index, t))
-                reserved_cam_positions.add(c)
-    reserved = tuple(reserved_list)
-    if reserved:
-        times = [t for _, t in reserved]
-        all_times = sorted(by_time)
-        span = all_times[-1] - all_times[0] if len(all_times) > 1 else 0.0
-        covered = max(times) - min(times)
-        if len(reserved_cam_positions) < min(2, max(len(g) for g in by_time.values())):
-            raise ContractError(
-                "reserved confirmation pool covers fewer than 2 distinct "
-                "camera positions — stratification failed for this ordering"
-            )
-        if span > 0 and covered < 0.5 * span:
-            raise ContractError(
-                "reserved confirmation pool spans less than half the "
-                "sequence time range — stratification failed"
-            )
+    reserved = build_reserved_pool(cameras)
     n_rounds = len(schedule.round_iterations)
     slots_per_pass = int(getattr(opt, "elgs_candidate_cap"))
     # The configured confirmation-sample count IS the slot size (a
@@ -1089,6 +1053,105 @@ def _refresh_round_evidence(state, gaussians, scene, round_index, family_ids=Non
     return evidence
 
 
+def build_reserved_pool(cameras) -> tuple[tuple[int, float], ...]:
+    """The stratified reserved confirmation pool, as ``((index, t), ...)``.
+
+    Within each timestamp group (the cameras of one frame, stably ordered by
+    ``image_name``), reserve the diagonal ``(frame_order + camera_order) % 4
+    == 0`` — ~25% of units, rotating across cameras AND spreading over time,
+    so the §7 confirmation measure can never collapse onto one view
+    regardless of the dataset's index ordering.
+
+    This is the SINGLE implementation of the reservation rule. ``setup_elgs``
+    calls it, and so does the ``elgs_reserved_parity`` control path
+    (``reserved_indices_for_parity``), so a control cell and an EL-GS cell
+    cannot drift apart in which units they train on. It depends on nothing
+    but the camera list — no runtime, registry, bundle, schedule, prereg,
+    slot grid or scalar budget — which is what makes the parity path
+    possible at all
+    (research-wiki/operations/elgs-matched-triple-readiness-2026-08-18.md §2).
+
+    The two stratification guards are raised here, so they apply IDENTICALLY
+    on both paths: a control that silently reserved a degenerate set would
+    not be a matched control.
+    """
+
+    by_time: dict = {}
+    for i in range(len(cameras)):
+        t = float(getattr(cameras[i], "timestamp", 0.0))
+        by_time.setdefault(t, []).append(i)
+    reserved_list = []
+    reserved_cam_positions = set()
+    for f, t in enumerate(sorted(by_time)):
+        group = sorted(
+            by_time[t], key=lambda i: str(getattr(cameras[i], "image_name", i))
+        )
+        for c, index in enumerate(group):
+            if (f + c) % 4 == 0:
+                reserved_list.append((index, t))
+                reserved_cam_positions.add(c)
+    reserved = tuple(reserved_list)
+    if reserved:
+        times = [t for _, t in reserved]
+        all_times = sorted(by_time)
+        span = all_times[-1] - all_times[0] if len(all_times) > 1 else 0.0
+        covered = max(times) - min(times)
+        if len(reserved_cam_positions) < min(2, max(len(g) for g in by_time.values())):
+            raise ContractError(
+                "reserved confirmation pool covers fewer than 2 distinct "
+                "camera positions — stratification failed for this ordering"
+            )
+        if span > 0 and covered < 0.5 * span:
+            raise ContractError(
+                "reserved confirmation pool spans less than half the "
+                "sequence time range — stratification failed"
+            )
+    return reserved
+
+
+def reserved_indices_for_parity(scene, opt) -> frozenset[int] | None:
+    """The reserved indices a control cell must ALSO drop, or ``None``.
+
+    Returns ``None`` — meaning "do nothing" — unless ``elgs_reserved_parity``
+    is set AND ``elgs_enable`` is not. When EL-GS is enabled the reservation
+    is already applied through ``ElgsTrainerState.reserved_indices``, so the
+    flag is deliberately a no-op there rather than a second filter that would
+    double-drop.
+
+    Exists because an EL-GS cell trains on ~75% of the training units while a
+    bare temporal-substrate control trains on 100%, and comparing the two
+    would hand the control a third more data on a benchmark whose open
+    question is held-out generalization.
+    """
+
+    if not bool(getattr(opt, "elgs_reserved_parity", False)):
+        return None
+    if bool(getattr(opt, "elgs_enable", False)):
+        return None
+    # unpacked exactly as setup_elgs unpacks them, so the two paths see the
+    # same camera objects in the same order and therefore the same indices
+    cameras = [_unpack_camera(item)[0] for item in scene.getTrainCameras()]
+    return frozenset(index for index, _ in build_reserved_pool(cameras))
+
+
+def filter_reserved_indices(training_dataset, reserved_indices):
+    """Drop ``reserved_indices`` from a dataset, or return it unchanged.
+
+    Index-based ``Subset``, matching ``filter_elgs_reserved``: never
+    materializes items, so lazy image decoding is preserved.
+    """
+
+    if not reserved_indices:
+        return training_dataset
+    from torch.utils.data import Subset
+
+    kept = [
+        index for index in range(len(training_dataset))
+        if index not in reserved_indices
+    ]
+    return Subset(training_dataset, kept)
+
+
 def filter_elgs_reserved(training_dataset, state):
     """Exclude the reserved confirmation units from the refit
     training data (spec §7: refits never see confirmation samples).
@@ -1239,11 +1302,14 @@ __all__ = [
     "ElgsTrainerState",
     "apply_elgs_routing_pins",
     "build_interval_config",
+    "build_reserved_pool",
     "elgs_summary",
     "filter_elgs_reserved",
+    "filter_reserved_indices",
     "infer_frame_dt",
     "load_structural_prereg",
     "maybe_run_elgs_schedule",
+    "reserved_indices_for_parity",
     "run_post_refit_classification",
     "seed_families",
     "setup_elgs",

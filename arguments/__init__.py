@@ -253,6 +253,14 @@ class OptimizationParams(ParamGroup):
         # sets elgs_smoke_schedule and is stamped evidence_bearing
         # false.
         self.elgs_smoke_max_reports_per_window = 0
+        # MATCHED-COMPARISON PARITY, not an EL-GS feature: build the
+        # stratified reserved confirmation pool and drop it from the
+        # training data WITHOUT enabling any other EL-GS state, so a
+        # temporal-substrate control trains on the same ~75% of the same
+        # units an EL-GS cell trains on. A no-op when elgs_enable is set
+        # (that path already drops them). See
+        # research-wiki/operations/elgs-matched-triple-readiness-2026-08-18.md §2.
+        self.elgs_reserved_parity = False
 
         super().__init__(parser, "Optimization Parameters")
 

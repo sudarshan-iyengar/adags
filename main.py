@@ -1119,7 +1119,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         apply_elgs_routing_pins,
         elgs_summary,
         filter_elgs_reserved,
+        filter_reserved_indices,
         maybe_run_elgs_schedule,
+        reserved_indices_for_parity,
         setup_elgs,
     )
     elgs_trainer_state = setup_elgs(gaussians, scene, dataset, opt)
@@ -1159,6 +1161,17 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     # (spec §7 "refits never see confirmation samples"); a no-op for
     # non-EL-GS lanes.
     training_dataset = filter_elgs_reserved(training_dataset, elgs_trainer_state)
+    # Matched-comparison parity: a control cell drops the SAME reserved
+    # units an EL-GS cell drops, from the same shared reservation rule.
+    # Returns None (no-op) unless elgs_reserved_parity is set and
+    # elgs_enable is not, so this can never double-filter.
+    parity_reserved = reserved_indices_for_parity(scene, opt)
+    if parity_reserved is not None:
+        training_dataset = filter_reserved_indices(training_dataset, parity_reserved)
+        print(json.dumps({"elgs_reserved_parity": {
+            "reserved_units": len(parity_reserved),
+            "training_units_after": len(training_dataset),
+        }}, sort_keys=True))
     training_dataloader = DataLoader(training_dataset, batch_size=batch_size, shuffle=True,
                                      num_workers=0 if dataset.dataloader else 0,
                                      collate_fn=identity_collate, drop_last=True)
