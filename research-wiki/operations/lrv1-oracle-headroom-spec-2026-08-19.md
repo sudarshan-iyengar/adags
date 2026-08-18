@@ -286,3 +286,105 @@ The experiment ends when A0, A1 and A2 are terminal, the gate is applied to
 A0's output, and the section 7 rule is applied. A replicate is authorized only
 under the "close" branch. No further cells are authorized by this page under
 any outcome.
+
+---
+
+## RESULT PART 1 (2026-08-19, append-only) — the preflight, and what it cleared
+
+Nothing above is rewritten. This section records the admitted-image preflight
+and the launch-time verifications; the cell results follow in a later part.
+
+### 11.1 Experiment 165 — the K>=2 preflight PASSED its decisive check
+
+`lrv1_preflight_a1` r0, pool `dgx`, commit `5874fd1`, image
+`sha256:70a28e3d...`, config `configs/lrv1/preflight_a1.yaml` (byte-identical
+to `a1.yaml` except `iterations: 800`).
+
+**Seeding, on Apollo, identical to the local setup preflight:**
+
+```
+{"elgs_seeding": {"families": 512, "iteration": 0, "oracle_K": 2,
+  "oracle_episodes": "configs/lrv1/oracle_correct.json",
+  "oracle_families": 8, "oracle_rows": 84, "rows": 50000}}
+{"elgs_setup": {"evidence": false, "families": 512,
+  "frame_dt": 0.16666666666666607, "restored": false,
+  "schedule": "full", "time_span": 9.833333333333334}}
+```
+
+**The decisive observation is at iteration 600.** Under this capacity policy
+densification first fires there, and that is exactly where the `elgs_a`
+optimizer-group defect used to crash — `AssertionError: Group elgs_a has more
+than one param` on the clone path, `IndexError: mask [N] vs indexed tensor [1]`
+on the prune path. The run crossed it and continued:
+
+| iteration | points |
+|---:|---:|
+| 500-600 | 50,000 |
+| 610-630 | **43,977** |
+
+The count **fell**, which means the prune path ran too, not merely the clone
+path — a net removal of ~6,000 rows of the uniform random initialization while
+the `elgs_a` group held 512 per-family tensors, 8 of them at `K=2` with
+`dim(a) = 3`. **Both per-point optimizer paths executed against a
+non-per-point group and neither raised.** That is the whole reason this
+preflight existed.
+
+Also established by the run: training is stable (train PSNR 10.74 at iteration
+0 rising through 21.30 by 580) and the measured rate is **~1.30-1.43 s/it at
+batch 2**, against A0's **3.85 it/s** — the EL-GS path is ~5.4x slower per
+iteration, which is the per-family Python loop inside `presence_multiplier`
+that section 2.1 measured and deliberately did not chase.
+
+### 11.2 Reserved-unit parity — verified per run, not assumed
+
+The matched-comparison requirement is that the temporal control must not train
+on more data than the EL-GS cells. Verified from A0's own log line:
+
+```
+{"elgs_reserved_parity": {"reserved_units": 240, "training_units_after": 720}}
+```
+
+240 of 960 training units reserved, 720 trained on. The EL-GS path reaches the
+same 240 through a different function (`filter_elgs_reserved` rather than the
+parity shim, so it prints no such line); `tests/test_elgs_reserved_parity.py`
+asserts the two paths drop **identical indices**, and the local setup preflight
+reported `reserved_indices` of exactly 240 for both A1 and A2. So the control
+and the cells train on the same 720 units.
+
+### 11.3 A third confound, named before any number was read
+
+Section 4.2 named two. There is a third, and it is inherent to the mechanism
+rather than a defect:
+
+**Presence gating changes which primitives accumulate densification gradient.**
+A row whose family is absent at time `t` renders with exactly zero opacity, so
+it contributes no gradient and no `xyz_gradient_accum`. Object rows are
+therefore suppressed for 24 of 60 frames in A1 and for a different 24 frames in
+A2. The densification POLICY and the point CAP are identical across cells, but
+the realized allocation need not be — and indeed the preflight ended iteration
+630 at 43,977 points where A0 was at ~104,000 by iteration 1000.
+
+**Consequence, stated now:** "capacity matched" here means matched policy and
+matched cap, **not** matched realized primitive count. Final primitive counts
+are reported per cell and must be read alongside every delta. A1-vs-A2 is
+affected far less than A0-vs-A1, because both carry the same 24-frame
+suppression dose — which is a further reason the timing conclusion rests on
+A1-vs-A2.
+
+### 11.4 Launch record
+
+| exp | cell | retry | pool | commit | note |
+|---|---|---|---|---|---|
+| 165 | `lrv1_preflight_a1` | r0 | dgx | `5874fd1` | preflight |
+| **167** | `lrv1_a0_temporal_control` | **r0** | dgx | `43d9d46` | **ERROR — my mistake**: passed `--checkpoint_iterations`, which `main.py` does not define, so argparse rejected it in ~18 s. Claim index consumed, never reusable. |
+| 168 | `lrv1_a0_temporal_control` | r1 | dgx | `43d9d46` | A0 |
+| **166** | `b1_stg_matched_crb` | **r0** | hopper | `2ad0074` | **CANCELED before allocation.** All three `hopper` H100 slots were held by unrelated long-running Commands since 16:13Z and the trial was never given an agent. Zero compute consumed. |
+| 169 | `b1_stg_matched_crb` | r1 | **dgx** | `43d9d46` | B1, moved to `dgx` |
+| 170 | `lrv1_a1_oracle_correct` | r0 | dgx | `d892e28` | A1 |
+
+**Pool switch recorded, not silent:** B1 moved from `hopper` to `dgx` because
+`hopper` was saturated by other users. It is compared to a PUBLISHED number and
+to no local cell, so nothing in this block requires it to share hardware with
+anything; if a local STG reproduction is ever run it must be on `dgx` too.
+`dgx` has **6** slots, three permanently occupied by unrelated Commands, so the
+effective budget for this block is three concurrent cells.
