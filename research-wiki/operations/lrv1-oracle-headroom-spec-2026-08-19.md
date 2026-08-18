@@ -545,3 +545,37 @@ exact.
 asserted in gate item 7 ("24 of 24"). It was run by the primary as a scratch
 script and its output recorded, but no tracked artifact carries it. That is a
 fair criticism of the record, not of the fact.
+
+---
+
+## ANCHORS (2026-08-19, append-only) — the scale `event_return` is read on
+
+Computed from the scene's own renderer, **independent of every cell**, and
+recorded here **before any cell output was inspected** so that the scale cannot
+be chosen after seeing a number. Reproducible from
+`scripts/build_synthetic_reveal_scene.py::render` alone.
+
+| anchor | pooled `event_return` PSNR |
+|---|---:|
+| **FLOOR** — a cell that reconstructs the background behind the object perfectly and the returned object not at all, i.e. renders the return frames as if it never came back | **10.1235 dB** |
+| per held-out view at the floor | cam02 9.39, cam07 10.62, cam12 15.02, cam17 10.05 |
+| **PRACTICAL CEILING** — correct everywhere but off by one 8-bit quantisation step | **58.92 dB** |
+
+So a cell scoring near 10 dB on this metric has not reconstructed the returned
+surface at all; the useful dynamic range is roughly 10 to 40 dB. cam12's higher
+floor is the view where the returned object subtends fewest pixels and is
+partly occluded by a static sphere, which is also why it carries only 10% of
+the pooled weight against cam02's 45%.
+
+**A note on the ramps that survive the B1 repair**, so the secondary
+diagnostics are not misread. Neither repaired program ramps on a decisive
+return frame, but the residual half-presence frames land differently:
+
+* **A1** ramps at frames **30 and 53** — both inside the absence gap, so A1
+  pays for them in `ghost_gap` and nowhere else;
+* **A2** ramps at frames **6 and 29** — both ground-truth-present, so A2 pays
+  for them in `event_episode1`.
+
+`ghost_gap` is therefore **not** directly comparable between A1 and A0, and
+`event_episode1` is not directly comparable between A2 and A0. `event_return`,
+the decisive metric, is unaffected in both.
