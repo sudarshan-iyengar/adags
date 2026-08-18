@@ -579,3 +579,126 @@ return frame, but the residual half-presence frames land differently:
 `ghost_gap` is therefore **not** directly comparable between A1 and A0, and
 `event_episode1` is not directly comparable between A2 and A0. `event_return`,
 the decisive metric, is unaffected in both.
+
+---
+
+## RESULT PART 2 (2026-08-19, append-only) — LRV1's gate FAILED, and the cause is the fixture, not the representation
+
+Nothing above is rewritten. **The gate thresholds applied here were fixed
+before any cell output existed** (REVIEW ROUND 1, finding M5) and are not
+moved now that a number exists.
+
+### 12.1 A0 — the matched ADAGS temporal control (experiment 168)
+
+`lrv1_a0_temporal_control` r1, `dgx`, commit `43d9d46`, image
+`sha256:70a28e3d...`, 6000 iterations, terminal COMPLETED, 149,602 primitives
+(the 150,000 cap binds), checkpoint at iteration 6000. Scored by experiment
+173 (`lrv1_eval_a0` r1).
+
+| region | pooled PSNR | mean-per-frame | pixel-times |
+|---|---:|---:|---:|
+| `event_return` | **21.9952** | 23.4587 | 113,868 |
+| `event_episode1` | **23.2890** | 24.9772 | 569,340 |
+| `ghost_gap` | 14.1091 | 15.4887 | 455,472 |
+| `ordinary_return` | 19.4833 | 19.7400 | 2,766,132 |
+| `ordinary_all` | 19.2501 | 19.5142 | 28,116,792 |
+| `whole_frame` | 19.3105 | 19.5722 | SSIM 0.69694, LPIPS-Alex 0.23476 |
+
+Per return frame: 54 → 18.33, 55 → 22.72, 56 → 24.29, 57 → 25.27, 58 → 25.55,
+59 → 24.60 dB. The first returned frame is the worst by ~6 dB, which is the
+shape the hypothesis predicts.
+
+### 12.2 The evaluator agrees with `main.py`, so the measurement is sound
+
+This matters before anything is read into the numbers. `main.py`'s own held-out
+evaluation of the same run reports `best_val/psnr` **19.5785** and
+`best_val/ssim` **0.6969425**; this evaluator reports whole-frame pooled PSNR
+**19.3105** and SSIM **0.6969427**.
+
+**SSIM agrees to six decimal places** — two independent implementations
+rendering the same 240 held-out views and reaching the same number. The
+0.268 dB PSNR difference is the expected sign and magnitude of the
+channel-pooling defect recorded in [[stg-n3v-protocol-parity-2026-08-19]]:
+`main.py` averages three per-channel PSNRs where this evaluator pools over
+channels and pixels, and the bias is `10*log10(AM/GM)` over the per-channel
+MSEs, always non-negative.
+
+### 12.3 THE GATE: FAILED on item 6
+
+| item | rule (fixed before any output) | measured | verdict |
+|---|---|---:|---|
+| 3 — control errs at the return | `event_episode1 - event_return >= 1.0 dB` | **1.2939 dB** | **PASS** |
+| 6 — region reconstructible in principle | `event_episode1 >= 25.0 dB` | **23.2890 dB** | **FAIL** |
+
+**GATE FAILED.** Under section 6 the consequence is fixed and not negotiable:
+**LRV1 is UNSUITABLE / INCONCLUSIVE for this question, and no representation
+verdict follows from any A1 number on it.**
+
+Experiment 171 (LRV1 A1, correct oracle, repaired boundaries) was ~45 minutes
+into a ~2.4 hour run when the gate was applied. It was **cancelled**, because
+its remaining hour of compute could not buy an interpretable result and the
+slot was needed for a scene that can. That is not cancelling valid work to make
+a report terminal — it is stopping work whose interpretive basis a measurement
+had already removed.
+
+### 12.4 Why it failed, measured rather than guessed
+
+A0 reached **34.23 dB on training views and 19.31 dB held out** — a 15 dB gap
+on a five-primitive analytic scene, which is not a plausible generalization gap
+and pointed at the fixture.
+
+**The initialization cloud does not cover the visible scene.** The cloud is
+uniform in `[-1.3, 1.3]^3`; the ground plane reaches to `GROUND_HALF_EXTENT =
+3.0`. Measured over all 20 cameras by ray-casting the scene's own geometry:
+
+| ground half extent | pixels showing surface OUTSIDE the init cube | background |
+|---:|---:|---:|
+| **3.0 (LRV1)** | **13.94%** | 32.90% |
+| 1.3 | **0.00%** | 46.84% |
+
+Densification **clones and splits existing primitives**; it cannot create them
+where none are nearby. So ~14% of every image is surface the optimizer can only
+fit with floaters — and a floater that reproduces a training view exactly is
+wrong from a held-out view 18 degrees away. That is the mechanism of the 15 dB
+gap, and it also explains the ordering in the table above: `event_episode1`
+(23.29) and `event_return` (22.00) are *better* than `ordinary_all` (19.25),
+because the event object sits near the centre of the scene where the init cloud
+is dense, while the badly-reconstructed ground is everywhere else.
+
+**This is a defect in the fixture, authored by the primary, not a property of
+the representation and not a property of the event.**
+
+### 12.5 What LRV1 does and does not establish
+
+**Establishes:**
+
+* the whole measurement chain works end to end on the admitted image —
+  fixture, loader, trainer, checkpoint, evaluator, reducer;
+* the evaluator agrees with an independent implementation to six decimals on
+  SSIM;
+* a real, quantified failure mode for authored testbeds: **if the
+  initialization does not cover the visible surface, held-out numbers measure
+  floaters rather than the method.** That is worth more than the cell would
+  have been.
+
+**Does NOT establish:** anything about whether the episodic representation has
+headroom. A1 was cancelled and would have been uninterpretable anyway.
+
+### 12.6 LRV2 — the same event, on a scene that is actually initialized
+
+`scripts/build_synthetic_reveal_scene.py --scene-id LRV2
+--ground-half-extent 1.3`. **One constant changes.** Cameras, frames, the event
+object and its timing, the oracle-episode files, the training budget and the
+capacity policy are all unchanged, and the held-out event supply is **identical
+at 113,868 return pixel-times**. Uncovered visible surface measures **0.00%**.
+
+Cells `configs/lrv2/{a0,a1,a2}.yaml` differ from their LRV1 counterparts in
+`source_path` and comments only, and reuse `configs/lrv1/oracle_*.json`
+unchanged — the presence programs depend only on frame timing and the frozen
+prereg constants, neither of which moved.
+
+**Every rule in sections 5, 6 and 7 above, and the anchors, carry over
+unchanged and are NOT re-derived for LRV2.** The gate floor stays at 25.0 dB
+and the deficit minimum at 1.0 dB. Applying the same fixed rules to a repaired
+fixture is the point; loosening them because the first scene failed them would
+not be.
