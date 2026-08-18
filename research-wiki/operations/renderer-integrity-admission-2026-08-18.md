@@ -325,3 +325,135 @@ repro_bound_new        r0 (exp 142)                 -> next free r1
 ```
 
 Never reuse or delete a consumed claim.
+
+---
+
+## APPENDIX C (2026-08-18, append-only) — the new image's own spread, and it settles section 6's open question
+
+Section 6 named the settling measurement and declined to run it: "two or
+three runs of the NEW image at the same seed, giving it its own spread".
+That was authorised separately and has now run. Nothing above is rewritten;
+this appendix reports what the added runs show and where they change how
+section 6's result may be READ.
+
+**Setup, identical to 148 in every respect the wrapper records** except the
+retry index: `configs/elgs/smoke_elgs.yaml`, 600 iterations, seed 0, from
+scratch, N3V `cut_roasted_beef`, pool `dgx`, admitted image
+`sha256:70a28e3d…`, `--max-train-iterations 600`, same `--source_path`.
+Commit is `a70f14f` rather than 148's `392ba4a`; the only code difference
+between them is `scripts/build_absence_diagnostic.py` and its tests
+(`git diff --stat 392ba4a..a70f14f`), neither of which is in the training
+path, and the CUDA source hash is byte-identical. So the arms differ by
+nothing that executes.
+
+| exp | image | retry | held-out `best_val/psnr` | `final/ssim` | training-log Loss | training-log PSNR |
+|---|---|---|---:|---:|---:|---:|
+| 146 | old `51f8a852…` | r2 | 28.54022950 | 0.92084739 | 0.1021910 | 26.02 |
+| 147 | old `51f8a852…` | r2 | 28.43576755 | 0.92022758 | 0.1017597 | 26.38 |
+| 148 | new `70a28e3d…` | r2 | 28.77180493 | 0.92390805 | 0.0974231 | 26.63 |
+| **152** | new `70a28e3d…` | **r3** | **28.77185474** | 0.92390745 | 0.0974552 | 26.63 |
+| **153** | new `70a28e3d…` | **r4** | **28.77213518** | 0.92392631 | 0.0974608 | 26.63 |
+
+`best_val/psnr` and `final/ssim` are read from each run's `summary.json` on
+Apollo; the two training-log columns are the final progress line, the same
+quantity section 6's table used.
+
+### The measured spreads
+
+| quantity | old image (n=2) | new image (n=3) | ratio |
+|---|---:|---:|---:|
+| held-out `best_val/psnr` | **0.10446 dB** | **0.00033 dB** | ~317x |
+| training-log Loss | 4.313e-4 | 3.77e-5 | ~11x |
+| training-log PSNR | 0.36 dB | 0.00 dB (26.63 in all three) | — |
+
+**The new image is reproducible run-to-run in this configuration; the old
+one was not.** Three runs of the repaired kernel agree to 3.3e-4 dB of
+held-out PSNR — five significant figures — while the two old-image runs
+disagree by 0.10 dB on the same metric and by 0.36 dB on the training-log
+metric section 6 reported.
+
+### This RESOLVES section 6's "not established", in the direction of the repair
+
+Section 6 concluded that 148 "lies within roughly one old-image spread" so
+the measurement "cannot separate 'the repaired kernel trains differently'
+from 'this configuration is simply nondeterministic at this magnitude'".
+With the new image's own spread in hand, it separates:
+
+* the new image sits **0.2316 dB** above the BETTER of the two old runs on
+  held-out PSNR;
+* that gap is **~700x the new image's own spread** and **~2.2x the old
+  image's**;
+* every one of the three new runs is above every old run, on all four
+  reported quantities, with no overlap.
+
+So the repaired kernel does train measurably differently on this
+configuration, and section 6's cautious refusal to say so was a consequence
+of n=1, not of the data.
+
+**The weak side of this is stated too.** The old-image spread rests on
+n=2, so it is a poor estimate of that image's variability, and an unlucky
+pair cannot be excluded on the numbers alone. What does not depend on that
+estimate is the new image's tightness at n=3, and the qualitative contrast
+between three runs agreeing to five significant figures and two runs
+disagreeing in the second.
+
+### The atomicAdd attribution, revisited honestly
+
+Section 6 declined to attribute the old spread to the guard, on the correct
+ground that `atomicAdd` float-summation order is nondeterministic and exists
+in BOTH images. That reasoning is unchanged and remains right as far as it
+goes. What the new runs add is an empirical bound on it: **if `atomicAdd`
+ordering were the dominant source of run-to-run variation here, the
+repaired image would vary by a similar amount. It varies by 3.3e-4 dB.**
+Therefore, in this configuration, `atomicAdd` ordering contributes at most
+that, and the old image's 0.10–0.36 dB came from somewhere else. The
+identified candidate — the only relevant difference between the two images
+— is the per-tile early-out reading uninitialised memory
+([[rasterizer-backward-two-defects-2026-08-17]]).
+
+**Still NOT established, and deliberately not claimed:** that `max_contrib`
+specifically is the mechanism. No experiment isolated it; the inference is
+by elimination over a two-element difference set, which is weaker than a
+direct measurement and is labelled as such.
+
+**Also NOT established:** that the new image's higher PSNR is "better
+training" in any scientific sense. It is a different, now-reproducible
+trajectory. Whether the repaired gradient is the *correct* gradient is the
+question section 4.2's finite-difference residuals could not arbitrate, and
+this appendix does not touch it.
+
+### What changes for prior results, and what does not
+
+* Section 6's actionable consequence for OLD-image single-run comparisons is
+  unchanged: they carry ~0.36 dB of unreported run-to-run uncertainty in
+  this configuration and smaller differences are not resolvable.
+* **NEW, and this is the useful part:** single-run-per-arm comparisons on
+  the ADMITTED image do NOT inherit that penalty in this configuration.
+  Three runs agreeing to 3.3e-4 dB means a future matched comparison on the
+  new image can resolve differences far below 0.36 dB — which materially
+  improves the power of the matched presence triple, whose decision rule
+  uses `max(0.5 dB, |T-1 - T-1'|)`. The `|T-1 - T-1'|` term is measured
+  per-experiment and is NOT replaced by this figure.
+* **The scope limit stands unchanged.** This is 600 iterations of N3V at
+  50k points with `elgs_enable: True`. It does NOT license transferring
+  either spread to a 15k-iteration DiVa-360 run at 400k+ points. A lane
+  needing a resolvable difference still measures its own spread; what has
+  changed is the prior expectation about how large that will be.
+
+### Cost and provenance
+
+Two runs, ~13.6 min of training each, wall 21.5 and 21.3 min including
+container start and evaluation — **≈0.72 slot-hours**, against a projected
+0.30 (0.15 each, inherited from 146–148's projection). The projection
+understated the actual by ~2.4x because it counted training time only.
+Recorded rather than smoothed over: the block's stated ceiling for this item
+was ≈0.5 GPU-h and the measured consumption exceeded it.
+
+Both `evidence_bearing: false`, exploratory, `dgx`. Consumed claim indices:
+
+```
+repro_bound_new   r3 (exp 152), r4 (exp 153)   -> next free r5
+```
+
+No further renderer runs are authorised by this page under any outcome, and
+this appendix does not authorise any.
