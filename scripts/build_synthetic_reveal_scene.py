@@ -54,7 +54,16 @@ EPISODE_2_FRAMES = (54, 59)
 LIGHT_DIR = np.array([0.5, 1.0, 0.4])
 AMBIENT = 0.25
 GROUND_Y = -0.62
-GROUND_HALF_EXTENT = 3.0
+# LRV1 shipped 3.0 and that was a DEFECT: the initialization cloud is uniform in
+# [-1.3, 1.3]^3, so a ground plane reaching to 3.0 puts 13.94% of every image on
+# surface with no primitive anywhere near it. Densification clones and splits
+# EXISTING primitives; it cannot create them from nothing. Those pixels are
+# exactly where the optimizer is free to place floaters that satisfy the 16
+# training views and are wrong from the 4 held-out ones -- LRV1's A0 reached
+# 34.23 dB on training views and 19.31 dB held out. LRV2 sets it to the init
+# half-width, which measures 0.00% uncovered.
+DEFAULT_GROUND_HALF_EXTENT = 3.0
+GROUND_HALF_EXTENT = DEFAULT_GROUND_HALF_EXTENT
 
 # (centre, radius, base_colour, texture_mode)
 STATIC_SPHERES = (
@@ -255,7 +264,16 @@ def main():
     ap.add_argument("--out", required=True, help="output scene directory")
     ap.add_argument("--num-init-pts", type=int, default=50_000)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--scene-id", default="LRV1")
+    ap.add_argument("--ground-half-extent", type=float,
+                    default=DEFAULT_GROUND_HALF_EXTENT,
+                    help="ground plane half extent; MUST NOT exceed the "
+                         "initialization cloud half-width, or visible surface "
+                         "is left with no primitive to grow from")
     args = ap.parse_args()
+
+    global GROUND_HALF_EXTENT
+    GROUND_HALF_EXTENT = float(args.ground_half_extent)
 
     out = Path(args.out)
     (out / "train").mkdir(parents=True, exist_ok=True)
@@ -305,8 +323,9 @@ def main():
     store_ply(out / "points3d.ply", xyz, rgb)
 
     spec = {
-        "scene_id": "LRV1",
+        "scene_id": args.scene_id,
         "kind": "synthetic_leave_and_return",
+        "ground_half_extent": GROUND_HALF_EXTENT,
         "evidence_bearing": False,
         "n_frames": N_FRAMES, "fps": FPS, "time_duration": list(TIME_DURATION),
         "width": WIDTH, "height": HEIGHT, "focal_px": FOCAL,
