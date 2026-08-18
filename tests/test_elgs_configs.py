@@ -51,6 +51,49 @@ def _main_top_level_keys():
     return keys
 
 
+class RoundsFlagPlumbingTests(unittest.TestCase):
+    """`elgs_rounds_enabled` defaults True, and ParamGroup renders every bool
+    as `action="store_true"`, so the CLI cannot express False. YAML is the
+    ONLY route that can disable structural rounds, and a rounds-off cell that
+    silently ran with rounds ON would be scientifically wrong rather than
+    failed -- so the route gets a test rather than a comment."""
+
+    def test_the_key_exists_on_the_optimization_surface(self):
+        self.assertIn("elgs_rounds_enabled", _optimization_param_names())
+
+    def test_yaml_route_can_set_it_false(self):
+        """Reproduces main.py's recursive_merge leaf: assert hasattr, setattr."""
+
+        class _Args:
+            elgs_rounds_enabled = True
+
+        document = "OptimizationParams:" + chr(10) + "  elgs_rounds_enabled: false" + chr(10)
+        args = _Args()
+        for key, value in yaml.safe_load(document)["OptimizationParams"].items():
+            self.assertTrue(hasattr(args, key), key)
+            setattr(args, key, value)
+        self.assertIs(args.elgs_rounds_enabled, False)
+
+    def test_the_cli_route_cannot_set_it_false(self):
+        """Recorded as a TESTED limitation, not an assumption: if ParamGroup's
+        bool handling ever changes, this test fails and the comment in
+        arguments/__init__.py must be revisited."""
+
+        from argparse import ArgumentParser
+
+        from arguments import OptimizationParams
+
+        parser = ArgumentParser()
+        params = OptimizationParams(parser)
+        parsed = parser.parse_args([])
+        self.assertIs(getattr(parsed, "elgs_rounds_enabled"), True)
+        action = next(
+            a for a in parser._actions if a.dest == "elgs_rounds_enabled"
+        )
+        self.assertEqual(action.__class__.__name__, "_StoreTrueAction")
+        self.assertEqual(action.nargs, 0)
+
+
 class SmokeConfigAdmissionTests(unittest.TestCase):
     def test_every_key_is_recursive_merge_compatible(self):
         config = yaml.safe_load(SMOKE.read_text(encoding="utf-8"))

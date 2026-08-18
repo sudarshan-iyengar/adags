@@ -17,6 +17,7 @@ import torch
 from depth_visibility.errors import ContractError
 from elgs.state_io import build_elgs_state, load_elgs_state
 from elgs.trainer_hooks import (
+    _propose_smoke_candidates,
     apply_elgs_routing_pins,
     elgs_summary,
     filter_elgs_reserved,
@@ -83,7 +84,7 @@ def _stub_gaussians(n_rows=64):
     return g
 
 
-def _build():
+def _build(opt=None):
     # Camera-fastest ordering with n_cams % 4 == 0: exactly the
     # ordering that collapsed an index-stride reservation onto one
     # camera — the stratified scheme must survive it.
@@ -94,7 +95,7 @@ def _build():
     dataset = _CountingDataset(cameras)
     scene = _StubScene(dataset)
     gaussians = _stub_gaussians()
-    state = setup_elgs(gaussians, scene, dataset=None, opt=_stub_opt())
+    state = setup_elgs(gaussians, scene, dataset=None, opt=opt or _stub_opt())
     return state, gaussians, scene, dataset
 
 
@@ -294,6 +295,92 @@ class RoundAndPostRefitTests(unittest.TestCase):
         summary = elgs_summary(state)
         self.assertEqual(summary["candidates_accepted"], 1)
         self.assertGreater(summary["ledger_events"], 0)
+
+
+class RoundsEnabledFlagTests(unittest.TestCase):
+    """`elgs_rounds_enabled` is the structural-search master switch.
+
+    False must run NO structural round and propose NO candidate while
+    leaving the lineage substrate fully live — seeding, the `elgs_a`
+    optimizer group and the presence multiplier — so a K=1
+    presence-only cell needs neither track nor evidence artifacts.
+    True must be exactly today's behaviour.
+    """
+
+    def _disabled(self):
+        opt = _stub_opt()
+        opt.elgs_rounds_enabled = False
+        state, gaussians, scene, _ = _build(opt)
+        return state, gaussians, scene, opt
+
+    def test_option_surface_defaults_to_true(self):
+        from argparse import ArgumentParser
+
+        from arguments import OptimizationParams
+
+        parser = ArgumentParser(add_help=False)
+        group = OptimizationParams(parser)
+        self.assertTrue(group.extract(parser.parse_args([])).elgs_rounds_enabled)
+
+    def test_absent_flag_defaults_to_true_and_rounds_still_run(self):
+        # _stub_opt() deliberately never sets the flag: an option surface
+        # that predates it must keep running rounds unchanged.
+        state, gaussians, scene, _ = _build()
+        self.assertTrue(state.rounds_enabled)
+        maybe_run_elgs_schedule(state, gaussians, scene, _stub_opt(), 200, _render_loss)
+        self.assertEqual(state.rounds_run, [200])
+        self.assertEqual(len(state.committed_decisions), 1)
+
+    def test_disabled_runs_no_round_at_any_boundary(self):
+        state, gaussians, scene, opt = self._disabled()
+        self.assertFalse(state.rounds_enabled)
+        # Smoke schedule rounds: 200, 350, 500.
+        for iteration in (200, 350, 500):
+            maybe_run_elgs_schedule(
+                state, gaussians, scene, opt, iteration, _render_loss
+            )
+        self.assertEqual(state.rounds_run, [])
+        self.assertEqual(state.committed_decisions, [])
+        self.assertFalse(getattr(gaussians, "_elgs_pinned_families", set()))
+        self.assertEqual(elgs_summary(state)["candidates_accepted"], 0)
+
+    def test_disabled_proposer_proposes_nothing(self):
+        state, _, _, _ = self._disabled()
+        self.assertEqual(_propose_smoke_candidates(state, 200), [])
+
+    def test_disabled_never_reaches_post_refit(self):
+        state, gaussians, scene, opt = self._disabled()
+        for iteration in (200, 350, 500, 600):
+            maybe_run_elgs_schedule(
+                state, gaussians, scene, opt, iteration, _render_loss
+            )
+        self.assertFalse(state.post_refit_done)
+
+    def test_disabled_keeps_seeding_the_a_logit_group_and_presence(self):
+        state, gaussians, _, _ = self._disabled()
+        self.assertTrue(state.seeded)
+        self.assertGreater(len(state.runtime.registry.active_ids()), 0)
+        self.assertIsNotNone(state.logit_group_index)
+        group = gaussians.optimizer.param_groups[state.logit_group_index]
+        self.assertEqual(group["name"], "elgs_a")
+        self.assertEqual(len(group["params"]), len(state.runtime.logit_parameters()))
+        presence = state.runtime.presence_multiplier(gaussians._elgs_family_ids, 0.0)
+        self.assertEqual(presence.shape[0], 64)
+        self.assertGreater(float(presence.sum()), 0.0)
+
+    def test_disabled_requires_no_track_or_evidence_state(self):
+        """`state.evidence is None` alone is VACUOUS here -- it follows from
+        the stub's empty `elgs_tracks_dir`, not from the flag, and would hold
+        with the feature reverted. What the flag itself must guarantee is that
+        nothing downstream ever ASKS for evidence: no round fires and the
+        proposer returns nothing, so the K=1 presence substrate needs no track
+        artifact to stay live."""
+
+        state, _, _, _ = self._disabled()
+        self.assertIsNone(state.evidence)
+        self.assertFalse(state.rounds_enabled)
+        self.assertEqual(_propose_smoke_candidates(state, 3000), [])
+        self.assertEqual(state.rounds_run, [])
 
 
 if __name__ == "__main__":

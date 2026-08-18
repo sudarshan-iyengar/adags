@@ -233,6 +233,24 @@ class OptimizationParams(ParamGroup):
         self.elgs_prereg_dir = "configs/elgs"
         self.elgs_tracks_dir = ""
         self.elgs_smoke_schedule = False
+        # Structural-search master switch, independent of elgs_enable.
+        # False keeps the lineage substrate fully live (seeding, the
+        # per-family a-logit optimizer group, the presence multiplier
+        # and therefore ordinary photometric training and
+        # densification) while running NO structural round and
+        # proposing NO candidate, so a K=1 presence-only cell needs
+        # neither track nor evidence artifacts. True is today's
+        # behaviour exactly.
+        # SET IT FROM YAML, NEVER FROM THE CLI: ParamGroup renders every
+        # bool as `action="store_true"`, so a default-True flag cannot be
+        # turned off on the command line at all (the same is true of
+        # enable_soft_routing, motion_aware_densify_use_residual and
+        # lifecycle_evidence_preload -- a pre-existing repo-wide property,
+        # not one this flag introduces). `--elgs_rounds_enabled false`
+        # would leave rounds ON and produce a scientifically wrong cell
+        # rather than a failed one. The YAML route is exercised by
+        # tests/test_elgs_configs.py::RoundsFlagPlumbingTests.
+        self.elgs_rounds_enabled = True
         self.elgs_beta = -1.0
         self.elgs_kappa = -1.0
         self.elgs_chi = -1.0

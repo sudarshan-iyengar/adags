@@ -62,6 +62,7 @@ class ElgsTrainerState:
     frame_dt: float
     seeded: bool = False
     rounds_run: list = field(default_factory=list)
+    rounds_enabled: bool = True
     a_lr: float = 0.0
     k_se: float = 1.0
     candidate_cap: int = 8
@@ -242,6 +243,7 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         frame_dt=frame_dt,
         seeded=seeded,
         rounds_run=rounds_run,
+        rounds_enabled=bool(getattr(opt, "elgs_rounds_enabled", True)),
         a_lr=float(getattr(opt, "elgs_a_lr")),
         k_se=float(getattr(opt, "elgs_k_se")),
         candidate_cap=slots_per_pass,
@@ -695,6 +697,9 @@ def _propose_smoke_candidates(state: ElgsTrainerState, iteration: int) -> list:
     from .transaction_ledger import LedgerEvent
 
     proposals = []
+    # Structural search off: propose nothing at all (elgs_rounds_enabled).
+    if not state.rounds_enabled:
+        return proposals
     # Eligibility for the smoke operation is unchanged: K == 1.
     eligible = [
         family_id
@@ -767,7 +772,11 @@ def maybe_run_elgs_schedule(state, gaussians, scene, opt, iteration, render_unit
         return
     if not state.seeded:
         raise ContractError("EL-GS families must be seeded at setup")
-    if state.runtime.is_round_boundary(iteration) and iteration not in state.rounds_run:
+    if (
+        state.rounds_enabled
+        and state.runtime.is_round_boundary(iteration)
+        and iteration not in state.rounds_run
+    ):
         _run_round(state, gaussians, scene, iteration, render_unit_loss)
     if (
         iteration >= state.schedule.refit_until

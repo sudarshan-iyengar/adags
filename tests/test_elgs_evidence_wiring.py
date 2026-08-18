@@ -1959,6 +1959,7 @@ class _SmokeState:
         )
         self.evidence = evidence
         self.rounds_run = []
+        self.rounds_enabled = True
 
 
 class SmokeReportBoundTests(unittest.TestCase):

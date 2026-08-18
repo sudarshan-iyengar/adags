@@ -75,6 +75,21 @@ def _as_row_denominator(values, row_count, where, device=None):
     return tensor.to(torch.float32)
 
 
+# Optimizer groups whose parameters are NOT one-tensor-per-primitive, so the
+# per-point densify/prune paths must leave them completely alone. Kept in one
+# place because the two paths previously carried separate copies of this list
+# and both copies missed `elgs_a` (the EL-GS per-family interval logits,
+# installed by elgs/trainer_hooks.py::_refresh_logit_param_group).
+NON_PER_POINT_PARAM_GROUPS = (
+    "gate_mlp",
+    "gate_params",
+    "motion_lora_basis",
+    "motion_scaffold_coeff",
+    "motion_scaffold_basis",
+    "elgs_a",
+)
+
+
 class GaussianModel:
 
     def setup_functions(self):
@@ -1548,13 +1563,26 @@ class GaussianModel:
             name = group["name"]
 
             # Skip global / non-per-point groups
-            if name in ("gate_mlp", "gate_params", "motion_lora_basis", "motion_scaffold_coeff", "motion_scaffold_basis"):
+            if name in NON_PER_POINT_PARAM_GROUPS:
                 continue
 
             if static and "static" not in name:
                 continue
             elif not static and "static" in name:
                 continue
+
+            # Fail closed rather than slice a group that is not actually one
+            # tensor per primitive: this path has no per-name work list to fall
+            # through on, so an unlisted non-per-point group would otherwise be
+            # mask-indexed and silently rewritten.
+            first = group["params"][0] if group["params"] else None
+            if len(group["params"]) != 1 or first.dim() == 0 or first.shape[0] != mask.shape[0]:
+                raise ContractError(
+                    f"_prune_optimizer: group {name} is not one tensor per primitive "
+                    f"({len(group['params'])} params, leading dim "
+                    f"{first.shape if first is not None else None} vs "
+                    f"{int(mask.shape[0])} rows); add it to NON_PER_POINT_PARAM_GROUPS"
+                )
 
             stored_state = self.optimizer.state.get(group["params"][0], None)
             if stored_state is not None:
@@ -1655,18 +1683,22 @@ class GaussianModel:
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
             name = group["name"]
-            if name in ("gate_mlp", "gate_params", "motion_lora_basis", "motion_scaffold_coeff", "motion_scaffold_basis"):
+            if name in NON_PER_POINT_PARAM_GROUPS:
                 # Global params; no concatenation
                 continue
-
-            assert (
-                    len(group["params"]) == 1
-            ), f"Group {name} has more than one param"
 
             try:
                 extension_tensor = tensors_dict[name]
             except KeyError:
                 continue
+
+            # Checked only for groups the caller actually asked to grow, so a
+            # non-per-point group that is absent from `tensors_dict` can never
+            # trip it — the assert used to run before this lookup and fired on
+            # the multi-tensor `elgs_a` group.
+            assert (
+                    len(group["params"]) == 1
+            ), f"Group {name} has more than one param"
 
             stored_state = self.optimizer.state.get(group["params"][0], None)
             if stored_state is not None:
