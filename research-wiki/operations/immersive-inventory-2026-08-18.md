@@ -187,3 +187,149 @@ in this file sit within a fraction of a metre of the origin (the first entry is
 **Still not done:** STG's `pre_immersive_undistorted.py` has not been read, so
 nothing here states how these fields map onto its expected inputs, and no
 conversion, loader check or decoded-size measurement has been performed.
+
+---
+
+## APPENDIX (2026-08-19, append-only) — the official STG Immersive preprocessing was read, and it does not run as shipped
+
+Nothing above is rewritten. Section 98's "NOT DONE — STG's preprocessing script
+has not been read" is closed here.
+
+**Provenance.** Read from primary source via `raw.githubusercontent.com` on the
+`main` branch: `script/pre_immersive_distorted.py`,
+`script/pre_immersive_undistorted.py`, `script/pre_n3d.py`,
+`script/utils_pre.py`, `thirdparty/gaussian_splatting/helper3dg.py`,
+`utils/my_utils.py` and the Immersive configs were obtained **verbatim in
+full**; `dataset_readers.py`, `scene/__init__.py`, `helper_train.py` and
+`train_imdist.py` by repeated narrow extraction, because the fetch layer
+refused bulk reproduction of a 1348-line source file twice. The primary did not
+re-fetch. Treat the verbatim command strings as decision-grade and the
+`dataset_readers.py` line attributions as high-but-not-certain.
+
+### 1. The Immersive COLMAP driver is malformed, and only the Immersive one
+
+Four `feature_extractor` command builders exist in `helper3dg.py`:
+
+```
+getcolmapsinglen3d:          "colmap feature_extractor --database_path "                                     <- correct
+getcolmapsingleimundistort:  "colmap feature_extractor SiftExtraction.max_image_size 6000 --database_path "  <- MALFORMED
+getcolmapsingleimdistort:    "colmap feature_extractor SiftExtraction.max_image_size 6000 --database_path "  <- MALFORMED
+getcolmapsingletechni:       "colmap feature_extractor --database_path "                                     <- correct
+```
+
+`SiftExtraction.max_image_size 6000` is missing its `--`, so COLMAP receives two
+unregistered positional tokens against a parser that declares none. It exits
+non-zero, and the caller does `if exit_code != 0: exit(exit_code)`. **Both
+defective builders are the Immersive drivers and only the Immersive drivers.**
+The block-4 record's second-hand "two malformed-command defects" is
+**independently confirmed, and the count is exactly right**.
+
+**Consequence: Google Immersive preprocessing cannot be reproduced from the
+official code without patching it first.** That is not a reason to prefer a
+different dataset — it is a cost that must be in the estimate.
+
+### 2. The 46-vs-45 discrepancy: implicit exclusion by iteration source
+
+Resolved from source, and it matches what experiment 162 measured. The script
+enumerates three different things:
+
+* frame extraction: `videoslist = sorted(videopath.glob("*.mp4"))` — **videos**
+* symlinking: `sorted(originalpath.glob("camera_*"))` — **directories**
+* undistortion and calibration: `for idx, camera in enumerate(meta)` over
+  `models.json` — **calibration**
+
+So the uncalibrated camera has its 300 frames decoded and its directory
+symlinked (wasted disk) and then never appears in `colmap_<offset>/input/`, in
+`cameras.txt`/`images.txt`, in any `.npy`, in `sparse/0`, or in the trainer.
+**No explicit exclusion, no warning, no crash — silent.** The reverse mismatch
+(calibration without video) does crash, on `assert imagepath.exists()`.
+
+This confirms the standing guidance: **key on `models.json`, treat the mp4 set
+as a superset.**
+
+### 3. Two facts that change what an Immersive port would have to be
+
+**The trainer never reads the undistorted images.** `--source_path` points at
+`<scene>_dist/colmap_0`, but `readColmapCamerasImmersive` walks two directories
+up and resolves `<scene>_dist/camera_XXXX/{j}.png` — the **raw fisheye frames**,
+through the symlink. Geometry comes from `sparse/0`; pixels come from fisheye;
+and the rendered pinhole image is warped into fisheye space at loss time using a
+per-camera inverse flow map (`<camera>.npy`, ~39 MB each) attached in
+`scene/__init__.py`. COLMAP's `image_undistorter` output is produced and then
+effectively unused on this path.
+
+**So the loader-compatibility question was framed wrongly in the earlier
+record.** It is not "convert fisheye to pinhole and feed the trainer"; STG
+trains *in fisheye space* on the distorted path. A pinhole-only port is
+possible — drop the `.npy` limb and train on the rectified images — but it is a
+different method from the published one, and its numbers would not be
+comparable to STG's published Immersive figures.
+
+The rectification itself is `cv2.fisheye.initUndistortRectifyMap` + `remap`
+with a **hand-built** `knew`: focal multiplied by a per-scene scale (0.36
+generally, **0.35 for `02_Flames`**, 0.5 on the undistorted path), principal
+point unchanged, output size equal to input size. There is **no
+`getOptimalNewCameraMatrix`, no `estimateNewCameraMatrixForUndistortRectify`,
+and therefore no `balance` or `alpha` parameter anywhere**, and **no crop** —
+the wider field of view comes purely from shrinking the focal length, with
+outside-the-circle pixels left black. Only `k1, k2` are used;
+`radial_distortion[2:]` is discarded.
+
+### 4. The extraction cost is confirmed from source
+
+`pre_immersive_distorted.py` calls `extractframes(v)` **with no start/end
+arguments**, against a signature defaulting to `startframe=0, endframe=300`.
+The CLI's `--startframe`/`--endframe` are honoured by undistortion, DB writing
+and COLMAP, but **not** by extraction. So **every run decodes frames 0-299 of
+every video at full resolution as PNG regardless of the requested range** — the
+figure carried in the block-4 record, now confirmed from the source line rather
+than inherited.
+
+### 5. Other defects, recorded so they are not rediscovered
+
+* **A dead frame cap.** `if "04_Trucks" == srcscene:` guards a 150-frame limit,
+  but the scene list contains `"04_Truck"` without the `s`. The guard never
+  fires. Present in both Immersive scripts.
+* **A resumability `NameError`.** In `imageundistort`, `image` is bound only
+  inside the `else:` branch but used outside it under `if offset == 0:`. On a
+  rerun where the input PNG exists and the `.npy` does not, it raises — or, in a
+  partial resume, silently reuses the previous camera's frame.
+* **POSIX-only**: `rm -r` via `os.system` in three functions, plus symlinks. The
+  repository ships a `script/wsl.md` telling Windows users to use WSL2, so the
+  maintainers know.
+* **Unquoted `os.system` string concatenation** for every COLMAP call — any
+  space in a dataset path breaks all four.
+* **`w`/`h` are taken from `models.json` and never validated against the decoded
+  frame**; the sanity asserts in `write_colmap` are commented out.
+* **`configs/im_undistort_lite/02_Flames.json` appears copy-pasted from
+  Technicolor** (`"loader": "technicolor"`, `"resolution": 2`), and it is the
+  only file in that directory although the README points at it.
+* **`pickview.pkl` path mismatch**: the trainer looks for it beside the data,
+  the repo ships it under `configs/im_view/<scene>/`, and nothing copies it.
+
+### 6. Published Immersive protocol, for the record
+
+Seven scenes (`01_Welder, 02_Flames, 04_Truck, 09_Alexa, 10_Alexa, 11_Alexa,
+12_Cave`); `"duration": 50` frames per model; `"resolution": 1` (full);
+**20,000 iterations, hard-coded in `train_imdist.py` and overriding the 30,000
+in `OptimizationParams`**; held-out view `camera_0001`, selected positionally by
+an alphabetical sort rather than by name.
+
+### 7. Disposition — unchanged, and now better supported
+
+Google Immersive stays **NOT ADMITTED for event supply**, on the geometric
+ground recorded above: 46 viewpoints inside a sub-metre dome span ~50 degrees of
+parallax against a surround rig's 180, so multi-view corroboration is undefined
+rather than merely hard. Nothing in the source touches that.
+
+What the source reading changes is the **cost and the shape** of an Immersive
+port, and both moved the wrong way: the official preprocessing does not run as
+shipped, it decodes six times more frames than a 50-frame protocol needs, and
+the published method trains in fisheye space rather than on rectified images, so
+a pinhole port would not be comparable to the published numbers.
+
+**No Immersive preprocessing was run in this block, deliberately.** Three
+concurrent cells were the effective budget and every one of them was on a
+question that could actually be decided; Immersive could not advance any of
+them. `02_Flames.zip` and its extracted `models.json` remain on Apollo, intact
+and untouched.
