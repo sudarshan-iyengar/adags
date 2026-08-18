@@ -200,8 +200,9 @@ class ElgsRuntime:
         # Row expansion is a GATHER over the compact per-family column, not a
         # per-row Python stack: this runs on every render call, and the
         # per-row form cost 1.04 s at 50k rows / 4.13 s at 300k (forward +
-        # backward, V100-class local GPU), which alone exceeded the training
-        # budget of an EL-GS cell. Same values, same graph edges — only the
+        # backward, measured on the local RTX 4080 SUPER), which alone exceeded
+        # the training budget of an EL-GS cell — and it was LINEAR in row count
+        # where this is flat. Same values, same graph edges — only the
         # summation order inside the backward differs, as it already did
         # between runs (atomicAdd).
         compact = torch.stack([per_family[int(f)] for f in unique_ids.tolist()])
