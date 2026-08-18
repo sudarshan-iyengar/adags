@@ -64,6 +64,12 @@ RASTERIZER_SOURCES = (
 TEST_MODULES = (
     "tests.test_flow_backward_vjp",
     "tests.test_flow_resize_semantics",
+    # The colour VJP pins. They belong here rather than only in a local
+    # run because they are the regression coverage for the two backward
+    # repairs of 05e22be, and because every pin in them needs a GPU: a
+    # workstation run reports them as skips, and a skipped pin is not a
+    # passing one.
+    "tests.test_colour_background_vjp",
 )
 
 
