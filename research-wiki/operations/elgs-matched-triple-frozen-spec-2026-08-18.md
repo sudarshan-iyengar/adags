@@ -460,3 +460,128 @@ requirements; section 7's limits; and section 8's termination rule. The
 
 **Do not launch the triple.** Revision 2 repairs the specification; it does
 not authorize the experiment.
+
+---
+
+## REVIEW ROUND 2 (2026-08-18) — VERDICT: **BLOCKED**. The experiment cannot answer the question it poses
+
+Append-only. A fresh-context adversarial reviewer read revision 2 and returned
+**BLOCKED** with four blocking findings. **Do not launch. The integration
+preflight is NOT authorized either**, because three of its five checks are
+themselves among the defects.
+
+### B1 — T-2 has no presence representation to measure. PRIMARY-VERIFIED.
+
+This is the finding that matters, and R2.2 walked right past it: R2.2 correctly
+identified the K=1 degeneracy **in the metric** and stopped there. It is a
+property of **the cell**.
+
+The frozen `prereg_structural_v1.json` `family_seeding` fixes *"each nonempty
+voxel cell is one family with a K=1 spanning program, latch pattern (1,1),
+`dim(a)=1`"*. And `elgs/intervals.py:189` computes
+`sigma = torch.softmax(state.a, dim=0)`.
+
+**Softmax over a one-element vector is identically `[1.0]` with gradient
+exactly `0.0`.** Verified directly in the project environment:
+
+```
+softmax over dim(a)=1 -> [1.0]
+gradient             -> [0.0]
+```
+
+The reviewer ran the full realization at the spec's own `time_duration [0,4.7]`
+/ 141 frames / `dt = 1/30` and found presence **exactly 1.0 at every frame**,
+the realization **invariant across a ±50 logit range**, and
+`d(sum presence)/da = 0`.
+
+So on T-2 the `elgs_a` optimizer group is a group of parameters **that can
+never move**, and latching, multi-episode structure and exact-zero absence —
+the three things that make this representation the method — are all **inert**.
+
+**What T-2 actually measures is the cost of DELETING the temporal-Gaussian
+marginal** (presence *replaces* `get_marginal_t` in the opacity product). That
+is a legitimate ablation. It is not the stated question, and section 3's "the
+EL-GS substrate is photometrically viable" inference is **not licensed** by a
+cell in which the representation reduces to the identity.
+
+**A sharp irony worth recording:** the `elgs_a` optimizer repair landed this
+block is correct and necessary — it prevents a real crash and is required the
+moment `K >= 2` — but in the exact configuration this spec calls for, the
+parameter group it protects is provably inert.
+
+### B2 — the cells are not capacity-matched in the sense the question requires
+
+[[exp123-mechanism-audit]] measured the control substrate on this exact scene:
+median temporal scale 0.0073 s, **6.2% of primitives active at a typical
+frame**. Under B1, T-2/T-3 have **100%** active at every frame — a **~16×**
+difference in effective per-frame capacity, introduced by construction and
+uncontrolled. Section 2 matches the *stored* budget and calls that matched; the
+project's standing G5 gate is explicit that this is insufficient. Worse,
+exp123's own reading predicts the confound's **direction**: T-2 plausibly
+*gains*, and that gain would be read as representation viability.
+
+### B3 — `D` as specified is not producible for T-2/T-3
+
+`scripts/eval_diva360_heldout.py` restores a checkpoint but never calls
+`setup_elgs`, and `GaussianModel.restore` only *stashes* the EL-GS payload. So
+`elgs_runtime is None`, `elgs_active` is False, and the renderer takes the
+`get_marginal_t` branch — **T-2/T-3 would be scored through the untrained
+temporal marginal**, parameters that never gated opacity during their training.
+`scripts/audit_mechanism.py` has the identical defect, which also invalidates
+its `active_points` statistic on those cells.
+
+### B4 — three of the five preflight checks are vacuous or impossible
+
+* **check 3 is vacuous at ≥700 iterations** — round boundaries are
+  `[3000, 4500, 6000]`, so no round can fire at ≤700 whether the flag is set or
+  not, and `rounds_enabled` is not in the setup log line at all. *This repeats
+  round 1's own mistake: a horizon chosen short of the thing it claims to test.*
+* **check 4 is impossible** — `reserved_indices_for_parity` returns `None`
+  whenever `elgs_enable` is True, so `elgs_reserved_parity.reserved_units` can
+  never appear on the EL-GS path and nothing equivalent exists there.
+* **check 5 is not observable** from any emitted artifact — `moment_reset_log`
+  goes only into the binary checkpoint.
+
+### Material findings
+
+Ten in total. The load-bearing ones: **M4 — `S_max` is calibrated against the
+wrong quantity.** Every Appendix C figure is a *same-seed* replicate, while `S`
+is a *different-seed* spread this project has twice recorded as never measured.
+The arithmetic is fine; the comparison is not. **M2 — the replacement pathology
+is near-tautological**, so the "worse without pathologies" row is effectively
+unreachable. **M3 — per-frame held-out PSNR is emitted by nothing**, so R2.2's
+replacement metric is not implementable against the specified artifacts.
+**M6 — the outcome table still has no kill branch**, leaving a clean path from
+a capacity-confounded result to a representation claim. **M8 — no config file
+exists for any of the four cells**, and `elgs_smoke_schedule` is unspecified
+though it decides whether any round fires at all.
+
+### What round 2 verified as correctly repaired
+
+R2.1's arithmetic (first densify/prune genuinely at iteration 600, and 700 does
+cross it; checks 1 and 2 are satisfiable); **R2.3's downgrade is honest and if
+anything understates**; R2.4's one-sided rule is directionally consistent with
+its table; R2.2's degeneracy claim is true for T-2 and *stronger* than stated;
+section 1's evidence-inactivity claim; section 2's scalar-budget argument; and
+that densified rows inherit family ids correctly.
+
+**Launch preconditions 1 and 2 are closed** by commit `c4ff0d4`, which the
+reviewer independently confirmed — with the note that the implementation
+short-circuits the caller and the proposer rather than making
+`is_round_boundary` return `False` as section 6 specified. R2.7's list is stale
+in that respect.
+
+**A provenance correction, since the reviewer misread it:** commit `c4ff0d4`
+was made by the **primary**, after inspecting the diff, reverting the repair to
+confirm the tests catch the defect, and receiving an independent code review of
+**APPROVE**. No subagent staged, committed or pushed anything in this block;
+both reviewers were read-only and both correctly remained so.
+
+### Status
+
+**BLOCKED at round 2, and the block is deeper than revision 2's.** B1 says the
+experiment as specified cannot answer its question at all, and no wording
+repair reaches that. Either the cells are re-specified so presence has degrees
+of freedom (`K >= 2`, or an unlatched pattern giving `dim(a) = 2`), or the
+question is restated as what the cells actually measure — and B2 then requires
+an added capacity control either way. **This returns to the user.**
