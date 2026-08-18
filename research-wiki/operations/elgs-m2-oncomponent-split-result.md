@@ -149,6 +149,13 @@ camera-convention axis flip the frozen text never specifies, and emitting
 a number that depends on an unstated convention would be worse than
 emitting none.
 
+**Note added with §8:** the PRIMARY reducer does emit both, inside the
+instrument's own convention (`anchor_agreement.share = 0.5412`;
+4,210,877 merges / 22,191 splits). Because the independent reduction
+deliberately abstained rather than guessing the convention, **no
+agreement is claimed on those rows** — they are reported by one reducer
+only, and remain descriptive.
+
 ## 6. What this does NOT establish
 
 * **Physical presence.** `ON_ELIGIBLE` means the report landed on an
@@ -157,7 +164,12 @@ emitting none.
   physical-absence claim is permitted before it returns.
 * **That the tracker is correct.** A drifted report can land on an
   eligible component by coincidence.
-* **Agreement between reducers.** The primary reducer has not returned.
+* ~~**Agreement between reducers.** The primary reducer has not
+  returned.~~ **SUPERSEDED the same day by §8** — experiment 151 returned
+  and the two reductions agree to the digit. The original statement is
+  struck rather than deleted, because it was true when §1–§7 were written
+  and the sealing order matters: the independent reduction was sealed
+  while this bullet still held.
 * **Anything about the occlusion supply**, which stands at 239,545 and is
   untouched here.
 * **G-OA's FAIL**, not reopened.
