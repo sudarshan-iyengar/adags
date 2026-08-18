@@ -3,6 +3,97 @@
 Updated 2026-08-08 (night) after Loop 2 ([[operations/elgs-method]]).
 Earlier updates remain binding history.
 
+## Audit-Instrument Update — 2026-08-18 (block 4)
+
+**G13's absence limb does not get its decision this block, and the reason is
+worth more than the decision would have been.**
+
+The two-stage M1-A0b audit — the only instrument that could convert the
+DiVa-360 absence question from open to decided — reached revision 3 with its
+sequence universe reconciled and its applicable-camera set adopted, and was
+then **BLOCKED at round 2** by a fresh-context statistical review
+([[operations/elgs-audit-prereg-2026-08-18]] REVIEW ROUND 2). **Stage 1 was
+not executed; no candidate frame was rendered, displayed or transmitted.**
+
+The reconciliation and the camera decision both stand, and are new durable
+structure:
+
+* the sequence universe is **20 coverage-population sequences → 18 eligible →
+  12 with `N_s > 0` → `E_select` = 10**, and the simultaneous-bound divisor is
+  **m = 10**. The "16 more eligible", the 10, and the 11-vs-12 were three
+  different sets, not a contradiction;
+* the applicable-camera set is **D3**, the sealed per-candidate frustum rule,
+  adopted by the user. The estimand narrows to *unobservability across the
+  cameras the frozen candidate generator geometrically considered applicable,
+  followed by same-identity reappearance* — **not** physical absence, **not** a
+  rig-wide set, **not** generator-independent supply.
+
+**The new negative knowledge is about inheritance, and it generalizes past this
+audit.** Two of the four blocking findings are cases of a preregistration
+inheriting a sample and an instrument from an earlier frozen document, carrying
+the sample's *identity* forward, and silently dropping the *design facts* that
+came with it:
+
+* **the sampling design was not carried.** The frozen 73-window sample is a
+  round-robin over strata, 3 rounds, without replacement. Per-sequence
+  Clopper-Pearson on `(k_s, n_s)` assumes equal within-sequence inclusion
+  probabilities, which requires `3·N_s/n_s` to be an integer. **Verified: it is
+  not, for five sequences including `pour_tea` and `tea` — two of the four that
+  decide the outcome.** So the decision-bearing bound is not the confidence
+  bound the kill rule treats it as, while the design-consistent
+  Horvitz-Thompson estimator sits in the same file with no decision weight;
+* **a disclosed bias was not carried.** The parent document discloses that
+  audit frames are drawn over a window that *includes bridged frames, at which
+  the identity is associated by construction of the flicker rule* — so a
+  bridged window can never be A3-positive whatever the scene contains.
+  Deflated A3 → **kill easier**, the wrongful-kill direction. **Verified: the
+  word appeared zero times in either audit document.**
+
+**The lesson to carry into every future instrument:** citing a frozen artifact
+by name inherits its identity, not its assumptions. A preregistration that
+reuses a sample must restate that sample's design, and must re-import every
+disclosed bias, inside its own frozen text — or its estimator is being applied
+to a design it has never seen.
+
+Two further verified facts that bound what any repair can claim:
+
+* **the finite-population omission is not a rounding matter.** `U_s` routinely
+  exceeds the logically attainable maximum `k + (N − n)` — for `tea` at every
+  `k`. Capping it moves the kill from **2,580 to 3,141 of 7,000**, a 21.7%
+  shift, and `tea`'s published "6 of 9" threshold is unattainable in fact;
+* **stage-1 decidability was never general.** It exists only because `scissor`
+  and `poker` are excluded, on a frozen sensitivity reading sitting 0.003 and
+  0.015 below a threshold. Verified in git that the exclusion is **not**
+  post-hoc: the freeze commit predates every coverage figure.
+
+**Not changed:** G-OA's FAIL is not reopened; no floor, threshold or estimand
+moved; `scissor` and `poker` remain `indeterminate`; and the 0-of-597
+corroboration figure stands exactly as it did. What changed is that the route's
+*decision* is now blocked on statistics rather than on compute, and the block
+is repairable.
+
+## Dataset-Reachability Update — 2026-08-18 (block 4)
+
+**ImViD's full release is reachable after all, and the previous block's
+contrary finding is corrected rather than rewritten**
+([[operations/dataset-admission-matrix-2026-08-18]] block-4 append). It is
+world-readable with no credential: 325 files, 1.181 TB, verified by the primary
+and enumerated two independent ways. But only **7 of 16 published takes** are
+there (47.2% of the published bytes), `scene3_classroom` is missing a camera,
+and a 122 GiB `moving_rig` folder is unaccounted for in the README's own total.
+**This changes cost and reachability, not admissibility** — ImViD remains NOT
+ADMITTED for event supply.
+
+**Google Immersive's 46-videos-vs-45-calibrations gap is resolved against the
+sealed artifacts**: the uncalibrated file is `camera_0046`, and `camera_0001` —
+STG's held-out test view — is present and calibrated. So it is a per-scene
+calibration failure whose index **moves between scenes**, and any visibility
+ledger built by enumerating `camera_*.mp4` will mis-index differently on
+different scenes. The dome's event-supply exclusion now carries a number: the
+whole 46-camera rig spans ~50° of parallax at 1 m against a surround rig's
+180°, so the multi-view corroboration the absence instrument needs is not
+merely hard there — **it is undefined**.
+
 ## Coverage-Instrument Update — 2026-08-18
 
 **G13's absence limb: the coverage floor that eliminated the two
