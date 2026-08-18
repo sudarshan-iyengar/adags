@@ -1,0 +1,20 @@
+{
+ "schema_version": "elgs-oracle-episodes-v1",
+ "units": "model_time_seconds",
+ "region": {
+  "kind": "sphere",
+  "centre": [
+   0.7,
+   0.1,
+   0.35
+  ],
+  "radius": 0.2
+ },
+ "gaps": [
+  [
+   0.9166666666666679,
+   4.916666666666667
+  ]
+ ],
+ "note": "WRONG-TIME CONTROL for A2. The correct gap reflected about the window midpoint t=4.9166667 s. A reflection is the only transform that exactly preserves the episode count, every episode duration, the gap duration and the total present duration, so A2 differs from A1 in episode TIMING and in nothing else. Frozen before any output was inspected."
+}

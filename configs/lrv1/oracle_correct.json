@@ -1,0 +1,20 @@
+{
+ "schema_version": "elgs-oracle-episodes-v1",
+ "units": "model_time_seconds",
+ "region": {
+  "kind": "sphere",
+  "centre": [
+   0.7,
+   0.1,
+   0.35
+  ],
+  "radius": 0.2
+ },
+ "gaps": [
+  [
+   4.916666666666667,
+   8.916666666666666
+  ]
+ ],
+ "note": "LRV1 ground truth: the event object is absent over frames 30-53. Boundaries sit at the midpoints between the last present and first absent frame, and between the last absent and first present frame."
+}
