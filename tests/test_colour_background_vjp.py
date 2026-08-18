@@ -35,8 +35,12 @@ importing each build ahead of the image's, on one three-Gaussian scene:
 
     variant                      dL_dopacity   white-bg opacity vs
                                      (absmax)  finite differences
-    background double counted, guard   48.884  169% / 167% / 234% off
-    background counted once,   guard   17.900  4.9% / 3.6% / within tol
+    background double counted, no guard 48.884  169% / 167% / 234% off
+    background counted once,   no guard 17.900  4.9% / 3.6% / within tol
+
+Both rows are with the `max_contrib` guard REMOVED. With it present both
+variants gave exactly 0.0 and were indistinguishable, which is the point
+of the paragraph below.
 
 The black-background column is bit-for-bit identical between the two,
 which is the reason no recorded ADAGS result is affected: every
@@ -380,9 +384,16 @@ class ColourVjpAgainstFiniteDifferencesTests(unittest.TestCase):
     #: If black itself is this bad the scene is not a usable instrument.
     BLACK_SANITY = 0.15
 
-    def _compare(self, field, axes, step, black_sanity, seeds):
-        black = _finite_difference_error(BLACK, field, axes, step, seeds[0])
-        white = _finite_difference_error(WHITE, field, axes, step, seeds[1])
+    def _compare(self, field, axes, step, black_sanity, seed):
+        # The SAME seed for both, deliberately. `_upstream` depends only on
+        # the seed and the frame size, which the two scenes share, so black
+        # and white are finite-differenced against an IDENTICAL upstream
+        # gradient and therefore against the same scalar loss. That is the
+        # whole basis of the comparison below: the renderer's secant bias is
+        # only common-mode, and therefore only cancels, if the two
+        # measurements differ in the background and in nothing else.
+        black = _finite_difference_error(BLACK, field, axes, step, seed)
+        white = _finite_difference_error(WHITE, field, axes, step, seed)
 
         self.assertGreater(
             black["largest_finite_difference"],
@@ -405,7 +416,7 @@ class ColourVjpAgainstFiniteDifferencesTests(unittest.TestCase):
         )
 
     def test_opacity_agreement_is_no_worse_on_white_than_on_black(self):
-        self._compare("opacities", [0], self.OPACITY_STEP, self.BLACK_SANITY, (67, 61))
+        self._compare("opacities", [0], self.OPACITY_STEP, self.BLACK_SANITY, 67)
 
     def test_the_geometry_path_is_exercised_under_a_white_background(self):
         """The defect reached more than opacity, but geometry cannot be

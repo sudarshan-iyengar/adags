@@ -230,3 +230,110 @@ GPU slot, well under 0.5 slot-hours total; no run directory, no ledger
 entry, `evidence_bearing: false` throughout. The image was NOT rebuilt or
 republished: every variant was compiled inside the container from the
 uploaded context, which is also why none of this required a new digest.
+
+## APPEND 2026-08-18 — independent review, three corrections and one new defect
+
+An independent adversarial review of the repair commits (`05e22be`,
+`a63da6b`, `495ae16`) was obtained on 2026-08-18 and its findings were
+each re-verified against the source before being accepted here. The
+requested reviewer `gpt-5.6-sol-high` was again REFUSED by the account
+(HTTP 400, "not supported when using Codex with a ChatGPT account"), so
+the review ran on Codex's default model at high reasoning effort with an
+identical 12-item read-only prompt. **The requested reviewer did not
+run** — same disclosure as [[rendered-flow-supervision-is-nonfunctional]].
+
+The review confirmed the two repairs as correct: `max_contrib` has no
+population path anywhere; `PerGaussianRenderCUDA` at `backward.cu:1659`
+is the only launched backward render kernel; the per-pixel bound has no
+off-by-one (forward sets `contributor` BEFORE accepting at
+`forward.cu:719`/`781`, stores `k+1`, and backward's zero-based
+`splat_idx_in_tile >= last_contributor` therefore admits exactly `0..k`);
+`-ar[ch]` is the complete remainder; and dropping the `T_final` shuffle
+is safe because the launch is one 32-thread warp per block, every lane
+reaches the shuffle sequence before any per-pixel `continue`, and each
+shuffle is independent.
+
+### Correction 1 — `max_contrib` is NOT consumed by `renderCUDA`
+
+Open item 4 above states that `bg_color`, `final_Ts` and `max_contrib`
+"are still consumed by the unlaunched `renderCUDA`". **That is wrong for
+`max_contrib`, which is not in that kernel's signature at all**
+(`backward.cu:984-1015` has `bg_color` and `final_Ts` and no
+`max_contrib`). `max_contrib` is now genuinely dead in this file: it
+survives only in the shared `BACKWARD::render` surface and the
+`rasterizer_impl.cu` plumbing. The conclusion of open item 4 — leave all
+three in place — is unchanged, because removing `max_contrib` would still
+ripple through `backward.h` and `rasterizer_impl.cu`; only the stated
+reason was wrong.
+
+### Correction 2 — "the guard cost is only loop iterations" is incomplete
+
+Removing the guard also exposes reads of **unwritten** checkpoint
+entries. `forward.cu:682-685` and `:703` stop processing a pixel once the
+block is done, so the checkpoint writes at `:705-715` never happen for
+pixels that terminated early, and `SampleState` comes from a
+`torch::empty` buffer (`rasterize_points.cu:104`) that is not cleared.
+Backward loads all four `sampled_*` families at `backward.cu:1397-1403`
+BEFORE applying the per-pixel bound at `:1418`, so later buckets can now
+read those unwritten entries.
+
+**This is not a correctness regression and not out-of-bounds.** The
+accesses are in bounds (`SampleState` allocates `B * BLOCK_SIZE`,
+`rasterizer_impl.cu:235-241`; `global_bucket_idx` is bounded by `B`,
+`backward.cu:1270-1271`), and the values cannot reach a gradient: any
+splat that passes `:1418` is one forward actually processed, so its
+checkpoint was written; any splat that does not passes `continue` before
+any arithmetic or atomic. `last_contributor` itself comes from
+`n_contrib`, which forward writes unconditionally for every inside pixel.
+The correct statement is therefore "no output changes, at the cost of
+loop iterations AND some useless global loads", not "only loop
+iterations".
+
+### Correction 3 — the test docstring mislabelled its own table
+
+`tests/test_colour_background_vjp.py`'s summary table labelled both
+nonzero-gradient rows as having the guard present, which contradicts the
+paragraph directly beneath it. Both rows are with the guard REMOVED.
+Corrected in the source; recorded here because the same table appears
+above on this page, where it is already labelled correctly.
+
+### NEW pre-existing defect — the depth and alpha gradients are DEAD
+
+**Not caused by this repair, not repaired here, and more consequential
+than anything above.**
+
+`gaussian_renderer/diff_gaussian_rasterization.py:174` returns rendered
+depth and `1 - T` as differentiable outputs; its backward accepts
+`grad_depth` and `grad_alpha` at `:177` and forwards them at `:212-217`.
+They arrive in the launched kernel as `dL_depths` and `dL_masks`
+(`backward.cu:1253-1254`) — **and are never read there.** Their only
+reads in the whole file are at `:1061-1062`, inside the unlaunched
+`renderCUDA`. The launched kernel consumes only `dL_invdepths`
+(`backward.cu:1469-1470`).
+
+Consequence: **a loss on rendered depth or on rendered alpha produces no
+Gaussian gradient at all on the active path** — silently, exactly as the
+`max_contrib` guard did. This also severs the opacity path through the
+external environment-map composition on `(1 - alpha)` at
+`gaussian_renderer/__init__.py:376-389`.
+
+Scope on recorded results: `main.py:1824` and `:1915` show an `Ldepth`
+loss key exists in the training loss dictionary. Whether any recorded
+ADAGS run enabled a depth or alpha loss term is **NOT established here**,
+and no result is impugned by this note. What is established is that if
+one did, its depth/alpha gradient was zero. This is recorded as a
+candidate for a separate bounded repair, deliberately NOT bundled into
+the present integrity fix.
+
+### One claim weakened
+
+The review declined to fully accept "no recorded ADAGS result is
+affected" for defect 1. All 72 `white_background` occurrences under
+`configs/` are `False` and the parser default is also false
+(`arguments/__init__.py:54`), but `main.py:1035-1036` and `:1127-1128`
+construct `bg_color = [1,1,1]` whenever `white_background` is set, so a
+CLI override or a direct API call could have reached the kernel with a
+nonzero background. The repository evidence supports "every tracked
+configuration is black-background"; it does not prove "every execution
+ever performed was". The weaker statement is the one this page should be
+read as making.
