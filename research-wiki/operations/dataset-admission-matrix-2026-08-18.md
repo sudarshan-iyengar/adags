@@ -163,3 +163,66 @@ critical path is M-2 plus the user's route decision.
   data.
 * The three dynamic MPEG-GSC exploration sequences have unverified
   provenance and availability.
+
+---
+
+## APPEND-ONLY NARROWING (2026-08-18) — the ImViD rig verdict, and what survives it
+
+Nothing above is rewritten. Two of this page's three structural
+disqualifications are narrowed in scope by facts that arrived after it was
+written; the third stands unchanged. The **event-supply** verdicts are
+untouched in every case.
+
+### ImViD — "the rig physically relocates" is NARROWED, not withdrawn
+
+The section-2 row and the section-"why" paragraph treat rig mobility as a
+property of the whole dataset. The paper's own capture-strategy table
+distinguishes per scene: **Opera and Meeting are captured fixed-point only**,
+while Laboratory, Classroom, Rendition, Puppy and Playing have both fixed and
+moving takes. So the confound is a property of a TAKE, not of the dataset, and
+per-take verification is the correct granularity.
+
+**Recorded as reported, not as verified here.** The per-scene strategy table is
+taken from the 2026-08-18 strategy document's reading of the paper. This block
+does not claim to have re-read the paper's table; what IS verified here is the
+sample-level fact already on record — the Opera sample carries 39 poses for 39
+cameras with a single static pose each, and fixed-pose triangulation succeeds
+at 1.17–1.21 px across frames 0/150/299 ([[imvid-sample-ingestion]]).
+
+**What does NOT change.** ImViD remains **NOT ADMITTED for event supply**, for
+the reason that never depended on the rig: it ships no masks and no identity
+ground truth, so there is no tracker-independent instrument and no
+coverage statistic can be defined on it. A rig fixed for one take does not
+supply an event instrument.
+
+**What DOES change.** ImViD is admissible for temporal/photometric
+reconstruction and held-out-view generalization, entered through the Opera
+sample. That work is under way and recorded in
+[[imvid-baseline-freeze]]'s pilot appendix.
+
+**A necessary-not-sufficient caution that must travel with this narrowing:**
+metadata cannot certify a fixed take. A moving take registered at frame 0
+produces exactly the same 39-pose `images.txt` as a fixed one. The only
+sufficient test is the fixed-rig test — fixed-pose triangulation residual at
+frames 0/mid/end — and that needs the whole take, which is not acquired.
+
+### Google Immersive — "NOT ADMITTED" stands for event supply; the geometry claim is CONFIRMED and sharpened
+
+The dome argument is unchanged and remains the reason it cannot supply
+absence evidence: no second azimuth, so "merely occluded from here" cannot be
+ruled out.
+
+Newly VERIFIED here, by direct request rather than from prose: the raw
+distribution is **not gated at all**. The `deepview_video_raw_data` bucket is
+publicly listable through the GCS JSON API, holds **15 scene archives
+totalling 65,461,026,250 bytes**, and every object serves an unauthenticated
+GET. The smallest is `15_Branches.zip` at 179,620,533 bytes and the largest
+`10_Alexa_Meade_Face_Paint_1.zip` at 10,587,538,727. The dataset is therefore
+two orders of magnitude cheaper to obtain than the earlier "acquisition cost"
+framing implied — which changes nothing about its admissibility for event
+supply and does change its cost as a reconstruction/generalization anchor.
+Inventory: [[immersive-inventory-2026-08-18]].
+
+### MeetRoom and MPEG-GSC
+
+Unchanged.
