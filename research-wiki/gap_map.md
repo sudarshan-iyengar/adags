@@ -3,6 +3,82 @@
 Updated 2026-08-08 (night) after Loop 2 ([[operations/elgs-method]]).
 Earlier updates remain binding history.
 
+## Coverage-Instrument Update — 2026-08-18
+
+**G13's absence limb: the coverage floor that eliminated the two
+richest sequences was an artifact of the falsified visibility gate.**
+Retracts nothing; it changes which sequences the absence question can
+still be asked about, and it sharpens a coupling this map already
+recorded.
+
+The 2026-08-14 entry above notes that `track_coverage_upper_bound` and the
+absence limb share the `v >= 0.5` constant, so part of their
+anticorrelation is an instrument identity. M-2 then showed `v` is BINARY,
+which makes every threshold in `(0, 1]` equivalent and the
+"lower-the-threshold" repair vacuous. The repair the evidence supports is
+a component-membership gate, and its effect on coverage has now been
+measured ([[operations/elgs-coverage-bounding-pair-result]], Determined
+experiment 154, all five contract checks exact):
+
+| sequence | frozen `v >= 0.5` | anchor-agreeing | any-report (upper) |
+|---|---:|---:|---:|
+| `scissor` | 0.441 | **0.852** | 0.916 |
+| `poker` | 0.382 | **0.796** | 0.834 |
+| `put_candy` | 0.507 | 0.727 | 0.861 |
+| `pour_tea` | 0.591 | 0.710 | 0.795 |
+
+So **the 0.5 coverage floor did not eliminate scissor and poker because
+their foreground was untracked** — it eliminated them because a per-point
+self-occlusion flag was being read as an association signal. Both clear the
+floor by more than they previously fell short of it.
+
+**They are nevertheless classed `indeterminate`**, because the frozen
+convention-dependence rule demotes on a sensitivity crossing and the
+transposed-anchor reading lands at 0.497 and 0.485. The rule was frozen
+before the reducer existed and was not changed after the numbers; the
+demotion is conservative and the transposed variant is diagnosed on the
+page as a null rather than a rival convention (it admits 4.5-11x fewer
+reports).
+
+**The consequence is structural and it is new knowledge about the route,
+not about the scenes.** Excluding scissor and poker removes 452 of the 597
+candidate windows, and that exclusion is the only reason the amended
+audit's stage-1 kill rule is decidable at all: with scissor, poker and
+pour_tea all admitted, no possible audit outcome can fire the kill, because
+`U_s = N_s * UB_s` scales with the candidate count while the bound is
+floored by the sample size ([[operations/elgs-audit-prereg-2026-08-18]]
+section 4). **A larger candidate population makes the kill harder.** That
+is a preregistered tripwire now, and it means any future rule that admits
+those two must re-specify stage 1 first.
+
+**Nothing here reopens G-OA's FAIL, changes a floor, or admits any sequence
+to evidence use.** Admission requires a fresh preregistration under a
+corrected instrument.
+
+**One further open item, recorded because it bounds every A3 and A_S count
+the audit could produce:** the audit's presence decoys bound the
+instrument's false-positive side only, and nothing estimates its miss rate
+on genuine full-view absence, because no DiVa-360 window is known to be
+absent. That is the specific hole
+[[operations/kubric-testbed-scope-2026-08-18]] scopes, and it is not
+closable on real data.
+
+## Renderer Update — 2026-08-18
+
+**The admitted image is reproducible run-to-run; the old one was not.**
+Three runs of the repaired kernel at fixed seed agree to **3.3e-4 dB** of
+held-out PSNR, against **0.10 dB** (same metric) and **0.36 dB**
+(training-log metric) between two old-image runs
+([[operations/renderer-integrity-admission-2026-08-18]] Appendix C). This
+resolves that page's open question in the direction of the repair, and it
+bounds the `atomicAdd` explanation empirically: if float-summation order
+were the dominant source here, the repaired image would vary similarly.
+
+Consequence for every lane: single-run-per-arm comparisons **on the
+admitted image** no longer inherit the 0.36 dB penalty in that
+configuration. The figure does not transfer to 15k DiVa-360 runs, and the
+matched presence spec still measures its own spread.
+
 ## Measurement-Closure Update — 2026-08-14
 
 **G13's ABSENCE limb loses its measured supply; its OCCLUSION limb keeps
