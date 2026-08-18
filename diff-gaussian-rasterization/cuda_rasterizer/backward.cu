@@ -1287,10 +1287,28 @@ PerGaussianRenderCUDA(
 	splat_idx_global = range.x + splat_idx_in_tile;
 	valid_splat = (splat_idx_in_tile < num_splats_in_tile);
 
-	// if first gaussian in bucket is useless, then others are also useless
-	if (bucket_idx_in_tile * 32 >= max_contrib[tile_id]) {
-		return;
-	}
+	// The upstream early-out on max_contrib is NOT usable in this fork: this
+	// is the only place `max_contrib` is ever touched, and nothing writes it.
+	// Upstream taming-3dgs fills it in its forward render kernel (a block-wide
+	// max-reduction of last_contributor, stored by thread 0); that reduction
+	// does not exist in forward.cu here, and ImageState comes out of a
+	// torch::empty buffer with only `ranges` memset. So the guard compared
+	// against UNINITIALISED DEVICE MEMORY.
+	//
+	// When that memory happened to be zero the condition held for EVERY
+	// bucket, this kernel returned before doing any work, and the whole
+	// backward produced exactly zero -- silently, and depending on allocator
+	// history rather than on the scene. Measured on a V100: with the guard in
+	// place a colour loss on a three-Gaussian scene gave dL_dopacity,
+	// dL_dmeans3D and dL_dmeans2D all exactly 0.0; with it removed, 17.90,
+	// 3.67 and 6.03 on the identical scene and forward.
+	//
+	// Correctness never depended on it. It is a per-tile early-out over a
+	// bound that the per-pixel test below (`splat_idx_in_tile >=
+	// last_contributor`, from n_contrib, which forward.cu DOES write) already
+	// enforces exactly. Removing it costs empty warps their loop iterations;
+	// restoring the optimisation means computing max_contrib in the forward,
+	// which is a separate change.
 
 	// Load Gaussian properties into registers
 	int gaussian_idx = 0;
@@ -1338,7 +1356,6 @@ PerGaussianRenderCUDA(
 
 	// values useful for gradient calculation
 	float T;
-	float T_final;
 	float last_contributor;
 	float ar[C];
 	float arflow[2];
@@ -1357,7 +1374,6 @@ PerGaussianRenderCUDA(
 		// So pass this ready-made T value to next thread.
 		T = my_warp.shfl_up(T, 1);
 		last_contributor = my_warp.shfl_up(last_contributor, 1);
-		T_final = my_warp.shfl_up(T_final, 1);
 		for (int ch = 0; ch < C; ++ch) {
 			ar[ch] = my_warp.shfl_up(ar[ch], 1);
 			dL_dpixel[ch] = my_warp.shfl_up(dL_dpixel[ch], 1);
@@ -1385,7 +1401,6 @@ PerGaussianRenderCUDA(
 			for (int ch = 0; ch < 2; ++ch)
 				arflow[ch] = -pixel_flows[ch * H * W + pix_id] + sampled_arflow[global_bucket_idx * BLOCK_SIZE * 2 + ch * BLOCK_SIZE + idx];
 			ard = -pixel_invDepths[pix_id] + sampled_ard[global_bucket_idx * BLOCK_SIZE + idx];
-			T_final = final_Ts[pix_id];
 			last_contributor = n_contrib[pix_id];
 			for (int ch = 0; ch < C; ++ch) {
 				dL_dpixel[ch] = dL_dpixels[ch * H * W + pix_id];
@@ -1411,23 +1426,36 @@ PerGaussianRenderCUDA(
 			if (alpha < 1.0f / 255.0f) continue;
 			const float weight = alpha * T;
 
-			// add the gradient contribution of this pixel's colour to the gaussian
-			float bg_dot_dpixel = 0.0f;
+			// add the gradient contribution of this pixel's colour to the gaussian.
+			// -ar[ch] is the ENTIRE remainder of the pixel, suffix sum AND
+			// T_final * bg[ch]: pixel_colors here is a straight copy of
+			// out_color (rasterizer_impl.cu), and the forward folds the
+			// background into out_color (forward.cu). So the single
+			// -(1 / (1 - alpha)) * (-ar[ch]) term below already carries the
+			// background's share of d(out) / d(alpha).
+			//
+			// Upstream taming-3dgs writes a background-FREE pixel_colors
+			// straight from its forward kernel, so THERE the same expression
+			// misses the background and a separate
+			//     dL_dalpha += (-T_final / (1 - alpha)) * (bg . dL_dpixel)
+			// is required after this loop. Do not port that line back here:
+			// against a background-inclusive pixel_colors it counts the
+			// background twice, which is silent under the black background
+			// N3V and DiVa-360 use and wrong under any other.
 			float dL_dalpha = 0.0f;
 			for (int ch = 0; ch < C; ++ch) {
 				ar[ch] += weight * c[ch]; // TODO: check
 				const float &dL_dchannel = dL_dpixel[ch];
 				Register_dL_dcolors[ch] += weight * dL_dchannel;
 				dL_dalpha += ((c[ch] * T) - (1.0f / (1.0f - alpha)) * (-ar[ch])) * dL_dchannel;
-
-				bg_dot_dpixel += bg_color[ch] * dL_dpixel[ch];
 			}
 
 			// add the gradient contribution of this pixel's flow to the gaussian.
-			// out_flow carries NO background term, so unlike colour there is no
-			// T_final background correction here. Static Gaussians have f == 0,
-			// which leaves only the suffix term: their alpha still scales T for
-			// every later dynamic Gaussian and therefore changes the flow.
+			// out_flow carries NO background term, so -arflow[ch] is a pure
+			// suffix sum with no T_final * bg folded into it. Static Gaussians
+			// have f == 0, which leaves only the suffix term: their alpha still
+			// scales T for every later dynamic Gaussian and therefore changes
+			// the flow.
 			for (int ch = 0; ch < 2; ++ch) {
 				arflow[ch] += weight * f[ch];
 				const float &dL_dchannel_flow = dL_dpixflow[ch];
@@ -1440,8 +1468,6 @@ PerGaussianRenderCUDA(
 			Register_dL_dinvdepths += weight * dL_invdepth;
 			dL_dalpha += ((invd * T) - (1.0f / (1.0f - alpha)) * (-ard)) * dL_invdepth;
 
-			// Account for last sample for colour
-			dL_dalpha += (-T_final / (1.0f - alpha)) * bg_dot_dpixel;
 			T *= (1.0f - alpha);
 
 
