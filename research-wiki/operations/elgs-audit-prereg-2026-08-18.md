@@ -629,3 +629,43 @@ now bounded, from numbers already on the A1 result page:
 
 Computing the two sensitivities for the 16 monotonicity rows is cheap and would
 close this outright. **This bounds the finding; it does not discharge it.**
+
+---
+
+## THE SEALED CAMERA MAPPING (experiment 163) — computed, hashed, and it corrects one of this page's own numbers
+
+Determined experiment **163**, cell `a0b_camera_mapping` r0, commit `c4ff0d4`,
+admitted image, pool `dgx`, `evidence_bearing: false`, COMPLETED. Artifact
+`runs/elgs/a0b_camera_mapping_r0/camera_mapping.json`, 43,478 bytes, sha256
+`aa6d93d200aa1a3ce74945427b903ea99019fda5ee4413a532511c07b0e506ad`.
+
+**The load-bearing contract passed exactly: the recomputed `S_w` reproduces the
+sealed `audit_sample_B8` `containing_cameras` on 73 of 73 windows.** `void`
+is false. This was previously an unverified claim — the round-2 reviewer listed
+it among the things it had to take on the document's word. It is now measured.
+
+| quantity | measured |
+|---|---|
+| `\|S_w\|` min / q1 / median / q3 / max | **3 / 20 / 23 / 26 / 26** |
+| windows with `\|S_w\| < 3` | **0** — none excluded on geometric admissibility |
+| windows where a tie was broken | **0** |
+| data-quality flag | `soda_screen_w0_171` — anchor at **1.955 × rig_radius**, `\|S_w\| = 3` exactly, best triple separation **28.7°** |
+
+**A correction to revision 3's own D3 measurement.** Revision 3 recorded that
+the best-separated triple has minimum axis separation "104–116 degrees for
+every sequence except `soda`". **Measured, `slice_apple`'s worst window is
+98.5° — below the stated band** (and `writing_2` is 104.8°). The correct range
+excluding `soda` is **98.5–116.2°**. Nothing depends on it, because
+admissibility tests only `|S_w| ≥ 3` — which is precisely review finding M7's
+complaint that no separation floor exists. Recorded as a correction rather than
+quietly restated.
+
+**This bounds review finding M7.** M7 warned that the tie set is formed with
+exact float equality, so a 1e-16 `arccos` difference could decide the triple
+instead of the frozen id-tuple rule. **Measured: zero of the 73 windows had
+more than one triple at the maximum**, so the tie-break never fires on this
+data and the concern is empirically inert here. It remains a genuine defect of
+the frozen text for any future candidate set and is **not discharged**.
+
+**The mapping changes nothing about the round-2 verdict.** It was never the
+binding constraint — B1, B2 and B4 are — and stage 1 remains blocked.

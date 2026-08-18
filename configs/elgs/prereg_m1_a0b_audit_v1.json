@@ -47,6 +47,46 @@
     },
     "audit_triple_selection": {
       "FROZEN_BEFORE_COMPUTATION": true,
+      "SEALED_MAPPING": {
+        "BOUNDS_review_finding_M7": "M7 warned that the tie set is formed with exact float equality, so a 1e-16 arccos difference could decide the triple instead of the frozen id-tuple rule. MEASURED: ZERO of the 73 windows had more than one triple at the maximum, so the tie-break never fires on this data and the concern is empirically inert here. It remains a real defect of the frozen text for any future candidate set, and is NOT discharged.",
+        "CORRECTION_to_the_D3_measurement_recorded_in_revision_3": "revision 3 recorded 'the best-separated triple within each candidate's own set has minimum axis separation 104-116 degrees for every sequence except soda (28.7)'. MEASURED: slice_apple's worst window is 98.5 degrees, BELOW the stated band, and writing_2 is 104.8. The correct statement is 98.5 to 116.2 degrees excluding soda. The claim was slightly wrong and is corrected here rather than quietly restated; nothing depends on it, because admissibility tests only |S_w| >= 3 -- which is itself review finding M7's complaint.",
+        "artifact": "runs/elgs/a0b_camera_mapping_r0/camera_mapping.json",
+        "bytes": 43478,
+        "computed": "Determined experiment 163, cell a0b_camera_mapping r0, commit c4ff0d4, admitted image, pool dgx, evidence_bearing false",
+        "contract": "PASSED -- the recomputed S_w reproduces the sealed audit_sample_B8 containing_cameras on 73 of 73 windows, exactly. void = false.",
+        "measured_disclosure": {
+          "S_w_size": {
+            "histogram": {
+              "12": 2,
+              "13": 1,
+              "14": 2,
+              "15": 3,
+              "16": 1,
+              "17": 2,
+              "19": 1,
+              "20": 7,
+              "21": 6,
+              "22": 4,
+              "23": 8,
+              "24": 7,
+              "25": 9,
+              "26": 19,
+              "3": 1
+            },
+            "max": 26,
+            "median": 23,
+            "min": 3,
+            "q1": 20,
+            "q3": 26
+          },
+          "data_quality_flag": "soda_screen_w0_171|388|130 -- anchor at 1.955 * rig_radius, |S_w| = 3 exactly, best triple separation 28.7 deg. Reported separately, never pooled.",
+          "inadmissible_window_keys": [],
+          "windows_where_a_tie_was_broken": 0,
+          "windows_with_fewer_than_three_applicable_cameras": 0
+        },
+        "sealed_before_any_verdict": "yes -- no auditor has seen any frame, and stage 1 is BLOCKED at round 2 in any case",
+        "sha256": "aa6d93d200aa1a3ce74945427b903ea99019fda5ee4413a532511c07b0e506ad"
+      },
       "UNREPAIRED_RESIDUE": "round 2, M7: the frozen text specifies no comparison tolerance, and the implementation forms the tie set with exact float equality, so on a near-symmetric 26-camera rig a 1e-16 arccos difference can decide the triple instead of the frozen id-tuple rule. The sha256 seal keeps the EXECUTED audit reproducible; independent RE-DERIVATION is what is at risk. Separately, |S_w| >= 3 is the only admissibility test -- the census's own frozen angular_separation_floor is not reused, so three near-parallel cameras are admissible (soda at 28.7 deg is flagged but not excluded). Both are SUBSTANTIVE and NOT repaired here.",
       "admissibility": "a window with |S_w| < 3 is EXCLUDED from both the A3 numerator and its denominator; the exclusion is reported per sequence and the excluded candidate is named.",
       "determinism": "a total order on candidate triples: (minimum pairwise separation DESC, sorted camera-id tuple ASC). No RNG, no free constant, no tie left unresolved.",
