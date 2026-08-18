@@ -418,3 +418,69 @@ counts beyond the folder-level totals, and the decoded-size estimates. Two
 malformed-command defects the worker reports in STG's own source
 (a `SiftExtraction.max_image_size` flag missing its `--`, and an unreachable
 `04_Trucks`/`04_Truck` branch) are recorded as reported and unconfirmed.
+
+---
+
+## APPENDIX (2026-08-19, append-only) — Meeting and Playing ship a distortion-free PINHOLE intrinsic, so §5's loader gap does not apply to them
+
+Nothing above is rewritten. §5 records a shared, unclosed loader gap:
+`scene/dataset_readers.py:666-676` accepts only `SIMPLE_PINHOLE` / `PINHOLE`,
+and ImViD Opera ships `OPENCV`, so "every new candidate needs a conversion step
+that does not exist today". That is an **Opera** fact and it does **not**
+generalise across ImViD scenes.
+
+The two `cameras.txt` files were read in full (70 and 72 bytes; the only bulk-free
+fetch this needed) and each contains **exactly one line**:
+
+```
+scene4_meeting   1 PINHOLE 5338 2991 2722.5516678678127 2721.4363233225208 2669 1495.5
+scene7_playing   1 PINHOLE 5411 2999 2626.5693056599121 2636.5945038889649 2705.5 1499.5
+```
+
+sha256 `73c29251...` and `0ca2e1d5...` respectively.
+
+Three consequences:
+
+* **The standing UNVERIFIED inference is CONFIRMED exactly.** The byte
+  arithmetic works out (69 chars + newline = 70; 71 + newline = 72), and one
+  line means one camera entry, so all 39 views of each scene reference
+  `CAMERA_ID 1` — a single shared intrinsic, not per-camera calibration.
+* **`PINHOLE` carries no distortion parameters at all.** Meeting and Playing are
+  therefore **directly loader-compatible as shipped**, with no conversion step.
+  The A3 undistortion measurement (median 14.7 px, max 90.5 px) is an Opera
+  measurement and must not be transferred to them.
+* **The principal point is exactly centred in both** (5338/2 = 2669,
+  2991/2 = 1495.5; 5411/2 = 2705.5, 2999/2 = 1499.5) and the rasters differ per
+  scene. That reads as the authors having already rectified these two scenes and
+  not Opera — an interpretation, not a measurement.
+
+**What this does NOT change.** ImViD remains **NOT ADMITTED for event supply**.
+The disqualification in §2 is that the 39-camera array is mounted on a platform
+that moves, so the applicable-camera set is not geometrically stable over time;
+a loader fact cannot touch that. And the fixed-rig question for Meeting remains
+**structurally undeterminable from metadata** — the only sufficient test is a
+fixed-pose triangulation residual at frames 0 / mid / end, which needs the whole
+114.25 GiB take. Reading Meeting's `images.txt` would show 39 poses and would
+prove nothing about whether the rig moved.
+
+### Two corrections to the inventory record
+
+* **Apollo free space is 30.841 TiB**, measured this session via `rclone about`.
+  The figures carried above (31.174 TiB) and in the block-4 handover
+  (31.85 TiB) are stale by 0.3-1.0 TiB. Storage still does not bind.
+* **An unresolved inconsistency, not closed.** The Opera *sample* already on
+  Apollo has a `cameras.txt` describing ONE shared `2 OPENCV 5312 2988 ...`
+  camera, while the Drive `scene1_opera/cameras.txt` is recorded as 39
+  *identical* OPENCV lines at 6,309 bytes. Thirty-nine identical lines would be
+  malformed COLMAP, because the ID column must vary. Whether the Drive file uses
+  `CAMERA_ID 1..39` or repeats one id is **not determined** — it is a 6.3 KB
+  text read and it decides what `images.txt` references. Worth closing before
+  any full-take Opera pilot.
+
+Per-folder FILE COUNTS were re-verified independently and match the recorded
+table exactly, including `scene3_classroom` missing `cam38.mp4` and `moving_rig`
+carrying no `.txt` at all. Per-folder BYTE totals were **not** re-verified:
+Drive serves no ETag, no Content-MD5 and no `X-Goog-Hash`, and a HEAD returns a
+`Content-Length: 0` virus-scan interstitial, so sizes are obtainable only by
+1-byte Range GETs — 325 of them for the whole release. All byte figures remain
+inherited.
