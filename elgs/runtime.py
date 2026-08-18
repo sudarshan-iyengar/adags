@@ -164,7 +164,10 @@ class ElgsRuntime:
             raise ContractError("family_ids must be a 1-D per-row column")
         per_family: dict[int, torch.Tensor] = {}
         zero = torch.zeros((), device=self.device, dtype=self.dtype)
-        for family_id in torch.unique(family_ids).tolist():
+        # `torch.unique` returns its values SORTED, which is what makes the
+        # `searchsorted` row expansion below exact.
+        unique_ids = torch.unique(family_ids)
+        for family_id in unique_ids.tolist():
             family_id = int(family_id)
             if family_id < 0:
                 per_family[family_id] = zero
@@ -194,10 +197,16 @@ class ElgsRuntime:
                     f"t={timestamp} — intervals not disjoint"
                 )
             per_family[family_id] = values.sum()
-        rows = torch.stack(
-            [per_family[int(f)] for f in family_ids.tolist()]
-        ).reshape(-1, 1)
-        return rows
+        # Row expansion is a GATHER over the compact per-family column, not a
+        # per-row Python stack: this runs on every render call, and the
+        # per-row form cost 1.04 s at 50k rows / 4.13 s at 300k (forward +
+        # backward, V100-class local GPU), which alone exceeded the training
+        # budget of an EL-GS cell. Same values, same graph edges — only the
+        # summation order inside the backward differs, as it already did
+        # between runs (atomicAdd).
+        compact = torch.stack([per_family[int(f)] for f in unique_ids.tolist()])
+        index = torch.searchsorted(unique_ids.to(family_ids.device), family_ids)
+        return compact[index.to(compact.device)].reshape(-1, 1)
 
     def flush_to_registry(self) -> None:
         """Write the LIVE logits back into the registry records

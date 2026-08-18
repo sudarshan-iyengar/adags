@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import torch
 
@@ -63,6 +64,7 @@ class ElgsTrainerState:
     seeded: bool = False
     rounds_run: list = field(default_factory=list)
     rounds_enabled: bool = True
+    oracle_episodes: str = ""           # path to an oracle-episode JSON, or ""
     a_lr: float = 0.0
     k_se: float = 1.0
     candidate_cap: int = 8
@@ -244,6 +246,7 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         seeded=seeded,
         rounds_run=rounds_run,
         rounds_enabled=bool(getattr(opt, "elgs_rounds_enabled", True)),
+        oracle_episodes=str(getattr(opt, "elgs_oracle_episodes", "") or ""),
         a_lr=float(getattr(opt, "elgs_a_lr")),
         k_se=float(getattr(opt, "elgs_k_se")),
         candidate_cap=slots_per_pass,
@@ -611,9 +614,57 @@ def _declared_focal(source_path) -> float | None:
     return None
 
 
+ORACLE_EPISODES_SCHEMA = "elgs-oracle-episodes-v1"
+
+
+def load_oracle_episodes(path: str, config: IntervalConfig):
+    """Parse an oracle-episode JSON into (region, IntervalState, tau).
+
+    EXPLORATORY supply path: the caller hands the seeder a fixed K >= 2
+    episode program instead of letting a structural round discover one. The
+    file gives a spatial region and the INTERIOR absence gaps only; the outer
+    endpoints are always the latched ones (-w_m, T + w_m), so the returned
+    program is latch (1,1) with dim(a) = 2K - 1 and the Omega-sum identity
+    holds by construction. `inverse` performs the floor and admissibility
+    checks, so an inexpressible gap fails closed here rather than at render.
+    """
+    payload = json.loads(Path(path).read_text())
+    if payload.get("schema_version") != ORACLE_EPISODES_SCHEMA:
+        raise ContractError(
+            f"oracle episodes: expected schema {ORACLE_EPISODES_SCHEMA}, "
+            f"got {payload.get('schema_version')!r}"
+        )
+    if payload.get("units") != "model_time_seconds":
+        raise ContractError("oracle episodes: units must be model_time_seconds")
+    region = payload["region"]
+    if region.get("kind") != "sphere":
+        raise ContractError(f"oracle episodes: unsupported region {region.get('kind')!r}")
+    gaps = [[float(a), float(b)] for a, b in payload["gaps"]]
+    if not gaps:
+        raise ContractError("oracle episodes: at least one absence gap is required")
+    lo, hi = -config.w_m, config.T + config.w_m
+    edges = [lo] + [x for gap in gaps for x in gap] + [hi]
+    if any(b <= a for a, b in zip(edges, edges[1:])):
+        raise ContractError(f"oracle episodes: boundaries not strictly increasing: {edges}")
+    lens = [edges[i + 1] - edges[i] for i in range(0, len(edges) - 1, 2)]
+    gap_lens = [b - a for a, b in gaps]
+    interval = inverse(
+        len(gaps) + 1, True, True, 0.0, lens, gap_lens, 0.0, config,
+        dtype=torch.float32,
+    )
+    return region, interval, tuple(0.0 for _ in lens)
+
+
 def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
     """Voxel-grid family seeding at seed_iteration (preregistered rule):
-    each nonempty cell is one family, K=1 spanning, latch (1,1)."""
+    each nonempty cell is one family, K=1 spanning, latch (1,1).
+
+    When `state.oracle_episodes` names a file, the seeding GRANULARITY is
+    unchanged -- still one family per nonempty cell, so the preregistered
+    `max_families` cap binds exactly as before -- and only the interval
+    PROGRAM differs: a cell containing any point inside the oracle region
+    gets the supplied fixed K >= 2 program instead of the spanning one.
+    """
     if state.seeded:
         raise ContractError("families already seeded")
     seeding = state.prereg["family_seeding"]
@@ -634,16 +685,29 @@ def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
         1, True, True, 0.0, [state.config.omega], [], 0.0, state.config,
         dtype=torch.float32,
     )
+    oracle_interval = None
+    oracle_tau = (0.0,)
+    in_region = None
+    if state.oracle_episodes:
+        region, oracle_interval, oracle_tau = load_oracle_episodes(
+            state.oracle_episodes, state.config
+        )
+        centre = torch.tensor(region["centre"], device=xyz.device, dtype=xyz.dtype)
+        in_region = (xyz - centre).norm(dim=1) <= float(region["radius"])
+
     family_ids = torch.empty_like(inverse_map)
+    oracle_cells = 0
     for cell_index in range(unique_keys.numel()):
         member_mask = inverse_map == cell_index
         centroid = xyz[member_mask].mean(dim=0)
+        is_oracle = oracle_interval is not None and bool(in_region[member_mask].any())
+        oracle_cells += int(is_oracle)
         record = state.runtime.registry.create_family(
             birth_time=0.0,
             birth_site=tuple(float(v) for v in centroid.tolist()),
             lineage_key=f"seed-cell-{int(unique_keys[cell_index])}",
-            interval=spanning,
-            tau=(0.0,),
+            interval=oracle_interval if is_oracle else spanning,
+            tau=oracle_tau if is_oracle else (0.0,),
         )
         state.runtime.registry.on_rows_added(record.family_id, int(member_mask.sum()))
         family_ids[member_mask] = record.family_id
@@ -656,6 +720,10 @@ def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
         "iteration": iteration,
         "families": len(state.runtime.registry.active_ids()),
         "rows": int(family_ids.numel()),
+        "oracle_episodes": state.oracle_episodes or None,
+        "oracle_families": oracle_cells,
+        "oracle_K": None if oracle_interval is None else oracle_interval.K,
+        "oracle_rows": 0 if in_region is None else int(in_region.sum()),
     }}, sort_keys=True))
 
 

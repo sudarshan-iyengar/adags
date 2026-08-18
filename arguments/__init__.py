@@ -279,6 +279,15 @@ class OptimizationParams(ParamGroup):
         # (that path already drops them). See
         # research-wiki/operations/elgs-matched-triple-readiness-2026-08-18.md §2.
         self.elgs_reserved_parity = False
+        # EXPLORATORY oracle-episode supply: path to a JSON file that gives a
+        # spatial region and the interior absence gaps of a fixed K >= 2
+        # episode program. Families seeded from cells that intersect the
+        # region get that program; every other family keeps the preregistered
+        # K=1 spanning one. Empty (the default) leaves seeding exactly as
+        # preregistered. A str because ParamGroup renders bool as
+        # `store_true` (so a bool could never be turned off from the CLI) and
+        # neither int nor float can carry the boundaries.
+        self.elgs_oracle_episodes = ""
 
         super().__init__(parser, "Optimization Parameters")
 
