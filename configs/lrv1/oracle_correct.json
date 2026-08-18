@@ -12,9 +12,9 @@
  },
  "gaps": [
   [
-   4.916666666666667,
-   8.916666666666666
+   5.166666666666666,
+   8.666666666666666
   ]
  ],
- "note": "LRV1 ground truth: the event object is absent over frames 30-53. Boundaries sit at the midpoints between the last present and first absent frame, and between the last absent and first present frame."
+ "note": "LRV1 ground truth: the event object is absent over frames 30-53. Each boundary is INSET by the smoothstep half-width w = 2*frame_dt = 0.3333 s from the last/first present frame, so the presence PLATEAU is exactly 1.0 on all 36 ground-truth-present frames and the two ramps fall on frames 30 and 53, inside the absence gap. Placing the boundary at the frame-53/54 midpoint instead -- the obvious choice, and the one this file previously carried -- put presence at 0.15625 on frame 54 and 0.84375 on frame 55, two of the six decisive return frames."
 }

@@ -133,6 +133,69 @@ class LoadOracleEpisodesTests(unittest.TestCase):
         self.assertNotEqual([float(x) for x in ra.b], [float(x) for x in rb.b])
 
 
+class RampPlacementTests(unittest.TestCase):
+    """The defect a fresh-context review caught, pinned so it cannot return.
+
+    `dim(a)`, episode count and duration multiset can all be correct while the
+    experiment is still broken, because presence does not step -- it ramps over
+    the smoothstep half-width `w` on each side of a boundary. Putting a
+    boundary at the midpoint between the last absent and first present frame
+    (the obvious choice) lands that ramp ON the first evaluated frames: the
+    original LRV1 oracle rendered the event object at presence 0.15625 on frame
+    54 and 0.84375 on frame 55, two of the six frames the whole comparison
+    turns on, while its dose-matched control sat at 1.0 on all six.
+
+    A duration-matched control is NOT automatically a ramp-matched one.
+    """
+
+    LRV1_PRESENT_FRAMES = frozenset(list(range(0, 30)) + list(range(54, 60)))
+    LRV1_RETURN_FRAMES = tuple(range(54, 60))
+
+    def presence_curve(self, path, cfg):
+        from elgs.intervals import forward
+        _, interval, _ = load_oracle_episodes(path, cfg)
+        r = forward(interval, cfg)
+        return [float(episode_presence(torch.tensor(f / 6.0), r.b, r.d, cfg.w).sum())
+                for f in range(60)]
+
+    def test_shipped_lrv1_oracles_are_flat_on_every_ground_truth_present_frame(self):
+        cfg = build_config()
+        root = Path(__file__).resolve().parents[1] / "configs" / "lrv1"
+        for name in ("oracle_correct.json", "oracle_wrong.json"):
+            path = root / name
+            if not path.is_file():           # config not shipped in this checkout
+                continue
+            curve = self.presence_curve(str(path), cfg)
+            for f in self.LRV1_RETURN_FRAMES:
+                self.assertAlmostEqual(
+                    curve[f], 1.0, places=5,
+                    msg=("%s ramps on decisive return frame %d (presence %.5f): a "
+                         "boundary sits within w of an evaluated frame" % (name, f, curve[f])))
+
+    def test_the_correct_oracle_is_flat_across_the_whole_present_set(self):
+        cfg = build_config()
+        path = Path(__file__).resolve().parents[1] / "configs" / "lrv1" / "oracle_correct.json"
+        if not path.is_file():
+            self.skipTest("configs/lrv1/oracle_correct.json not present")
+        curve = self.presence_curve(str(path), cfg)
+        ramped = [f for f in sorted(self.LRV1_PRESENT_FRAMES) if curve[f] < 1.0 - 1e-5]
+        self.assertEqual(ramped, [], "correct oracle ramps on ground-truth-present frames")
+        # and the ramps must land inside the absence gap, where they cost only a
+        # secondary diagnostic
+        partial = [f for f in range(60) if 1e-6 < curve[f] < 1.0 - 1e-6]
+        self.assertTrue(set(partial).isdisjoint(self.LRV1_PRESENT_FRAMES))
+
+    def test_a_midpoint_boundary_is_detected_as_ramping(self):
+        """Anti-vacuity: the check must FAIL on the construction it replaced."""
+        cfg = build_config()
+        with tempfile.TemporaryDirectory() as tmp:
+            # the original construction: boundary at the frame-53/54 midpoint
+            curve = self.presence_curve(write_spec(tmp, [[29.5 / 6.0, 53.5 / 6.0]]), cfg)
+        self.assertLess(curve[54], 0.5, "fixture no longer reproduces the defect")
+        self.assertAlmostEqual(curve[54], 0.15625, places=5)
+        self.assertAlmostEqual(curve[55], 0.84375, places=5)
+
+
 class PresenceRowExpansionTests(unittest.TestCase):
     """The repaired row expansion must be a pure speedup: identical values and
     identical gradients versus the per-row Python stack it replaced."""

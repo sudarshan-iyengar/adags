@@ -12,9 +12,9 @@
  },
  "gaps": [
   [
-   0.9166666666666679,
-   4.916666666666667
+   1.1666666666666679,
+   4.666666666666668
   ]
  ],
- "note": "WRONG-TIME CONTROL for A2. The correct gap reflected about the window midpoint t=4.9166667 s. A reflection is the only transform that exactly preserves the episode count, every episode duration, the gap duration and the total present duration, so A2 differs from A1 in episode TIMING and in nothing else. Frozen before any output was inspected."
+ "note": "WRONG-TIME CONTROL for A2. The correct gap reflected about the window midpoint t=4.9166667 s of [-w_m, T+w_m]. A reflection is the only transform that exactly preserves the episode count, every episode duration, the gap duration and the total present duration. It also leaves A2 at presence 1.0 across the true return frames 54-59, so A2 can render the return and the comparison is fair at the event itself. Frozen before any cell output was inspected."
 }
