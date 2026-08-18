@@ -175,8 +175,18 @@ def main():
     # THE point of this script: restore the presence program the cell trained
     # under. Without it the renderer falls back to `get_marginal_t` and every
     # EL-GS number below would describe a model that was never trained.
-    state = setup_elgs(gaussians, scene, dataset, opt)
     elgs_declared = bool(getattr(opt, "elgs_enable", False))
+    # A live runtime is NOT sufficient. If the checkpoint carried no elgs_state,
+    # `setup_elgs` takes its fresh-run branch and silently RE-SEEDS over the
+    # trained cloud -- a different bounding box, a different voxel grid, and so
+    # a different row set carrying the oracle program than the one that trained.
+    # The reported family counts would all look plausible. Check the payload.
+    if elgs_declared and getattr(gaussians, "_pending_elgs_state", None) is None:
+        raise ContractError(
+            "cell declares elgs_enable but the checkpoint carries no elgs_state; "
+            "setup_elgs would re-seed families over the TRAINED cloud instead of "
+            "restoring the ones that trained")
+    state = setup_elgs(gaussians, scene, dataset, opt)
     if elgs_declared and getattr(gaussians, "elgs_runtime", None) is None:
         raise ContractError(
             "cell declares elgs_enable but the EL-GS runtime is not live after "

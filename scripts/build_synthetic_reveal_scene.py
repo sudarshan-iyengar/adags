@@ -304,15 +304,6 @@ def main():
     rgb = np.full((args.num_init_pts, 3), 0.5)
     store_ply(out / "points3d.ply", xyz, rgb)
 
-    ep1_t = [float(EPISODE_1_FRAMES[0] / FPS),
-             float((EPISODE_1_FRAMES[1] + GAP_FRAMES[0]) / 2.0 / FPS)]
-    ep2_t = [float((GAP_FRAMES[1] + EPISODE_2_FRAMES[0]) / 2.0 / FPS),
-             float(TIME_DURATION[1])]
-    mid = 0.5 * (TIME_DURATION[0] + TIME_DURATION[1])
-    wrong = [[2 * mid - ep1_t[1], 2 * mid - ep1_t[0]],
-             [2 * mid - ep2_t[1], 2 * mid - ep2_t[0]]]
-    wrong.sort()
-
     spec = {
         "scene_id": "LRV1",
         "kind": "synthetic_leave_and_return",
@@ -331,13 +322,16 @@ def main():
             "gap": list(GAP_FRAMES),
             "episode_2": list(EPISODE_2_FRAMES),
         },
-        "oracle_episodes_seconds": [ep1_t, ep2_t],
-        "wrong_time_episodes_seconds": wrong,
-        "wrong_time_construction": (
-            "reflection of the correct episode set about the window midpoint t=5.0 s; "
-            "exactly preserves episode count, each episode duration, the gap duration "
-            "and the total present duration, and changes only the timing"
-        ),
+        # The oracle EPISODE PROGRAMS deliberately do NOT live here. They depend
+        # on trainer-side constants this builder has no business knowing -- the
+        # smoothstep half-width w and the latch endpoints +-w_m, both derived
+        # from the frozen structural prereg -- and duplicating them here once
+        # already produced three artifacts that disagreed about what the
+        # wrong-time control was. The single source of truth is
+        # configs/lrv1/oracle_{correct,wrong}.json; this file states only the
+        # ground-truth presence FRAMES, which is what the scene actually knows.
+        "oracle_episodes": "configs/lrv1/oracle_correct.json",
+        "wrong_time_episodes": "configs/lrv1/oracle_wrong.json",
         "return_frames": list(range(EPISODE_2_FRAMES[0], EPISODE_2_FRAMES[1] + 1)),
         "event_object_pixels_per_test_view_frame": {
             "cam{:02d}_f{:03d}".format(c, f): visible_px[(c, f)]
@@ -355,8 +349,6 @@ def main():
     print("held-out event pixel-times: return={} episode1={} gap={}".format(tot, ep1, gap))
     per_view = {c: sum(visible_px[(c, f)] for f in ret) for c in TEST_CAMERAS}
     print("per held-out view over return frames: {}".format(per_view))
-    print("oracle episodes (s): {} {}".format(ep1_t, ep2_t))
-    print("wrong-time episodes (s): {}".format(wrong))
     print("points3d.ply sha256: {}".format(sha256_file(out / "points3d.ply")))
     return 0
 
