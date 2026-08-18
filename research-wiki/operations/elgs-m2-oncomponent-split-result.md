@@ -6,11 +6,9 @@ classification, denominators and decision rule before any outcome
 existed. Diagnostic only: no C1–C6 class, census total, coverage figure
 or eligibility verdict is changed by anything here.
 
-**Status: the INDEPENDENT reduction is complete and sealed. The primary
-reducer (experiment 151) had not returned when this was written.**
-Agreement between the two is therefore NOT yet established, and this page
-must be read as one complete independent measurement, not as a
-cross-checked result. The comparison is the next action.
+**Status: BOTH reductions complete. They AGREE EXACTLY — see §8.**
+The independent reducer sealed its numbers before experiment 151
+returned, so independence held.
 
 ## 1. Contract checks — all three exact
 
@@ -170,3 +168,74 @@ Collect experiment 151 and compare against §1–§2. Agreement on three
 exact contract checks and a pooling-invariant `p_on` would make this
 durable. **Disagreement is the more informative outcome and must be
 reported, not reconciled.**
+
+
+## 8. CROSS-CHECK — the two reductions agree to the digit
+
+Experiment 151 (primary reducer, `dgx`, commit `7465d82`, image
+`70a28e3d…`) COMPLETED. Artifact pulled from
+`runs/elgs/m2_oncomponent_split_r2/diagnostic.json` and compared against
+the independent reduction, which had sealed first.
+
+| quantity | independent | primary | agree |
+|---|---:|---:|:---:|
+| `ON_ELIGIBLE` | 931,410 | 931,410 | ✔ |
+| `OFF_ELIGIBLE` | 0 | 0 | ✔ |
+| `BACKGROUND` | 155,429 | 155,429 | ✔ |
+| `UNIDENTIFIABLE` | 0 | 0 | ✔ |
+| `p_on` | 0.8570 | 0.8569898577434192 | ✔ |
+| low-visibility pairs | 1,086,839 | 1,086,839 | ✔ |
+| total report-pairs | 1,240,623 | 1,240,623 | ✔ |
+| absence windows | 597 | 597 | ✔ |
+
+Two reducers, written independently from the same frozen text, over the
+same sealed artifacts, with no shared code — the independent one was
+forbidden from reading `build_absence_diagnostic.py` or any
+`diagnostic.json`, and sealed before the primary returned. **Every figure
+matches.** The verdict in §2 is now durable.
+
+### Third confirmation of the binary-`v` finding
+
+The primary's own `v_histogram` places **all 1,086,839 reports in bin
+`[0.0, 0.1)` and exactly zero in `[0.1,0.2)`, `[0.2,0.3)`, `[0.3,0.4)`
+and `[0.4,0.5)`.** That is an independent third confirmation, from the
+instrument's own machinery, of §3: the histogram the design commissioned
+to make thresholds recomputable is degenerate, and no threshold in
+`(0, 1]` moves a single report.
+
+### Facts the primary adds that the independent reduction did not report
+
+* **`p_on` is identical at ALL THREE eligibility levels** — 16 px, 64 px
+  and 256 px all give `0.8569898577434192` over the same 1,086,839
+  reports. The split is therefore **invariant to the component area
+  floor**, which removes `component_min_px` as a candidate explanation
+  for the result. This is a robustness fact worth more than it looks:
+  had `p_on` moved with the floor, the finding would have been an
+  artifact of a frozen constant.
+* **`restricted_to_C1a_windows` contains ZERO windows** —
+  `absence_windows_contributing = 0`, `p_on_primary = None`, with
+  `differs_from_unrestricted = True` correctly raised. This is not a
+  defect: C1a is the corroborated-true-absence class, and the parent
+  diagnostic's headline is that **0 of 597** windows are corroborated. The
+  empty restriction reproduces that finding from a different direction.
+* Denominators: **363 distinct seed_ids, 26 distinct camera_ids.**
+* `anchor_agreement.share = 0.5412` over all 1,086,839 reports
+  (`reports_without_an_anchor_label = 0`). **DESCRIPTIVE ONLY** — it
+  carries no decision weight by design, and is recorded, not used. The
+  independent reducer declined to compute it rather than guess an
+  unstated camera-convention axis flip; the primary computes it inside
+  the instrument's own convention, so the two are not comparable and no
+  agreement is claimed for this row.
+* D2 context, unchanged and not an input: 4,210,877 merge events, 22,191
+  split events.
+
+### What the cross-check does NOT establish
+
+Agreement between two reducers over the same sealed artifacts confirms
+the REDUCTION, not the inputs. Both read the same tracks and the same
+masks. If those artifacts were wrong, both would be wrong together —
+which is precisely how the 2026-08-13 substrate defect survived an
+"exact" recomputation. The three contract checks (597 / 1,086,839 /
+1,240,623) are the guard against that, and they passed; the writing_2
+trap in Appendix A was the specific substitution they were designed to
+catch, and it did not fire.
