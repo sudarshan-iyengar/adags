@@ -306,3 +306,161 @@ sign-off and must not be read as one.
 **Two things still gate execution**: the section 3 applicable-camera-set choice
 (a scientific-semantic decision for the user or a reviewer) and a second review
 round on revision 2.
+
+---
+
+## REVISION 3 (2026-08-18) — the sequence universe is reconciled and the camera set is DECIDED
+
+Append-only. Nothing above is rewritten. Revision 3 resolves the two items that
+gated execution after round 1: the section 3 applicable-camera-set choice, and
+an apparent three-way conflict in how the sequence universe was being counted.
+Machine-readable text: `configs/elgs/prereg_m1_a0b_audit_v1.json` at
+`revision: 3`. Status remains `frozen_pending_signoff` until round 2 returns.
+
+### R3.1 The sequence-universe reconciliation — there was no contradiction
+
+Three different sets were being named by three different numbers. Reconciled
+once, exactly, before any audit outcome is viewed.
+
+| sequence | `N_s` | `n_s` | A1 reading (i) | A1 class | basis | `E_eligible` | `E_indet` | `E_select` | exclusion reason |
+|---|---:|---:|---:|---|---|:-:|:-:|:-:|---|
+| `music_box` | 0 | 0 | 1.000 | eligible | monotonicity | ✓ | | | zero candidates — not in the audit population |
+| `piano` | 0 | 0 | 0.998 | eligible | monotonicity | ✓ | | | zero candidates |
+| `chess` | 0 | 0 | 0.936 | eligible | monotonicity | ✓ | | | zero candidates |
+| `writing_2` | 2 | 2 | 0.924 | eligible | monotonicity | ✓ | | ✓ | — |
+| `writing_1` | 0 | 0 | 0.918 | eligible | monotonicity | ✓ | | | zero candidates |
+| `maracas` | 1 | 1 | 0.917 | eligible | monotonicity | ✓ | | ✓ | — |
+| `jenga` | 0 | 0 | 0.896 | eligible | monotonicity | ✓ | | | zero candidates |
+| `put_fruit` | 4 | 4 | 0.887 | eligible | monotonicity | ✓ | | ✓ | — |
+| `pan` | 11 | 4 | 0.853 | eligible | monotonicity | ✓ | | ✓ | — |
+| `keyboard_mouse` | 0 | 0 | 0.853 | eligible | monotonicity | ✓ | | | zero candidates |
+| `tambourine` | 18 | 6 | 0.815 | eligible | monotonicity | ✓ | | ✓ | — |
+| `xylophone` | 0 | 0 | 0.779 | eligible | monotonicity | ✓ | | | zero candidates (corrected conversion; the defective-era row read 0.577) |
+| `kindle` | 0 | 0 | 0.779 | eligible | monotonicity | ✓ | | | zero candidates |
+| `soda` | 1 | 1 | 0.774 | eligible | monotonicity | ✓ | | ✓ | — |
+| `tea` | 13 | 9 | 0.743 | eligible | monotonicity | ✓ | | ✓ | — |
+| `slice_apple` | 4 | 4 | 0.731 | eligible | monotonicity | ✓ | | ✓ | — |
+| `pour_tea` | 73 | 9 | 0.591 | eligible | **measured** | ✓ | | ✓ | — |
+| `put_candy` | 18 | 9 | 0.507 | eligible | **measured** | ✓ | | ✓ | — |
+| `scissor` | 343 | 15 | 0.441 | **indeterminate** | **measured** | | ✓ | | transposed-anchor sensitivity 0.497 crosses the floor; the frozen `indeterminate_rule` bars it from a winning 3-subset |
+| `poker` | 109 | 9 | 0.382 | **indeterminate** | **measured** | | ✓ | | transposed-anchor sensitivity 0.485 crosses the floor; same rule |
+
+**The identities, all verified:**
+
+* 20 = 4 measured + 16 by monotonicity;
+* 20 = 18 `eligible` + 2 `indeterminate` + 0 `ineligible`;
+* 20 = 12 with `N_s > 0` + **8 with `N_s == 0`**;
+* **10 = |`E_select`| = |{eligible} ∩ {`N_s > 0`}| = 12 − 2**;
+* Σ`N_s` over all 20 = **597** exactly; Σ`n_s` = **73** exactly;
+* Σ`N_s` over `E_select` = 145, Σ`n_s` over `E_select` = **49**;
+* Σ`N_s` over `E_indeterminate` = **452** = 75.7%.
+
+**Where each disputed number came from:**
+
+* *"16 more sequences are eligible"* counts A1's **monotonicity rows**, not
+  audit-population members. A1 computed readings (ii)/(iii) for four sequences
+  and proved the other sixteen eligible without computing them. 4 + 16 = 20.
+* *`E_select` = 10* is `E_eligible` **restricted to `N_s > 0`**. Eight eligible
+  sequences carry zero true-absence candidates and are absent from the audit
+  population entirely. That restriction, not any disagreement, is the whole gap
+  between 18 and 10.
+* *m = 11 vs m = 12* — **neither is this audit's divisor.** The audit's divisor
+  is **m = 10**. The 12 appears only inside the hypothetical degeneracy
+  tripwire, where `scissor` and `poker` are *added* to the ten. The 11 was a
+  revision-1 arithmetic error inside that same tripwire table, corrected in
+  revision 2. No construction in this design uses m = 11.
+
+**Frozen here:** `E_select` is exactly the ten sequences listed above, and the
+simultaneous-bound divisor is **m = 10**. `scissor` and `poker` remain
+`indeterminate` and excluded for this audit; **their status may not change
+after power or audit results are seen, under any circumstance.**
+
+### R3.2 The applicable-camera set — D3 adopted, and what that costs
+
+**The user has adopted D3**, the sealed census per-candidate frustum rule that
+reproduced `containing_cameras` on 73 of 73 frozen windows. Section 3's
+blocking finding is resolved by decision, not by discovery: D2 stays refuted
+and D1 stays destructive.
+
+`S_w` = the tracking cameras whose frustum contains the frozen candidate
+anchor, under the frozen `prereg_m1_census_v1` predicate — positive
+camera-frame depth and a pixel inside `[0, W−1] × [0, H−1]`. Its **only**
+inputs are the sealed anchor (`ltp` / `ltp_frame`), the frozen calibration, and
+the existing deterministic frustum computation. Auditor verdicts, post-result
+visibility, tracker visibility flags and mask occupancy are all prohibited
+inputs, and the candidate generator is not modified.
+
+**The permitted estimand, verbatim and binding:**
+
+> unobservability across the cameras that the frozen candidate generator
+> geometrically considered applicable, followed by same-identity reappearance.
+
+**This does not establish** literal physical absence; unobservability across an
+independently fixed rig-wide camera set; or candidate-generator-independent
+event supply. Two phrasings are added to the prohibited list accordingly.
+
+**The audit triple, frozen before it is computed.** The three audit cameras of
+a window are the 3-subset of `S_w` maximising the **minimum pairwise
+optical-axis angular separation**, ties broken by the lexicographically
+smallest sorted camera-id tuple. Optical axis of camera `c` is
+`w2c[:3,:3].T @ [0,0,1]` — the census's own construction. The order is total:
+(min separation DESC, id-tuple ASC). No RNG, no free constant, no unresolved
+tie. A window with `|S_w| < 3` is excluded from **both** the A3 numerator and
+its denominator and is named in the report.
+
+The mapping is computed once, written to a run artifact, and its sha256
+recorded in the JSON **before any auditor sees any frame**; thereafter it is
+immutable.
+
+### R3.3 Power, recomputed at the reconciled m = 10 — and unchanged
+
+Recomputed independently by the primary after the reconciliation and the D3
+adoption, with Clopper-Pearson evaluated two ways (closed form
+`1 − (α/m)^(1/n)` at `k = 0`, and bisection on the exact binomial CDF; they
+agree to `< 1e-12`) and without `scipy`. **Every published figure reproduces
+exactly:** 2,580 of 7,000; minimum A3-positives 0/1/3/6; minimal surviving
+outcome `{pour_tea 2, tambourine 1, put_candy 3, tea 0}`; tripwire
+93.72 / 44.97 / 30.12 summing to 168.805 at m = 12; the uncorrected-90% check
+48.81 / 24.61 / 16.48 summing to 89.894; required `n_s` 135 / 42 / 27 at m = 12
+with the superseded 132 / 41 / 27 at m = 11.
+
+**The camera rule does not move the power arithmetic.** D3 leaves 100% of the
+73 windows with at least three applicable cameras, so no window is excluded on
+geometric admissibility and every `N_s` and `n_s` is unchanged. Under D1 the
+`E_select` sample would have fallen from 49 windows to 14 and the analysis
+would have had to be redone — which is the concrete form of "destructive".
+
+One structural fact worth stating: **`pour_tea` reaches `U_s` = 29.24 ≥ 12 at
+zero observed A3-positives**, so it occupies a slot in a surviving 3-subset
+unconditionally. The stage-1 decision therefore turns entirely on `tambourine`,
+`put_candy` and `tea`.
+
+### R3.4 Decidability is CONDITIONAL — state this wherever stage 1 is described
+
+**Stage 1 is not generally decisive.** Its kill power exists *only* because
+`scissor` and `poker` are excluded from `E_select`. With `scissor`, `poker` and
+`pour_tea` all admitted, the kill cannot fire under any outcome. Stage 1's
+decidability is therefore conditional on A1's coverage classification, which
+demoted those two sequences on a frozen sensitivity reading sitting 0.003 and
+0.015 below a threshold. **Any statement that stage 1 "can kill the route"
+without that clause is a misdescription of this design.**
+
+### R3.5 What revision 3 preserves unchanged
+
+Simultaneous one-sided coverage across the frozen `E_select`; the complete
+three-sequence kill inequality; the per-sequence floor of 12 and the pooled
+floor of 72; candidate-set-relative conclusions; the separate eligible /
+indeterminate / selectable sets; the diagnostic-only recall probe; the
+model-auditor vs human-confirmed evidence grades; the corrected human
+spot-check population (the 73 real candidates only, decoys and probes
+excluded); the explicit `UNSURE` handling; the finite-population disclosure;
+and the frozen amendment policy.
+
+### R3.6 Round-2 status
+
+Revision 3 is submitted for **one** fresh-context statistical and semantic
+re-review. A PASS requires explicit confirmation of the audit population and
+`E_select`, the simultaneous-bound divisor, the candidate-specific camera
+mapping, the narrowed estimand, the human spot-check population, the power
+table, and the outcome-to-action rules. A second substantive rejection stops
+audit execution and returns the issue to the user.

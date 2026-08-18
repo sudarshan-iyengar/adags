@@ -21,6 +21,37 @@
   },
   "applicable_camera_set": {
     "BLOCKING_IF": "if the adopted definition leaves fewer than 3 applicable cameras for a window, that window is excluded from both the A3 numerator and its denominator, and the exclusion count is reported per sequence; a sequence left with no admissible window is removed from E_select and the removal is reported.",
+    "adopted_definition": "D3_census_per_candidate_frustum",
+    "adoption_record": {
+      "DOES_NOT_ESTABLISH": [
+        "literal physical absence",
+        "unobservability across an independently fixed rig-wide camera set",
+        "candidate-generator-independent event supply"
+      ],
+      "PERMITTED_ESTIMAND_VERBATIM": "unobservability across the cameras that the frozen candidate generator geometrically considered applicable, followed by same-identity reappearance.",
+      "blocking_condition": "if this preregistration cannot embody the rule reproducibly WITHOUT changing the candidate generator, a blocking finding is recorded and NO alternative camera instrument is invented.",
+      "decided_by": "the user, 2026-08-18, in writing",
+      "permitted_inputs": [
+        "the sealed candidate anchor",
+        "the frozen calibration",
+        "the existing deterministic frustum computation"
+      ],
+      "prohibited_inputs": [
+        "auditor verdicts",
+        "post-result visibility information",
+        "per-report tracker visibility flags",
+        "candidate mask occupancy",
+        "any modification of the candidate generator"
+      ],
+      "rule": "S_w = the set of tracking cameras whose frustum contains the frozen candidate anchor, under the frozen prereg_m1_census_v1 frustum_containment predicate: a point is inside a camera's frustum iff it projects with POSITIVE camera-frame depth to a pixel inside [0, W-1] x [0, H-1]. Inputs are the sealed candidate anchor (audit_sample_B8 ltp / ltp_frame) and the frozen calibration ONLY."
+    },
+    "audit_triple_selection": {
+      "FROZEN_BEFORE_COMPUTATION": true,
+      "admissibility": "a window with |S_w| < 3 is EXCLUDED from both the A3 numerator and its denominator; the exclusion is reported per sequence and the excluded candidate is named.",
+      "determinism": "a total order on candidate triples: (minimum pairwise separation DESC, sorted camera-id tuple ASC). No RNG, no free constant, no tie left unresolved.",
+      "rule": "the 3 audit cameras of a window are the 3-subset T of S_w maximising the MINIMUM pairwise optical-axis angular separation; ties are broken by the lexicographically smallest sorted camera-id tuple. Optical axis of camera c = w2c[:3,:3].T @ [0,0,1], the same construction the census's angular_separation_floor uses.",
+      "sealing": "the full candidate -> (S_w, audit triple) mapping is computed once, written to a run artifact, and its sha256 recorded in this file before any auditor sees any frame. The mapping is then immutable."
+    },
     "candidate_definitions_measured": {
       "D1_all_cameras_fixed_triple": {
         "candidate_independent": true,
@@ -52,8 +83,14 @@
       "changing the definition after any A3 verdict is seen"
     ],
     "recommendation_requiring_SIGN_OFF": "adopt D3, and state in every A_S claim that the applicable set was determined by the frozen candidate's own triangulated anchor, so A_S is unobservability across the cameras the CANDIDATE GENERATOR considered applicable -- not across an independently defined camera set",
+    "required_disclosure_table": [
+      "the distribution of |S_w| over the 73 frozen windows (min, quartiles, median, max, and the full histogram)",
+      "the number of candidates with fewer than three applicable cameras, and the identity of every one excluded for that reason",
+      "the previously measured failures of the candidate-independent alternatives: D2's feasible-radius set is EMPTY (containing the anchors needs k >= 0.69 rig_radius while retaining 3 cameras needs k <= 0.20), and D1's fixed triple (7, 37, 46) contains all three of a candidate's anchor in only 14 of E_select's 49 windows (28.6%), which collapses the kill rule's decidability",
+      "the soda_screen_w0_171 data-quality flag: anchor at 1.955 * rig_radius, |S| = 3 exactly, best triple separation 28.7 degrees -- reported separately, never pooled silently"
+    ],
     "requirement_as_stated": "frozen before any candidate outcome is viewed; derived from sealed calibration and camera validity only; never from auditor verdicts, candidate-specific track visibility, or candidate mask occupancy",
-    "status": "BLOCKING FINDING -- UNRESOLVED. Stage 1 may not execute until a reviewer or the user selects a definition in a signed revision."
+    "status": "RESOLVED IN REVISION 3 -- D3 ADOPTED BY THE USER, subject to preregistration review."
   },
   "authority": "research-wiki/operations/elgs-audit-prereg-2026-08-18.md",
   "cell": "M1-A0b two-stage blinded visual audit",
@@ -66,7 +103,7 @@
     "A_S": {
       "definition": "An A3-positive window is A_S-positive iff every camera in the sequence's applicable set S_seq returns NOT VISIBLE from both auditors at at least 3 audited frames including the window midpoint and the last v==0 frame.",
       "grade": "claim-grade ONLY with per-positive human confirmation",
-      "interpretation": "full-applicable-camera unobservability. This is NOT literal physical absence and may not be described as such anywhere. Human confirmation validates the OPERATIONAL VISUAL LABEL only; it does not observe physical ground truth."
+      "interpretation": "full-applicable-camera unobservability, where the applicable set is D3 (revision 3): the cameras whose frustum contains the frozen candidate anchor. The permitted estimand is therefore, verbatim: 'unobservability across the cameras that the frozen candidate generator geometrically considered applicable, followed by same-identity reappearance.' This is NOT literal physical absence, NOT unobservability across an independently fixed rig-wide camera set, and NOT candidate-generator-independent event supply, and may not be described as any of those anywhere. Human confirmation validates the OPERATIONAL VISUAL LABEL only; it does not observe physical ground truth."
     },
     "R_S": {
       "definition": "An A_S-positive window is R_S-positive iff, in the post-window frames, the same identity reappears within r_site_census of its disappearance position under the sealed census return rule.",
@@ -76,7 +113,9 @@
     "prohibited_phrasings": [
       "physical absence (for A3 or A_S)",
       "the object was not there",
-      "route dead"
+      "route dead",
+      "unobservability across the rig (for A_S under D3)",
+      "candidate-generator-independent event supply"
     ]
   },
   "evidence_grading": {
@@ -140,9 +179,25 @@
       "reviewer": "fresh-context adversarial statistical reviewer, no prior project context",
       "round": 1,
       "verdict": "BLOCKED"
+    },
+    {
+      "changes_since_the_reviewed_revision_2": [
+        "sequence_universe_reconciliation added: the full 20-row table and the four-count identity resolving the 16 / 10 / 11-vs-12 apparent conflict",
+        "applicable_camera_set RESOLVED: D3 adopted by the user with the narrowed estimand frozen verbatim",
+        "audit_triple_selection frozen: max-min pairwise optical-axis separation, ties by lexicographic camera-id tuple, sealed by sha256 before any verdict",
+        "required_disclosure_table specified",
+        "A_S interpretation narrowed and two prohibited phrasings added",
+        "m frozen at 10 and E_select frozen; scissor/poker status fixed for this audit",
+        "power recomputed at m = 10 by an independent implementation; unchanged",
+        "DECIDABILITY_IS_CONDITIONAL added"
+      ],
+      "revision_reviewed": 3,
+      "round": 2,
+      "status": "SUBMITTED FOR FRESH-CONTEXT RE-REVIEW",
+      "verdict": "PENDING"
     }
   ],
-  "revision": 2,
+  "revision": 3,
   "schema_version": "elgs-prereg-a0b-audit-v1",
   "sequence_sets": {
     "E_eligible": "sequences classed eligible by A1, restricted to those with N_s > 0",
@@ -151,6 +206,18 @@
       "poker_screen_w0_267"
     ],
     "E_select_change_requires": "a new signed revision of this file; E_select may never be widened after any audit outcome is seen",
+    "E_select_frozen": [
+      "pour_tea_screen_w0_225",
+      "tambourine_screen_w0_127",
+      "put_candy_screen_w0_233",
+      "tea_screen_w0_164",
+      "pan_screen_w0_114",
+      "put_fruit_screen_w0_162",
+      "slice_apple_screen_w0_233",
+      "writing_2_screen_w0_239_fix79ae5b7",
+      "maracas_screen_w0_134",
+      "soda_screen_w0_171"
+    ],
     "E_select_initial": [
       "pour_tea_screen_w0_225",
       "tambourine_screen_w0_127",
@@ -164,8 +231,292 @@
       "soda_screen_w0_171"
     ],
     "indeterminate_rule": "E_indeterminate sequences MAY be audited descriptively and their per-sequence numbers reported, but they CANNOT enter a winning 3-subset unless a deterministic, statistically justified coverage-adjudication rule is separately frozen, signed, and passed BEFORE any event frame of theirs is inspected.",
+    "indeterminate_status_fixed": "scissor and poker remain indeterminate and excluded from E_select for THIS audit. Their status may not change after power or audit results are seen, under any circumstance.",
+    "m_frozen_revision_3": 10,
     "m_initial": 10,
     "source": "research-wiki/operations/elgs-coverage-bounding-pair-result.md (A1), classes frozen there"
+  },
+  "sequence_universe_reconciliation": {
+    "identities_verified": [
+      "20 = 4 measured + 16 by monotonicity",
+      "20 = 18 eligible + 2 indeterminate + 0 ineligible",
+      "20 = 12 with N_s > 0 + 8 with N_s == 0",
+      "10 = |E_select| = |{eligible} INTERSECT {N_s > 0}| = 12 - 2 indeterminate",
+      "sum of N_s over all 20 = 597 (the audit population, exact)",
+      "sum of n_s over all 12 with N_s > 0 = 73 (the frozen stage-1 sample, exact)",
+      "sum of N_s over E_select = 145; sum of n_s over E_select = 49",
+      "sum of N_s over E_indeterminate = 452 = 75.7% of 597"
+    ],
+    "purpose": "revision 3. Three DIFFERENT sets were being named by three different numbers across the A1 result page, this file and the power analysis. They are reconciled here once, exactly, BEFORE any audit outcome is viewed.",
+    "simultaneous_bound_divisor": {
+      "definition": "m = |E_select|, fixed BEFORE any audit outcome is viewed and unchangeable except by a new signed revision",
+      "frozen": true,
+      "m": 10
+    },
+    "source": "N_s from the 20 sealed screening censuses with the corrected writing_2 and xylophone conversions substituted; n_s from audit_sample_B8; coverage and class from research-wiki/operations/elgs-coverage-bounding-pair-result.md, whose readings were independently reproduced with ZERO differences on 28 compared cells (Determined experiment 161).",
+    "table": {
+      "columns": [
+        "sequence",
+        "N_s",
+        "n_s",
+        "A1_reading_i_coverage",
+        "A1_class",
+        "class_basis",
+        "in_E_eligible",
+        "in_E_indeterminate",
+        "in_E_select",
+        "exclusion_reason"
+      ],
+      "rows": [
+        [
+          "music_box",
+          0,
+          0,
+          1.0,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population"
+        ],
+        [
+          "piano",
+          0,
+          0,
+          0.998,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population"
+        ],
+        [
+          "chess",
+          0,
+          0,
+          0.936,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population"
+        ],
+        [
+          "writing_2",
+          2,
+          2,
+          0.924,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "writing_1",
+          0,
+          0,
+          0.918,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population"
+        ],
+        [
+          "maracas",
+          1,
+          1,
+          0.917,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "jenga",
+          0,
+          0,
+          0.896,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population"
+        ],
+        [
+          "put_fruit",
+          4,
+          4,
+          0.887,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "pan",
+          11,
+          4,
+          0.853,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "keyboard_mouse",
+          0,
+          0,
+          0.853,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population"
+        ],
+        [
+          "tambourine",
+          18,
+          6,
+          0.815,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "xylophone",
+          0,
+          0,
+          0.779,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population (corrected conversion; the defective-era row read 0.577)"
+        ],
+        [
+          "kindle",
+          0,
+          0,
+          0.779,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          false,
+          "zero true-absence candidate windows: not in the audit population"
+        ],
+        [
+          "soda",
+          1,
+          1,
+          0.774,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "tea",
+          13,
+          9,
+          0.743,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "slice_apple",
+          4,
+          4,
+          0.731,
+          "eligible",
+          "monotonicity",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "pour_tea",
+          73,
+          9,
+          0.591,
+          "eligible",
+          "measured",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "put_candy",
+          18,
+          9,
+          0.507,
+          "eligible",
+          "measured",
+          true,
+          false,
+          true,
+          null
+        ],
+        [
+          "scissor",
+          343,
+          15,
+          0.441,
+          "indeterminate",
+          "measured",
+          false,
+          true,
+          false,
+          "A1 class indeterminate: the frozen transposed-anchor sensitivity lands at 0.497, crossing the 0.5 floor. The frozen indeterminate_rule bars it from a winning 3-subset absent a separately frozen and signed coverage-adjudication rule. STATUS IS FIXED FOR THIS AUDIT and may not change after any power or audit result is seen."
+        ],
+        [
+          "poker",
+          109,
+          9,
+          0.382,
+          "indeterminate",
+          "measured",
+          false,
+          true,
+          false,
+          "A1 class indeterminate: the frozen transposed-anchor sensitivity lands at 0.485, crossing the 0.5 floor. Same rule and same fixed status as scissor."
+        ]
+      ]
+    },
+    "the_apparent_conflict": {
+      "claim_16_more_are_eligible": "A1 computed readings (ii)/(iii) for FOUR sequences (put_candy, pour_tea, poker, scissor) and classed the remaining SIXTEEN eligible by its monotonicity proof (reading (i) >= 0.5 forces reading (iii) >= 0.5). 4 + 16 = 20 = the whole A1 coverage population. The '16' is a count of monotonicity rows, NOT a count of audit-population members.",
+      "claim_E_select_is_10": "E_select = E_eligible RESTRICTED to sequences with N_s > 0. Of the 20 coverage-population sequences, 18 are eligible and 2 are indeterminate; of those 18 eligible, only 10 carry at least one true-absence candidate window. EIGHT eligible sequences carry ZERO candidates and are therefore absent from the audit population entirely.",
+      "claim_m_11_vs_12": "NEITHER is the divisor for this audit. m = |E_select| = 10. The 12 appears ONLY in the hypothetical DEGENERACY TRIPWIRE, where scissor and poker are ADDED to the 10-member E_select giving 12; the 11 was a revision-1 arithmetic error in the tripwire's required-n_s table, corrected to 12 in revision 2. There is no construction anywhere in this design in which m = 11.",
+      "verdict": "NO CONTRADICTION. 20 (coverage population) / 18 (E_eligible) / 12 (sequences with N_s > 0) / 10 (E_select, and the simultaneous-bound divisor) are four distinct, mutually consistent counts."
+    },
+    "writing_2_note": "the A1 coverage value 0.924 is from the CORRECTED conversion; the defective-era cycle-2 screening table recorded 0.845 and a defective N_s of 84. The corrected N_s is 2."
   },
   "stage_1": {
     "estimator": {
@@ -214,6 +565,7 @@
       "on_not_fire": "proceed to stage 2"
     },
     "power_ANALYSED_BEFORE_EXECUTION": {
+      "DECIDABILITY_IS_CONDITIONAL": "STATE THIS WHEREVER STAGE 1 IS DESCRIBED. Stage 1 is NOT generally decisive. Its kill power exists ONLY because scissor and poker are excluded from E_select. With scissor, poker and pour_tea all admitted the kill cannot fire under ANY outcome. Stage 1's decidability is therefore CONDITIONAL on A1's coverage classification, which demoted those two sequences on a frozen sensitivity reading sitting 0.003 and 0.015 below a threshold. Any statement that stage 1 'can kill the route' without that clause is a misdescription of this design.",
       "DEGENERACY_TRIPWIRE": "if a future adjudication rule admits scissor, poker AND pour_tea to E_select simultaneously, the kill CANNOT FIRE under any outcome: at zero observed A3-positives those three alone give U = 93.7 + 45.0 + 30.1 = 168.8 >= 72 with each >= 12. Bonferroni is not the cause; the same holds at an uncorrected 90%.",
       "E_select_of_10_result": "DECIDABLE. Only 4 of the 10 have N_s >= 12 and can ever reach U_s >= 12 (pour_tea 73, tambourine 18, put_candy 18, tea 13). Over the 7,000 attainable outcome vectors the kill fires in 2,580 and does not in 4,420. The minimal surviving outcome is pour_tea >= 2, tambourine >= 1, put_candy >= 3 A3-positives.",
       "consequence": "admitting scissor turns stage 1 from a cheap screen into a near-census of that sequence. Any revision that admits scissor or poker MUST re-specify stage 1 before execution.",
@@ -224,6 +576,12 @@
         "poker": "n_s >= 42 of 109 (38.5%)",
         "pour_tea": "n_s >= 27 of 73 (37.0%)",
         "scissor": "n_s >= 135 of 343 (39.4%)"
+      },
+      "recomputed_revision_3": {
+        "basis": "recomputed independently by the primary at the reconciled m = 10 after the sequence-universe reconciliation and the D3 adoption, with Clopper-Pearson verified two ways (closed form 1 - (alpha/m)^(1/n) at k = 0, and bisection on the exact binomial CDF; agreement < 1e-12) and no scipy.",
+        "camera_rule_effect": "NONE on the power arithmetic. D3 leaves 100% of the 73 windows with >= 3 applicable cameras, so no window is excluded on geometric admissibility and every N_s and n_s entering the power analysis is unchanged. Had D1 been adopted instead, E_select's stage-1 sample would have fallen from 49 windows to 14 and the analysis would have had to be redone.",
+        "note_pour_tea": "pour_tea reaches U_s = 29.24 >= 12 at ZERO observed A3-positives, so it occupies a slot in a surviving 3-subset unconditionally; the decision therefore turns on tambourine, put_candy and tea.",
+        "unchanged": "every published figure reproduces EXACTLY: kill fires in 2,580 of 7,000; per-sequence minimum A3-positives pour_tea 0 of 9, tambourine 1 of 6, put_candy 3 of 9, tea 6 of 9; minimal surviving outcome {pour_tea 2, tambourine 1, put_candy 3, tea 0}; tripwire U_s 93.72 / 44.97 / 30.12 summing to 168.805 at m = 12; the uncorrected-90% check 48.81 / 24.61 / 16.48 summing to 89.894; required n_s 135 / 42 / 27 at m = 12 and the superseded 132 / 41 / 27 at m = 11."
       },
       "why": "U_s = N_s * UB_s scales with the candidate count while UB_s is floored by the sample size, so a LARGER candidate population makes the kill harder, not easier"
     },
