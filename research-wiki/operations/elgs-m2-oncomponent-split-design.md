@@ -229,3 +229,60 @@ pooled, §5's verdict follows mechanically from `p_on`, and the
 independent recomputation either agrees or its disagreement is explained.
 No further screening, re-tracking, or tranche-2 work is authorised by this
 page under any outcome.
+
+## APPENDIX A — resolved artifact paths (2026-08-18, verified by rclone)
+
+Frozen alongside the design. All under
+`/apollo/users/sri/proj_adags/`. Tracks are `<conversion>_tracks/tracks.json`;
+each tracks directory also carries `MANIFEST.json` and the frozen
+`tracks_shift.json` / `tracks_shuffle.json` controls. Each conversion
+directory contains `masks/` and `undist/`.
+
+| sequence | conversion dir (`data/diva360_derived/`) | census (`runs/elgs/`) |
+|---|---|---|
+| maracas | `maracas_screen_w0_134` | `m1c2_screen_maracas_r0` |
+| tambourine | `tambourine_screen_w0_127` | `m1c2_screen_tambourine_r0` |
+| pour_tea | `pour_tea_screen_w0_225` | `m1c2_screen_pour_tea_r0` |
+| pan | `pan_screen_w0_114` | `m1c2_screen_pan_r0` |
+| soda | `soda_screen_w0_171` | `m1c2_screen_soda_r0` |
+| tea | `tea_screen_w0_164` | `m1c2_screen_tea_r0` |
+| put_candy | `put_candy_screen_w0_233` | `m1c2_screen_put_candy_r0` |
+| put_fruit | `put_fruit_screen_w0_162` | `m1c2_screen_put_fruit_r0` |
+| **writing_2** | **`writing_2_screen_w0_239_fix79ae5b7`** | **`m1c3fix_census_writing_2_screen_r0`** |
+| poker | `poker_screen_w0_267` | `m1c2_screen_poker_r0` |
+| slice_apple | `slice_apple_screen_w0_233` | `m1c2_screen_slice_apple_r0` |
+| scissor | `scissor_screen_w0_561` | `m1c2_screen_scissor_r0` |
+
+**writing_2 is the trap, and it is a DOUBLE one.** Both the defective and
+the corrected artifacts survive on Apollo, side by side, distinguished
+only by a commit-hash suffix:
+
+```
+writing_2_screen_w0_239              <- DEFECTIVE, do not use
+writing_2_screen_w0_239_fix79ae5b7   <- corrected
+```
+
+and its census is in a **different run directory from the other eleven**
+(`m1c3fix_census_...` rather than `m1c2_screen_...`), because the
+remeasurement of [[elgs-substrate-remeasurement-result]] produced a new
+census rather than overwriting the old one. Taking the `m1c2_screen_`
+census for writing_2 by pattern-matching the other eleven would silently
+reintroduce exactly the substrate defect that voided cycle 3 — the same
+class of error that once passed screening, a gate, a sign-off and an
+"exact" recomputation.
+
+This is why §2 states the artifacts are excluded **by name, not by
+timestamp**, and why the 597-window contract check is a hard void
+condition rather than a reconciliation: with the defective writing_2 the
+absence total is 679, not 597, so the denominator itself detects the
+substitution.
+
+`xylophone_screen_w0_306_fix79ae5b7` also exists but xylophone is NOT in
+the 12: its corrected true-absence count is 0, so it contributes no
+low-visibility reports inside absence windows.
+
+The run directory `m1absdiag_primary_fix4acb0fc_r0` exists on Apollo
+under that literal name, so the citation in
+[[elgs-absence-diagnostic-result]] resolves; the timestamped
+`20260814T121653Z_m1absdiag_primary_fix_0_4acb0fc` in the local ledger is
+the same experiment (69) recorded under the submission convention.
