@@ -40,7 +40,14 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# INSERT, not append: the admitted image ships a `pointops2` whose `functions`
+# subpackage is absent, and `utils.general_utils` imports
+# `pointops2.functions.pointops` unconditionally. Appending leaves the installed
+# one ahead of the repository's on sys.path, so the import resolves to the
+# shadowing package and fails. `scripts/eval_diva360_heldout.py` inserts at 0
+# for the same reason. `main.py` is unaffected because its own directory IS the
+# repository root, so sys.path[0] already points there.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
