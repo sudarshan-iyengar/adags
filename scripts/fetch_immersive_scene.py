@@ -248,6 +248,14 @@ def main(argv=None) -> int:
     parser.add_argument("--inventory", action="store_true", help="read-only listing; no download")
     parser.add_argument("--verify-only", action="store_true", help="re-hash an existing archive")
     parser.add_argument("--inspect", action="store_true", help="central-directory inventory")
+    parser.add_argument(
+        "--extract-member", action="append", default=[],
+        help="extract exactly these archive members beside the archive. Intended "
+             "for the small calibration file (models.json), NOT for the videos; "
+             "refuses any member larger than --extract-member-max-bytes so it "
+             "cannot become an accidental full extraction",
+    )
+    parser.add_argument("--extract-member-max-bytes", type=int, default=1 << 22)
     parser.add_argument("--out", default=None, help="manifest path")
     args = parser.parse_args(argv)
 
@@ -361,6 +369,34 @@ def main(argv=None) -> int:
 
     if args.inspect:
         report["archive_inventory"] = _inspect(target)
+
+    if args.extract_member:
+        extracted = {}
+        with zipfile.ZipFile(target) as zf:
+            for member in args.extract_member:
+                try:
+                    info = zf.getinfo(member)
+                except KeyError as exc:
+                    raise ContractError(f"archive has no member {member!r}") from exc
+                if info.file_size > args.extract_member_max_bytes:
+                    raise ContractError(
+                        f"member {member!r} is {info.file_size} bytes, over the "
+                        f"{args.extract_member_max_bytes}-byte cap; this option is "
+                        "for small calibration files, not for the videos"
+                    )
+                # zip-slip guard: the member must land under dest
+                out = (dest / member).resolve()
+                if dest.resolve() not in out.parents and out != dest.resolve():
+                    raise ContractError(f"member {member!r} escapes {dest}")
+                out.parent.mkdir(parents=True, exist_ok=True)
+                data = zf.read(member)
+                out.write_bytes(data)
+                extracted[member] = {
+                    "bytes": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                    "path": str(out),
+                }
+        report["extracted_members"] = extracted
 
     print(json.dumps({
         "name": name,
