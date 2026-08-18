@@ -47,9 +47,10 @@
     },
     "audit_triple_selection": {
       "FROZEN_BEFORE_COMPUTATION": true,
+      "UNREPAIRED_RESIDUE": "round 2, M7: the frozen text specifies no comparison tolerance, and the implementation forms the tie set with exact float equality, so on a near-symmetric 26-camera rig a 1e-16 arccos difference can decide the triple instead of the frozen id-tuple rule. The sha256 seal keeps the EXECUTED audit reproducible; independent RE-DERIVATION is what is at risk. Separately, |S_w| >= 3 is the only admissibility test -- the census's own frozen angular_separation_floor is not reused, so three near-parallel cameras are admissible (soda at 28.7 deg is flagged but not excluded). Both are SUBSTANTIVE and NOT repaired here.",
       "admissibility": "a window with |S_w| < 3 is EXCLUDED from both the A3 numerator and its denominator; the exclusion is reported per sequence and the excluded candidate is named.",
       "determinism": "a total order on candidate triples: (minimum pairwise separation DESC, sorted camera-id tuple ASC). No RNG, no free constant, no tie left unresolved.",
-      "rule": "the 3 audit cameras of a window are the 3-subset T of S_w maximising the MINIMUM pairwise optical-axis angular separation; ties are broken by the lexicographically smallest sorted camera-id tuple. Optical axis of camera c = w2c[:3,:3].T @ [0,0,1], the same construction the census's angular_separation_floor uses.",
+      "rule": "the 3 audit cameras of a window are the 3-subset T of S_w maximising the MINIMUM pairwise optical-axis angular separation; ties are broken by the lexicographically smallest sorted camera-id tuple. Optical axis of camera c = w2c[:3,:3].T @ [0,0,1]. PROVENANCE CORRECTED in revision 4: this construction lives in CODE (scripts/build_m1_census.py::angular_separation_floor, and identically scripts/build_absence_diagnostic.py::_pair_confirmable and scripts/build_a0b_camera_mapping.py::optical_axis), NOT in prereg_m1_census_v1.json. A determinism claim anchored to a mutable script is weaker than one anchored to frozen text, and that weakness is recorded rather than glossed.",
       "sealing": "the full candidate -> (S_w, audit triple) mapping is computed once, written to a run artifact, and its sha256 recorded in this file before any auditor sees any frame. The mapping is then immutable."
     },
     "candidate_definitions_measured": {
@@ -101,7 +102,7 @@
       "interpretation": "3-view unobservability. An UPPER BOUND on physical absence and NEVER a certification of it: invisibility in 3 of the applicable cameras is implied by absence but does not imply it."
     },
     "A_S": {
-      "definition": "An A3-positive window is A_S-positive iff every camera in the sequence's applicable set S_seq returns NOT VISIBLE from both auditors at at least 3 audited frames including the window midpoint and the last v==0 frame.",
+      "definition": "An A3-positive window is A_S-positive iff every camera in the window's applicable set S_w (the D3 per-candidate applicable set adopted in revision 3; the symbol S_seq is retired -- it was defined only by the REJECTED D1 and D2) returns NOT VISIBLE from both auditors at at least 3 audited frames including the window midpoint and the last v == 0 frame. UNREPAIRED RESIDUE (round 2, B3): 'the last v == 0 frame' is undefined for a camera that never queried the identity (the documented 12.2% never-queried limb) and for a camera in which v is never 0, and it is driven by the very tracker flag M-2 showed carries no confidence information. That is a SUBSTANTIVE gap and is NOT repaired here.",
       "grade": "claim-grade ONLY with per-positive human confirmation",
       "interpretation": "full-applicable-camera unobservability, where the applicable set is D3 (revision 3): the cameras whose frustum contains the frozen candidate anchor. The permitted estimand is therefore, verbatim: 'unobservability across the cameras that the frozen candidate generator geometrically considered applicable, followed by same-identity reappearance.' This is NOT literal physical absence, NOT unobservability across an independently fixed rig-wide camera set, and NOT candidate-generator-independent event supply, and may not be described as any of those anywhere. Human confirmation validates the OPERATIONAL VISUAL LABEL only; it does not observe physical ground truth."
     },
@@ -124,7 +125,7 @@
     "model_auditor_output": "diagnostic",
     "unmeasured": "the instrument's miss rate on genuine full-view absence, which this design does not estimate because no window is known to be genuinely absent"
   },
-  "execution_authorization": "NOT GRANTED. No candidate frame may be rendered, displayed, or transmitted to any auditor, agent or panel until the user authorizes stage 1 in writing. Building and testing extraction tooling on synthetic inputs is permitted.",
+  "execution_authorization": "NOT GRANTED, AND NOW BLOCKED BY REVIEW. The user's conditional authorization of stage 1 required a CLEAN fresh-context PASS on revision 3. Round 2 returned BLOCKED with four blocking findings, two of which (B1, B2) the primary independently verified. Under the directive's own rule a SUBSTANTIVE second rejection stops audit execution and returns the issue to the user. Revision 4 repairs ONLY mechanical and wording defects; B1, B2, B4 and the material findings M3, M4, M5, M7, M8, M11, M12 are NOT repaired. No candidate frame may be rendered, displayed or transmitted.",
   "population": {
     "N_s": {
       "maracas_screen_w0_134": 1,
@@ -181,23 +182,57 @@
       "verdict": "BLOCKED"
     },
     {
-      "changes_since_the_reviewed_revision_2": [
-        "sequence_universe_reconciliation added: the full 20-row table and the four-count identity resolving the 16 / 10 / 11-vs-12 apparent conflict",
-        "applicable_camera_set RESOLVED: D3 adopted by the user with the narrowed estimand frozen verbatim",
-        "audit_triple_selection frozen: max-min pairwise optical-axis separation, ties by lexicographic camera-id tuple, sealed by sha256 before any verdict",
-        "required_disclosure_table specified",
-        "A_S interpretation narrowed and two prohibited phrasings added",
-        "m frozen at 10 and E_select frozen; scissor/poker status fixed for this audit",
-        "power recomputed at m = 10 by an independent implementation; unchanged",
-        "DECIDABILITY_IS_CONDITIONAL added"
+      "blocking": {
+        "B1_design_inconsistent_bound": "Per-sequence Clopper-Pearson on (k_s, n_s) assumes equal within-sequence inclusion probabilities. The frozen B8 sample is a ROUND-ROBIN over (sequence x terminal class x pooled staleness tercile) strata, 3 rounds, without replacement, so stratum h contributes min(3, size_h) and equal inclusion needs equal stratum sizes, i.e. 3*N_s/n_s integral. PRIMARY-VERIFIED: it is NOT integral for scissor (68.600), poker (36.333), pour_tea (24.333), tea (4.333) or pan (8.250) -- and pour_tea and tea are two of the four decisive sequences. So k_s/n_s is not design-unbiased for p_s, U_s is not a 1-alpha/m upper confidence bound on the population count, and the 90% simultaneous coverage claim is unsupported. The design-consistent Horvitz-Thompson estimator is present in the file and deliberately given NO decision weight. Repair requires either proving per-sequence CP conservative under the actual design, or per-stratum bounds with U_s = sum_h N_sh*UB_sh and a larger Bonferroni divisor -- which MOVES the power analysis.",
+        "B2_bridged_frame_bias_absent": "The same frozen B8 block discloses that audit frames are drawn uniformly over the CENSUS window, which INCLUDES bridged frames at which the identity is associated BY CONSTRUCTION of the flicker rule, so a bridged window can never be A3-positive whatever the scene contains (85 of 109 poker windows carry at least one). Deflated A3 -> deflated U_s -> kill EASIER, which is the wrongful-kill direction. PRIMARY-VERIFIED by grep: 'bridg' occurs ZERO times in this JSON and ZERO times in the prose page, and the B8 mandate to report bridged_sampled_frame was not carried forward. The human spot-check cannot catch it -- it is instrument geometry, not auditor behaviour.",
+        "B3_A_S_defined_over_an_undefined_symbol": "Three binding operational lines said S_seq, which only the REJECTED D1 and D2 define; D3 constructs S_w per candidate. MECHANICALLY REPAIRED in revision 4. The residue is NOT: 'the last v == 0 frame' is undefined for never-queried cameras and for cameras where v is never 0.",
+        "B4_recall_probe_has_no_construction_rule": "'20 windows, DIAGNOSTIC ONLY' is the complete specification; no construction rule exists in this JSON, the prose page or the census prereg. Yet 20 of the 93 stream windows (21.5%) enter the >= 0.8 inter-auditor agreement GATE's denominator with undefined provenance and difficulty, and the amendment policy protects a rule that does not exist -- so it could be written after outcomes without formally breaking the freeze. This is structurally the same defect round 1 blocked on, repaired for the spot-check and left here. The preregistration is NOT EXECUTABLE as written: the stream cannot be built."
+      },
+      "disposition": "SUBSTANTIVE SECOND REJECTION. Under the governing directive this stops audit execution and returns the issue to the user. Revision 4 repairs mechanical and wording defects only.",
+      "found_sound_and_named": [
+        "the reconciliation genuinely resolves the 16 / 10 / 11-vs-12 conflict rather than papering over it; corroborated independently because only m = 10 reproduces 2,580/7,000",
+        "the Bonferroni construction including the 3-subset maximisation -- re-derived independently, no uncovered multiplicity",
+        "the estimand ordering R_S subset A_S subset A3, so an A3 upper bound validly upper-bounds the R_S count",
+        "both direction statements that ARE given (Bonferroni, FPC), verified numerically",
+        "the scissor/poker exclusion is NOT post-hoc -- verified in git that the freeze commit dad3360 contains the sensitivity rule verbatim and NO scissor or poker coverage figure, and that the A1 result commits are strict descendants",
+        "the degeneracy tripwire and its 're-specify stage 1' consequence clause; the reviewer additionally enumerated ALL 1,120,000 attainable vectors in the 12-member set and the kill fires in ZERO -- stronger than the k=0 corner the document claims",
+        "D2 refuted by measurement though it was the page's own proposal, and D1 rejected on a measured consequence",
+        "the sha256 seal mechanically closes the verdict-driven camera-selection worry; build_a0b_camera_mapping.py implements exactly the frozen rule and reads no imagery",
+        "the round-1 human spot-check repair, correctly motivated on the wrongful-kill direction",
+        "the UNSURE spot-check with deliberately no numeric threshold",
+        "VOID being explicitly two-directional",
+        "the prohibited-phrasing list carried inline into kill_rule.on_fire rather than living only in prose",
+        "the A1 independent recomputation, with its weaker sealing order disclosed rather than glossed"
       ],
+      "material_not_repaired": {
+        "M11_decoy_count_is_not_a_count": "'at least 20' decoys against a gate stated as 'at most 1 of 20'. Above 20 the count form is undefined and can disagree with the 0.05 rate form, while the amendment policy protects 'the decoy construction rule and count'.",
+        "M12_stage_2_has_no_feasibility_statement": "Under D3 the A_S pass runs every camera of S_w (pooled median 23) at >= 3 frames over all 145 E_select windows, two model auditors, plus per-positive human confirmation. Nothing states whether that is affordable, and the amendment policy would forbid trimming it once outcomes are visible.",
+        "M3_finite_population_magnitude": "PRIMARY-VERIFIED. U_s routinely exceeds the logically attainable maximum k + (N_s - n_s): for tea at EVERY k (5.207 vs 4 at k=0), tambourine and put_candy from k=2, pour_tea from k=7. Capping U_s at k + (N-n) moves the kill from 2,580 to 3,141 of 7,000 -- a 21.7% shift in the decision region. The disclosed DIRECTION is correct (omission is conservative wrt killing); the MAGNITUDE was undisclosed and the power table is presented as exact. tea's published '6 of 9' threshold is unattainable in fact: 6 of 9 from N=13 permits at most 10 true positives, below the floor of 12.",
+        "M4_D3_direction_undisclosed": "Two effects push A3 DOWN relative to any anchor-containing fixed set: S_w conditions on the candidate's own stale anchor (so the audited cameras are those with unobstructed geometry toward the last known position), and the triple MAXIMISES minimum pairwise separation (the hardest-to-be-invisible-in triple available). Lower A3 -> kill easier. Also |S_w| ranges 3-26, so the amount of maximisation varies per candidate and correlates with anchor geometry, making per-sequence UB_s non-comparable across sequences -- and the kill rule's 3-subset maximisation selects on exactly that. Bonferroni covers multiplicity, not this confounding. Bonferroni and the FPC each get a direction statement; D3 gets only a semantic one.",
+        "M5_undisclosed_supersession": "The B8 block names prereg_m1_census_v1 audit_protocol rules as 'UNCHANGED and still binding', including camera_rule (the 3 TRAINING cameras of MAXIMAL PAIRWISE separation) and estimate (a one-sided LOWER Clopper-Pearson bound on the confirmed proportion). This preregistration silently changes all three: pool becomes S_w, 'maximal pairwise' becomes 'maximal MINIMUM pairwise', and the lower bound becomes a per-sequence UPPER bound.",
+        "M7_triple_tolerance_and_separation_floor": "recorded on audit_triple_selection.UNREPAIRED_RESIDUE",
+        "M8_monotonicity_rows_never_sensitivity_tested": "A1 demotes on EITHER sensitivity crossing 0.5 'regardless of primary value', but readings (ii)/(iii) and BOTH sensitivities were computed only for the 4 measured sequences -- and 8 of the 10 E_select members are monotonicity rows. The written monotonicity proof covers reading (iii) only. The reviewer judges the extension to the transposed sensitivity sound and empirically corroborated on all four measured sequences, but it is written nowhere.",
+        "M9_M10_M1_M2": "mechanically repaired in revision 4"
+      },
+      "primary_verification": "the primary independently reproduced B1's stratum-size impossibility (5 of 12 sequences non-integral, including pour_tea and tea), B2's zero-occurrence grep, and M3's cap effect (2,580 -> 3,141, 21.7%) before recording any of it.",
+      "reviewer": "fresh-context adversarial statistical and semantic reviewer, no prior project context",
+      "reviewer_judgement_on_the_record": "none of the four blocking findings is an arithmetic error and none is evidence of motivated reasoning. B1 and B2 are defects of INHERITANCE -- this preregistration inherits a sample and an instrument from another frozen document, carries forward the sample's identity, and drops the design facts and the disclosed bias that came with it. B3 and B4 are unfinished text.",
+      "reviewer_reproduced_exactly": "every published figure: 2,580 of 7,000; minimum A3-positives 0/1/3/6; the tripwire 93.72 / 44.97 / 30.12 summing to 168.805; the uncorrected-90% check 48.81 / 24.61 / 16.48 summing to 89.894; required n_s 135 / 42 / 27 at m = 12 and 132 / 41 / 27 at m = 11; and every reconciliation identity including the SET identity {N_s > 0} minus E_indeterminate == E_select",
       "revision_reviewed": 3,
       "round": 2,
-      "status": "SUBMITTED FOR FRESH-CONTEXT RE-REVIEW",
-      "verdict": "PENDING"
+      "seven_required_confirmations": {
+        "audit_population_and_E_select": "CONFIRMED (caveat M8)",
+        "candidate_specific_camera_mapping": "NOT CONFIRMED (B3, M4, M5, M6, M7)",
+        "human_spot_check_population": "CONFIRMED as repaired",
+        "narrowed_estimand": "PARTIALLY CONFIRMED (B3 makes A_S unexecutable; B2 unaddressed)",
+        "outcome_to_action_rules": "PARTIALLY CONFIRMED (stage 2 has no on_pass; M10)",
+        "power_table": "CONFIRMED numerically, NOT confirmed as stated (M1, M2, M3, and rests on B1)",
+        "simultaneous_bound_divisor": "CONFIRMED, m = 10"
+      },
+      "verdict": "BLOCKED"
     }
   ],
-  "revision": 3,
+  "revision": 4,
   "schema_version": "elgs-prereg-a0b-audit-v1",
   "sequence_sets": {
     "E_eligible": "sequences classed eligible by A1, restricted to those with N_s > 0",
@@ -524,7 +559,7 @@
       "direction_note": "raising per-sequence confidence RAISES UB_s and therefore makes the kill HARDER; Bonferroni is conservative with respect to killing",
       "finite_population_disclosure": "Clopper-Pearson assumes i.i.d. binomial sampling, but the stage-1 sample is drawn WITHOUT replacement from small finite populations at sampling fractions up to 100% (put_fruit 4/4, slice_apple 4/4, writing_2 2/2, maracas 1/1, soda 1/1) and 69% (tea 9/13). No finite-population correction is applied. The direction is disclosed: an FPC would TIGHTEN UB_s and therefore make the kill EASIER, so omitting it is conservative with respect to killing and anti-conservative with respect to passing. Applying one would require a signed revision.",
       "overall_alpha": 0.1,
-      "per_sequence_bound": "one-sided Clopper-Pearson UPPER bound UB_s on the A3 proportion among the sequence's audited windows",
+      "per_sequence_bound": "one-sided Clopper-Pearson UPPER bound UB_s on the sequence's POPULATION A3 proportion p_s, computed from (k_s, n_s). CORRECTED in revision 4: revision 3 said 'the A3 proportion among the sequence's audited windows', which is k_s/n_s and is known exactly; U_s = N_s * UB_s is only meaningful if UB_s bounds the POPULATION proportion. See BLOCKING finding B1: whether it does under the frozen sampling design is exactly what is now disputed.",
       "simultaneity": "Bonferroni: each per-sequence bound is computed at confidence 1 - alpha/m with m = |E_select|, giving at least 90% simultaneous coverage",
       "simultaneity_alternatives": "a different simultaneous method is permitted only if mathematically specified, power-checked, and accepted by the fresh-context reviewer in a signed revision"
     },
@@ -555,19 +590,19 @@
         "NOT_VISIBLE",
         "UNSURE"
       ],
-      "views": "the 3 audit cameras of S_seq x 5 uniformly strided frames of the window, endpoints included"
+      "views": "the 3 audit cameras of S_w (the D3 per-candidate applicable set adopted in revision 3; the symbol S_seq is retired -- it was defined only by the REJECTED D1 and D2) x 5 uniformly strided frames of the window, endpoints included"
     },
     "kill_rule": {
       "U_s": "N_s * UB_s, capped at N_s",
-      "fires_iff": "there exists NO three-sequence subset T of E_select with U_s >= 12 for every s in T AND sum of U_s over T >= 72",
+      "fires_iff": "there exists NO three-sequence subset T of E_select with U_s >= 12 for every s in T AND sum of U_s over T >= 72. DECIDABILITY IS CONDITIONAL: stage 1 can fire the kill ONLY because scissor and poker are excluded from E_select; with them admitted no outcome can fire it.",
       "floors_provenance": "12 and 72 are the frozen cycle-2 selection-inequality floors and are NOT re-derived here",
-      "on_fire": "record 'physical-absence-bearing candidates are scarce ON THE FROZEN CANDIDATE SET' and route the DiVa tranche-1 claim family to R3, stated relative to the candidate generator and carrying the recall caveat. The words 'route dead' are prohibited.",
+      "on_fire": "record 'physical-absence-bearing candidates are scarce ON THE FROZEN CANDIDATE SET' and route the DiVa tranche-1 claim family to R3, stated relative to the candidate generator and carrying the recall caveat. The words 'route dead' are prohibited. DECIDABILITY IS CONDITIONAL: stage 1 can fire the kill ONLY because scissor and poker are excluded from E_select; with them admitted no outcome can fire it.",
       "on_not_fire": "proceed to stage 2"
     },
     "power_ANALYSED_BEFORE_EXECUTION": {
       "DECIDABILITY_IS_CONDITIONAL": "STATE THIS WHEREVER STAGE 1 IS DESCRIBED. Stage 1 is NOT generally decisive. Its kill power exists ONLY because scissor and poker are excluded from E_select. With scissor, poker and pour_tea all admitted the kill cannot fire under ANY outcome. Stage 1's decidability is therefore CONDITIONAL on A1's coverage classification, which demoted those two sequences on a frozen sensitivity reading sitting 0.003 and 0.015 below a threshold. Any statement that stage 1 'can kill the route' without that clause is a misdescription of this design.",
       "DEGENERACY_TRIPWIRE": "if a future adjudication rule admits scissor, poker AND pour_tea to E_select simultaneously, the kill CANNOT FIRE under any outcome: at zero observed A3-positives those three alone give U = 93.7 + 45.0 + 30.1 = 168.8 >= 72 with each >= 12. Bonferroni is not the cause; the same holds at an uncorrected 90%.",
-      "E_select_of_10_result": "DECIDABLE. Only 4 of the 10 have N_s >= 12 and can ever reach U_s >= 12 (pour_tea 73, tambourine 18, put_candy 18, tea 13). Over the 7,000 attainable outcome vectors the kill fires in 2,580 and does not in 4,420. The minimal surviving outcome is pour_tea >= 2, tambourine >= 1, put_candy >= 3 A3-positives.",
+      "E_select_of_10_result": "DECIDABLE. Only 4 of the 10 have N_s >= 12 and can ever reach U_s >= 12 (pour_tea 73, tambourine 18, put_candy 18, tea 13). Over the 7,000 attainable outcome vectors the kill fires in 2,580 and does not in 4,420. CORRECTED in revision 4 (round 2, M1): revision 3 named {pour_tea 2, tambourine 1, put_candy 3, tea 0} as 'THE minimal surviving outcome', which reads as a necessary threshold. It is not unique and it is not necessary -- under the componentwise partial order there are SIX minimal surviving vectors (1,2,7,0), (1,3,5,0), (1,4,4,0), (2,0,3,6), (2,1,0,6), (2,1,3,0) in (pour_tea, tambourine, put_candy, tea). (1,2,7,0) survives with pour_tea = 1 and (2,1,0,6) survives with put_candy = 0. The named vector is ONE minimal surviving outcome, not the threshold.",
       "consequence": "admitting scissor turns stage 1 from a cheap screen into a near-census of that sequence. Any revision that admits scissor or poker MUST re-specify stage 1 before execution.",
       "method": "enumerate every attainable outcome vector over the sequences that can reach the per-sequence floor and ask whether the kill can both fire and not fire",
       "n_s_required_to_remove_the_tripwire": {
@@ -580,12 +615,12 @@
       "recomputed_revision_3": {
         "basis": "recomputed independently by the primary at the reconciled m = 10 after the sequence-universe reconciliation and the D3 adoption, with Clopper-Pearson verified two ways (closed form 1 - (alpha/m)^(1/n) at k = 0, and bisection on the exact binomial CDF; agreement < 1e-12) and no scipy.",
         "camera_rule_effect": "NONE on the power arithmetic. D3 leaves 100% of the 73 windows with >= 3 applicable cameras, so no window is excluded on geometric admissibility and every N_s and n_s entering the power analysis is unchanged. Had D1 been adopted instead, E_select's stage-1 sample would have fallen from 49 windows to 14 and the analysis would have had to be redone.",
-        "note_pour_tea": "pour_tea reaches U_s = 29.24 >= 12 at ZERO observed A3-positives, so it occupies a slot in a surviving 3-subset unconditionally; the decision therefore turns on tambourine, put_candy and tea.",
+        "note_pour_tea": "WITHDRAWN in revision 4 (round 2, M2). Revision 3 said 'pour_tea reaches U_s >= 12 at zero observed A3-positives, so the decision turns entirely on tambourine, put_candy and tea'. The premise is right and the inference is FALSE: pour_tea's own count enters the >= 72 sum. (2,1,3,0) survives at 47.911 + 12.702 + 13.500 = 74.113, while (1,1,3,0) -- differing only in pour_tea -- gives 39.715 + 12.702 + 13.500 = 65.916 and FIRES the kill. The correct statement is that pour_tea occupies a subset slot unconditionally, not that its count is irrelevant.",
         "unchanged": "every published figure reproduces EXACTLY: kill fires in 2,580 of 7,000; per-sequence minimum A3-positives pour_tea 0 of 9, tambourine 1 of 6, put_candy 3 of 9, tea 6 of 9; minimal surviving outcome {pour_tea 2, tambourine 1, put_candy 3, tea 0}; tripwire U_s 93.72 / 44.97 / 30.12 summing to 168.805 at m = 12; the uncorrected-90% check 48.81 / 24.61 / 16.48 summing to 89.894; required n_s 135 / 42 / 27 at m = 12 and the superseded 132 / 41 / 27 at m = 11."
       },
       "why": "U_s = N_s * UB_s scales with the candidate count while UB_s is floored by the sample size, so a LARGER candidate population makes the kill harder, not easier"
     },
-    "purpose": "a cheap validity screen plus a possible kill; never an admission",
+    "purpose": "a cheap validity screen plus a possible kill; never an admission. DECIDABILITY IS CONDITIONAL: stage 1 can fire the kill ONLY because scissor and poker are excluded from E_select; with them admitted no outcome can fire it.",
     "validity_gates": {
       "decoy_false_A3_max": 0.05,
       "decoy_false_A3_max_as_count": "at most 1 of 20",
@@ -614,13 +649,13 @@
     "no_partial_credit": "a model-auditor A_S or R_S positive that a human does not confirm is not counted, in either direction",
     "pipeline_order": [
       "3-view pass -> A3",
-      "A_S pass on A3-positives: every camera in S_seq at >= 3 frames including the window midpoint and the last v == 0 frame",
+      "A_S pass on A3-positives: every camera in S_w (the D3 per-candidate applicable set adopted in revision 3; the symbol S_seq is retired -- it was defined only by the REJECTED D1 and D2) at >= 3 frames including the window midpoint and the last v == 0 frame (see the A_S definition's unrepaired residue)",
       "return pass on A_S-positives: post-window frames, same identity reappearing within r_site_census",
       "human confirmation of EVERY A_S-positive and EVERY R_S-positive"
     ],
     "population": "ALL candidate windows of every sequence in E_select"
   },
-  "status": "frozen_pending_signoff",
+  "status": "BLOCKED_AT_ROUND_2_RETURNED_TO_USER",
   "tooling_boundary": {
     "gate": "explicit user authorization of stage 1",
     "permitted_now": "build and test the frame-extraction and panel-assembly tooling on SYNTHETIC or DECOY-FREE inputs",

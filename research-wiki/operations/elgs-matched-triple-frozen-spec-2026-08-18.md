@@ -306,3 +306,157 @@ be improvised at the end of a block against an unsigned spec.
 
 Only then does user compute authorization become meaningful. **Do not launch
 the triple.**
+
+---
+
+## REVISION 2 (2026-08-18) — the five MATERIAL findings repaired; still NOT LAUNCHED
+
+Append-only. Nothing above is rewritten; where a rule changes, the superseded
+rule is named and left standing. Status stays **FROZEN, NOT SIGNED, NOT
+LAUNCHED**, and the launch preconditions are unchanged in number.
+
+### R2.1 (finding 1) The preflight must cross the crash, not stop before it
+
+Section 4's "first 500 iterations" preflight is **SUPERSEDED**. Densification
+begins at 500 and its first interval boundary is 600, so a 500-iteration
+preflight terminates cleanly one interval short of the `elgs_a` defect and
+**falsely validates the configuration**. That is the trap the spec set for
+itself.
+
+**The preflight is now ≥ 700 iterations and must satisfy all five:**
+
+| requirement | check |
+|---|---|
+| crosses the first densification boundary | iteration reached ≥ 700 |
+| a real densify/prune actually fired | the row count changed at least once at an interval boundary, read from the run log — not merely "no exception" |
+| rounds are disabled where specified | T-2's log shows zero structural rounds and zero smoke proposals |
+| reserved-unit parity holds | `elgs_reserved_parity.reserved_units` present and equal on the control and EL-GS paths |
+| optimizer-group integrity | the `elgs_a` group still holds one tensor per live family after densify/prune, and its Adam moments were not silently reset |
+
+A preflight that raises, or that reaches 700 without a single densify/prune
+event, does **not** license the remaining cells. Its measured rate — not the
+section 4 estimate — becomes the submission manifest's projection.
+
+### R2.2 (finding 2) Temporal-support collapse is RETIRED for these cells, and may not be reported as a result
+
+With K = 1 latched full-span families and structural rounds off, per-primitive
+temporal support is **constant by construction**. The distribution is a point
+mass, so the pathology cannot be observed on the two cells it exists to
+discriminate. Section 3's `temporal-support collapse` definition is therefore
+**RETIRED for T-2 and T-3**.
+
+**Binding prohibition:** if this quantity is computed on T-2 or T-3 anyway, it
+is a structural artifact of K = 1 and **must not be reported as a result,
+cited as evidence of stability, or read as the absence of a pathology.** A
+degenerate metric returning "no collapse" is not a finding.
+
+It remains defined and measurable on **T-1 and T-1'**, where the temporal
+marginal is live, and is reported there as a control-side descriptive only.
+
+**The pathology set for the section 3 branch becomes two measurable items:**
+
+1. **Endpoint degradation** — unchanged and already operational: held-out PSNR
+   on the first and last 10 frames falling more than the mid-window PSNR does,
+   relative to T-1.
+2. **Per-frame held-out PSNR profile divergence** — NEW, defined here before
+   any number exists. Compute per-frame held-out PSNR over the 141-frame
+   window for every cell. The profile diverges iff the mean absolute per-frame
+   difference between the EL-GS cell and T-1 exceeds the mean absolute
+   per-frame difference between T-1 and T-1'. That is a same-arm-calibrated
+   comparison, it is measurable in both substrates, and it needs no structural
+   variation to be non-degenerate.
+
+Item 2 replaces item 1's lost discriminating power rather than adding a third
+criterion; the branch still asks one question — *does the EL-GS cell fail in
+the same shape the temporal substrate does?*
+
+### R2.3 (finding 3) The parity claim is downgraded to what the test actually proves
+
+Section 2 cites `tests/test_elgs_reserved_parity.py` as if it demonstrated
+end-to-end that both paths drop identical indices. **It does not.**
+`test_both_paths_drop_identical_indices` compares the control path against a
+hand-built state and pins the link to `setup_elgs` by **source-text pattern
+matching**, not by executing `setup_elgs`. Round 1's reviewer traced the
+mechanism by hand and found it correct, so the *claim* is true — but the test
+does not establish it, and this spec must not cite it as though it did.
+
+**Launch precondition, added:** replace the source-text assertion with an
+**executable mechanism test** that calls the real `setup_elgs` and observes
+the reserved indices it actually installs, asserting equality with the control
+path's. Until that test exists and passes, the parity requirement rests on a
+manual trace, and any comparison read from these cells must carry that
+qualification.
+
+### R2.4 (finding 4) The decision rule is made directionally consistent
+
+Section 3's `|D| <= max(0.5 dB, S)` is **SUPERSEDED**. It is symmetric while
+its own outcome table's first row reads "comparable **or better**", which
+leaves a large positive `D` formally undefined.
+
+**The rule is now one-sided, matching the table:**
+
+> Let `tol = max(0.5 dB, min(S, S_max))`. Presence is **comparable or better**
+> iff `D >= -tol`. It is **worse** iff `D < -tol`, and only then does the
+> pathology branch decide.
+
+| reading | consequence |
+|---|---|
+| `D >= -tol` | comparable or better — the EL-GS substrate is photometrically viable; M2 substrate establishment proceeds on it |
+| `D < -tol`, **with** a pathology from R2.2 | a representation decision goes to the user before any evidence run |
+| `D < -tol`, **without** those pathologies | capacity and schedule work moves onto the presence substrate rather than the temporal one |
+
+**One safeguard added, because the cells differ only in the presence
+representation.** If `D > +1.0 dB`, the result is **not** read as a
+representation win until a matched-configuration audit confirms the four cells
+were in fact matched. A gain of that size from swapping the presence
+representation alone is more likely a configuration mismatch than a finding,
+and the cheapest time to notice is before the claim is written.
+
+### R2.5 (finding 5) `S` gets a ceiling, and the justification is stated
+
+`S` is a **single-replicate** estimate: one pair, one difference. With no
+ceiling, an unlucky T-1/T-1' pair inflates the tolerance and could launder a
+real regression as "comparable". That is the failure the replicate was added
+to prevent, so leaving it uncapped defeats the fourth cell's purpose.
+
+**`S_max = 1.0 dB`, frozen here.** The justification, so the number is not
+arbitrary:
+
+* it is **2× the decision rule's own 0.5 dB floor**, so `S` can at most double
+  the comparison band and never turn it into a rubber band;
+* it is roughly **10× the largest same-arm spread ever measured in this
+  project on this metric** — the old renderer image's 0.10446 dB
+  ([[renderer-integrity-admission-2026-08-18]] Appendix C) — and ~3,000× the
+  admitted image's 0.00033 dB, so it is generous against every measurement on
+  record rather than tuned to a hoped-for outcome.
+
+**If `S > S_max`, the comparison is VOID.** The configuration is unstable at
+15k on this scene, no comparability verdict may be recorded in either
+direction, and `S` itself is reported as the finding and returned to the user.
+A void here is a real outcome, not a failure to obtain one.
+
+Note that `tol` uses `min(S, S_max)`: `S` above the ceiling voids the
+experiment rather than widening the band, so the two rules cannot be played
+against each other.
+
+### R2.6 What revision 2 does NOT change
+
+The four cells and their matching table; the scene, split, window, resolution,
+background, initialization, image digest, iteration count and capacity policy;
+the reserved-unit parity requirement itself; the 0.5 dB floor; the provenance
+requirements; section 7's limits; and section 8's termination rule. The
+`elgs_a` defect and the `elgs_rounds_enabled` flag remain launch preconditions
+1 and 2 and are **not** closed by this revision.
+
+### R2.7 Launch preconditions after revision 2
+
+1. the `elgs_a` densify/prune defect repaired and tested against the **real**
+   `densify_and_prune`, not a stub;
+2. `elgs_rounds_enabled` landed, default `True`;
+3. the executable reserved-parity mechanism test of R2.3 landed;
+4. a ≥ 700-iteration preflight meeting all five R2.1 checks;
+5. one fresh-context re-review of this revision;
+6. explicit user compute authorization for ~20–28 GPU-hours.
+
+**Do not launch the triple.** Revision 2 repairs the specification; it does
+not authorize the experiment.

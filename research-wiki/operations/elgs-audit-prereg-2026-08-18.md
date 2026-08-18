@@ -464,3 +464,146 @@ re-review. A PASS requires explicit confirmation of the audit population and
 mapping, the narrowed estimand, the human spot-check population, the power
 table, and the outcome-to-action rules. A second substantive rejection stops
 audit execution and returns the issue to the user.
+
+---
+
+## REVIEW ROUND 2 (2026-08-18) — VERDICT: **BLOCKED**. Substantive, so audit execution STOPS and returns to the user
+
+Append-only. A fresh-context adversarial statistical and semantic reviewer with
+no prior project context read revision 3 and its JSON and returned **BLOCKED**
+with four blocking findings. Revision 4 repairs **mechanical and wording
+defects only**. `status` is now `BLOCKED_AT_ROUND_2_RETURNED_TO_USER`.
+
+**The governing rule is the directive's own:** a substantive second rejection
+stops audit execution and returns the issue to the user. The user's
+authorization of stage 1 was conditional on a *clean* PASS. It did not arrive.
+**Stage 1 was not executed, no panel was built, and no candidate frame was
+rendered, displayed or transmitted to anyone.**
+
+### What the reviewer reproduced exactly
+
+Every published figure, with Clopper-Pearson implemented twice (closed form and
+bisection, agreeing to 1.11e-16) and no `scipy`: 2,580 of 7,000; minimum
+A3-positives 0/1/3/6; the tripwire 93.72 / 44.97 / 30.12 summing to 168.805;
+the uncorrected-90% check summing to 89.894; required `n_s` 135 / 42 / 27 at
+m = 12 and 132 / 41 / 27 at m = 11; and every reconciliation identity —
+including the **set** identity `{N_s > 0} \ E_indeterminate == E_select`, not
+merely its cardinality. It also went beyond the document on the tripwire,
+enumerating **all 1,120,000** attainable vectors in the 12-member set and
+finding the kill fires in **zero** — stronger than the `k = 0` corner claimed.
+
+It independently verified in git that the scissor/poker exclusion is **not
+post-hoc**: freeze commit `dad3360` carries the sensitivity rule verbatim and
+contains no coverage figure for either sequence, and the A1 result commits are
+strict descendants.
+
+### The four BLOCKING findings
+
+**B1 — the decision-bearing bound assumes a sampling design the frozen sample
+does not have.** Per-sequence Clopper-Pearson on `(k_s, n_s)` needs equal
+within-sequence inclusion probabilities. The frozen B8 sample is a
+**round-robin** over (sequence × terminal class × pooled staleness tercile)
+strata, 3 rounds, without replacement — so stratum `h` contributes
+`min(3, size_h)`, and equal inclusion requires equal stratum sizes, i.e.
+`3·N_s/n_s` integral.
+
+**Primary-verified.** It is not integral for **scissor 68.600, poker 36.333,
+pour_tea 24.333, tea 4.333, pan 8.250** — and `pour_tea` and `tea` are two of
+the four decisive sequences. So `k_s/n_s` is not design-unbiased for `p_s`,
+`U_s = N_s·UB_s` is not a `1 − α/m` upper confidence bound on the population
+count, and the "at least 90% simultaneous coverage" claim is unsupported. The
+design-consistent Horvitz-Thompson estimator is already in the file and is
+deliberately given **no** decision weight, while the decision rests on the
+design-inconsistent one with no argument that it is conservative. Repairing it
+either proves per-sequence CP conservative under the actual design, or moves to
+per-stratum bounds with a larger Bonferroni divisor — **which moves the power
+analysis.**
+
+**B2 — a known, quantified, kill-direction bias is absent from this
+preregistration.** The same frozen B8 block discloses that audit frames are
+drawn uniformly over the census window, which *includes bridged frames at which
+the identity is associated by construction of the flicker rule*. A bridged
+window therefore **can never be A3-positive whatever the scene contains** (85
+of 109 `poker` windows carry at least one). Deflated A3 → deflated `U_s` →
+**kill easier** — the wrongful-kill direction the entire round-1 spot-check
+repair exists to guard, and one the spot-check cannot catch because it is
+instrument geometry rather than auditor behaviour. **Primary-verified by grep:
+`bridg` occurred zero times in the JSON and zero times in this page**, and B8's
+mandate to report `bridged_sampled_frame` was not carried forward.
+
+**B3 — `A_S` was defined over a symbol the adopted rule does not define.**
+Three binding operational lines said `S_seq`, which only the **rejected** D1 and
+D2 define; D3 constructs `S_w` per candidate. **Mechanically repaired in
+revision 4.** The residue is not: "the last `v == 0` frame" is undefined for a
+camera that never queried the identity (the documented 12.2% never-queried
+limb) and for one in which `v` is never 0 — and it is driven by the very
+tracker flag M-2 showed carries no confidence information.
+
+**B4 — the recall probe has no construction rule, and it sits inside a validity
+gate.** `"20 windows, DIAGNOSTIC ONLY"` is the complete specification; no
+construction rule exists in the JSON, this page, or the census prereg. Yet 20 of
+the 93 stream windows — **21.5% of the ≥ 0.8 inter-auditor agreement gate's
+denominator** — are of undefined provenance and difficulty, and the amendment
+policy protects a rule that does not exist. This is structurally the same defect
+round 1 blocked on, repaired for the spot-check and left standing here. **The
+preregistration is not executable as written: the stream cannot be built.**
+
+### The material finding that moves a published number
+
+**M3 — the finite-population omission is not a rounding matter.**
+Primary-verified: `U_s` routinely exceeds the logically attainable maximum
+`k + (N_s − n_s)` — for `tea` at **every** `k` (5.207 against a hard maximum of
+4 at `k = 0`), for `tambourine` and `put_candy` from `k = 2`, for `pour_tea`
+from `k = 7`. Capping `U_s` at that maximum moves the kill from **2,580 to
+3,141 of 7,000 — a 21.7% shift in the decision region.** The disclosed
+*direction* is correct and the omission is conservative with respect to killing;
+the *magnitude* was undisclosed while the power table was presented as exact.
+And `tea`'s published "6 of 9" threshold is **unattainable in fact**: 6 of 9
+drawn from 13 permits at most 10 true positives, below the floor of 12.
+
+Further material findings — D3's undisclosed statistical direction (M4), the
+undisclosed supersession of another frozen prereg's still-binding camera and
+estimator rules (M5), the missing comparison tolerance and separation floor in
+the triple rule (M7), the 16 monotonicity rows never subjected to the
+sensitivity test that demoted scissor and poker (M8, and 8 of the 10 `E_select`
+members are monotonicity rows), the decoy count that is not a count (M11), and
+stage 2's absent feasibility statement (M12) — are recorded in full in the JSON
+`review_history` round-2 entry.
+
+### Repaired in revision 4 — mechanical and wording only
+
+`S_seq` → `S_w` in the three binding operational lines (B3); the bound's
+misnamed parameter, which said "the proportion among the sequence's audited
+windows" when `U_s` requires a **population** proportion (M9); the provenance
+pointer that resolved to a mutable script rather than frozen text (M6); the
+conditional-decidability clause added to `stage_1.purpose`,
+`kill_rule.fires_iff` and `kill_rule.on_fire`, which the document had instructed
+and then not done (M10); and two false claims withdrawn — "**the** minimal
+surviving outcome", which is one of **six** minimal surviving vectors and is not
+necessary (M1), and "the decision turns entirely on tambourine, put_candy and
+tea", which is false because `pour_tea`'s own count enters the ≥ 72 sum: (2,1,3,0)
+survives at 74.113 while (1,1,3,0) fires the kill at 65.916 (M2).
+
+### What is NOT repaired, and why
+
+B1, B2, B4 and M3–M5, M7, M8, M11, M12 are **substantive**. B1 would move the
+power analysis; B2 needs a disclosure and possibly an exclusion rule; B4 needs a
+construction rule that does not exist. None is inside the frozen semantics, so
+none may be improvised here.
+
+### The reviewer's own judgement, recorded because it bears on what to do next
+
+None of the four blocking findings is an arithmetic error, and none is evidence
+of motivated reasoning. **B1 and B2 are defects of inheritance** — this
+preregistration inherits a sample and an instrument from another frozen
+document, carries the sample's identity forward, and drops the design facts and
+the disclosed bias that came with it. B3 and B4 are unfinished text. All four
+are repairable without restructuring the power analysis, though B1's repair will
+move its numbers.
+
+### Status
+
+**BLOCKED at round 2. Stage 1 is not executed and is not executable.** The
+camera mapping remains unbuilt pending the decision below, and building it
+changes nothing about this verdict — the mapping was never the binding
+constraint.
