@@ -330,10 +330,23 @@ essentially all CPU matching, and inflated by three of these cells running
 concurrently on one node (the third cell's feature extraction took 189 s
 against this one's 80 s, which is the contention showing).
 
-Frames 150 and 299 (experiments 159 / 160) were still running at the end of the
-block; their manifests land at
-`data/imvid/sparse35/frame_000150/` and `frame_000299/`. The union rebuild
-(`scripts/imvid_build_initialization.py` over the three) has NOT been run.
+**Frames 150 and 299 (experiments 159 / 160) also COMPLETED**, and the pattern
+holds across the whole clip:
+
+| frame | cameras | points (35-cam) | points (39-cam) | mean reprojection (35-cam) | (39-cam) |
+|---:|---|---:|---:|---:|---:|
+| 0 | 35/35 | 5,140 | 6,075 | **1.1953 px** | 1.2127 |
+| 150 | 35/35 | 7,803 | 9,256 | **1.1361 px** | 1.1697 |
+| 299 | 35/35 | 7,214 | 8,668 | **1.1808 px** | 1.2061 |
+
+Intrinsics delta **exactly 0.0** and pose delta **1.110e-16** (one ULP) on all
+three. The 35-camera residual is BETTER than the 39-camera residual at every
+frame — so the supplied calibration is self-consistent on the training subset
+at the start, middle and end of the clip, and the held-out views were adding
+observations rather than constraining geometry.
+
+The union rebuild (`scripts/imvid_build_initialization.py` over the three) has
+NOT been run; that is a single cheap follow-up cell.
 
 **Still open for S5**: the loader has not been exercised on ImViD data — the
 trainer's loader reads PINHOLE and ImViD ships OPENCV, and the conversion step

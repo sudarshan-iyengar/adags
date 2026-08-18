@@ -151,7 +151,7 @@ fire it. The coverage classification therefore decides whether the audit is
 worth running, which is not a relationship anyone designed and is worth
 stating plainly.
 
-## 5. Independent recomputation — NOT DONE, and this is a real gap
+## 5. Independent recomputation — NOT DONE ~~(SUPERSEDED by §8 the same day; preserved because it was true when written)~~
 
 The design's section 8 requires reading (iii) to be recomputed by a
 fresh-context worker from the frozen text alone, sealed before the primary
@@ -198,3 +198,65 @@ Termination per the design is therefore NOT reached: classes exist for all
 ```
 a1_coverage_bounding_pair   r0 (exp 154)   -> next free r1
 ```
+
+---
+
+## 8. CROSS-CHECK COMPLETE — the two reductions agree on every cell, and §5 is superseded
+
+Determined experiment **161** (`a1_indep_recompute` r0, commit `8898b0d`,
+admitted image, `dgx`) COMPLETED. Artifact
+`runs/elgs/a1_indep_recompute_r0/indep_bounding_pair.json`
+(sha256 `32ca8f512ee1b058e9432ce4f1d58a6cb893a31f31958caca0912b95252d3ef1`).
+
+`scripts/indep_coverage_recompute.py` was written by a fresh-context worker
+from the frozen design text alone, forbidden from reading the primary reducer,
+its tests, this page, or any `bounding_pair.json`. It shares **no code** with
+the primary: it labels components with `scipy.ndimage.label` rather than
+`cv2.connectedComponentsWithStats`, and imports none of the primary's
+functions.
+
+### Every comparable quantity, both reductions
+
+| sequence | denominator | (i) frozen | (ii) any-report | (iii) anchor | (iii) transposed | (iii) last-defined | class |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `poker` | 8,464 | 3,237 | 7,056 | 6,740 | 4,107 | 6,983 | indeterminate |
+| `scissor` | 18,478 | 8,147 | 16,924 | 15,745 | 9,188 | 16,108 | indeterminate |
+| `put_candy` | 12,401 | 6,284 | 10,683 | 9,013 | 6,598 | 9,544 | eligible |
+| `pour_tea` | 13,752 | 8,125 | 10,933 | 9,768 | 8,469 | 10,180 | eligible |
+
+**These are the values from BOTH reducers.** 28 compared cells — four
+denominators, twenty numerators, four classes — and **zero differences**. The
+independent reducer's own contract status is `ok` on all four sequences.
+
+That is the stronger outcome, and it is worth naming what it rules out: the
+worker's report listed nine "residual definitional freedom" items, three of
+which could plausibly have produced a divergence — it treats a transposed
+anchor falling outside a non-square mask array as out-of-domain, it reads
+`v == 0` as exact float equality rather than `v < 0.5`, and it does **not**
+clamp the report pixel into the mask raster (the primary does, in order to
+reproduce `build_association` exactly). None of the three moved a single
+integer on this data, which localises the agreement rather than merely
+asserting it.
+
+### §5 is SUPERSEDED, but its caveat about sealing order is NOT
+
+§5 recorded that the independent recomputation had not happened and that every
+figure rested on one implementation. **That is now false and the section is
+superseded.** What survives from it, and must travel with this result:
+
+* **the sealing order is weaker than M-2's.** M-2's independent reduction was
+  sealed BEFORE the primary returned. Here the primary result already existed
+  when the independent implementation was written, because four earlier launch
+  attempts died on transient API errors. The worker never saw the primary
+  result, the primary code, or this page, so **independence of the reduction
+  holds**; the property that the independent side committed first does not;
+* agreement confirms the **REDUCTION, not the inputs.** Both reducers read the
+  same tracks and the same masks. If those were wrong, both would be wrong
+  together — which is exactly how the 2026-08-13 substrate defect survived an
+  "exact" recomputation. The guard against that is §1's contract checks against
+  the sealed census artifacts, produced by a **third** program
+  (`build_m1_census.py`), and they passed on all four sequences.
+
+**The design's termination condition (§10) is now met:** classes exist for all
+20 sequences, the contract checks passed, and the independent recomputation
+agrees.

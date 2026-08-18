@@ -1,7 +1,7 @@
 # Google Immersive Light Field Video — verified inventory and pilot acquisition
 
 Date: 2026-08-18. Status: **inventory VERIFIED by direct request; pilot scene
-acquisition submitted.** EXPLORATORY. No Immersive training has run, no
+ACQUIRED and digest-verified; calibration read from the data.** EXPLORATORY. No Immersive training has run, no
 Immersive number exists, and no preprocessing beyond the archive inventory has
 been performed.
 
@@ -92,9 +92,9 @@ verification). Result recorded in section 6.
 | step | status |
 |---|---|
 | read-only inventory | **DONE** (section 1–2) |
-| pilot acquisition of `02_Flames` | submitted, exp 157 |
-| archive central-directory inventory | part of exp 157 (`--inspect`) |
-| `models.json` fisheye format read from the data | **NOT DONE** — requires the extracted archive |
+| pilot acquisition of `02_Flames` | **DONE**, exp 157, digest-verified |
+| archive central-directory inventory | **DONE**, exp 157 |
+| `models.json` fisheye format read from the data | **DONE** — section 6 |
 | STG `pre_immersive_undistorted.py` route read from source | **NOT DONE** |
 | fisheye -> perspective conversion | **NOT DONE**, and must go through STG's official script rather than a reimplementation |
 | loader compatibility | **NOT DONE** |
@@ -129,7 +129,61 @@ transfer, and the coverage instrument cannot even be defined without masks.
 
 ## 6. Acquisition result
 
-*To be completed when experiment 157 is terminal.* The record must carry: the
-publisher MD5 match, the self-computed sha256, the byte count, the archive's
-central-directory inventory (entry count, uncompressed total, compression
-ratio, per-suffix breakdown), and whether `models.json` is present.
+Experiment **157** (`immersive_fetch_flames` r0) COMPLETED in ~5 min.
+
+```
+path            /apollo/users/sri/proj_adags/data/immersive/raw/02_Flames.zip
+bytes           5,474,948,990          (matches the recorded size exactly)
+publisher MD5   b0pj+tNbWxPsY6Qj8S89Fg==   MATCH
+sha256          0209febf06d7989a016fa38164e6ebc38472bb0637da0d7bd3a64c614feb468b
+read-only       true
+free before     34,198,435,921,920 bytes (31.1 TiB)
+```
+
+Archive central directory, nothing extracted at this stage:
+
+```
+entries      47      = 46 x .mp4 (5,474,302,514 bytes) + 1 x .json (25,985 bytes)
+uncompressed 5,474,328,499        ratio 1.0001 -- a container, not a compressor
+largest      camera_0016.mp4 127,043,635 bytes
+naming       02_Flames/camera_00NN.mp4
+```
+
+### The calibration, read FROM THE DATA (experiment 162)
+
+`02_Flames/models.json` extracted by name under a 4 MiB per-member cap
+(sha256 `199afc790c274f4782b7786fd6014137286d05eec152d845e31d92ddc8ea8908`). It
+is a JSON **list**, one entry per camera:
+
+```json
+{"name": "camera_0001",
+ "position": [0.00655, 0.00148, 0.42002],
+ "orientation": [-0.02831, 0.02742, -0.03381],
+ "focal_length": 1113.591793482135,
+ "pixel_aspect_ratio": 1.0,
+ "principal_point": [1286.024, 930.536],
+ "width": 2560.0, "height": 1920.0,
+ "radial_distortion": [0.09911, -0.01876, 0.0],
+ "projection_type": "fisheye"}
+```
+
+So: **fisheye projection, a single focal length with a pixel aspect ratio, a
+2-parameter radial distortion** (the third term is 0.0 here), and orientation
+as a 3-vector — an axis-angle convention, NOT a quaternion and NOT a matrix.
+Raster 2560x1920.
+
+**A DISCREPANCY, recorded rather than smoothed:** the archive holds **46**
+`.mp4` files but `models.json` describes **45** cameras. One video has no
+calibration entry, or one entry is dropped. Nothing here establishes which, and
+any preprocessing step must resolve it explicitly rather than zipping the two
+lists together by position — that is precisely the kind of off-by-one that
+produces a silently mis-calibrated scene.
+
+**The rig confirms the dome disqualification quantitatively:** camera positions
+in this file sit within a fraction of a metre of the origin (the first entry is
+0.42 m out), which is the sub-metre sphere
+[[dataset-admission-matrix-2026-08-18]] describes.
+
+**Still not done:** STG's `pre_immersive_undistorted.py` has not been read, so
+nothing here states how these fields map onto its expected inputs, and no
+conversion, loader check or decoded-size measurement has been performed.
