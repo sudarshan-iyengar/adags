@@ -607,3 +607,25 @@ move its numbers.
 camera mapping remains unbuilt pending the decision below, and building it
 changes nothing about this verdict — the mapping was never the binding
 constraint.
+
+### M8's residual risk, BOUNDED by the primary from the existing record
+
+M8 — that the 16 monotonicity rows were never subjected to the sensitivity rule
+that demoted `scissor` and `poker`, and that **8 of the 10 `E_select` members
+are monotonicity rows** — stands as a documentation gap. Its residual risk is
+now bounded, from numbers already on the A1 result page:
+
+* on all **four** measured sequences **both** sensitivity readings sit **above**
+  reading (i), not below — transposed 0.4852 / 0.4972 / 0.5321 / 0.6158 against
+  reading (i) 0.3824 / 0.4409 / 0.5067 / 0.5908, and last-defined 0.8250 /
+  0.8717 / 0.7696 / 0.7403;
+* the weakest `E_select` monotonicity row is `slice_apple` at reading (i)
+  **0.731 — a margin of 0.231 above the floor**. A sensitivity reading would
+  have to fall 0.231 *below* reading (i) to demote it, which is the opposite
+  direction to every measurement taken;
+* `scissor` and `poker` were demoted from reading (i) = 0.441 and 0.382, i.e.
+  **from below the floor**. No `E_select` monotonicity row is below the floor on
+  reading (i) at all, so the two situations are not analogous.
+
+Computing the two sensitivities for the 16 monotonicity rows is cheap and would
+close this outright. **This bounds the finding; it does not discharge it.**
