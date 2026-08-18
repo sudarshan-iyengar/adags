@@ -286,3 +286,34 @@ under that literal name, so the citation in
 [[elgs-absence-diagnostic-result]] resolves; the timestamped
 `20260814T121653Z_m1absdiag_primary_fix_0_4acb0fc` in the local ledger is
 the same experiment (69) recorded under the submission convention.
+
+## APPENDIX B — execution record and a POOL SWITCH (2026-08-18)
+
+`AGENTS.md` requires that census/diagnostic cells run on `hopper` and
+that any pool switch be "a new ledger entry, never silent". This is that
+entry.
+
+| exp | pool | retry | commit | state | note |
+|---|---|---|---|---|---|
+| 149 | `hopper` | r0 | `bd705f0` | **KILLED by the submitter** | never acquired a slot |
+| 150 | `dgx` | r1 | `8349881` | submitted | the executing cell |
+
+Experiment 149 sat at `0/1` slots for over twenty minutes behind three
+`jpl` commands that had held every hopper slot since 2026-08-17 15:33 —
+about ten hours — with no indication they would release. Hopper was fully
+occupied by another user, so the M-2 measurement would not have run at
+all tonight on the sanctioned pool.
+
+It was therefore resubmitted to `dgx` at `r1` and **149 was killed** so
+the two could not both execute and write competing artifacts. The output
+path differs accordingly (`m2_oncomponent_split_r1/diagnostic.json`).
+
+This switch is a scheduling decision with no scientific content: the
+reduction is CPU-bound, deterministic, and reads sealed artifacts, so the
+pool cannot influence the result. It is recorded because the rule is that
+it is recorded, not because it is suspected of mattering. Both `r0` and
+`r1` claim indices are consumed and must never be reused or deleted.
+
+Per `AGENTS.md`, `slots_per_trial: 1` means this CPU-bound cell still
+occupies one GPU slot, and its cost is reported as slot-hours on that
+basis rather than described as free.
