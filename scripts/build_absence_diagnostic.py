@@ -1128,22 +1128,112 @@ PRE_OUT_OF_DOMAIN = 1
 PRE_LOW_VISIBILITY = 2
 PRE_NEEDS_MASK = 3
 
+# ---------------------------------------------------------------------------
+# M-2 on/off-component split of LOW_VISIBILITY reports (DIAGNOSTIC ONLY).
+# Frozen spec: research-wiki/operations/elgs-m2-oncomponent-split-design.md.
+# These codes NEVER enter WindowEval.status, no class, no census total and no
+# eligibility verdict: they populate a separate accumulator emitted under the
+# top-level "low_visibility_component_split" key. The instrument's own
+# correspondence is reused unchanged -- the SAME MaskFrame.labels and the SAME
+# MaskFrame.lookup[li] -- so no second correspondence is introduced (design 3).
+# ---------------------------------------------------------------------------
+
+LV_NOT_APPLICABLE = -1  # this (camera, frame) pair is not a LOW_VISIBILITY report
+LV_ON_ELIGIBLE = 0
+LV_OFF_ELIGIBLE = 1
+LV_BACKGROUND = 2
+LV_UNIDENTIFIABLE = 3
+LV_CLASS_NAMES = ("ON_ELIGIBLE", "OFF_ELIGIBLE", "BACKGROUND", "UNIDENTIFIABLE")
+# design 4.4: FIXED bin edges, so eligibility under any candidate threshold at
+# a bin edge is recomputable offline without a second pass.
+LV_V_BIN_EDGES = (0.0, 0.1, 0.2, 0.3, 0.4, 0.5)
+LV_V_BIN_NAMES = ("[0.0,0.1)", "[0.1,0.2)", "[0.2,0.3)", "[0.3,0.4)", "[0.4,0.5)")
+LV_V_BIN_NA = -1
+# design 4.5: the anchor-relative reading is DESCRIPTIVE and carries no
+# decision weight; it is a tri-state because the anchor need not project.
+LV_ANCHOR_UNAVAILABLE = -1
+LV_ANCHOR_DIFFERS = 0
+LV_ANCHOR_EQUALS = 1
+
+LV_NOTE_GATE_BEARING = (
+    "DIAGNOSTIC ONLY (elgs-m2-oncomponent-split-design 1). This block changes "
+    "no C1-C6 window class, no census total, no coverage figure and no "
+    "eligibility verdict. Every other section of this artifact is bit-identical "
+    "to a run without it."
+)
+LV_NOTE_POPULATION = (
+    "Exactly the (camera, frame) report-pairs the frozen instrument stamped "
+    "ST_LOW_VISIBILITY, over the SAME selection every other pooled report "
+    "statistic uses: cameras in the frozen containing set S, frames in "
+    "W(record). The split total is asserted equal to the LOW_VISIBILITY entry "
+    "of report_status_cross_tabulation."
+)
+LV_NOTE_ANCHOR_AGREEMENT = (
+    "DESCRIPTIVE ONLY, no decision weight (elgs-m2-oncomponent-split-design 3). "
+    "Share of low-visibility reports whose component label equals the anchor's "
+    "label at the same (camera, frame). This is not an identity correspondence "
+    "and is not an input to any class."
+)
+LV_NOTE_UNIDENTIFIABLE = (
+    "Structurally 0: MaskFrame fails closed via build_m1_census."
+    "load_component_labels when a mask is missing or undecodable, so no pair "
+    "reaches the split with an unavailable mask. A nonzero count here would "
+    "mean the fail-closed path was weakened."
+)
+LV_NOTE_BOUNDS = (
+    "Bounds precede visibility in build_raw_reports, so a low-visibility report "
+    "is inside the raster by construction; a failure is a contract failure, not "
+    "a fifth class (elgs-m2-oncomponent-split-design 3)."
+)
+LV_NOTE_RESTRICTED = (
+    "design 4.3: the same split restricted to the windows the instrument "
+    "classified as corroborated true absence (C1a). Reported alongside the "
+    "unrestricted split with an explicit differs_from_unrestricted flag."
+)
+LV_NOTE_D2_CONTEXT = (
+    "design 4.6: the EXISTING D2 merge and split event counts, unchanged, at "
+    "the primary (eligibility, IoU) reading. Context only -- they are not "
+    "inputs to the split, which is per-(camera, frame) and memoryless."
+)
+
 
 @dataclasses.dataclass(frozen=True)
 class RawReports:
-    """(seed, camera, frame) -> (precursor, col, row), plus the track-row set.
+    """(seed, camera, frame) -> (precursor, col, row, v_bin), plus track rows.
 
     ``ReportIndex`` keeps only the associated-candidate pixels, which cannot
     distinguish NEVER_QUERIED from MISS_TOKEN from OUT_OF_DOMAIN from
     LOW_VISIBILITY. This index preserves every precursor while using the SAME
     thresholds and the SAME round-half-up rule, and its NEEDS_MASK cells are
     asserted identical to ``ReportIndex.pixels`` for every in-scope seed.
+
+    ``v_bin`` is the M-2 fixed-edge visibility bin, carried ONLY for
+    LOW_VISIBILITY entries (``LV_V_BIN_NA`` everywhere else) so the joint
+    histogram of design 4.4 needs no second pass over the tracks artifact. No
+    consumer of the first three fields is affected by its presence.
     """
 
-    table: dict[tuple[int, int, int], tuple[int, int, int]]
+    table: dict[tuple[int, int, int], tuple[int, int, int, int]]
     track_rows: set[tuple[int, int]]
     candidate_frames: dict[tuple[int, int], tuple[int, ...]]
     out_of_domain_count: int
+
+
+def lv_v_bin(visibility: float) -> int:
+    """Index of ``visibility`` in the FROZEN ``LV_V_BIN_EDGES`` ladder.
+
+    Half-open bins ``[e_i, e_{i+1})``. Only reached for reports the instrument
+    already stamped LOW_VISIBILITY, i.e. ``v < visibility_threshold``; a value
+    outside ``[0, 0.5)`` therefore contradicts the caller and fails closed.
+    """
+
+    for index in range(len(LV_V_BIN_NAMES)):
+        if LV_V_BIN_EDGES[index] <= visibility < LV_V_BIN_EDGES[index + 1]:
+            return index
+    raise ContractError(
+        f"low-visibility report v={visibility!r} falls outside the frozen M-2 bin "
+        f"ladder {LV_V_BIN_EDGES}"
+    )
 
 
 def build_raw_reports(
@@ -1154,7 +1244,7 @@ def build_raw_reports(
     prereg: Prereg,
 ) -> RawReports:
     scope = {int(seed) for seed in seeds_in_scope}
-    table: dict[tuple[int, int, int], tuple[int, int, int]] = {}
+    table: dict[tuple[int, int, int], tuple[int, int, int, int]] = {}
     track_rows: set[tuple[int, int]] = set()
     candidates: dict[tuple[int, int], list[int]] = {}
     out_of_domain = 0
@@ -1170,19 +1260,26 @@ def build_raw_reports(
             frame = int(round(float(report["frame"])))
             key = (seed_id, camera_id, frame)
             if report.get("is_miss", False):
-                table[key] = (PRE_MISS, -1, -1)
+                table[key] = (PRE_MISS, -1, -1, LV_V_BIN_NA)
                 continue
             col = round_half_up(float(report["x"]))
             row = round_half_up(float(report["y"]))
             # A4: bounds precede visibility.
             if not (0 <= col <= camera.width - 1 and 0 <= row <= camera.height - 1):
-                table[key] = (PRE_OUT_OF_DOMAIN, -1, -1)
+                table[key] = (PRE_OUT_OF_DOMAIN, -1, -1, LV_V_BIN_NA)
                 out_of_domain += 1
                 continue
-            if float(report["v"]) < prereg.visibility_threshold:
-                table[key] = (PRE_LOW_VISIBILITY, -1, -1)
+            visibility = float(report["v"])
+            if visibility < prereg.visibility_threshold:
+                # M-2: the pixel is PRESERVED. It was computed two lines above
+                # and previously discarded, which is what made the 87.60%
+                # LOW_VISIBILITY limb an unmeasured mixture. The status this
+                # entry produces downstream is UNCHANGED (still LOW_VISIBILITY
+                # at every eligibility level); the pixel feeds the separate M-2
+                # accumulator only.
+                table[key] = (PRE_LOW_VISIBILITY, col, row, lv_v_bin(visibility))
                 continue
-            table[key] = (PRE_NEEDS_MASK, col, row)
+            table[key] = (PRE_NEEDS_MASK, col, row, LV_V_BIN_NA)
             candidates.setdefault((seed_id, camera_id), []).append(frame)
 
     # Commensurability assertion against the instrument's own index.
@@ -1331,6 +1428,14 @@ class WindowEval:
     status: np.ndarray  # (levels, cams, interval) int8
     evaluated: np.ndarray
     ltp_on_eligible: np.ndarray  # (levels, cams) bool at ltp_frame
+    # M-2 split of the LOW_VISIBILITY limb. Parallel to `status` and never read
+    # by `classify`, by any tally, or by any decision rule; LV_NOT_APPLICABLE
+    # everywhere the pair is not a LOW_VISIBILITY report. Only the ON/OFF
+    # distinction depends on the eligibility level, so lv_v_bin and lv_anchor
+    # carry no level axis.
+    lv_class: np.ndarray  # (levels, cams, interval) int8
+    lv_v_bin: np.ndarray  # (cams, interval) int8
+    lv_anchor: np.ndarray  # (cams, interval) int8
     ltp_frame_evaluated: bool = False
     w_mask: np.ndarray | None = None
     d2: dict[str, Any] = dataclasses.field(default_factory=dict)
@@ -1780,6 +1885,11 @@ def evaluate_sequence(
                 status=np.full((n_levels, n_cams, n_interval), -1, dtype=np.int8),
                 evaluated=np.zeros((n_cams, n_interval), dtype=bool),
                 ltp_on_eligible=np.zeros((n_levels, n_cams), dtype=bool),
+                lv_class=np.full(
+                    (n_levels, n_cams, n_interval), LV_NOT_APPLICABLE, dtype=np.int8
+                ),
+                lv_v_bin=np.full((n_cams, n_interval), LV_V_BIN_NA, dtype=np.int8),
+                lv_anchor=np.full((n_cams, n_interval), LV_ANCHOR_UNAVAILABLE, dtype=np.int8),
                 d2={"cameras": {_d2_key_name(k): {} for k in d2_keys}},
             )
         )
@@ -1909,6 +2019,31 @@ def evaluate_sequence(
                     report_label = int(mask_frame.labels[report[2], report[1]])
                 else:
                     report_label = None
+                # ---- M-2 low-visibility pixel, DIAGNOSTIC ONLY -------------
+                # A separate variable from report_label so the status ladder
+                # below cannot see it: LOW_VISIBILITY is still assigned before
+                # any component test, exactly as the frozen instrument does.
+                if precursor == PRE_LOW_VISIBILITY:
+                    if not (
+                        0 <= report[2] < mask_frame.shape[0]
+                        and 0 <= report[1] < mask_frame.shape[1]
+                    ):
+                        raise ContractError(
+                            f"{sequence_name}: low-visibility report pixel "
+                            f"({report[1]}, {report[2]}) outside the decoded raster "
+                            f"{mask_frame.shape} at camera {camera_id} frame {frame}. "
+                            + LV_NOTE_BOUNDS
+                        )
+                    low_vis_label = int(mask_frame.labels[report[2], report[1]])
+                    window.lv_v_bin[ci, ti] = report[3]
+                    if anchor_label is None:
+                        window.lv_anchor[ci, ti] = LV_ANCHOR_UNAVAILABLE
+                    elif low_vis_label == anchor_label:
+                        window.lv_anchor[ci, ti] = LV_ANCHOR_EQUALS
+                    else:
+                        window.lv_anchor[ci, ti] = LV_ANCHOR_DIFFERS
+                else:
+                    low_vis_label = None
                 for li in range(n_levels):
                     lut = mask_frame.lookup[li]
                     window.t3[li, ci, ti] = mask_frame.any_eligible[li]
@@ -1932,6 +2067,15 @@ def evaluate_sequence(
                     else:
                         status = ST_ASSOCIATED if lut[report_label] else ST_OFF_COMPONENT
                     window.status[li, ci, ti] = status
+                    # ---- M-2 split (design 3), strictly downstream of the
+                    # status above and with no effect on it.
+                    if low_vis_label is not None:
+                        if low_vis_label == 0:
+                            window.lv_class[li, ci, ti] = LV_BACKGROUND
+                        elif lut[low_vis_label]:
+                            window.lv_class[li, ci, ti] = LV_ON_ELIGIBLE
+                        else:
+                            window.lv_class[li, ci, ti] = LV_OFF_ELIGIBLE
 
             # ---- D2 lineage --------------------------------------------------
             if lineage:
@@ -2190,6 +2334,144 @@ def _fraction(numerator: float, denominator: float) -> float | None:
 
 def _c5_total(counts: dict[str, int]) -> int:
     return sum(counts[name] for name in C5_MEMBERS)
+
+
+# ---------------------------------------------------------------------------
+# M-2 on/off-component split of the LOW_VISIBILITY limb (DIAGNOSTIC ONLY).
+# Reads WindowEval.lv_* only. Writes nothing back into any window, any class,
+# any tally or any status array.
+# ---------------------------------------------------------------------------
+
+
+def _lv_zero_counts() -> dict[str, int]:
+    return {name: 0 for name in LV_CLASS_NAMES}
+
+
+def _lv_zero_histogram() -> dict[str, dict[str, int]]:
+    return {bin_name: _lv_zero_counts() for bin_name in LV_V_BIN_NAMES}
+
+
+def _lv_accumulate(windows: Sequence[WindowEval], prereg: Prereg) -> dict[str, Any]:
+    """Fold one window set into the four-way split (design 3 and 4).
+
+    The population is the SAME (camera, frame) selection every other pooled
+    report statistic uses -- frozen containing cameras crossed with W(record)
+    -- so the split total is commensurate with
+    ``report_status_cross_tabulation["LOW_VISIBILITY"]``, and is asserted so.
+    """
+
+    levels = prereg.s5_component_px
+    primary = prereg.primary_level_index
+    by_level = {
+        str(int(px)): {"counts": _lv_zero_counts(), "v_histogram": _lv_zero_histogram()}
+        for px in levels
+    }
+    pairs_evaluated = 0
+    low_visibility_pairs = 0
+    seeds: set[int] = set()
+    cameras: set[int] = set()
+    contributing_windows = 0
+    anchor_evaluated = anchor_matched = anchor_unavailable = 0
+    merge_events = split_events = 0
+    d2_primary = _d2_key_name(_d2_keys(prereg)[0])
+    for window in windows:
+        member = window.member_mask(S1_FROZEN)
+        selected = member[:, None] & window.w_mask[None, :]
+        pairs_evaluated += int(selected.sum())
+        for value in window.d2["cameras"][d2_primary].values():
+            merge_events += int(value.get("merge_events", 0))
+            split_events += int(value.get("split_events", 0))
+        low = selected & (window.lv_class[primary] != LV_NOT_APPLICABLE)
+        n_low = int(low.sum())
+        # The split population must BE the LOW_VISIBILITY limb, not a
+        # look-alike. A disagreement means the diagnostic drifted off the
+        # instrument it is measuring, and the run is void.
+        stamped = int((window.status[primary][selected] == ST_LOW_VISIBILITY).sum())
+        if n_low != stamped:
+            raise ContractError(
+                f"M-2 split population for window {window.key} has {n_low} pairs but the "
+                f"instrument stamped {stamped} ST_LOW_VISIBILITY pairs"
+            )
+        if not n_low:
+            continue
+        low_visibility_pairs += n_low
+        contributing_windows += 1
+        seeds.add(int(window.seed_id))
+        cameras.update(int(window.cams[ci]) for ci in np.nonzero(low.any(axis=1))[0])
+        anchors = window.lv_anchor[low]
+        anchor_unavailable += int((anchors == LV_ANCHOR_UNAVAILABLE).sum())
+        anchor_evaluated += int((anchors != LV_ANCHOR_UNAVAILABLE).sum())
+        anchor_matched += int((anchors == LV_ANCHOR_EQUALS).sum())
+        bins = window.lv_v_bin[low]
+        for li, px in enumerate(levels):
+            block = by_level[str(int(px))]
+            classes = window.lv_class[li][low]
+            for code, class_name in enumerate(LV_CLASS_NAMES):
+                hits = classes == code
+                block["counts"][class_name] += int(hits.sum())
+                for bi, bin_name in enumerate(LV_V_BIN_NAMES):
+                    block["v_histogram"][bin_name][class_name] += int((hits & (bins == bi)).sum())
+
+    for block in by_level.values():
+        total = sum(block["counts"].values())
+        if total != low_visibility_pairs:
+            raise ContractError(
+                f"M-2 split at one eligibility level totals {total} but the population "
+                f"is {low_visibility_pairs}; the four classes are not a partition"
+            )
+        block["total"] = total
+        block["shares"] = {
+            class_name: _fraction(count, total) for class_name, count in block["counts"].items()
+        }
+        block["p_on"] = _fraction(block["counts"][LV_CLASS_NAMES[LV_ON_ELIGIBLE]], total)
+
+    primary_block = by_level[str(int(levels[primary]))]
+    return {
+        "denominators": {
+            "low_visibility_report_pairs": low_visibility_pairs,
+            "report_pairs_evaluated": pairs_evaluated,
+            "distinct_seed_ids": len(seeds),
+            "distinct_camera_ids": len(cameras),
+            "absence_windows_in_scope": len(windows),
+            "absence_windows_contributing": contributing_windows,
+        },
+        "by_eligibility_level_px": by_level,
+        "p_on_primary": primary_block["p_on"],
+        "unidentifiable": primary_block["counts"][LV_CLASS_NAMES[LV_UNIDENTIFIABLE]],
+        "unidentifiable_note": LV_NOTE_UNIDENTIFIABLE,
+        "anchor_agreement": {
+            "reports_with_an_anchor_label": anchor_evaluated,
+            "reports_matching_the_anchor_label": anchor_matched,
+            "share": _fraction(anchor_matched, anchor_evaluated),
+            "reports_without_an_anchor_label": anchor_unavailable,
+            "note": LV_NOTE_ANCHOR_AGREEMENT,
+        },
+        "d2_context": {
+            "merge_events": merge_events,
+            "split_events": split_events,
+            "note": LV_NOTE_D2_CONTEXT,
+        },
+    }
+
+
+def low_visibility_split(
+    windows: Sequence[WindowEval], assigned: Sequence[str], prereg: Prereg
+) -> dict[str, Any]:
+    """The unrestricted split plus its C1a-restricted counterpart (design 4.3)."""
+
+    if len(windows) != len(assigned):
+        raise ContractError(
+            f"M-2 split received {len(windows)} windows but {len(assigned)} class assignments"
+        )
+    block = _lv_accumulate(windows, prereg)
+    confirmed = [w for w, name in zip(windows, assigned) if name == CLASS_C1A]
+    restricted = _lv_accumulate(confirmed, prereg)
+    restricted["differs_from_unrestricted"] = (
+        restricted["by_eligibility_level_px"] != block["by_eligibility_level_px"]
+    )
+    restricted["note"] = LV_NOTE_RESTRICTED
+    block["restricted_to_C1a_windows"] = restricted
+    return block
 
 
 def classify_all(
@@ -2768,6 +3050,7 @@ def run_diagnostic(
 
     # ---- per-sequence roll-ups -------------------------------------------
     per_sequence_out: dict[str, Any] = {}
+    lv_per_sequence: dict[str, Any] = {}
     window_records: list[dict[str, Any]] = []
     end_truncated_c1a = primary_tally.end_truncated_c1a
     level = prereg.primary_level_index
@@ -2777,6 +3060,7 @@ def run_diagnostic(
     for name in names:
         result = evaluations[name]
         windows = result["windows"]
+        sequence_start = cursor
         counts = _empty_counts()
         silent_count = 0
         cross_tab = {status: 0 for status in STATUS_NAMES}
@@ -2897,6 +3181,10 @@ def run_diagnostic(
                     },
                 }
             )
+        # M-2: the same `names`-order cursor slice the per-sequence blocks use.
+        lv_per_sequence[name] = low_visibility_split(
+            windows, primary_assignment[sequence_start:cursor], prereg
+        )
         block = result["census_block"]
         total = len(windows)
         per_sequence_out[name] = {
@@ -3357,6 +3645,23 @@ def run_diagnostic(
             "strict_unanimity_differs_from_primary_status": closure.get(
                 "strict_unanimity_differs_from_primary_status"
             ),
+        },
+        "low_visibility_component_split": {
+            "measurement": "M-2",
+            "frozen_design": "research-wiki/operations/elgs-m2-oncomponent-split-design.md",
+            "gate_bearing": False,
+            "note": LV_NOTE_GATE_BEARING,
+            "population": LV_NOTE_POPULATION,
+            "class_names": list(LV_CLASS_NAMES),
+            "v_bin_edges": list(LV_V_BIN_EDGES),
+            "v_bin_names": list(LV_V_BIN_NAMES),
+            "eligibility_levels_px": [int(px) for px in prereg.s5_component_px],
+            "primary_eligibility_level_px": int(
+                prereg.s5_component_px[prereg.primary_level_index]
+            ),
+            "visibility_threshold": prereg.visibility_threshold,
+            "per_sequence": lv_per_sequence,
+            "pooled": low_visibility_split(all_windows, primary_assignment, prereg),
         },
         "audit_sample_B8": audit_sample,
         "measurement_closure": closure,

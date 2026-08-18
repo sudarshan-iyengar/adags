@@ -1475,5 +1475,351 @@ class BindingPoolingTests(unittest.TestCase):
         self.assertAlmostEqual(tally.a_c23(), 100 / 110)  # window-weighted: 0.909
 
 
+# ---------------------------------------------------------------------------
+# M-2: the on/off-component split of the LOW_VISIBILITY limb.
+# Frozen design: research-wiki/operations/elgs-m2-oncomponent-split-design.md.
+#
+# FIXTURE M2 (one window, three training cameras, one report class each):
+#   masks    = ANCHOR_BLOB (144 px, contains (32,32)) + OFFSET_TINY_BLOB
+#              (25 px at rows/cols 48..52, disjoint from every other blob)
+#   cam01    = v 0.05 at (32, 32) -> the eligible anchor component  -> ON_ELIGIBLE
+#   cam02    = v 0.45 at (50, 50) -> the 25 px sub-threshold component
+#                                                                   -> OFF_ELIGIBLE
+#   cam03    = v 0.25 at (2, 2)   -> label 0                        -> BACKGROUND
+# Every in-window report is v < 0.5, so W(record) is the whole 10-frame
+# interval and each camera contributes exactly len(WINDOW_FRAMES) pairs.
+#
+# The S5 ladder is (16, 64, 256) px with 64 primary, so the SAME 30 reports
+# split three different ways and the level dependence is hand-derivable:
+#   16 px  -> both components eligible          -> ON 20 / OFF  0 / BG 10
+#   64 px  -> only the 144 px component         -> ON 10 / OFF 10 / BG 10
+#   256 px -> neither component                 -> ON  0 / OFF 20 / BG 10
+# ---------------------------------------------------------------------------
+
+M2_ON_ELIGIBLE, M2_OFF_ELIGIBLE, M2_BACKGROUND, M2_UNIDENTIFIABLE = diag.LV_CLASS_NAMES
+
+
+def _m2_masks(camera_id: int, frame: int) -> np.ndarray:
+    return with_blobs(ANCHOR_BLOB, OFFSET_TINY_BLOB)
+
+
+def _m2_reports(camera_id: int, frame: int):
+    """ASSOCIATED before the window; one low-visibility class per camera in it."""
+
+    if frame < WINDOW_FIRST:
+        return {"v": 0.9, "x": float(ANCHOR_COL), "y": float(ANCHOR_ROW)}
+    if camera_id == 1:
+        return {"v": 0.05, "x": float(ANCHOR_COL), "y": float(ANCHOR_ROW)}
+    if camera_id == 2:
+        return {"v": 0.45, "x": 50.0, "y": 50.0}
+    return {"v": 0.25, "x": 2.0, "y": 2.0}
+
+
+class LowVisibilitySplitTests(Harness):
+    """The split itself: counts, denominators, histogram, anchor agreement."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        root = Path(cls._tmp.name)
+        scene_dir = write_scene(root, _m2_masks)
+        tracks_path = write_tracks(root, _m2_reports)
+        from scripts.build_elgs_tracks import load_temporal_scene
+
+        floor = census.angular_separation_floor(load_temporal_scene(scene_dir))
+        census_path = write_census(
+            root, scene_dir, containing_cameras=[1, 2, 3], angular_floor=floor
+        )
+        cls.result = diag.run_diagnostic(
+            [(scene_dir.name, scene_dir, tracks_path, census_path)], PREREG, panel="primary"
+        )
+        cls.sequence = scene_dir.name
+        cls.split = cls.result["low_visibility_component_split"]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    def _primary(self, block):
+        return block["by_eligibility_level_px"][str(self.split["primary_eligibility_level_px"])]
+
+    def test_split_is_emitted_under_its_own_top_level_key(self):
+        self.assertIn("low_visibility_component_split", self.result)
+        self.assertFalse(self.split["gate_bearing"])
+        self.assertEqual(self.split["primary_eligibility_level_px"], 64)
+        self.assertEqual(self.split["v_bin_edges"], [0.0, 0.1, 0.2, 0.3, 0.4, 0.5])
+        self.assertEqual(sorted(self.split["per_sequence"]), [self.sequence])
+
+    def test_four_way_counts_at_the_primary_level(self):
+        counts = self._primary(self.split["pooled"])["counts"]
+        self.assertEqual(
+            counts,
+            {
+                M2_ON_ELIGIBLE: len(WINDOW_FRAMES),
+                M2_OFF_ELIGIBLE: len(WINDOW_FRAMES),
+                M2_BACKGROUND: len(WINDOW_FRAMES),
+                M2_UNIDENTIFIABLE: 0,
+            },
+        )
+        self.assertAlmostEqual(self.split["pooled"]["p_on_primary"], 1 / 3)
+        # the per-sequence block is the pooled block on a one-sequence run
+        per_sequence = self.split["per_sequence"][self.sequence]
+        self.assertEqual(self._primary(per_sequence)["counts"], counts)
+
+    def test_the_split_population_is_exactly_the_LOW_VISIBILITY_limb(self):
+        # design 2: a denominator disagreement voids the run, so the reducer's
+        # own cross-tabulation is the reference.
+        cross = self.result["pooled"]["report_status_cross_tabulation"]
+        denominators = self.split["pooled"]["denominators"]
+        self.assertEqual(
+            denominators["low_visibility_report_pairs"], cross["LOW_VISIBILITY"]
+        )
+        self.assertEqual(
+            denominators["report_pairs_evaluated"], self.result["pooled"]["pairs_evaluated"]
+        )
+        self.assertEqual(denominators["distinct_seed_ids"], 1)
+        self.assertEqual(denominators["distinct_camera_ids"], 3)
+        self.assertEqual(denominators["absence_windows_in_scope"], 1)
+        self.assertEqual(denominators["absence_windows_contributing"], 1)
+
+    def test_counts_move_with_the_eligibility_level_and_never_leave_the_population(self):
+        by_level = self.split["pooled"]["by_eligibility_level_px"]
+        self.assertEqual(sorted(by_level), ["16", "256", "64"])
+        expected = {
+            "16": (2 * len(WINDOW_FRAMES), 0, len(WINDOW_FRAMES)),
+            "64": (len(WINDOW_FRAMES), len(WINDOW_FRAMES), len(WINDOW_FRAMES)),
+            "256": (0, 2 * len(WINDOW_FRAMES), len(WINDOW_FRAMES)),
+        }
+        for level, (on, off, background) in expected.items():
+            counts = by_level[level]["counts"]
+            self.assertEqual(counts[M2_ON_ELIGIBLE], on, level)
+            self.assertEqual(counts[M2_OFF_ELIGIBLE], off, level)
+            self.assertEqual(counts[M2_BACKGROUND], background, level)
+            self.assertEqual(by_level[level]["total"], 3 * len(WINDOW_FRAMES), level)
+
+    def test_v_histogram_uses_the_frozen_bin_edges(self):
+        histogram = self._primary(self.split["pooled"])["v_histogram"]
+        self.assertEqual(list(histogram), self.split["v_bin_names"])
+        # v = 0.05 -> [0.0,0.1) and ON; 0.25 -> [0.2,0.3) and BACKGROUND;
+        # 0.45 -> [0.4,0.5) and OFF. Every other cell is empty.
+        self.assertEqual(histogram["[0.0,0.1)"][M2_ON_ELIGIBLE], len(WINDOW_FRAMES))
+        self.assertEqual(histogram["[0.2,0.3)"][M2_BACKGROUND], len(WINDOW_FRAMES))
+        self.assertEqual(histogram["[0.4,0.5)"][M2_OFF_ELIGIBLE], len(WINDOW_FRAMES))
+        self.assertEqual(
+            sum(sum(row.values()) for row in histogram.values()), 3 * len(WINDOW_FRAMES)
+        )
+
+    def test_anchor_agreement_is_descriptive_and_hand_derivable(self):
+        # the anchor pixel (32, 32) sits in the 144 px component in every
+        # camera; only cam01's report shares that label.
+        agreement = self.split["pooled"]["anchor_agreement"]
+        self.assertEqual(agreement["reports_with_an_anchor_label"], 3 * len(WINDOW_FRAMES))
+        self.assertEqual(agreement["reports_matching_the_anchor_label"], len(WINDOW_FRAMES))
+        self.assertEqual(agreement["reports_without_an_anchor_label"], 0)
+        self.assertAlmostEqual(agreement["share"], 1 / 3)
+
+    def test_unidentifiable_is_structurally_zero(self):
+        # design 4.7: a clean run has none. There is no path that produces one
+        # -- MaskFrame fails closed on a missing or undecodable mask (see
+        # test_substrate_mismatch_fails_the_run_closed), so a nonzero count
+        # here would mean that fail-closed path was weakened.
+        self.assertEqual(self.split["pooled"]["unidentifiable"], 0)
+        self.assertEqual(
+            self._primary(self.split["pooled"])["counts"][M2_UNIDENTIFIABLE], 0
+        )
+
+    def test_restricted_split_reports_the_C1a_subset(self):
+        # this fixture's single window is C3, so the C1a-restricted split is
+        # empty and explicitly flagged as differing.
+        self.assertEqual(
+            self.result["pooled"]["classes"][diag.CLASS_C1A], 0
+        )
+        restricted = self.split["pooled"]["restricted_to_C1a_windows"]
+        self.assertTrue(restricted["differs_from_unrestricted"])
+        self.assertEqual(restricted["denominators"]["low_visibility_report_pairs"], 0)
+        self.assertEqual(restricted["denominators"]["absence_windows_in_scope"], 0)
+        self.assertEqual(self._primary(restricted)["counts"][M2_ON_ELIGIBLE], 0)
+
+    def test_output_stays_plain_strict_json(self):
+        json.loads(json.dumps(self.split, allow_nan=False, sort_keys=True))
+
+
+class LowVisibilityPixelPreservationTests(Harness):
+    """build_raw_reports keeps the pixel it already computed (design 3)."""
+
+    def _raw(self, report_fn):
+        scene_dir, tracks_path, _ = self.build(_m2_masks, report_fn)
+        from scripts.build_elgs_tracks import load_temporal_scene
+
+        scene = load_temporal_scene(scene_dir)
+        artifact = json.loads(Path(tracks_path).read_text(encoding="utf-8"))
+        prereg = diag.load_prereg(PREREG)
+        # index_tracks is the commensurability reference the two assertions
+        # inside build_raw_reports check against; reaching the return at all
+        # is the evidence that neither of them fires on preserved pixels.
+        index = census.index_tracks(artifact, scene)
+        return diag.build_raw_reports(artifact, scene, index, {0}, prereg), index
+
+    def test_low_visibility_entries_carry_the_round_half_up_pixel_and_v_bin(self):
+        raw, index = self._raw(_m2_reports)
+        # cam01 in-window: v = 0.05 at (32, 32), bin 0
+        self.assertEqual(
+            raw.table[(0, 1, WINDOW_FIRST)], (diag.PRE_LOW_VISIBILITY, 32, 32, 0)
+        )
+        # cam02 in-window: v = 0.45 at (50, 50), bin 4
+        self.assertEqual(
+            raw.table[(0, 2, WINDOW_FIRST)], (diag.PRE_LOW_VISIBILITY, 50, 50, 4)
+        )
+        # cam03 in-window: v = 0.25 at (2, 2), bin 2
+        self.assertEqual(
+            raw.table[(0, 3, WINDOW_FIRST)], (diag.PRE_LOW_VISIBILITY, 2, 2, 2)
+        )
+        # ...and no low-visibility key leaked into the census index, which is
+        # why neither commensurability assertion constrains them.
+        for camera_id in (1, 2, 3):
+            self.assertNotIn((0, camera_id, WINDOW_FIRST), index.pixels)
+
+    def test_associated_entries_are_unchanged_and_still_commensurate(self):
+        raw, index = self._raw(_m2_reports)
+        key = (0, 1, WINDOW_FIRST - 1)
+        self.assertEqual(raw.table[key], (diag.PRE_NEEDS_MASK, ANCHOR_COL, ANCHOR_ROW, -1))
+        self.assertEqual(index.pixels[key], (ANCHOR_COL, ANCHOR_ROW))
+
+    def test_miss_and_out_of_domain_entries_carry_no_v_bin(self):
+        def reports(camera_id, frame):
+            if frame < WINDOW_FIRST:
+                return None
+            return {"v": 0.3, "x": -50.0, "y": -50.0}
+
+        raw, _ = self._raw(reports)
+        self.assertEqual(raw.table[(0, 1, 0)], (diag.PRE_MISS, -1, -1, -1))
+        self.assertEqual(
+            raw.table[(0, 1, WINDOW_FIRST)], (diag.PRE_OUT_OF_DOMAIN, -1, -1, -1)
+        )
+        # A4 is untouched: bounds still precede visibility, so an out-of-domain
+        # low-visibility report is OUT_OF_DOMAIN and never enters the split.
+        self.assertEqual(raw.out_of_domain_count, 3 * len(range(WINDOW_FIRST, N_FRAMES)))
+
+    def test_bins_partition_the_sub_threshold_range(self):
+        self.assertEqual(
+            [diag.lv_v_bin(v) for v in (0.0, 0.1, 0.2, 0.3, 0.4, 0.49)],
+            [0, 1, 2, 3, 4, 4],
+        )
+        with self.assertRaises(ContractError):
+            diag.lv_v_bin(0.5)
+        with self.assertRaises(ContractError):
+            diag.lv_v_bin(-0.1)
+
+
+class LowVisibilitySplitIsDiagnosticOnlyTests(Harness):
+    """THE binding invariant: the split changes nothing the instrument reports.
+
+    Two runs share one scene and one census and differ ONLY in the (x, y) of
+    the low-visibility reports -- the coordinate the frozen instrument
+    discarded at build_absence_diagnostic.py:1183 and this change preserves.
+    Every pre-existing section must therefore be identical between them, while
+    the new section must differ. If the preserved pixel had leaked into any
+    class, tally, status, census total or sensitivity cell, this fails.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        root = Path(cls._tmp.name)
+        scene_dir = write_scene(root, _m2_masks)
+        from scripts.build_elgs_tracks import load_temporal_scene
+
+        floor = census.angular_separation_floor(load_temporal_scene(scene_dir))
+        census_path = write_census(
+            root, scene_dir, containing_cameras=[1, 2, 3], angular_floor=floor
+        )
+
+        def on_component(camera_id, frame):
+            if frame < WINDOW_FIRST:
+                return {"v": 0.9, "x": float(ANCHOR_COL), "y": float(ANCHOR_ROW)}
+            return {"v": 0.3, "x": float(ANCHOR_COL), "y": float(ANCHOR_ROW)}
+
+        def off_component(camera_id, frame):
+            if frame < WINDOW_FIRST:
+                return {"v": 0.9, "x": float(ANCHOR_COL), "y": float(ANCHOR_ROW)}
+            return {"v": 0.3, "x": 2.0, "y": 2.0}
+
+        results = []
+        for name, report_fn in (("on", on_component), ("off", off_component)):
+            sub = root / name
+            sub.mkdir()
+            results.append(
+                diag.run_diagnostic(
+                    [(scene_dir.name, scene_dir, write_tracks(sub, report_fn), census_path)],
+                    PREREG,
+                    panel="primary",
+                )
+            )
+        cls.on_result, cls.off_result = results
+        cls.sequence = scene_dir.name
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    @staticmethod
+    def _volatile(section, block):
+        # wall clocks and peak RSS are not outputs of the measurement; the
+        # tracks path and its digest legitimately differ because the two runs
+        # read two different artifacts.
+        if section == "provenance":
+            return {k: v for k, v in block.items() if k not in ("wall_seconds", "peak_rss_bytes")}
+        if section == "per_sequence":
+            return {
+                name: {k: v for k, v in body.items() if k != "wall_seconds"}
+                for name, body in block.items()
+            }
+        if section == "inputs":
+            return {
+                name: {k: v for k, v in body.items() if k not in ("tracks_path", "tracks_sha256")}
+                for name, body in block.items()
+            }
+        return block
+
+    def test_the_new_key_is_the_only_new_key(self):
+        self.assertEqual(set(self.on_result) - set(self.off_result), set())
+        self.assertIn("low_visibility_component_split", self.on_result)
+
+    def test_every_pre_existing_section_is_identical(self):
+        checked = 0
+        for section in self.on_result:
+            if section == "low_visibility_component_split":
+                continue
+            left = self._volatile(section, self.on_result[section])
+            right = self._volatile(section, self.off_result[section])
+            self.assertEqual(
+                json.dumps(left, sort_keys=True),
+                json.dumps(right, sort_keys=True),
+                f"section {section!r} depends on the low-visibility report pixel",
+            )
+            checked += 1
+        self.assertGreater(checked, 15)
+
+    def test_the_split_itself_does_distinguish_the_two_runs(self):
+        # the guard above would pass vacuously if the pixel changed nothing.
+        def counts(result):
+            split = result["low_visibility_component_split"]["pooled"]
+            level = str(
+                result["low_visibility_component_split"]["primary_eligibility_level_px"]
+            )
+            return split["by_eligibility_level_px"][level]["counts"]
+
+        on, off = counts(self.on_result), counts(self.off_result)
+        self.assertEqual(on[M2_ON_ELIGIBLE], 3 * len(WINDOW_FRAMES))
+        self.assertEqual(on[M2_BACKGROUND], 0)
+        self.assertEqual(off[M2_ON_ELIGIBLE], 0)
+        self.assertEqual(off[M2_BACKGROUND], 3 * len(WINDOW_FRAMES))
+        # ...and both runs saw the SAME number of low-visibility reports.
+        self.assertEqual(
+            self.on_result["pooled"]["report_status_cross_tabulation"]["LOW_VISIBILITY"],
+            self.off_result["pooled"]["report_status_cross_tabulation"]["LOW_VISIBILITY"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
