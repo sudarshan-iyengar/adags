@@ -285,6 +285,61 @@ should show **fewer points and 35/35 coverage at a similar residual**. A
 materially WORSE residual would indicate the held-out views were doing
 structural work, which would itself be worth knowing.
 
+### A4 RESULT — frame 0 (experiment 158, COMPLETED)
+
+The 35-camera rebuild succeeds, and it behaves exactly as the comparison
+predicted before it ran.
+
+| quantity | 39 cameras (leaky) | **35 cameras (this rebuild)** |
+|---|---:|---:|
+| cameras registered | 39 / 39 | **35 / 35** |
+| cameras with observations | 39 | **35** |
+| points | 6,075 | **5,140** |
+| observations | 25,220 | 20,366 |
+| mean track length | 4.151 | 3.962 |
+| **mean reprojection error** | 1.2127 px | **1.1953 px** |
+
+**Fewer points, full 35/35 coverage, and a residual that is not worse — it is
+marginally better.** So the four held-out views were contributing observations,
+not holding the reconstruction together: removing them costs 935 points and
+nothing in geometric consistency. Had the residual degraded materially, that
+would have meant the held-out cameras were doing structural work and the split
+itself would have needed reconsidering.
+
+**Calibration preserved, verified against the BINARY model:**
+
+```
+intrinsics max abs delta   0.0            (EXACT equality required, no tolerance)
+pose max abs delta         1.110e-16      (one ULP, cam34.png; tolerance 1e-12)
+```
+
+All four COLMAP 3.6 guarantees passed explicitly
+(`fix_existing_images=1`, `ba_refine_focal_length=0`,
+`ba_refine_principal_point=0`, `ba_refine_extra_params=0`), and the check reads
+`cameras.bin`/`images.bin` rather than the lossy text export, per the
+reconciliation in [[imvid-sample-ingestion]].
+
+**This closes the per-camera reprojection limb of the S5 validation for frame
+0: 1.1953 px against a 2 px gate, with every training camera contributing.**
+Observations per camera range 43 (cam34) to 1,787 (cam01) — the spread is large
+but no camera is empty.
+
+Cost, measured: `feature_extractor` 79.8 s, **`exhaustive_matcher` 2,692.8 s**,
+`point_triangulator` 13.4 s, converter + analyzer 2.3 s — about **47 minutes**,
+essentially all CPU matching, and inflated by three of these cells running
+concurrently on one node (the third cell's feature extraction took 189 s
+against this one's 80 s, which is the contention showing).
+
+Frames 150 and 299 (experiments 159 / 160) were still running at the end of the
+block; their manifests land at
+`data/imvid/sparse35/frame_000150/` and `frame_000299/`. The union rebuild
+(`scripts/imvid_build_initialization.py` over the three) has NOT been run.
+
+**Still open for S5**: the loader has not been exercised on ImViD data — the
+trainer's loader reads PINHOLE and ImViD ships OPENCV, and the conversion step
+does not exist. That is the remaining gate, and section A3's measurement is why
+it cannot be skipped.
+
 ## A5. Cost preflight for one 300-frame Opera baseline — an ESTIMATE, and labelled as one
 
 Built from this project's own measurements rather than from ImViD's reported
