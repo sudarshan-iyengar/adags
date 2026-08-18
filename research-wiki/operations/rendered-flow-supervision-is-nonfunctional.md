@@ -416,3 +416,48 @@ That the flow VJP is correct, or incorrect. That flow supervision helps
 or hurts. F and X remain BLOCKED — not because a gradient term is known
 missing, but because no instrument has yet demonstrated the gradient is
 live on the real path.
+
+## CAUSE IDENTIFIED (2026-08-17, later the same day)
+
+The zero-gradient harness defect recorded above — "`TinyScene` produces
+zero gradients for every loss, colour included, on BOTH images, at every
+scene size, with a valid bucket count and a correct forward. The cause is
+NOT yet identified" — **has been identified and repaired.** Full record
+and measurements: [[rasterizer-backward-two-defects-2026-08-17]].
+
+It was `backward.cu`'s per-tile early-out
+
+```cuda
+if (bucket_idx_in_tile * 32 >= max_contrib[tile_id]) { return; }
+```
+
+`max_contrib` is READ there and written NOWHERE — that is its only
+appearance in the whole rasterizer. Upstream taming-3dgs fills it with a
+block-wide max-reduction at the end of its forward render kernel; this
+fork's `forward.cu` takes the pointer and never touches it, and
+`ImageState` is carved from a `torch::empty` buffer with only `ranges`
+memset. So the guard compared against uninitialised device memory, and
+when that memory was zero the condition held for every bucket and the
+kernel returned before doing any work.
+
+Measured on a V100, same scene and forward (radii `[7, 6, 6]`): with the
+guard, `dL_dopacity`, `dL_dmeans3D` and `dL_dmeans2D` all exactly 0.0;
+with it removed, 17.90, 3.67 and 6.03.
+
+Consequences for what this page concluded:
+
+* **The diagnosis "severed at the rasterizer boundary" was right, and the
+  location was one level earlier than anyone looked** — the kernel's first
+  twenty lines, before any flow code.
+* **The flow VJP patch stays exonerated.** Experiment 136 attributed the
+  zeros to something shared with the pre-patch image, which was correct.
+* **The CORRECTION that "the 36 tests are not evidence" is now spent.**
+  With the guard removed, `tests/test_flow_backward_vjp.py` runs 36 and
+  **33 pass**, including the checkpoint-boundary suite, the static
+  coupling tests and both LoRA reachability tests. The residue is one
+  `P == 0` host-pointer error and finite-difference comparisons whose
+  black-background baseline is itself unreliable (see the open items on
+  the new page); none of it is a flow-VJP defect.
+
+This does NOT by itself unblock F and X. What it establishes is that the
+instrument works, which is the precondition the page asked for.
