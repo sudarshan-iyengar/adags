@@ -388,3 +388,160 @@ to no local cell, so nothing in this block requires it to share hardware with
 anything; if a local STG reproduction is ever run it must be on `dgx` too.
 `dgx` has **6** slots, three permanently occupied by unrelated Commands, so the
 effective budget for this block is three concurrent cells.
+
+---
+
+## REVIEW ROUND 1 (2026-08-19, append-only) — verdict **DEFECTIVE**, one blocking finding, repaired before any output was read
+
+A fresh-context adversarial reviewer with no project context was asked one
+question — does the frozen matrix answer the question it states, or is there a
+defect that would make the result uninterpretable whichever way it comes out.
+It returned **DEFECTIVE**. Recorded append-only; nothing above is rewritten.
+
+**Timing matters for how this is read: no cell output had been inspected when
+the repairs below were made.** A0 and B1 were mid-run and A1 was cancelled; no
+`lrv1_event_eval.json` existed. The outcome rules were still being fixed while
+no number existed, which is the only condition under which changing them is
+legitimate.
+
+### B1 — BLOCKING, PRIMARY-VERIFIED, and it lands on the decisive metric
+
+**Presence does not step, it ramps.** `elgs/presence.py` composes two clamped
+cubic smoothsteps over the half-width `w = 2 * frame_dt = 0.333 s`, so presence
+rises over the two frames after an episode start and falls over the two before
+its end. The frozen `oracle_correct.json` placed episode 2's onset at the
+midpoint between the last absent frame (53) and the first present frame (54) —
+the obvious choice — which puts that ramp **on frames 54 and 55, two of the six
+frames the whole comparison turns on**.
+
+Primary-verified by running the production path (`load_oracle_episodes` →
+`forward` → `episode_presence`) on the two frozen files:
+
+| | presence on return frames 54-59 | mean |
+|---|---|---:|
+| **A1 (correct, as frozen)** | `[0.15625, 0.84375, 1, 1, 1, 1]` | **0.8333** |
+| **A2 (wrong, as frozen)** | `[1, 1, 1, 1, 1, 1]` | **1.0000** |
+
+So A1 rendered the returned object at **15.6% opacity on the first evaluated
+frame** while its dose-matched control rendered it fully. The reviewer's
+composite calculation puts A1's achievable `event_return psnr_pooled` at a
+**ceiling near 19 dB regardless of how good the representation is**, an
+artefact of 7-21 dB against A1 depending on how well both cells reconstruct.
+Every row of the section-7 table was reachable for reasons unrelated to
+headroom.
+
+**Why the existing checks did not catch it.** The dose-match test asserts
+episode count, `dim(a)` and the sorted duration multiset. **None of those
+constrains where a ramp falls.** Section 4.1 above even notes the frame-54 edge
+band — and treats it as a carrier-agreement footnote, never connecting it to
+section 5's "return frames (54-59) only". The transferable lesson:
+**a duration-matched control is not automatically a ramp-matched one.**
+
+**Repair (landed `d0a7b3e`).** Inset each boundary by `w` from the last/first
+present frame, so the presence **plateau** rather than the raw interval matches
+ground truth:
+
+| | gap (s) | episodes (s) | durations | gap len | total present |
+|---|---|---|---|---:|---:|
+| A1 | `[5.1666667, 8.6666667]` | `[-0.3333, 5.1667]`, `[8.6667, 10.1667]` | 5.5, 1.5 | 3.5 | 7.0 |
+| A2 | `[1.1666667, 4.6666667]` | `[-0.3333, 1.1667]`, `[4.6667, 10.1667]` | 1.5, 5.5 | 3.5 | 7.0 |
+
+Verified after repair: **A1 is presence 1.0 on all 36 ground-truth-present
+frames**, with its two ramps landing on frames 30 and 53 — inside the absence
+gap, where they cost only the secondary `ghost_gap` diagnostic. **A2 remains
+1.0 across the true return frames**, so it can still render the return and the
+comparison stays fair at the event itself. Duration multiset, gap and total
+present time are identical between the two, and every episode and the gap clear
+the preregistered floor of 0.8333 s.
+
+Three tests pin it (`tests/test_elgs_oracle_episodes.py::RampPlacementTests`),
+including an **anti-vacuity** test that rebuilds the old construction and
+asserts the check fails on it at exactly `0.15625` / `0.84375`.
+
+**Experiment 170 was cancelled** — it was running the defective configuration.
+A1 relaunched as **171** at retry 1.
+
+### B2 — MATERIAL, accepted and disclosed rather than repaired
+
+The reviewer's second blocking finding: A2 does not hold "two episodes" fixed
+in the sense the question needs. EL-GS presence *replaces* the temporal
+marginal, and oracle families are hard-zeroed outside their episodes, so A1's
+object rows get 36 frames of mutually consistent supervision while A2's get 24
+frames of "be invisible" against 6 of "be the object". `D1 > D2` could
+therefore follow from **supervision consistency alone** — "a correct hard gate
+beats a maximally wrong one" — with no representational headroom over the
+substrate. The middle row of the section-7 table is close to unreachable
+because a reflection *maximises* mistiming.
+
+**This is accepted.** The A1-vs-A2 conclusion must be stated as *a correct hard
+presence gate beats a maximally wrong one*, which is weaker than *episode
+timing is what matters*. The proper fix is a **small-mistiming control** — the
+same `K=2` program with the gap translated by a few frames — which keeps
+supervision largely consistent and isolates timing precision from gate
+existence. That is one further ~2.6 GPU-h cell.
+
+### Further findings accepted as DISCLOSURE
+
+* **M2 — the largest A0-vs-A1 confound was not the one section 4.2 named.**
+  Under `elgs_enable`, `marginal_t` is replaced by `get_elgs_presence` for
+  **every** primitive, not only oracle ones. Non-oracle families are `K=1`
+  spanning with presence identically 1.0 at all 60 frames, so A1/A2 have **no
+  learnable per-primitive temporal lobe anywhere outside the ~780 oracle rows**,
+  while A0 has one everywhere. That is a global representation change, strictly
+  larger than the spatial-oracle and routing-pin confounds. It also means the
+  dominant gradient path into `_t` is dead under EL-GS, so
+  `densify_grad_t_threshold` fires differently. **A0-vs-A1 is a weaker
+  comparison than section 4.2 implied; A1-vs-A2 is unaffected.**
+* **M3 — the oracle region is a voxel-cell oracle roughly 8x the object's
+  volume**, not "which primitives are the object": a cell is oracle if *any* of
+  its points lies in the sphere, so ~780 seeded rows carry the program of which
+  ~95 are actually inside the object. Harmless here (no static sphere and no
+  ground intersects that box) but section 4.2 overstated the oracle's precision.
+* **M4 — capacity is matched by policy and cap, not in effect** — already
+  recorded independently as RESULT PART 1 section 11.3, and the reviewer adds
+  the mechanism on A2's side: 24 frames of "be invisible" against 6 of "be
+  visible" drives object rows toward `thresh_opa_prune`, plausibly pruning the
+  very primitives that would render the return. Final primitive counts are
+  reported per cell and are to be read as a confound indicator, not a neutral
+  fact.
+* **M9 — under-training is not direction-neutral.** ~16.7 epochs at 720 units
+  and batch 2. A0 must *discover* the timing and reallocate capacity; A1 is
+  handed it. So under-training favours A1, i.e. favours the hypothesis.
+
+### Repaired in the same pass
+
+* **M1** — three artifacts disagreed about what A2 was. `event_spec.json` no
+  longer duplicates the episode programs at all; it states the ground-truth
+  presence FRAMES and points at the config files. Scene regenerated; images and
+  `points3d.ply` bit-identical.
+* **M8** — the evaluator checked the runtime was live but not that it came from
+  the checkpoint. Without `elgs_state`, `setup_elgs` silently re-seeds over the
+  TRAINED cloud and every reported family count still looks plausible. Now
+  checked.
+* **M5** — gate items 3 and 6 were the same predicate. Item 6 is now an absolute
+  floor (episode-1 >= 25 dB), item 3 a minimum deficit (>= 1 dB).
+* **M7** — the reducer implemented "clearly positive" as bare `d1 > 0`. It now
+  returns INDETERMINATE below a 0.5 dB floor inherited from the matched-triple
+  spec's `max(0.5 dB, S)`.
+* **M6** — the gate could not be obtained without also handing the reducer A1.
+  `--a1` is now optional.
+
+### What the reviewer verified as CORRECT (not to be re-checked)
+
+Config matching (A1-vs-A2 is genuinely a one-variable change); the dose-match
+arithmetic as far as durations go; the carrier-agreement figures 58/60 and
+12/60 exactly; seeding granularity genuinely unchanged; `elgs_a_lr: 0.0`
+genuinely freezes the boundaries (`update_learning_rate` touches only the
+`"xyz"` group); the `presence_multiplier` repair exactly equivalent, with tests
+that would catch a real regression in the expansion; `elgs_reserved_parity`
+genuinely matched, with the reservation rule frame-uniform so there is **no
+return-frame bias**; determinism across cells; the scene is what this page
+describes; the event is a genuine disappearance with no occluder; held-out
+cameras genuinely held out; the event mask method-independent and its
+missing-mask guard fail-closed; and the supply figures 113,868 / 569,340 / 0
+exact.
+
+**One item the reviewer could not reproduce:** the camera-convention check
+asserted in gate item 7 ("24 of 24"). It was run by the primary as a scratch
+script and its output recorded, but no tracked artifact carries it. That is a
+fair criticism of the record, not of the fact.
