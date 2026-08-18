@@ -284,6 +284,34 @@ Priority: high
 Literature pressure: [[papers/liang2025_monodygaubench]], [[papers/zhang2025_d4rt]], [[papers/zhou2026_motionscale]], [[papers/liu2025_mono4dgs_hdr]]
 Related ideas: [[ideas/dynamic-region-diagnostic-benchmark]]
 
+## Renderer note (2026-08-18) — read before interpreting any flow or gradient gap
+
+G6 and G8 below are unchanged as SCIENTIFIC gaps: making the rendered-flow
+gradient live does not gate it for reliability, and the track-flow hook is
+still inert at `lambda_track_flow: 0.0`.
+
+Two engineering facts now bound how any gradient-based result in this
+repository may be read ([[operations/renderer-integrity-admission-2026-08-18]],
+[[operations/rasterizer-backward-two-defects-2026-08-17]]):
+
+* until 2026-08-18 the ACTIVE backward render kernel gated itself on
+  UNINITIALISED device memory, so its behaviour depended on allocator
+  history rather than on the scene. No prior run's gradients are known
+  reproducible. This does NOT establish that any recorded result is
+  wrong, and the reproducibility bound measuring the old image's own
+  spread is recorded on the admission page.
+* rendered-flow supervision was non-functional before 2026-08-18 — the
+  VJP lived in a kernel that was never launched. It is now live and
+  correctly routed. That closes an INSTRUMENT blocker, not a gap: the
+  flow VJP's numerical correctness is still unestablished, and per the
+  2026-08-18 decision memo flow supervision is recommended to stay
+  shelved because no EL-GS claim has a flow term and the primary dataset
+  has no flow.
+
+Nothing below is retracted on this basis. The historical flow-lane
+readings cited in G8 used the track-flow path, not rendered flow, so they
+are not affected by the rendered-flow repair.
+
 ## G8 - Flow Supervision Needs Reliability Gating
 
 MotionGS, PaMoSplat, SplatFlow, and Flow4DGS-SLAM all support explicit flow/motion guidance in some form, but ADAGS W&B suggests naive flow lanes underperform while render-gated flow looks more plausible. The gap is not "add flow"; it is robustly gating flow to reliable dynamic cores and boundaries.
