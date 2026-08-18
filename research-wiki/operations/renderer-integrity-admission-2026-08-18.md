@@ -227,9 +227,69 @@ this page under any outcome.
 | 143 != 144 | the old image was nondeterministic run to run; prior gradients are not reproducible even within themselves, and every cross-run comparison in the old image needs its own spread reported |
 | 143 == 144 == 145 | the guard was a no-op in this configuration; prior controls survive unqualified for configurations resembling this one, and ONLY for those — the smoke is 600 iterations of N3V and generalises to a 15k DiVa-360 run only by assumption |
 
-**Result: PENDING** — 143/144/145 submitted 2026-08-18, terminal states
-not yet observed at the time of writing. This section is appended when
-they land; nothing above depends on the outcome.
+### RESULT (2026-08-18) — the old image is NOT run-to-run reproducible
+
+All three COMPLETED. Final iteration, 600/600, identical config and seed:
+
+| exp | image | Loss | PSNR | Ll1 | Lssim |
+|---|---|---|---|---|---|
+| 146 | old `51f8a852…` | 0.1021910 | 26.02 | 0.0321 | 0.1211 |
+| 147 | old `51f8a852…` (identical to 146) | 0.1017597 | 26.38 | 0.0317 | 0.1197 |
+| 148 | new `70a28e3d…` | 0.0974231 | 26.63 | 0.0303 | 0.1142 |
+
+**146 != 147.** Two runs of the SAME image, SAME config, SAME seed
+disagree: loss by `4.3e-4`, **PSNR by 0.36 dB**. The frozen
+interpretation table's middle row applies.
+
+### What this does and does not establish
+
+**Established: the old image was not bit-reproducible at fixed seed.** The
+earlier expectation that this smoke was bit-identical across runs is
+refuted for this configuration.
+
+**NOT established: that the repair changed training.** The new image's
+run sits 0.25 dB above the higher of the two old runs, while the old
+image's own spread is 0.36 dB. **148 lies within roughly one old-image
+spread**, and with n=1 on the new image and n=2 on the old, this
+measurement cannot separate "the repaired kernel trains differently" from
+"this configuration is simply nondeterministic at this magnitude". It
+would be an over-reading of exactly the kind this lane exists to prevent
+to report 148's higher PSNR as an improvement.
+
+**The nondeterminism is not attributed to the guard.** The backward
+accumulates through `atomicAdd`, whose float summation order is not
+deterministic, and that mechanism is present in BOTH images. So run-to-run
+variation is expected even from a wholly correct kernel, and nothing here
+isolates `max_contrib` as its source. Attributing the spread to the guard
+would be the same unproven-attribution error that experiment 132's
+failure message already made once on this lane.
+
+### Consequence for prior controls — the actionable part
+
+Prior photometric results are **not invalidated**. What changes is how
+they may be READ:
+
+* any comparison in this repository resting on a SINGLE run per arm
+  carries an unreported run-to-run uncertainty, measured here at
+  **0.36 dB PSNR** for a 600-iteration N3V smoke at 50k points;
+* differences smaller than that spread are **not resolvable** from one
+  run per arm in this configuration;
+* the standing "no prior run's gradients are known reproducible" is now
+  sharpened: they are not reproducible, and the reason need not be the
+  guard.
+
+**Scope limit, stated rather than assumed.** This is 600 iterations of
+N3V `cut_roasted_beef` at 50k points with `elgs_enable: True`. It does
+NOT license transferring the 0.36 dB figure to a 15k-iteration DiVa-360
+run at 400k+ points, where both the spread and its drivers may differ. Any
+lane that needs a resolvable difference should measure its OWN spread
+rather than importing this one.
+
+**What would settle the open question**, and is NOT authorised here: two
+or three runs of the NEW image at the same seed, giving it its own spread
+to compare against the old image's. That is ~0.3–0.45 GPU-hours and is
+the natural next measurement if any future comparison needs to span the
+two images.
 
 ## 7. What is NOT admitted
 
