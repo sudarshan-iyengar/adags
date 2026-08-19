@@ -24,7 +24,12 @@ from pathlib import Path
 
 import numpy as np
 
-SCENE = Path(__file__).resolve().parents[1] / "data" / "synthetic" / "lrv1"
+# Checks whichever leave-and-return fixture is present. LRV2 differs from
+# LRV1 only in the ground-plane extent, so the same geometry invariants must
+# hold for both and the later scene is the one that matters.
+_ROOT = Path(__file__).resolve().parents[1] / "data" / "synthetic"
+SCENE = next((_ROOT / n for n in ("lrv2", "lrv1") if (_ROOT / n).is_dir()),
+             _ROOT / "lrv1")
 
 
 @unittest.skipUnless(SCENE.is_dir(), "LRV1 fixture not present in this checkout")
