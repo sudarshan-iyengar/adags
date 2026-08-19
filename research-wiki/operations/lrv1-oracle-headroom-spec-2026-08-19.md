@@ -903,3 +903,160 @@ initialization coverage before the first training cell, and running the control
 alone first to measure its return deficit before committing to the full matrix.
 Both are cheap. Both are now the recommended order for any authored testbed on
 this project.
+
+---
+
+## RESULT PART 5 (2026-08-19, append-only) — THE DECISIVE RESULT: no demonstrated episodic headroom, and the deficit is not where the hypothesis said it would be
+
+Every threshold and rule below was fixed before any cell output existed and
+none was moved. LRV3's gate PASSED, so this result **is** interpretable.
+
+### 15.1 The three cells
+
+A0 = experiment 177, A1 = 179, A2 = 180; scored by 178, 183, 182. All `dgx`,
+commit `66953f5`, admitted image `sha256:70a28e3d...`, 6000 iterations,
+checkpoint at iteration 6000 in all three, 240 held-out views scored in all
+three.
+
+| region (pooled PSNR) | **A0** temporal | **A1** correct oracle | **A2** wrong-time |
+|---|---:|---:|---:|
+| **`event_return`** | **27.2763** | **22.0448** | **10.1144** |
+| `event_episode1` | 29.7727 | 26.6149 | 12.7728 |
+| `ghost_gap` | 28.9700 | 22.4121 | 28.6610 |
+| `ordinary_return` | 28.1841 | 27.9140 | 27.8820 |
+| `ordinary_all` | 28.2591 | 27.7771 | 27.7830 |
+| `whole_frame` | 28.2822 | 27.7275 | 25.4266 |
+| whole-frame SSIM | 0.9196 | 0.9006 | 0.8893 |
+| primitives | 149,834 | 149,868 | 149,862 |
+
+**Capacity is matched in realized count, not merely in policy** — all three land
+within 34 primitives of each other at the 150,000 cap. That retires the
+capacity confound (REVIEW ROUND 1, M4) for this comparison specifically.
+
+Both EL-GS cells report `families: 512`, `K_histogram {1: 504, 2: 8}`,
+`a_lr: 0.0`, `rounds_enabled: false`, `runtime_live: true`, and the expected
+oracle file. The representation was live, non-degenerate and frozen, as
+intended.
+
+### 15.2 The frozen outcome rule, applied
+
+```
+D1 = A1 - A0 =  -5.2316 dB
+D2 = A2 - A0 = -17.1619 dB
+A1 - A2      = +11.9303 dB
+```
+
+**SECTION 7 READING: A1 falls below A0 by 5.2316 dB — NO demonstrated episodic
+headroom on this admitted event.**
+
+This is not a near-miss and it is not inside the resolution floor. It is an
+order of magnitude larger than the 0.5 dB floor, in the wrong direction.
+
+### 15.3 The deficit is NOT specific to the event, and that is the finding
+
+The single most informative row is `event_episode1` — the same object surface
+during 30 frames of **continuous presence**, where the correct oracle's presence
+is a constant 1.0 and the episodic machinery should be doing nothing at all:
+
+| region | A1 - A0 |
+|---|---:|
+| `ordinary_all` (non-event pixels everywhere) | **-0.48** |
+| `event_episode1` (object, continuously present) | **-3.16** |
+| `event_return` (object, at return) | **-5.23** |
+| `ghost_gap` (object footprint during absence) | **-6.56** |
+
+**Turning on EL-GS costs ~0.5 dB globally and ~3.2 dB on the object region even
+where presence is constant.** So most of the event-region deficit is a fixed
+cost of the representation swap, not a failure to reconstruct the return. Only
+about 2 dB of the 5.23 is additional at the return.
+
+Two mechanisms, both named in REVIEW ROUND 1 **before** these cells ran, account
+for this:
+
+* **M2 — EL-GS replaces the temporal marginal for EVERY primitive**, not only
+  oracle ones. Non-oracle families are `K=1` spanning with presence identically
+  1.0, so A1 and A2 have **no learnable per-primitive temporal lobe anywhere**
+  outside the ~780 oracle rows, while A0 has one on all 149,834. That is the
+  most plausible source of the -0.48 dB global and much of the -3.16 dB.
+* **M3 — the oracle is a VOXEL-CELL oracle roughly 8x the object's volume.** A
+  cell is oracle if *any* of its points lies in the sphere, so the hard gate
+  switches off background primitives near the object as well. `ghost_gap` is
+  the direct evidence: A1 loses **6.56 dB** there, in exactly the region where
+  its oracle families are held at presence zero and therefore render nothing —
+  including the background those cells were also responsible for.
+
+**So the experiment answers its question, and the answer is negative — but a
+substantial part of the measured deficit is attributable to how the oracle was
+wired rather than to the episodic representation being unable to help.** Both
+causes were disclosed in advance; neither is an excuse invented afterwards.
+
+### 15.4 What IS cleanly established: timing matters enormously, within EL-GS
+
+`A1 - A2 = +11.9303 dB` on the decisive metric, and A2's per-frame return
+profile is flat at **11.70 / 11.76 / 11.81 dB** against the scene's
+independently computed **floor of 9.7487 dB** — the score of a cell that never
+reconstructs the returned surface at all. **A2 barely reconstructs the return.**
+
+The mechanism is legible. A2's wrong schedule holds its object families
+*present* through the true absence, so 27 frames of "there is nothing here"
+outvote 3 frames of "there is an object here", and the optimizer drives those
+primitives transparent. Its `ghost_gap` of **28.66 dB** — nearly A0's 28.97 —
+confirms it: A2 fixed the gap by destroying the object, and paid for it at the
+return.
+
+So **within the episodic representation, correct episode timing is worth ~12 dB
+at the event.** That is a real and large effect. It is also, as REVIEW ROUND 1's
+finding B2 warned, the weaker of the two claims available: it shows *a correct
+hard presence gate beats a maximally wrong one*, not *timing precision is what
+matters*. A small-mistiming control would separate those and was not run.
+
+### 15.5 The honest summary
+
+1. **The representation executes exactly as specified.** Non-degenerate `K=2`,
+   frozen oracle boundaries, structural rounds off, capacity matched to 34
+   primitives, checkpoint and evaluator provenance verified. Nothing here is an
+   implementation failure.
+2. **Correct episode structure did not improve event reconstruction. It made it
+   5.23 dB worse.**
+3. **The deficit is dominated by a fixed cost of the swap, not by the event.**
+   -0.48 dB globally, -3.16 dB on the object under constant presence.
+4. **Episode timing matters enormously inside the representation** (+11.93 dB
+   over the wrong-time control), which is why the failure is interesting rather
+   than merely disappointing: the machinery clearly *does* something, and what
+   it does is not yet worth what it costs.
+5. **Two named, pre-disclosed wiring choices plausibly account for most of the
+   cost**, and both are fixable.
+
+### 15.6 What this licenses, and what it forbids
+
+**Forbidden by this result:** any claim that EL-GS's episodic presence improves
+reconstruction. On the only admitted event this project has, it does not.
+
+**Not established by this result:** that episodic presence *cannot* help. The
+two confounds in §15.3 are not decorative — they are the difference between
+"the representation is wrong" and "the representation was wired to pay for
+things it did not need". Specifically, A1 was made to give up the temporal
+marginal on 149,000 primitives that had no event to model, in exchange for
+episodic presence on ~780.
+
+**The next experiment is now specific rather than exploratory**, and it is
+cheap:
+
+* **keep the per-primitive temporal marginal for non-oracle families** so the
+  swap is local to the primitives that need it. If A1's `-0.48 dB` global and
+  much of the `-3.16 dB` episode-1 cost disappear, the representation swap is
+  not intrinsically expensive and the event-specific question can finally be
+  asked cleanly;
+* **make the oracle per-primitive rather than per-voxel-cell**, so background
+  near the object is not gated off with it. `ghost_gap` is the diagnostic that
+  says whether this mattered;
+* **add the small-mistiming control** that REVIEW ROUND 1 asked for, so
+  "timing matters" can be separated from "a hard gate matters".
+
+**DiVa claim-grade evidence work remains PAUSED and this result strengthens the
+case for keeping it paused.** The argument for pausing was that
+evidence-acquisition investment should follow a demonstration that the
+representation can use the evidence. The representation has now been handed
+*perfect* evidence — exact episode boundaries, on an admitted event, with
+matched capacity — and was 5.23 dB worse than not having it. Acquiring
+imperfect evidence for it is not the next thing to fund.
