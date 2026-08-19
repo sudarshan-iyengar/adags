@@ -12,6 +12,18 @@
 # in series). Comparing 34.37 against 33.52 across that gap is not supported,
 # and this cell is what makes the ADAGS side of the comparison legitimate.
 #
+#   MATCHED  batch_size: 2   -> was 4. Experiment 169 died with CUDA OOM at
+#                               iteration 3510/6000 on a V100 32GB, having
+#                               reached the 600k point cap: "Tried to allocate
+#                               2.71 GiB ... 28.98 GiB reserved in total".
+#                               Image-space buffers scale with the raster, and
+#                               this cell quadrupled it. Halving the batch
+#                               halves that peak -- and it also moves the ADAGS
+#                               side TOWARD the published protocol rather than
+#                               away from it, because STG trains N3V at batch 2.
+#                               Disclosed as a change to ADAGS's own budget: at
+#                               a fixed 6000 iterations, batch 2 sees half the
+#                               gradient samples batch 4 did.
 #   MATCHED  resolution: 1   -> 1352x1014, the published training/eval raster
 #   MATCHED  time_duration   -> frames 0-49 inclusive (t = frame/30, so the
 #                               upper bound must exceed 49/30 = 1.63333 and
@@ -33,7 +45,7 @@ num_pts: 300_0000
 num_pts_ratio: 1.0
 rot_4d: False
 force_sh_3d: True
-batch_size: 4
+batch_size: 2
 exhaust_test: False
 
 ModelParams:
