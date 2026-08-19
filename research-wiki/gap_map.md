@@ -640,3 +640,53 @@ evidence-acquisition investment should follow a demonstration that the
 representation can use the evidence. **That argument is unchanged.** What would
 restart it is a valid, gate-passing A1-vs-A2 result showing episode-timing-
 specific headroom — which is exactly what the LRV2 matrix is for.
+
+### DECISIVE RESULT (2026-08-19) — the representation was handed perfect evidence and got worse
+
+On the admitted LRV3 event, with capacity matched to within 34 primitives at
+the cap, frozen oracle boundaries, structural rounds off and verified
+checkpoint/evaluator provenance
+([[operations/lrv1-oracle-headroom-spec-2026-08-19]] RESULT PART 5):
+
+```
+D1 = A1(correct oracle) - A0(temporal) =  -5.2316 dB   on event_return
+D2 = A2(wrong-time)     - A0           = -17.1619 dB
+A1 - A2                                = +11.9303 dB
+```
+
+**Correct fixed `K=2` episode structure did not improve event reconstruction —
+it cost 5.23 dB.** An order of magnitude past the 0.5 dB decision floor, in the
+wrong direction, so this is a result rather than a near-miss.
+
+**G13's representation limb therefore has its first real answer, and it is
+negative — but the deficit is not where the hypothesis predicted.** On the same
+object surface during 30 frames of *continuous presence*, where the correct
+oracle's presence is a constant 1.0 and the episodic machinery is doing
+nothing, A1 is still **3.16 dB** behind; globally it is **0.48 dB** behind. Most
+of the event-region deficit is a **fixed cost of the representation swap**, not
+a failure at the return. The two mechanisms were named in review *before* the
+cells ran: EL-GS replaces the temporal marginal for **every** primitive (A1 gave
+up a learnable temporal lobe on 149,000 primitives to gain episodic presence on
+~780), and the oracle is a **voxel-cell** oracle ~8x the object's volume, so it
+gates background off with the object — visible as `ghost_gap` losing 6.56 dB.
+
+**What is cleanly established: episode timing matters enormously inside the
+representation.** A2 sits at 11.70 / 11.76 / 11.81 dB per return frame against
+the scene's independently computed floor of **9.7487 dB** — it barely
+reconstructs the return at all. Its mechanism is legible: 27 frames of true
+absence outvoted 3 of presence and drove its object primitives transparent, and
+its `ghost_gap` of 28.66 dB (against A0's 28.97) confirms it fixed the gap by
+destroying the object. That is the +11.93 dB.
+
+**Consequence for the route.** DiVa claim-grade evidence acquisition stays
+**PAUSED**, and this strengthens rather than merely maintains the case: the
+representation has now been handed *perfect* evidence — exact boundaries, on an
+admitted event, at matched capacity — and was worse than not having it.
+Acquiring imperfect evidence for it is not the next thing to fund.
+
+**The next experiment is specific, cheap and pre-identified**: keep the
+per-primitive temporal marginal for non-oracle families so the swap is local to
+the primitives that need it; make the oracle per-primitive rather than
+per-voxel-cell; and add the small-mistiming control that separates "timing
+precision matters" from "a hard gate matters". Only after those does a negative
+become a statement about the representation rather than about its wiring.
