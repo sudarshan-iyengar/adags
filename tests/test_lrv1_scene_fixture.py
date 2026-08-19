@@ -24,11 +24,11 @@ from pathlib import Path
 
 import numpy as np
 
-# Checks whichever leave-and-return fixture is present. LRV2 differs from
-# LRV1 only in the ground-plane extent, so the same geometry invariants must
-# hold for both and the later scene is the one that matters.
+# Checks the newest leave-and-return fixture present. The variants differ only
+# in the ground-plane extent (LRV2) and the return length (LRV3), so the same
+# geometry invariants must hold for all of them.
 _ROOT = Path(__file__).resolve().parents[1] / "data" / "synthetic"
-SCENE = next((_ROOT / n for n in ("lrv2", "lrv1") if (_ROOT / n).is_dir()),
+SCENE = next((_ROOT / n for n in ("lrv3", "lrv2", "lrv1") if (_ROOT / n).is_dir()),
              _ROOT / "lrv1")
 
 
