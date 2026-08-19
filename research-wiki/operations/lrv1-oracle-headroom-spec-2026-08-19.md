@@ -1060,3 +1060,44 @@ representation can use the evidence. The representation has now been handed
 *perfect* evidence — exact episode boundaries, on an admitted event, with
 matched capacity — and was 5.23 dB worse than not having it. Acquiring
 imperfect evidence for it is not the next thing to fund.
+
+### 15.7 A refinement to §15.3's attribution, from the numbers themselves
+
+The decomposition constrains the mechanisms better than §15.3 stated, and the
+constraint is worth writing down because it points the follow-up experiment at
+the right thing.
+
+`ordinary_all` loses only **0.48 dB**. That region has **no routing pins** and
+**no oracle gating**, and it also lost its per-primitive temporal marginal. The
+scene is static outside the event object, so the marginal was doing little
+there — and 0.48 dB is what losing it costs where it was not needed.
+
+`event_episode1` loses **3.16 dB** on a surface that is continuously present,
+where the oracle's presence is a flat 1.0 and the hard gate is therefore
+inactive. So roughly **2.7 dB is specific to the object region and is not
+explained by the marginal loss alone.** The remaining named candidates are:
+
+* **routing pins.** `apply_elgs_routing_pins` zeroes the route-logit gradient
+  for rows of `K > 1` families — i.e. exactly the ~780 oracle rows and nothing
+  else. Their dynamic/static route mixture is frozen at `route_logit_init: 0.0`
+  for the whole run, while A0's is free to learn. This is a per-row handicap
+  applied to precisely the rows the experiment cares about, and it is active
+  during episode 1 when the gate is not.
+* **the marginal loss mattering more where there IS temporal structure.** The
+  object is the only thing in the scene with a temporal signature, so it is the
+  one place a temporal marginal earns its keep.
+
+These two are separable and the separation is cheap: **run one cell with
+`K >= 2` oracle episodes and routing pins disabled.** If the ~2.7 dB
+object-specific gap largely closes, the pin is the cost and the episodic
+representation is cheaper than this experiment made it look. If it does not,
+the cost is the marginal and the follow-up in §15.6 item 1 is the right fix.
+
+`ghost_gap`'s **-6.56 dB** remains attributed to the voxel-cell oracle (M3):
+it is the only region where the hard gate is active, and the gate switches off
+background primitives that share the oracle cells with the object.
+
+**None of this changes the headline.** A1 is 5.23 dB behind A0 on the decisive
+metric and the negative stands as recorded. What it changes is which follow-up
+is worth running first, and it makes that follow-up a one-cell question rather
+than a redesign.
