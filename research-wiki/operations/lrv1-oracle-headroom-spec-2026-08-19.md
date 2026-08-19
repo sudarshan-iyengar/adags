@@ -810,3 +810,96 @@ frames. **Every gate and outcome rule carries over unchanged.**
 temporal substrate handles this whole event class at this budget, and the
 useful next move is a different event class or a tighter capacity budget — not
 a third adjustment of the same knob.
+
+---
+
+## RESULT PART 4 (2026-08-19, append-only) — LRV3: the gate PASSES, and the decisive cells are running
+
+Thresholds unchanged throughout. Only the event's difficulty axis moved, and
+only because a pre-registered admission criterion demanded it.
+
+### 14.1 The gate, on the same rules, across all three fixtures
+
+A0 on LRV3 = experiment 177 (6000 iterations, 149,834 primitives), scored by
+experiment 178.
+
+| | LRV1 | LRV2 | **LRV3** |
+|---|---:|---:|---:|
+| return length (frames) | 6 | 6 | **3** |
+| `event_episode1` | 23.2890 | 29.6922 | **29.7727** |
+| `event_return` | 21.9952 | 28.7314 | **27.2763** |
+| **deficit** | 1.2939 | 0.9608 | **2.4963** |
+| `ghost_gap` | 14.1091 | 28.7899 | 28.9700 |
+| `ordinary_all` | 19.2501 | 27.9998 | 28.2591 |
+| `whole_frame` | 19.3105 | 28.0303 | 28.2822 |
+| whole-frame SSIM | 0.69694 | 0.91846 | **0.91960** |
+| item 6 (`episode1 >= 25.0`) | **FAIL** | PASS | **PASS** |
+| item 3 (`deficit >= 1.0`) | PASS | **FAIL** | **PASS** |
+| **GATE** | FAILED | FAILED | **PASSED** |
+
+**The three fixtures separate the two failure modes cleanly**, which is the
+useful structure here:
+
+* **LRV1** failed item 6 — the scene was broken, and the control could not
+  reconstruct the surface even under continuous presence;
+* **LRV2** fixed that (item 6 up 6.4 dB) and then failed item 3 — the control
+  reconstructed the *return* nearly as well as continuous presence, so there
+  was nothing to discriminate;
+* **LRV3** halves the return and item 3 clears comfortably, while item 6 is
+  **unchanged at 29.77 vs 29.69** — exactly what should happen, since episode 1
+  was not touched. That invariance is the check that the difficulty knob moved
+  what it was supposed to move and nothing else.
+
+**Halving the returned surface's training observations (96 view-frames to 48)
+raised the control's return deficit from 0.96 dB to 2.50 dB** — a 2.6x
+increase from a 2x reduction in observations. That relationship is itself a
+recorded fact about how much the temporal substrate depends on return-window
+supply.
+
+### 14.2 What is now admitted, and what it licenses
+
+LRV3 satisfies every item of the section-6 admission gate. The event covers
+56,934 held-out return pixel-times, the returned surface is visible in all four
+held-out views, the correct boundaries are exact by construction, the region is
+demonstrably reconstructible (29.77 dB under continuous presence), the control
+demonstrably errs at the return (2.50 dB below that), and the fixture's
+geometry is pinned by tests.
+
+**So a negative A1 result on LRV3 IS interpretable** as "no demonstrated
+episodic headroom on an admitted event", and a positive one is interpretable
+subject to the A1-vs-A2 timing check and the confounds recorded in REVIEW
+ROUND 1.
+
+### 14.3 Cells running
+
+| exp | cell | retry | what it decides |
+|---|---|---|---|
+| **179** | `lrv3_a1_oracle_correct` | r0 | D1 — does correct fixed `K=2` episode structure beat the temporal substrate at the return |
+| **180** | `lrv3_a2_wrong_time` | r0 | D2 — is any gain attributable to the TIMING, or merely to having a hard presence gate |
+
+Both `dgx`, commit `66953f5`, admitted image, 6000 iterations, `elgs_a_lr: 0.0`
+(boundaries frozen), structural rounds off.
+
+**Experiment 175 (LRV2 A1) was cancelled** to free the slot. Its scene's gate
+had failed, so it could only bound the available gain on an inconclusive
+fixture, whereas LRV3's A1/A2 pair is the decisive comparison. That trade is
+recorded rather than silent: **no LRV2 A1 number exists**, and the ~1 dB bound
+implied by LRV2's control deficit stands as the only statement about that
+scene.
+
+### 14.4 The honest position on three fixtures
+
+Three iterations of a synthetic testbed is more than intended, and the reason
+each one happened is on the record: LRV1's was a defect I introduced
+(initialization not covering the visible surface), LRV2's was the event being
+too easy for the control, and only the second of those is a *scientific*
+finding rather than a repair. **The difficulty knob was moved exactly once, in
+one direction, to satisfy a criterion fixed before any cell ran** — and item 6's
+invariance across that move (29.69 -> 29.77) is the evidence that it was not a
+search over knobs until something passed.
+
+**What would have made this unnecessary:** ray-casting the scene to measure
+initialization coverage before the first training cell, and running the control
+alone first to measure its return deficit before committing to the full matrix.
+Both are cheap. Both are now the recommended order for any authored testbed on
+this project.
