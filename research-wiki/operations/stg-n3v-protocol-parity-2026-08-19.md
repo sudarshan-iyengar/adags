@@ -205,3 +205,68 @@ figure and not a reproduction of STG.
 saturated by three unrelated Commands since 16:13Z on 2026-08-18. Recorded
 because it makes the effective compute budget for this project three concurrent
 `dgx` cells, not the nominal pool sizes.
+
+---
+
+## APPENDIX B (2026-08-19, append-only) — B1's result, and why the headline number is a trap
+
+**Experiment 181** (`b1_stg_matched_crb` r2, `dgx`, commit `456f4d6`, admitted
+image, `batch_size: 2`) COMPLETED at 6000/6000 in 2h43m.
+
+| quantity | value |
+|---|---:|
+| held-out `best_val/psnr` (cam00, frames 0-49, 1352x1014) | **33.5210** |
+| `best_val/ssim` | 0.95934 |
+| `best_val/dynamic_mask_psnr` | 25.3561 |
+| `best_val/static_region_psnr` | 33.6781 |
+| final primitives | 599,342 (the 600k cap binds) |
+| `best_val_iter` | 6000 |
+
+**STG's published `cut_roasted_beef` is 33.52 (full) / 33.72 (lite).** The
+agreement to three decimal places with the full model is a coincidence, and
+reading it as "ADAGS matches STG" would be wrong in at least three ways.
+
+### The pooling correction moves it the other way
+
+`main.py` reports the **channel-split** PSNR (§1): it passes an unbatched
+`(3, H, W)` to `utils/image_utils.py`, so the figure is the mean of three
+per-channel PSNRs, and the bias is `10*log10(AM/GM)` over the per-channel MSEs
+— **always non-negative**. That bias was **measured at 0.268 dB** on this
+block's LRV1 A0 run, where an independent evaluator agreed with `main.py` on
+SSIM to six decimal places and differed on PSNR by exactly that.
+
+Applying it: **the pooled equivalent is ~33.25 dB, i.e. ~0.27 dB BELOW the
+published 33.52**, not level with it. The correction is a genuine one — STG and
+3DGS both pool — and it is the difference between "at parity" and "just under".
+
+### Everything else that is still not matched
+
+* **Training budget.** ADAGS ran its own 6000 iterations; STG's published number
+  is read at **iteration 25,000** of a 30,000-iteration schedule. Each side ran
+  at its own published budget, deliberately, and the resource ledger is part of
+  the comparison.
+* **`batch_size: 2`, not ADAGS's usual 4** — forced by the OOM in Appendix A. At
+  fixed iterations that is **half the gradient samples**. It happens to match
+  STG's batch 2, but it is a change to the ADAGS side and this number carries it.
+* **Initialization.** ADAGS: one frame-0 COLMAP plus dense MVS, 366,366 points,
+  no time channel. STG: 50 per-frame `point_triangulator` clouds concatenated
+  with a normalized time channel, unfiltered for `ours_full`. Confound of
+  unknown sign.
+* **One seed, no measured spread** on this configuration.
+* **This is a comparison to a PUBLISHED number, not a local reproduction.** B0
+  was not run and remains a second-image decision (§3).
+
+### What it does establish
+
+**ADAGS's temporal substrate is in the same league as the published STG figure
+on this scene under a matched raster and segment — plausibly a little under it
+once the pooling defect is corrected.** That is a materially different and far
+better-supported statement than [[sota-sweep-2026-08]]'s "34.37 dB, inside the
+competitive band", which was measured at a quarter of the pixel count and is
+retracted by §1.
+
+**The substrate is not the blocker.** Combined with this block's lane-A result —
+episodic presence 5.23 dB *behind* that substrate on an admitted event
+([[lrv1-oracle-headroom-spec-2026-08-19]] RESULT PART 5) — the reading is that
+ADAGS's temporal baseline is credible and the episodic representation is not
+yet earning its cost against it.
