@@ -164,3 +164,44 @@ a **screening** measurement:
   a 30.5021 dB three-scene route0 mean — sit on different pages under different
   protocols and were **not** reconciled. Neither should be cited in a
   comparison until they are.
+
+---
+
+## APPENDIX (2026-08-19, append-only) — B1's first attempt OOMed, and the memory estimate that predicted it was right
+
+**Experiment 169** (`b1_stg_matched_crb` r1, `dgx`, V100-SXM2-32GB, `batch_size: 4`)
+ran 2h55m and died at **iteration 3510 of 6000**:
+
+```
+torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.71 GiB
+(GPU 0; 31.74 GiB total capacity; 10.12 GiB already allocated;
+ 2.37 GiB free; 28.98 GiB reserved in total by PyTorch)
+```
+
+at `points=599499`, i.e. against the 600,000 cap. Train PSNR was 35.29 at the
+time of the crash. **No held-out number exists**: `--test_iterations 6000` means
+the first and only evaluation would have run at 6000, so no `chkpnt_best.pth`
+was ever written. A `point_cloud/iteration_3000` snapshot exists and is a
+partial artifact only.
+
+**The cause is not subtle and it was predicted.** This cell quadruples the pixel
+count relative to the lane it derives from (676x507 -> 1352x1014), and
+image-space rasterizer buffers scale with the raster. §4's protocol table
+carried the estimate "12.8 GB measured at 676x507 / batch 4; image-space buffers
+scale ~4x -> 25-35 GB, which makes V100 32 GB marginal — recommend
+`batch_size: 2`". **The primary kept batch 4 to preserve ADAGS's own published
+budget, and that decision cost ~2.9 GPU-hours.** Recorded rather than smoothed
+over: the estimate was available before submission and was not acted on.
+
+**Retry 2 (experiment 181) runs at `batch_size: 2`.** That halves the peak and,
+usefully, moves the ADAGS side *toward* the published protocol rather than away
+from it — STG trains N3V at batch 2. **But it is a real change to ADAGS's own
+budget and must be reported as one:** at a fixed 6000 iterations, batch 2 sees
+half the gradient samples batch 4 did. Any B1 number carries that caveat, on top
+of the standing one that this is a screening measurement against a published
+figure and not a reproduction of STG.
+
+**`hopper` (H100 80GB) would have avoided the change entirely** and has been
+saturated by three unrelated Commands since 16:13Z on 2026-08-18. Recorded
+because it makes the effective compute budget for this project three concurrent
+`dgx` cells, not the nominal pool sizes.
