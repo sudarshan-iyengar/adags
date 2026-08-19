@@ -1,0 +1,20 @@
+{
+ "schema_version": "elgs-oracle-episodes-v1",
+ "units": "model_time_seconds",
+ "region": {
+  "kind": "sphere",
+  "centre": [
+   0.7,
+   0.1,
+   0.35
+  ],
+  "radius": 0.2
+ },
+ "gaps": [
+  [
+   5.166666666666666,
+   9.166666666666666
+  ]
+ ],
+ "note": "LRV3 ground truth: absent over frames 30-56, returning for 57-59 only. Boundaries INSET by w = 0.3333 s so the presence plateau is exactly 1.0 on all 33 ground-truth-present frames and the ramps fall inside the gap."
+}

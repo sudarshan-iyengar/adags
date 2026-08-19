@@ -47,9 +47,17 @@ WIDTH, HEIGHT = 400, 300
 FOCAL = 420.0
 
 # Event object presence, in FRAME indices (inclusive).
+# The RETURN length is the event's difficulty knob: it sets how many
+# observations the model gets of the returned surface. LRV1/LRV2 used 6 frames
+# and the temporal control reconstructed the return to within 0.96 dB of its
+# continuously-present performance -- below the gate's 1.0 dB minimum, i.e. too
+# easy to discriminate. Admissibility bound: episode 2's duration is
+# 10.5 - first_return_frame/6 and must STRICTLY exceed floor_len = 0.8333 s,
+# so the first return frame may not exceed 57.
 EPISODE_1_FRAMES = (0, 29)
-GAP_FRAMES = (30, 53)
-EPISODE_2_FRAMES = (54, 59)
+DEFAULT_FIRST_RETURN_FRAME = 54
+GAP_FRAMES = (30, DEFAULT_FIRST_RETURN_FRAME - 1)
+EPISODE_2_FRAMES = (DEFAULT_FIRST_RETURN_FRAME, 59)
 
 LIGHT_DIR = np.array([0.5, 1.0, 0.4])
 AMBIENT = 0.25
@@ -265,6 +273,10 @@ def main():
     ap.add_argument("--num-init-pts", type=int, default=50_000)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--scene-id", default="LRV1")
+    ap.add_argument("--first-return-frame", type=int,
+                    default=DEFAULT_FIRST_RETURN_FRAME,
+                    help="first frame of the return episode; smaller return = "
+                         "harder event. Capped at 57 by floor_len.")
     ap.add_argument("--ground-half-extent", type=float,
                     default=DEFAULT_GROUND_HALF_EXTENT,
                     help="ground plane half extent; MUST NOT exceed the "
@@ -272,8 +284,14 @@ def main():
                          "is left with no primitive to grow from")
     args = ap.parse_args()
 
-    global GROUND_HALF_EXTENT
+    global GROUND_HALF_EXTENT, GAP_FRAMES, EPISODE_2_FRAMES
     GROUND_HALF_EXTENT = float(args.ground_half_extent)
+    f0 = int(args.first_return_frame)
+    if not EPISODE_1_FRAMES[1] + 2 <= f0 <= 57:
+        raise SystemExit("first return frame %d is inadmissible: episode 2 must "
+                         "clear floor_len, which caps it at 57" % f0)
+    GAP_FRAMES = (EPISODE_1_FRAMES[1] + 1, f0 - 1)
+    EPISODE_2_FRAMES = (f0, N_FRAMES - 1)
 
     out = Path(args.out)
     (out / "train").mkdir(parents=True, exist_ok=True)
