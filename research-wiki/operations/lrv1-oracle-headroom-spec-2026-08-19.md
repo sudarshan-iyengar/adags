@@ -702,3 +702,111 @@ unchanged and are NOT re-derived for LRV2.** The gate floor stays at 25.0 dB
 and the deficit minimum at 1.0 dB. Applying the same fixed rules to a repaired
 fixture is the point; loosening them because the first scene failed them would
 not be.
+
+---
+
+## RESULT PART 3 (2026-08-19, append-only) — LRV2: the fixture repair worked, and the event turned out too easy
+
+Nothing above is rewritten. Thresholds unchanged from the values fixed before
+any cell output existed.
+
+### 13.1 The repair worked, and the numbers say so unambiguously
+
+A0 on LRV2 (experiment 174, 6000 iterations, 149,825 primitives, scored by
+experiment 176), against A0 on LRV1:
+
+| region | LRV1 | **LRV2** | change |
+|---|---:|---:|---:|
+| `whole_frame` | 19.3105 | **28.0303** | **+8.72** |
+| whole-frame SSIM | 0.69694 | **0.91846** | **+0.222** |
+| `ordinary_all` | 19.2501 | **27.9998** | +8.75 |
+| `event_episode1` | 23.2890 | **29.6922** | +6.40 |
+| `event_return` | 21.9952 | **28.7314** | +6.74 |
+| `ghost_gap` | 14.1091 | **28.7899** | +14.68 |
+| training-view PSNR | 34.23 | **40.98** | +6.75 |
+
+**One constant changed** — the ground plane half extent, 3.0 to 1.3 — and the
+train/held-out gap collapsed from 15 dB to ~13 dB in absolute terms while
+held-out quality rose by nearly 9 dB. The diagnosis in §12.4 is confirmed by
+the repair.
+
+**Whole-frame numbers are NOT comparable across the two scenes** (background
+rises from 32.9% to 46.8% of pixels, and background is trivially correct), but
+the masked regions are: `event_episode1` and `event_return` are computed over
+the *same* object pixels in both, and both rose by 6-7 dB. The single most
+telling row is `ghost_gap`, up 14.68 dB.
+
+### 13.2 THE GATE: FAILED again, and this time on the other item
+
+| item | rule (unchanged) | LRV1 | **LRV2** | verdict |
+|---|---|---:|---:|---|
+| 6 — reconstructible in principle | `event_episode1 >= 25.0 dB` | 23.2890 FAIL | **29.6922** | **PASS** |
+| 3 — control errs at the return | `deficit >= 1.0 dB` | 1.2939 PASS | **0.9608** | **FAIL** |
+
+**GATE FAILED, by 0.0392 dB on item 3.** The threshold is not moved. Missing a
+pre-registered floor by a hair is precisely the situation that floor exists
+for, and loosening it after seeing the number would retroactively void every
+other freeze on this page.
+
+### 13.3 What the failure MEANS, and it is the most useful thing this block has produced
+
+This is not the same kind of failure as LRV1's. LRV1 failed because the fixture
+was broken. **LRV2 fails because the ADAGS temporal substrate solves this
+event.**
+
+* the control reconstructs the returned surface at **28.73 dB**, only **0.96 dB**
+  below its performance on the same surface during a 30-frame continuous
+  presence;
+* it is **not** cheating by keeping the object alive through the absence:
+  `ghost_gap` is **28.79 dB**, essentially the same as its ordinary-region
+  quality, so it genuinely removes the object and genuinely brings it back;
+* per-frame, the first returned frame is the weakest, which is the shape the
+  hypothesis predicts — but the whole effect is under a decibel.
+
+**So on this event there is at most ~1 dB of headroom for ANY representation to
+capture, episodic or otherwise.** That bound is independent of EL-GS and is the
+reason the gate refuses the scene: a testbed where the control barely errs
+cannot discriminate between representations, whatever the representation does.
+
+This is a real negative about the *event*, and it is worth more than an
+uninterpretable positive would have been. A 4D-Gaussian temporal substrate,
+given 16 training cameras, a 150k primitive budget and 6000 iterations, handles
+a 24-frame disappearance and a 6-frame same-pose return with about a decibel of
+residual error.
+
+### 13.4 A1 on LRV2 (experiment 175) — what it can and cannot say
+
+It was already 40 minutes into a 2.4 hour run when the gate was applied, and it
+was **allowed to finish** rather than cancelled, because unlike LRV1's A1 it can
+still produce something honest: **a bound**. With the control erring by only
+0.96 dB at the return, the most a correct-oracle episodic representation could
+recover here is that decibel, which sits at the edge of the 0.5 dB resolution
+floor with no measured same-arm spread. So A1's number is reported as a bound
+on the available gain, explicitly **not** as a representation verdict.
+
+### 13.5 LRV3 — the event gets harder along its one honest axis
+
+The only pre-registered requirement LRV2 fails is that the control must err.
+Making the event harder to satisfy an admission criterion that was fixed in
+advance is not tuning the test until the hypothesis wins — it is what the
+criterion is for.
+
+**The RETURN shortens from 6 frames to 3** (57-59), so the model sees the
+returned surface in 48 training views instead of 96, and the absence lengthens
+to 27 frames. Nothing else changes.
+
+The admissibility bound is tight and is now **enforced in the generator**:
+episode 2's duration is `10.5 - first_return_frame/6` and must strictly exceed
+`floor_len = 0.8333 s`, so the first return frame cannot exceed **57**. A
+2-frame return sits exactly ON the floor and is refused rather than silently
+accepted.
+
+Held-out event supply halves to **56,934** return pixel-times — still ample.
+The wrong-time control remains exactly dose-matched: durations `{5.5, 1.0}`
+both, gap `4.0` both, sum = `Omega` = 10.5, presence 1.0 across the true return
+frames. **Every gate and outcome rule carries over unchanged.**
+
+**If LRV3's control also errs by less than 1.0 dB, that is the finding**: the
+temporal substrate handles this whole event class at this budget, and the
+useful next move is a different event class or a tighter capacity budget — not
+a third adjustment of the same knob.
