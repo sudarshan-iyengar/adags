@@ -552,3 +552,91 @@ Status: open
 Priority: high
 Literature pressure: [[papers/guo2026_usplat4d]], [[papers/shih2025_prior_enhanced_gs]], [[papers/zhao2026_ground4d]], [[papers/sun2025_splatflow]]
 Related ideas: [[ideas/counterfactual-prior-usefulness-routing]], [[ideas/self-calibrated-prior-reliability-field]]
+
+## Oracle-Headroom Update — 2026-08-19
+
+**G13's representation limb got its instrument this block, and two of the three
+things that went wrong were matching failures of a kind worth naming.**
+
+The K=1 four-cell experiment is CLOSED and was correctly closed: `softmax` over
+a one-element vector is identically `[1.0]` with gradient exactly `0.0`, so that
+cell measured the cost of deleting the temporal marginal rather than the cost of
+a presence representation. `K` turned out to be a hardcoded literal at the
+seeding call with **no configuration surface at all**, and the only runtime path
+to `K >= 2` was a heuristic FISSION. `elgs_oracle_episodes`
+([[lrv1-oracle-headroom-spec-2026-08-19]]) supplies a fixed program instead,
+leaving the preregistered seeding granularity and the frozen prereg untouched.
+
+**Established: a non-degenerate `K=2` EL-GS cell trains stably.** The
+admitted-image preflight crossed iteration 600 — where densification first
+fires and where the `elgs_a` optimizer-group defect used to crash both the
+clone and the prune path — and the cloud went 50,000 -> 43,977 -> 74,590, so
+both paths ran repeatedly against a non-per-point parameter group without
+raising. That was the single largest implementation risk and it is now retired.
+
+**NOT established: any headroom.** No interpretable A1-vs-A0 number exists yet.
+
+### The three lessons, in decreasing order of how far they generalize
+
+**1. A dose-matched control is not automatically a RAMP-matched one.** The
+wrong-time control was matched on episode count, `dim(a)`, every episode
+duration, the gap duration and the total present duration — and a test asserted
+each of those. None of them constrains where the *smoothstep edge band* falls.
+Placing episode 2's onset at the midpoint between the last absent and the first
+present frame — the obvious choice — put presence at `0.15625` on the first
+evaluated frame and `0.84375` on the second, while the control sat at `1.0` on
+all six. **The decisive metric was biased against the hypothesis by 7-21 dB by
+construction.** Caught by a fresh-context review, primary-verified, repaired
+before any output was read.
+
+The generalization: **matching is only as good as the enumeration of what was
+matched.** When a comparison is declared "matched on X, Y, Z", the question to
+ask is not whether X, Y and Z are equal but what *else* differs — and
+especially whether anything the metric window touches differs. Here the metric
+window was six frames long and the unmatched quantity lived inside it.
+
+**2. If the initialization does not cover the visible surface, held-out numbers
+measure floaters rather than the method.** The first synthetic fixture put a
+ground plane out to 3.0 against an initialization cloud spanning `[-1.3, 1.3]`,
+leaving **13.94% of every image** on surface with no primitive anywhere near
+it. Densification clones and splits *existing* primitives; it cannot create
+them from nothing. The optimizer filled that band with floaters that satisfy
+the 16 training views and fail from the 4 held-out ones, and the control came
+out at **34.23 dB on training views against 19.31 dB held out**.
+
+The generalization: **a large train/held-out gap on a scene that should be easy
+is an initialization-coverage symptom before it is anything else**, and it is
+cheap to test directly — ray-cast the scene and measure the fraction of visible
+surface outside the init bounding volume. On any authored testbed this should
+be checked before the first training cell, not after.
+
+**3. The event-admission gate did its job, and that is the point of having
+one.** LRV1 failed it on the reconstructibility floor (`event_episode1`
+23.289 dB against 25.0), so no representation verdict follows from any A1
+number on that scene — and the A1 cell was cancelled 45 minutes into a 2.4 hour
+run rather than spend the compute on an uninterpretable number. Both thresholds
+were fixed before any output existed, in response to a review finding that the
+two gate items had been written as the *same predicate*. Neither was moved
+afterwards.
+
+### A protocol correction that outlives this block
+
+[[stg-n3v-protocol-parity-2026-08-19]] records, primary-verified in source,
+that this repository's recorded `cut_roasted_beef` figure of 34.366 dB was
+measured at **676x507** — `n3v2blender.py` halves the native frames on disk and
+`ModelParams.resolution: 2` then halves them again — against the 1352x1014 at
+which Spacetime Gaussians publishes 33.52. The "inside the competitive band"
+reading in [[sota-sweep-2026-08]] is **not supported**. Separately,
+`utils/image_utils.py` is called with an unbatched `(3, H, W)` at both ADAGS
+eval sites, so the reported PSNR is the mean of three per-channel PSNRs rather
+than the pooled PSNR; the bias is `10*log10(AM/GM)`, always non-negative, and
+measured at 0.268 dB on a real run.
+
+### What is still PAUSED, and what would restart it
+
+DiVa claim-grade instrumentation remains paused. Nothing this block produced
+evidence of representational headroom, and the argument for pausing was that
+evidence-acquisition investment should follow a demonstration that the
+representation can use the evidence. **That argument is unchanged.** What would
+restart it is a valid, gate-passing A1-vs-A2 result showing episode-timing-
+specific headroom — which is exactly what the LRV2 matrix is for.
