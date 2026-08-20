@@ -62,8 +62,18 @@ class GaussianExtractor(object):
         self.viewpoint_stack = viewpoint_stack
         metrics = defaultdict(list)
         
+        # LPIPS construction downloads AlexNet weights through torch.hub,
+        # which defaults to XDG_CACHE_HOME/torch. On a shared Apollo agent
+        # that path can be owned by another container's user (experiment
+        # 187 died there with EACCES), so point the hub at the writable
+        # output directory unless the caller set TORCH_HOME explicitly.
+        if not os.environ.get("TORCH_HOME"):
+            hub_dir = os.path.join(model_path, ".torchhub")
+            os.makedirs(hub_dir, exist_ok=True)
+            os.environ["TORCH_HOME"] = hub_dir
+            torch.hub.set_dir(hub_dir)
         lpips = LearnedPerceptualImagePatchSimilarity(
-                    net_type="alex", normalize=True, 
+                    net_type="alex", normalize=True,
                     ).to("cuda")
         
         fps_list = []
