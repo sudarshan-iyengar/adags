@@ -28,13 +28,73 @@ UNANIMOUS across 144 sensitivity readings**, independently recomputed.
   before it returns. G-OA's valid FAIL is NOT reopened.
 - Screening scope and cost: [[operations/elgs-exhaustive-screen-scope]].
 
-Compressed project memory for ideation. Updated 2026-08-08 (night)
-after Loop 2 of the representation-first program produced
-[[operations/elgs-method]] (EL-GS, calibrated novelty 8.0/10
-conditional, formal gate pending — the current lead candidate). LGS
-([[operations/lgs-method]], 6.5) is the evidence-off substrate and
-internal baseline; STAR-GS remains a PRESERVED training-side secondary.
-The 2026-07-29 section remains the last user-approved direction record.
+Compressed project memory for ideation. Updated 2026-08-20 after the
+Loop-3 block produced [[operations/ccr-method-2026-08-20]] (CCR, the
+current lead method candidate) and the first POSITIVE episodic-presence
+result. The 2026-07-29 section remains the last user-approved direction
+record.
+
+## 2026-08-20 LOOP 3 — localized presence WINS on the fixture; CCR frozen; substrate at STG parity
+
+- **Lane B positive (first ever for episodic presence).** The corrected
+  LOCALIZED cell — per-primitive oracle membership (~84 rows, 8
+  families), ordinary temporal marginal retained for every non-gated
+  row, TOTAL opacity gate (static twin included), routing pins off —
+  beat the matched temporal control on LRV3 `event_return` by
+  **+1.0496 dB** (frozen floor 0.5) at matched capacity (1,126 FEWER
+  primitives), `event_episode1` +1.24, `ordinary_all` −0.39, first
+  return frame +2.0 dB. **The total gate rendered EXACT absence
+  (infinite PSNR, zero error) on 21 of 27 gap frames**; the pooled
+  ghost deficit is entirely the two designed ramp frames. The
+  2026-08-19 −5.23 dB negative is now FULLY attributed to wiring
+  (global swap + static-twin leak + voxel oracle + pinned routing):
+  same event, same budget, localized wiring is **+6.15 dB** over the
+  old A1. [[operations/lrv3-local-presence-corrected-cell-2026-08-20]].
+  Small-mistiming control ran as experiment 191 (see the page for the
+  outcome). Ordinary-region −0.39 dB cost real, unattributed.
+- **Two instrument repairs that touch every historical number.**
+  (1) `route_logit_init` in YAML NEVER controlled a fresh run —
+  create_from_pcd materialized route logits from the constructor
+  default 4.0 before training_setup read the YAML; every historical
+  cell trained from p_dyn ≈ 0.982. Repaired; corrected cells declare
+  4.0 explicitly. (2) Both eval call sites channel-split PSNR
+  (+0.268 dB bias); now pooled, with tests. The `--val` path clamps,
+  the training-time path does not — never mix them in one table
+  ([[operations/n3v-baseline-registry-2026-08-20]] for every trap,
+  including that the survey CSV's `csvl_vpl_v2_exploratory` 34.48 row
+  is the WRONG-TIME CONTROL L5, never a baseline).
+- **Substrate position, canonical:** pooled+clamped **33.5050 dB /
+  SSIM 0.9593 / LPIPS-alex(norm) 0.0814** on `cut_roasted_beef` frames
+  0-49 at 1352x1014, cam00 held out, 6000 iterations — vs STG's
+  published 33.52 read at 25,000 iterations. Parity to 0.015 dB at a
+  quarter of the schedule ([[operations/stg-n3v-protocol-parity-2026-08-19]]
+  Appendix C). The substrate is NOT the blocker.
+- **Lane C selected method: CCR** — observation-born packet birth
+  (budget-neutral spacetime relocation, packet ids) + a POST-TRAINING
+  certified consolidation pass: directional donor appearance reuse
+  (DC primary arm) admitted per-edge by paired counterfactual trial
+  renders on reserved units, sequential in a prespecified order, one
+  all-or-nothing joint veto, B2 byte-identical to B1 outside the
+  pointer column. Frozen after 2 generators + cross-model triage +
+  16-query kill-search + 3 full-text threat reads + a 3-round hostile
+  fresh-context review ([[operations/ccr-method-2026-08-20]],
+  [[operations/ccr-novelty-record-2026-08-20]]). Novelty is NARROWED,
+  alive: CubifyGS occupies object-level asset reuse after absence;
+  the unoccupied cell is per-primitive, appearance-only,
+  trial-render-certified tying with exact restoration. Claims split:
+  identity only on the synthetic fixture, utility only on the frozen
+  N3V segment (frames 0-49,
+  [[operations/ccr-segment-selection-2026-08-20]]). Rejected on the
+  record: annealed soft tying (the 5.23 dB pathology class), ballistic
+  matching as headline, channel-selective sharing as standalone.
+- **Ladder state at block end: see the 2026-08-20 handover** for
+  experiment IDs (B0/B1 seeds on the STG-matched protocol with
+  reserved parity, preflight, consolidation pass tooling all landed:
+  `scene/packet_birth.py`, `scene/appearance_edit.py`,
+  `scripts/consolidate_packets.py`, `main.py --val --appearance_edit`).
+- **Unchanged:** DiVa claim-grade instrumentation PAUSED (the Lane B
+  positive is fixture-level; real-data event supply is exactly as
+  unresolved as before). EL-GS structural rounds, evidence heads: off.
 
 ## 2026-08-08 (night) EL-GS — Loop-2 lead candidate (gate pending)
 
