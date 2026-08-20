@@ -65,6 +65,8 @@ class ElgsTrainerState:
     rounds_run: list = field(default_factory=list)
     rounds_enabled: bool = True
     oracle_episodes: str = ""           # path to an oracle-episode JSON, or ""
+    local_presence: bool = False        # localized presence (per-primitive gate)
+    routing_pins_enabled: bool = True   # zero route-logit grads of K>1 rows
     a_lr: float = 0.0
     k_se: float = 1.0
     candidate_cap: int = 8
@@ -247,6 +249,8 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
         rounds_run=rounds_run,
         rounds_enabled=bool(getattr(opt, "elgs_rounds_enabled", True)),
         oracle_episodes=str(getattr(opt, "elgs_oracle_episodes", "") or ""),
+        local_presence=bool(getattr(opt, "elgs_local_presence", False)),
+        routing_pins_enabled=bool(getattr(opt, "elgs_routing_pins_enabled", True)),
         a_lr=float(getattr(opt, "elgs_a_lr")),
         k_se=float(getattr(opt, "elgs_k_se")),
         candidate_cap=slots_per_pass,
@@ -283,6 +287,17 @@ def setup_elgs(gaussians, scene, dataset, opt) -> ElgsTrainerState | None:
     # The schedule's seed/audit anchors gate the EVIDENCE machinery
     # (track seeds, cluster binding), which needs the M1 artifacts
     # and stays inactive without an elgs_tracks_dir.
+    if state.local_presence and not state.oracle_episodes:
+        raise ContractError(
+            "elgs_local_presence requires elgs_oracle_episodes: localized "
+            "presence gates only the oracle families and there is nothing "
+            "to gate without a program"
+        )
+    # The renderer reads this attribute (it only sees the model, never
+    # the trainer state); set on BOTH the fresh and restore paths so an
+    # evaluator restoring the checkpoint reproduces the trained
+    # semantics.
+    gaussians._elgs_local_presence = state.local_presence
     gaussians.elgs_runtime = runtime
     gaussians._elgs_checkpoint_extras = {
         "binding": bundle.binding,
@@ -695,22 +710,50 @@ def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
         centre = torch.tensor(region["centre"], device=xyz.device, dtype=xyz.dtype)
         in_region = (xyz - centre).norm(dim=1) <= float(region["radius"])
 
+    if state.local_presence and oracle_interval is None:
+        raise ContractError(
+            "local presence seeding requires an oracle-episode program"
+        )
     family_ids = torch.empty_like(inverse_map)
     oracle_cells = 0
-    for cell_index in range(unique_keys.numel()):
-        member_mask = inverse_map == cell_index
-        centroid = xyz[member_mask].mean(dim=0)
-        is_oracle = oracle_interval is not None and bool(in_region[member_mask].any())
-        oracle_cells += int(is_oracle)
-        record = state.runtime.registry.create_family(
-            birth_time=0.0,
-            birth_site=tuple(float(v) for v in centroid.tolist()),
-            lineage_key=f"seed-cell-{int(unique_keys[cell_index])}",
-            interval=oracle_interval if is_oracle else spanning,
-            tau=oracle_tau if is_oracle else (0.0,),
-        )
-        state.runtime.registry.on_rows_added(record.family_id, int(member_mask.sum()))
-        family_ids[member_mask] = record.family_id
+    if state.local_presence:
+        # LOCALIZED presence: membership is PER-PRIMITIVE. Only rows
+        # inside the oracle region join a family (one family per
+        # nonempty oracle cell, so granularity never exceeds the
+        # preregistered cap); every other row stays unassigned (-1) and
+        # keeps the ordinary temporal marginal in the renderer. The
+        # substrate is untouched outside the gated rows.
+        family_ids.fill_(-1)
+        for cell_index in range(unique_keys.numel()):
+            member_mask = (inverse_map == cell_index) & in_region
+            if not bool(member_mask.any()):
+                continue
+            centroid = xyz[member_mask].mean(dim=0)
+            oracle_cells += 1
+            record = state.runtime.registry.create_family(
+                birth_time=0.0,
+                birth_site=tuple(float(v) for v in centroid.tolist()),
+                lineage_key=f"seed-cell-{int(unique_keys[cell_index])}",
+                interval=oracle_interval,
+                tau=oracle_tau,
+            )
+            state.runtime.registry.on_rows_added(record.family_id, int(member_mask.sum()))
+            family_ids[member_mask] = record.family_id
+    else:
+        for cell_index in range(unique_keys.numel()):
+            member_mask = inverse_map == cell_index
+            centroid = xyz[member_mask].mean(dim=0)
+            is_oracle = oracle_interval is not None and bool(in_region[member_mask].any())
+            oracle_cells += int(is_oracle)
+            record = state.runtime.registry.create_family(
+                birth_time=0.0,
+                birth_site=tuple(float(v) for v in centroid.tolist()),
+                lineage_key=f"seed-cell-{int(unique_keys[cell_index])}",
+                interval=oracle_interval if is_oracle else spanning,
+                tau=oracle_tau if is_oracle else (0.0,),
+            )
+            state.runtime.registry.on_rows_added(record.family_id, int(member_mask.sum()))
+            family_ids[member_mask] = record.family_id
     gaussians._elgs_family_ids = family_ids.cpu()
     state.runtime._sync_all_from_registry()
     _refresh_logit_param_group(state, gaussians)
@@ -724,6 +767,11 @@ def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
         "oracle_families": oracle_cells,
         "oracle_K": None if oracle_interval is None else oracle_interval.K,
         "oracle_rows": 0 if in_region is None else int(in_region.sum()),
+        "local_presence": state.local_presence,
+        "routing_pins_enabled": state.routing_pins_enabled,
+        "unassigned_rows": int((family_ids < 0).sum()),
+        "gated_rows": int((family_ids >= 0).sum()) if state.local_presence
+        else None,
     }}, sort_keys=True))
 
 
@@ -1251,7 +1299,14 @@ def _refresh_routing_pins(state, gaussians) -> None:
     """Routing pinning (substrate): rows of families with K > 1 get a
     frozen route logit. Only the pinned FAMILY SET is cached — the
     row mask is rebuilt on every application from the live family-id
-    column, so densification can never silently unpin rows."""
+    column, so densification can never silently unpin rows.
+
+    `routing_pins_enabled: false` (the corrected localized cell) leaves
+    the set empty so the gated rows' static/dynamic mixture can learn
+    like every other row's."""
+    if not state.routing_pins_enabled:
+        gaussians._elgs_pinned_families = set()
+        return
     gaussians._elgs_pinned_families = {
         fid for fid in state.runtime.registry.active_ids()
         if state.runtime.registry.get(fid).routing_pinned

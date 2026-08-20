@@ -209,6 +209,11 @@ def main():
             "oracle_episodes": str(getattr(opt, "elgs_oracle_episodes", "")),
             "rounds_enabled": state.rounds_enabled,
             "a_lr": state.a_lr,
+            "local_presence": state.local_presence,
+            "routing_pins_enabled": state.routing_pins_enabled,
+            "gated_rows": int(
+                gaussians.get_elgs_gated_row_mask().sum()
+            ) if state.local_presence else None,
         })
 
     background = torch.tensor([1, 1, 1] if dataset.white_background else [0, 0, 0],

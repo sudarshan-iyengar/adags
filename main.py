@@ -1099,10 +1099,26 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     first_iter = 0
     tb_writer = prepare_output_and_logger(dataset)
     gaussians = GaussianModel(dataset.sh_degree, gaussian_dim=gaussian_dim, time_duration=time_duration, rot_4d=rot_4d, force_sh_3d=force_sh_3d, sh_degree_t=2 if pipe.eval_shfs_4d else 0)
+    # The configured route-logit init must be set BEFORE Scene() triggers
+    # create_from_pcd: that call materializes _route_logit from
+    # self.route_logit_init, and training_setup()'s later
+    # _ensure_route_and_motion_tensors preserves any correctly sized
+    # tensor. Until 2026-08-20 every fresh run therefore materialized the
+    # constructor default 4.0 regardless of the YAML value.
+    gaussians.route_logit_init = getattr(opt, "route_logit_init", 4.0)
     scene = Scene(dataset, gaussians, num_pts=num_pts, num_pts_ratio=num_pts_ratio, time_duration=time_duration)
     scene.opt = opt
     scene.motion_prior_cache = MotionPriorCache(dataset.source_path, opt, device="cuda")
     gaussians.training_setup(opt)
+    if gaussians._route_logit.numel() > 0:
+        with torch.no_grad():
+            _route_probs = torch.sigmoid(gaussians._route_logit)
+        print(json.dumps({"route_logit_init_materialized": {
+            "configured": float(gaussians.route_logit_init),
+            "logit_min": float(gaussians._route_logit.min()),
+            "logit_max": float(gaussians._route_logit.max()),
+            "dynamic_probability_mean": float(_route_probs.mean()),
+        }}, sort_keys=True))
 
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)

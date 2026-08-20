@@ -288,6 +288,22 @@ class OptimizationParams(ParamGroup):
         # `store_true` (so a bool could never be turned off from the CLI) and
         # neither int nor float can carry the boundaries.
         self.elgs_oracle_episodes = ""
+        # EXPLORATORY localized presence: when true (YAML-only, like the
+        # other EL-GS bools), EL-GS presence applies ONLY to rows whose
+        # family carries a K >= 2 episodic program, membership is
+        # PER-PRIMITIVE (only rows inside the oracle region join the
+        # family; every other row stays unassigned at -1), presence
+        # multiplies the TOTAL routed contribution (dynamic AND static
+        # branches), and every non-gated row keeps the ordinary learnable
+        # temporal marginal. Requires elgs_oracle_episodes. False leaves
+        # the global-replacement semantics of the LRV3 A1/A2 cells
+        # byte-identical.
+        self.elgs_local_presence = False
+        # Routing pins zero the route-logit gradient of K > 1 families'
+        # rows (substrate). The corrected localized cell disables them so
+        # the gated rows' static/dynamic mixture can learn like every
+        # other row's. True preserves the historical behaviour.
+        self.elgs_routing_pins_enabled = True
 
         super().__init__(parser, "Optimization Parameters")
 

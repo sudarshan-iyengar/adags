@@ -222,6 +222,28 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     # gaps; spec §1 + substrate). The marginal_t path stays untouched
     # for every non-EL-GS configuration.
     elgs_active = getattr(pc, "elgs_runtime", None) is not None
+    elgs_local = elgs_active and bool(getattr(pc, "_elgs_local_presence", False))
+    # Localized presence (elgs_local): gated rows (K >= 2 episodic
+    # program) take the episodic presence on BOTH routed branches — a
+    # total gate — while every other row keeps the substrate exactly:
+    # marginal on the dynamic branch, unmodulated static twin.
+    elgs_static_multiplier = None
+
+    def _temporal_multiplier():
+        nonlocal elgs_static_multiplier
+        if not elgs_active:
+            return pc.get_marginal_t(viewpoint_camera.timestamp)
+        presence = pc.get_elgs_presence(viewpoint_camera.timestamp)
+        if not elgs_local:
+            return presence
+        from elgs.presence import local_presence_multipliers
+
+        gated = pc.get_elgs_gated_row_mask()
+        dynamic_mult, elgs_static_multiplier = local_presence_multipliers(
+            presence, pc.get_marginal_t(viewpoint_camera.timestamp), gated
+        )
+        return dynamic_mult
+
     if pipe.compute_cov3D_python:
         if pc.rot_4d:
             cov3D_precomp, delta_mean = pc.get_current_covariance_and_mean_offset(scaling_modifier, viewpoint_camera.timestamp)
@@ -229,12 +251,9 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         else:
             cov3D_precomp = pc.get_covariance(scaling_modifier)
         if pc.gaussian_dim == 4:
-            if elgs_active:
-                # Bind marginal_t to the presence tensor so downstream
-                # consumers (the cov3D prefilter mask) stay defined.
-                marginal_t = pc.get_elgs_presence(viewpoint_camera.timestamp)
-            else:
-                marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
+            # Bind marginal_t to the effective multiplier so downstream
+            # consumers (the cov3D prefilter mask) stay defined.
+            marginal_t = _temporal_multiplier()
             opacity = opacity * marginal_t
     else:
         scales = pc.get_scaling
@@ -245,10 +264,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             if pc.rot_4d:
                 rotations_r = pc.get_rotation_r
 
-            if elgs_active:
-                marginal_t = pc.get_elgs_presence(viewpoint_camera.timestamp)
-            else:
-                marginal_t = pc.get_marginal_t(viewpoint_camera.timestamp)
+            marginal_t = _temporal_multiplier()
             opacity = opacity * marginal_t
 
     opacity, runtime_hide_reveal_stats = _apply_runtime_hide_reveal_gate(
@@ -333,6 +349,11 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     if use_soft_routing:
         means3D_static = pc.get_xyz
         opacity_static = base_opacity * static_probability
+        if elgs_static_multiplier is not None:
+            # Localized presence is a TOTAL gate: the static twin of a
+            # gated row is multiplied by the same episodic presence, so
+            # presence 0 means zero contribution through either branch.
+            opacity_static = opacity_static * elgs_static_multiplier
         sh_static = pc.get_features
         scales_static = pc.get_scaling
         rotations_static = pc.get_rotation

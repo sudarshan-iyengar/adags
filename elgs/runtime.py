@@ -102,11 +102,13 @@ class ElgsRuntime:
         self.device = torch.device(device)
         self.dtype = dtype
         self._logits: dict[int, torch.Tensor] = {}
+        self._gated_family_tensor: torch.Tensor | None = None
         self._sync_all_from_registry()
 
     # -- a-logit storage --------------------------------------------------
 
     def _sync_all_from_registry(self) -> None:
+        self._gated_family_tensor = None
         for family_id in self.registry.active_ids():
             self.sync_family_from_registry(family_id)
 
@@ -114,6 +116,7 @@ class ElgsRuntime:
         """(Re)write a family's logit row from its registry interval —
         the structural-op commit path. The caller must reset this
         family's optimizer moments (directive; logged)."""
+        self._gated_family_tensor = None
         record = self.registry.get(family_id)
         if record.retired or record.interval.K == 0:
             self._logits.pop(family_id, None)
@@ -208,6 +211,30 @@ class ElgsRuntime:
         compact = torch.stack([per_family[int(f)] for f in unique_ids.tolist()])
         index = torch.searchsorted(unique_ids.to(family_ids.device), family_ids)
         return compact[index.to(compact.device)].reshape(-1, 1)
+
+    def gated_row_mask(self, family_ids: torch.Tensor) -> torch.Tensor:
+        """(N, 1) bool: rows whose family carries a K >= 2 episodic
+        program (the localized-presence gate). Unassigned rows (-1) and
+        rows of K == 1 spanning families are NOT gated — under localized
+        presence they keep the ordinary temporal marginal. The gated
+        family set is cached and invalidated by every registry sync, so
+        structural ops can never leave a stale mask."""
+        if family_ids.dim() != 1:
+            raise ContractError("family_ids must be a 1-D per-row column")
+        if self._gated_family_tensor is None:
+            gated_ids = sorted(
+                fid for fid in self.registry.active_ids()
+                if self.registry.get(fid).interval.K > 1
+            )
+            self._gated_family_tensor = torch.tensor(gated_ids, dtype=torch.long)
+        if self._gated_family_tensor.numel() == 0:
+            return torch.zeros(
+                (family_ids.shape[0], 1), dtype=torch.bool, device=family_ids.device
+            )
+        mask = torch.isin(
+            family_ids, self._gated_family_tensor.to(family_ids.device)
+        )
+        return mask.reshape(-1, 1)
 
     def flush_to_registry(self) -> None:
         """Write the LIVE logits back into the registry records

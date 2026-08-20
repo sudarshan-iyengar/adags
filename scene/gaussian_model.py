@@ -251,6 +251,20 @@ class GaussianModel:
             self._elgs_family_ids, float(timestamp), overrides=override
         ).to(self._opacity.device, self._opacity.dtype)
 
+    def get_elgs_gated_row_mask(self):
+        """(N, 1) bool: rows carrying a K >= 2 episodic program.
+
+        Only meaningful under localized presence
+        (_elgs_local_presence); the renderer uses it to route gated
+        rows through episodic presence and every other row through the
+        ordinary temporal marginal.
+        """
+        if self.elgs_runtime is None:
+            raise RuntimeError("EL-GS runtime is not attached")
+        return self.elgs_runtime.gated_row_mask(self._elgs_family_ids).to(
+            self._opacity.device
+        )
+
     def _optimizer_state_for_capture(self):
         """The optimizer state to checkpoint. Under EL-GS the elgs_a
         group is stripped: on restore the base-group optimizer exists

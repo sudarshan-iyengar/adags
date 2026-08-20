@@ -77,6 +77,32 @@ def in_edge_band(realization: IntervalRealization, t: float, w: float) -> bool:
     return nearest < w
 
 
+def local_presence_multipliers(
+    presence: torch.Tensor, marginal: torch.Tensor, gated: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Per-row temporal multipliers under LOCALIZED presence.
+
+    gated rows (their family carries a K >= 2 episodic program) get the
+    episodic presence on BOTH routed branches, so presence 0 is a total
+    gate: no contribution through the dynamic branch or the separately
+    rendered static twin. Every other row keeps the substrate exactly:
+    the ordinary temporal marginal on the dynamic branch and an
+    unmodulated static twin.
+
+    presence/marginal are (N, 1); gated is (N, 1) bool. Returns
+    (dynamic_multiplier, static_multiplier), both (N, 1).
+    """
+    if presence.shape != marginal.shape or presence.shape != gated.shape:
+        raise ContractError(
+            "local presence: presence, marginal and gated must share one "
+            f"(N, 1) shape; got {tuple(presence.shape)}, "
+            f"{tuple(marginal.shape)}, {tuple(gated.shape)}"
+        )
+    dynamic = torch.where(gated, presence, marginal)
+    static = torch.where(gated, presence, torch.ones_like(presence))
+    return dynamic, static
+
+
 def z_series(realization: IntervalRealization, frames: list[float], w: float) -> list[bool]:
     return [plateau_z(realization, t, w) for t in frames]
 
@@ -90,6 +116,7 @@ __all__ = [
     "episode_presence",
     "family_presence",
     "in_edge_band",
+    "local_presence_multipliers",
     "plateau_z",
     "smoothstep",
     "winner_index",
