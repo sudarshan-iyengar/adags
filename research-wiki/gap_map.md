@@ -690,3 +690,52 @@ the primitives that need it; make the oracle per-primitive rather than
 per-voxel-cell; and add the small-mistiming control that separates "timing
 precision matters" from "a hard gate matters". Only after those does a negative
 become a statement about the representation rather than about its wiring.
+
+## Localized-Presence Update — 2026-08-20
+
+**G13's representation limb has its first POSITIVE, and the 2026-08-19
+negative is now fully attributed to wiring.** The pre-identified follow-up
+above was run as a corrected cell
+([[operations/lrv3-local-presence-corrected-cell-2026-08-20]], experiments
+184/185, rules frozen before output): localized presence (non-oracle rows
+keep the temporal marginal), per-primitive oracle membership (~84 rows, 8
+families), a TOTAL opacity gate (the static twin — which the 2026-08-19
+code audit found bypassing presence entirely — is now gated too), and
+routing pins off.
+
+```
+event_return   A1-LOCAL − A0′ = +1.0496 dB   (floor 0.5, matched capacity,
+                                              A1-LOCAL 1,126 primitives FEWER)
+event_episode1                 = +1.24 dB
+ordinary_all                   = −0.39 dB    (within the 0.5 bound)
+first return frame             = +2.0 dB
+vs the 2026-08-19 global A1    = +6.15 dB at the return
+```
+
+**The per-frame ghost diagnostic showed the total gate rendering EXACT
+absence — infinite PSNR, zero error — on 21 of 27 gap frames**, something
+a temporal marginal cannot do (the control leaks tail energy at 38–48 dB
+everywhere). The pooled ghost_gap deficit is entirely the two DESIGNED
+smoothstep ramp frames at presence 0.5. Corrected en route (append-only):
+the old A1's ghost deficit was attributed to the voxel-cell oracle (M3);
+removing that mechanism barely moved ghost_gap (22.41 → 22.83), so the
+ramps were always the dominant cause.
+
+Also corrected this block, and it touches every route0 lane ever run:
+**`route_logit_init` in YAML never controlled a fresh run** — route logits
+materialized from the constructor default 4.0 before the YAML was read
+(repaired 2026-08-20; every historical cell trained from p_dyn ≈ 0.982).
+And **both ADAGS eval call sites channel-split PSNR** (repaired; pooled
+now, +tests). Under the published pooled+clamped convention the substrate
+reads **33.5050 dB vs STG's published 33.52** on cut_roasted_beef frames
+0-49 at 1352x1014 — parity at 6k vs 25k iterations
+([[operations/stg-n3v-protocol-parity-2026-08-19]] Appendix C).
+
+**Still open:** the small-mistiming control (experiment 191, running);
+the −0.39 dB ordinary-region cost is real and unattributed; everything
+about real-data event supply is exactly as open as before — the fixture
+is authored. The method lane that inherits this datum is CCR
+([[operations/ccr-method-2026-08-20]]): observation-born packets plus
+reconstruction-certified post-training appearance consolidation, frozen
+after a 3-round hostile external review, with the B0/B1 ladder cells
+running on the STG-matched protocol.

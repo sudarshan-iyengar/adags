@@ -94,3 +94,91 @@ allocation, SOTA placement, or transfer. A positive here licenses exactly
 one thing: the representation question moves from "wired to lose" to
 "worth a real-data test", and the observation-born-lineage lane (Lane C/D)
 gains a mechanism-level datum.
+
+---
+
+## RESULT (2026-08-20, append-only) — the corrected localized cell BEATS the temporal control, and absence renders EXACTLY zero
+
+Every rule applied below was frozen in §4 before any cell produced an
+output. Cells: A0′ = experiment 184 (`lrv3_a0_prime` r0), A1-LOCAL =
+experiment 185 (`lrv3_a1_local_perprim_totalgate` r0), both commit
+`b7952b0`, admitted image, dgx, 6000 iterations, COMPLETED in ~65 min
+each (the 8-family presence gather removed the old ~4x EL-GS slowdown).
+Scored by experiments 189/190 (r0) and re-scored with the per-frame
+ghost diagnostic by 192/193 (r1, commit `1400b24`; region values agree).
+
+### The numbers (pooled PSNR, 240 held-out views)
+
+| region | **A0′** | **A1-LOCAL** | delta |
+|---|---:|---:|---:|
+| **`event_return`** | **27.1432** | **28.1928** | **+1.0496** |
+| `event_episode1` | 29.6022 | 30.8449 | +1.2427 |
+| `ghost_gap` | 29.0248 | 22.8333 | −6.1915 |
+| `ordinary_return` | 28.2876 | 28.1735 | −0.1141 |
+| `ordinary_all` | 28.3515 | 27.9660 | −0.3856 |
+| `whole_frame` | 28.3703 | 28.0082 | −0.3621 |
+| whole-frame SSIM | 0.92008 | 0.91989 | −0.0002 |
+| primitives | 149,794 | **148,668** | −1,126 |
+
+Per return frame (57/58/59): A0′ 26.75 / 29.94 / 28.28; A1-LOCAL
+28.76 / 29.26 / 29.41 — **+2.0 dB on the hardest (first-return) frame**.
+Provenance verified in the eval payload: `families 8`, `K {2:8}`,
+`local_presence true`, `routing_pins_enabled false`, `gated_rows 6005`
+(grown from 84 by clone/split inheritance), `a_lr 0.0`.
+
+### The frozen rules, applied
+
+* **Success rule: FIRES.** +1.0496 dB ≥ the 0.5 dB floor, at matched
+  realized capacity (A1-LOCAL runs 1,126 primitives FEWER).
+* **Locality admission:** `ordinary_all` −0.39 (within 0.5) PASS;
+  `event_episode1` +1.24 (an improvement; the bound existed to catch
+  degradation) PASS.
+* **`ghost_gap` −6.19 → the diagnose branch fires**, and the per-frame
+  diagnostic (below) resolves it in favor of the representation.
+
+### The ghost diagnosis — EXACT absence, plus the two designed ramp frames
+
+`ghost_gap_psnr_by_frame` (experiments 192/193):
+
+* **A1-LOCAL renders frames 34–54 at literally infinite PSNR — exact
+  zero error in the vacated footprint.** The total gate produces true
+  absence; the temporal control can never do this (A0′ leaks Gaussian-
+  tail energy at 38–48 dB on every gap frame).
+* A1-LOCAL's entire pooled ghost deficit comes from frames **30 and 56 —
+  the two DESIGNED smoothstep ramp frames at presence 0.5** (13.92 and
+  13.47 dB), disclosed in the 2026-08-19 ANCHORS note before any cell of
+  either block ran, plus small residuals on 31–33/55.
+* **Consequence, an append-only correction to
+  [[lrv1-oracle-headroom-spec-2026-08-19]] §15.3/§15.7 (M3):** the old
+  A1's `ghost_gap` −6.56 dB was attributed to the voxel-cell oracle
+  gating background off with the object. The per-primitive cell removes
+  that mechanism entirely and ghost_gap barely moves (22.41 → 22.83), so
+  the dominant cause was always the ramp frames, not the voxel oracle.
+  The −5.23 dB headline of that page is untouched; only the ghost
+  attribution is corrected.
+
+### What this establishes and what it does not
+
+**Established:** on the admitted LRV3 event, correctly localized
+per-primitive K=2 episodic presence with a total-opacity gate
+reconstructs the return **1.05 dB better** than the temporal substrate,
+improves the continuously-present object region, renders exact absence,
+and costs 0.39 dB on ordinary regions — at slightly lower realized
+capacity. Against the 2026-08-19 global-swap A1 (22.04 dB at the
+return), the localized wiring is **+6.15 dB**: the entire prior negative
+was the wiring, exactly as its §15.6 held open.
+
+**Not established:** that timing precision matters (the small-mistiming
+control, experiment 191 `lrv3_a1_local_shift2` r0, was authorized by the
+fired success rule and is running); anything about real data, event
+supply, or evidence mechanisms (the oracle is authored); transfer beyond
+this fixture. The `ordinary_all` −0.39 dB cost is real and unexplained —
+candidate mechanisms (the ~6k gated rows' contribution to shared
+surfaces, or plain run variation at this scene's same-arm spread, see
+below) are not separated.
+
+**Same-arm spread, measured for the first time on this scene:** A0′ vs
+the 2026-08-19 A0 (experiment 177) is a pure replicate modulo
+nondeterminism and one inert-code commit; the regions differ by 0.09 to
+0.17 dB. The +1.05 dB success margin is ~6–8x that spread. The N3V-smoke
+figure of 3.3e-4 dB does NOT transfer to this configuration.

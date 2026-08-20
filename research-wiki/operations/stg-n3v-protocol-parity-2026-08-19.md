@@ -270,3 +270,45 @@ episodic presence 5.23 dB *behind* that substrate on an admitted event
 ([[lrv1-oracle-headroom-spec-2026-08-19]] RESULT PART 5) — the reading is that
 ADAGS's temporal baseline is credible and the episodic representation is not
 yet earning its cost against it.
+
+---
+
+## APPENDIX C (2026-08-20, append-only) — the canonical pooled measurement, and the clamping axis Appendix B missed
+
+Two repairs landed on 2026-08-20 (commit `7ac4238`): both ADAGS eval call
+sites now pool PSNR over channels and pixels (batched `(1,3,H,W)`), pinned
+by `tests/test_psnr_pooling.py`. Experiment **194** (`b0_canonical_eval_crb`
+r3, commit `1400b24`) then ran the full `--val` pass over experiment 181's
+checkpoint at the matched raster:
+
+| quantity (cam00, frames 0-49, 1352x1014, renders CLAMPED to [0,1]) | value |
+|---|---:|
+| **pooled PSNR** | **33.5050** |
+| SSIM | 0.95934 |
+| LPIPS (alex, torchmetrics `normalize=True`) | 0.08136 |
+| primitives | 599,342 |
+
+**Appendix B's "pooled equivalent ~33.25" was computed on the wrong
+convention pair and is superseded for comparison purposes.** The 0.268 dB
+pooling bias is real, but `main.py`'s training-time 33.5210 is measured on
+UNCLAMPED renders while the published convention (STG's `(1,3,H,W)` in
+`[0,1]`) clamps — and the two corrections nearly cancel here:
+pooled+clamped reads 33.5050 where channel-split+unclamped read 33.5210.
+The clamping axis was flagged by the 2026-08-20 run-registry survey (the
+`--val` path clamps at `utils/mesh_utils.py:85`; the training-time eval
+does not) and was not carried in Appendix B's arithmetic.
+
+**The corrected screening statement: under the published metric convention
+(pooled, clamped, matched raster and segment, cam00), the ADAGS substrate
+reads 33.51 dB against STG's published 33.52 — parity to within 0.015 dB —
+at 6,000 training iterations against the 25,000 at which STG's number is
+read.** Still not a reproduction: initialization, batch schedule, and seed
+count remain unmatched, and the LPIPS convention differs (torchmetrics
+normalize=True; the [0,1] convention reads lower on identical images per
+[[diva360-protocol-parity-audit]]).
+
+Consumed en route, all three my own submission errors: experiment 186 r0
+(missing `--source_path`, ~8 s), 187 r1 (LPIPS torch.hub EACCES on a
+shared-node cache — repaired in commit `898cc59` by pointing TORCH_HOME
+at the run dir), 188 r2 (non-contiguous `.view` in the batched psnr —
+repaired in `1400b24` by `reshape`). Claims r0–r3 consumed; next free r4.
