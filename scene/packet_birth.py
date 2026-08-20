@@ -16,6 +16,13 @@ The transaction itself is the established point-neutral substrate
 identities and the Adam moment reset are handled exactly as by the CSVL-VPL
 lifecycle birth in :mod:`scene.lifecycle`.
 
+B1-D (``packet_birth_dynamic_mask_donors``, default False) is the one-variable
+donor-side variant pre-identified in ccr-ladder-round1-results-2026-08-20 §6.3:
+a row is an eligible donor only when its motion-model centre projects inside
+the current training view's dynamic mask, so static-support rows are never
+harvested. Ranking among eligible rows is the unchanged (opacity x radius)
+rule; see :func:`donor_dynamic_mask_eligibility` for the frozen semantics.
+
 Every entry point is a no-op unless ``packet_birth_enable`` is set, so a B0
 cell is bit-identical to the substrate.
 """
@@ -31,6 +38,7 @@ import torch
 
 from depth_visibility.capacity import apply_point_neutral_transaction
 from depth_visibility.errors import ContractError
+from utils.motion_prior_utils import project_points_to_screen
 from utils.sh_utils import RGB2SH
 
 PACKET_BIRTH_SCHEMA = "ccr-b1-packet-birth-v1"
@@ -69,6 +77,8 @@ class PacketBirthConfig:
     t_sigma_frames: float = 1.5
     from_iter: int = 1000
     until_iter: int = -1
+    #: B1-D. False = B1 exactly (every row is an eligible donor).
+    dynamic_mask_donors: bool = False
 
     def validate(self) -> "PacketBirthConfig":
         if not self.enable:
@@ -120,6 +130,11 @@ class PacketBirthState:
         self.next_packet_id = 0
         self.rows_assigned_total = 0
         self.rows_relocated_total = 0
+        # B1-D donor-eligibility bookkeeping (0 for every B1 cell).
+        self.donors_requested_total = 0
+        self.donors_eligible_total = 0
+        self.donors_shortfall_total = 0
+        self.events_skipped_no_dynamic_mask = 0
 
     @property
     def sigma_t(self) -> float:
@@ -144,6 +159,12 @@ class PacketBirthState:
             "packets": int(self.next_packet_id),
             "rows_assigned_total": int(self.rows_assigned_total),
             "rows_relocated_total": int(self.rows_relocated_total),
+            # B1-D aggregates; every per-event field is also in the event log.
+            "donor_mask": bool(self.cfg.dynamic_mask_donors),
+            "donors_requested_total": int(self.donors_requested_total),
+            "donors_eligible_total": int(self.donors_eligible_total),
+            "donors_shortfall_total": int(self.donors_shortfall_total),
+            "events_skipped_no_dynamic_mask": int(self.events_skipped_no_dynamic_mask),
         }
 
 
@@ -177,8 +198,17 @@ def ensure_packet_column(gaussians: Any) -> torch.Tensor:
     return ids
 
 
+def requested_donor_count(rows: int, fraction: float) -> int:
+    """The §3.1 cohort size the ranking rule asks for: ``int(fraction * rows)``."""
+
+    return int(float(fraction) * int(rows))
+
+
 def select_packet_donors(
-    opacity_logit: torch.Tensor, max_radii2D: torch.Tensor, fraction: float
+    opacity_logit: torch.Tensor,
+    max_radii2D: torch.Tensor,
+    fraction: float,
+    eligible: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Bottom-``fraction`` dynamic rows by activated opacity x screen radius.
 
@@ -187,17 +217,111 @@ def select_packet_donors(
     redundancy-witness and age rails answer the Slice-B question instead.
     ``torch.argsort`` is called without ``stable=`` because that keyword needs
     torch >= 2.0 and the local test environment is 1.12.
+
+    ``eligible`` is the B1-D donor gate: an optional per-row boolean mask.
+    ``None`` (the default, and the whole of B1) means every row is eligible and
+    the returned cohort is bit-identical to the original rule. When it is
+    given, the SAME (opacity x radius) ranking is applied to the eligible rows
+    ONLY, and the cohort is the bottom ``min(k, eligible)`` of those -- an
+    ineligible row is never a donor, and no fallback to ineligible rows exists.
     """
 
     count = int(opacity_logit.shape[0])
-    k = int(float(fraction) * count)
+    k = requested_donor_count(count, fraction)
     if count == 0 or k <= 0:
         return torch.zeros(0, dtype=torch.long, device=opacity_logit.device)
     with torch.no_grad():
         opacity = torch.sigmoid(opacity_logit.detach().reshape(count))
         radii = max_radii2D.detach().reshape(count).to(opacity.dtype).clamp(min=1.0)
         score = opacity * radii
-        return torch.argsort(score)[:k]
+        if eligible is None:
+            return torch.argsort(score)[:k]
+        rows = eligible.reshape(count).to(score.device).nonzero().reshape(-1)
+        if int(rows.numel()) == 0:
+            return torch.zeros(0, dtype=torch.long, device=opacity_logit.device)
+        order = torch.argsort(score.index_select(0, rows))
+        return rows.index_select(0, order)[:k].to(opacity_logit.device)
+
+
+def donor_dynamic_mask_eligibility(
+    gaussians: Any,
+    viewpoint_camera: Any,
+    dynamic_mask: torch.Tensor,
+    timestamp: float,
+) -> torch.Tensor:
+    """Per-row B1-D donor eligibility: centre inside the view's dynamic mask.
+
+    FROZEN SEMANTICS -- a row is eligible if and only if ALL of the following
+    hold, and is ineligible otherwise (fail-closed, no fallback):
+
+    * its centre is the MOTION-MODEL position ``get_dynamic_xyz(timestamp)``
+      at the current training timestamp -- the same call the renderer
+      rasterizes (gaussian_renderer/__init__.py:200) and the same one
+      ``compute_dynamic_densify_weight`` uses (main.py:87) -- NOT the
+      canonical ``_xyz``;
+    * the centre is IN FRONT of the camera: its view-space z, taken through
+      ``world_view_transform`` (the TRANSPOSED world-to-camera matrix,
+      scene/cameras.py:67, the same convention as
+      :func:`camera_forward_axis`), is finite and strictly positive;
+    * the projection is valid and in frame: ``project_points_to_screen``
+      (utils/motion_prior_utils.py:143, the projector already used by the
+      dynamic-densify weight) reports ``valid`` -- finite ``w`` and NDC inside
+      [-1, 1] -- and the NEAREST pixel ``(round(x), round(y))`` lies inside
+      ``[0, W) x [0, H)``;
+    * ``mask[y, x] > 0.5`` at that nearest pixel.
+
+    ``dynamic_mask`` is the trainer's mask for this view -- ``(1, H, W)``
+    float in [0, 1] as produced by ``MotionPriorCache.get_dynamic_mask`` --
+    and is reshaped to ``(H, W)`` exactly as the residual gate in
+    :func:`_packet_birth` already reshapes it. NEAREST-pixel lookup with a
+    strict 0.5 threshold is deliberate: it makes eligibility a hard
+    set-membership test rather than the bilinear weight
+    ``sample_mask_at_points`` returns.
+
+    Note the half-pixel convention difference that is inherent to the two
+    existing utilities: ``project_points_to_screen`` maps NDC onto
+    ``[0, W - 1]`` while ``Camera.get_rays`` (used by the backprojection above)
+    uses pixel CENTRES. At nearest-pixel resolution the difference is at most
+    one pixel and is not corrected here, so that the projector stays the
+    tested one.
+    """
+
+    getter = getattr(gaussians, "get_dynamic_xyz", None)
+    if getter is None:
+        raise ContractError(
+            "dynamic-mask donor gating requires a model exposing get_dynamic_xyz"
+        )
+    points = getter(float(timestamp)).detach().reshape(-1, 3)
+    count = int(points.shape[0])
+    if count == 0:
+        return torch.zeros(0, dtype=torch.bool, device=points.device)
+    height = int(getattr(viewpoint_camera, "image_height", 0))
+    width = int(getattr(viewpoint_camera, "image_width", 0))
+    if height <= 0 or width <= 0:
+        raise ContractError("dynamic-mask donor gating requires a sized camera")
+    mask = dynamic_mask.detach().reshape(height, width).to(points.device).reshape(-1)
+
+    world_view = viewpoint_camera.world_view_transform.to(
+        device=points.device, dtype=points.dtype
+    )
+    ones = torch.ones((count, 1), dtype=points.dtype, device=points.device)
+    camera_z = (torch.cat([points, ones], dim=-1) @ world_view)[:, 2]
+
+    screen_xy, valid = project_points_to_screen(points, viewpoint_camera)
+    screen_xy = torch.nan_to_num(screen_xy, nan=-1.0, posinf=-1.0, neginf=-1.0)
+    x = screen_xy[:, 0].round().long()
+    y = screen_xy[:, 1].round().long()
+    eligible = (
+        valid.reshape(count).to(points.device)
+        & torch.isfinite(camera_z)
+        & (camera_z > 0)
+        & (x >= 0)
+        & (x < width)
+        & (y >= 0)
+        & (y < height)
+    )
+    index = y.clamp(0, height - 1) * width + x.clamp(0, width - 1)
+    return eligible & (mask.index_select(0, index) > 0.5)
 
 
 def sample_residual_sites(
@@ -436,6 +560,7 @@ def _packet_birth(
     dynamic_mask: Optional[torch.Tensor],
 ) -> dict:
     timestamp = float(getattr(viewpoint_camera, "timestamp", 0.0))
+    donor_mask = bool(state.cfg.dynamic_mask_donors)
     record = {
         "iteration": int(iteration),
         "event_id": len(state.events),
@@ -445,17 +570,60 @@ def _packet_birth(
         "camera": str(getattr(viewpoint_camera, "image_name", "")),
         "timestamp": timestamp,
         "reason": None,
+        # B1-D donor-eligibility accounting. ``requested`` is what the
+        # fraction rule asks for, ``eligible_donors`` how many rows pass the
+        # gate (all rows when the gate is off), ``realized`` how many rows the
+        # event actually relocated, and ``shortfall`` the eligibility deficit
+        # max(0, requested - eligible_donors) -- never a depth-validity loss.
+        "donor_mask": donor_mask,
+        "requested": 0,
+        "eligible_donors": 0,
+        "realized": 0,
+        "shortfall": 0,
     }
     optimizer = getattr(gaussians, "optimizer", None)
     if optimizer is None:
         raise ContractError("packet birth requires an initialized optimizer")
+    if donor_mask and dynamic_mask is None:
+        # Frozen B1-D rule: without a mask there is no eligibility evidence, so
+        # the event is skipped whole -- no relocation, no packet id consumed,
+        # and not even the lazy packet column is materialized.
+        record["reason"] = "no_dynamic_mask"
+        state.events_skipped_no_dynamic_mask += 1
+        return record
     packet_ids = ensure_packet_column(gaussians)
     bank = gaussians.build_capacity_bank()
     if "max_radii2D" not in bank.accumulators:
         raise ContractError("packet birth requires the max_radii2D accumulator")
 
+    rows = _row_count(gaussians)
+    requested = requested_donor_count(rows, state.cfg.fraction)
+    if donor_mask:
+        eligible = donor_dynamic_mask_eligibility(
+            gaussians, viewpoint_camera, dynamic_mask, timestamp
+        )
+        if int(eligible.numel()) != rows:
+            raise ContractError(
+                "dynamic-mask donor gate returned {} rows for {} Gaussians".format(
+                    int(eligible.numel()), rows
+                )
+            )
+        eligible_count = int(eligible.sum().item())
+    else:
+        eligible = None
+        eligible_count = rows
+    record["requested"] = requested
+    record["eligible_donors"] = eligible_count
+    record["shortfall"] = max(0, requested - eligible_count)
+    state.donors_requested_total += requested
+    state.donors_eligible_total += eligible_count
+    state.donors_shortfall_total += int(record["shortfall"])
+
     donors = select_packet_donors(
-        bank.parameters["_opacity"], bank.accumulators["max_radii2D"], state.cfg.fraction
+        bank.parameters["_opacity"],
+        bank.accumulators["max_radii2D"],
+        state.cfg.fraction,
+        eligible=eligible,
     )
     if int(donors.numel()) == 0:
         record["reason"] = "no_donors"
@@ -511,6 +679,7 @@ def _packet_birth(
     state.rows_relocated_total += int(donors.numel())
 
     record["donors"] = int(donors.numel())
+    record["realized"] = int(donors.numel())
     record["packets"] = int(packets)
     record["rows_assigned"] = rows_assigned
     return record
@@ -547,9 +716,11 @@ __all__ = [
     "backproject_camera_z",
     "backproject_pixels",
     "camera_forward_axis",
+    "donor_dynamic_mask_eligibility",
     "ensure_packet_column",
     "maybe_packet_birth",
     "packet_components",
+    "requested_donor_count",
     "sample_residual_sites",
     "select_packet_donors",
     "setup_packet_birth",

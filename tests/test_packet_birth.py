@@ -13,6 +13,17 @@ The properties under test are the ones the operator can silently get wrong:
    the alpha normalization of the rendered CAMERA-Z depth;
 6. the temporal mean and temporal scale of a relocated row are the event's,
    not the donor's.
+
+The B1-D donor gate (``packet_birth_dynamic_mask_donors``) adds four more:
+
+7. the flag OFF path is bit-identical to the pre-gate operator, mask present
+   or not;
+8. with the flag ON, exactly the rows whose motion-model centre projects into
+   a masked pixel are eligible -- behind-camera and out-of-frame centres are
+   not -- and the ranking among them is the unchanged score rule;
+9. fewer eligible rows than requested relocates all eligible ones, records the
+   shortfall and never falls back to an ineligible row;
+10. a missing mask skips the event whole (no relocation, no packet id).
 """
 
 import math
@@ -21,6 +32,7 @@ import unittest
 from pathlib import Path
 
 import torch
+from omegaconf import OmegaConf
 from torch import nn
 
 from depth_visibility.capacity import CapacityBank
@@ -33,9 +45,11 @@ from scene.packet_birth import (
     backproject_camera_z,
     backproject_pixels,
     camera_forward_axis,
+    donor_dynamic_mask_eligibility,
     ensure_packet_column,
     maybe_packet_birth,
     packet_components,
+    requested_donor_count,
     sample_residual_sites,
     select_packet_donors,
     setup_packet_birth,
@@ -84,6 +98,20 @@ class _StubCamera:
         # scene/cameras.py stores the TRANSPOSED world-to-camera matrix.
         self.world_view_transform = world_to_camera.transpose(0, 1)
         self.camera_center = centre_tensor
+        # The same pinhole, expressed the way project_points_to_screen reads
+        # it: clip = hom_world @ full_proj_transform, w = camera z, and
+        # pixel = (ndc + 1) / 2 * (size - 1) recovers FOCAL * X / Z + PRINCIPAL.
+        projection = torch.zeros(4, 4)
+        span = float(IMAGE_SIZE - 1)
+        projection[0, 0] = 2.0 * FOCAL / span
+        projection[0, 2] = 2.0 * PRINCIPAL / span - 1.0
+        projection[1, 1] = 2.0 * FOCAL / span
+        projection[1, 2] = 2.0 * PRINCIPAL / span - 1.0
+        projection[2, 2] = 1.0
+        projection[3, 2] = 1.0
+        # scene/cameras.py stores the TRANSPOSED projection too.
+        self.projection_matrix = projection.transpose(0, 1)
+        self.full_proj_transform = self.world_view_transform @ self.projection_matrix
 
 
 def _expected_site(col, row, depth=SITE_DEPTH, centre=(0.0, 0.0, 0.0)):
@@ -92,6 +120,28 @@ def _expected_site(col, row, depth=SITE_DEPTH, centre=(0.0, 0.0, 0.0)):
     x = (col + 0.5 - PRINCIPAL) / FOCAL
     y = (row + 0.5 - PRINCIPAL) / FOCAL
     return torch.tensor(centre, dtype=torch.float32) + depth * torch.tensor([x, y, 1.0])
+
+
+def _donor_point(col, row, depth=SITE_DEPTH, centre=(0.0, 0.0, 0.0)):
+    """World point that projects EXACTLY onto integer screen pixel ``(col, row)``.
+
+    Unlike :func:`_expected_site` (which uses ``Camera.get_rays``' pixel-CENTRE
+    convention) this inverts ``project_points_to_screen``, so ``round()`` on
+    the projected coordinate is unambiguous.
+    """
+
+    x = (col - PRINCIPAL) * depth / FOCAL
+    y = (row - PRINCIPAL) * depth / FOCAL
+    return torch.tensor(centre, dtype=torch.float32) + torch.tensor([x, y, float(depth)])
+
+
+def _block_mask():
+    """(1, H, W) dynamic mask that is 1 exactly on ``BLOCK_PIXELS``."""
+
+    mask = torch.zeros(1, IMAGE_SIZE, IMAGE_SIZE)
+    for col, row in BLOCK_PIXELS:
+        mask[0, row, col] = 1.0
+    return mask
 
 
 class _StubGaussians:
@@ -120,6 +170,9 @@ class _StubGaussians:
         self._capacity_last_reassigned = torch.zeros(rows, dtype=torch.long)
         self.route_logit_init = 4.0
         self._packet_ids = torch.empty(0, dtype=torch.long)
+        # Stands in for GaussianModel's LoRA/poly motion offset so that
+        # get_dynamic_xyz(t) is genuinely time-dependent (zero by default).
+        self.motion_velocity = torch.zeros(rows, 3)
         self.optimizer = torch.optim.Adam(
             [{"params": [value], "name": name} for name, value in self._named_parameters()],
             lr=0.0,
@@ -130,6 +183,9 @@ class _StubGaussians:
         for state in self.optimizer.state.values():
             state["exp_avg"].fill_(1.0)
             state["exp_avg_sq"].fill_(1.0)
+
+    def get_dynamic_xyz(self, timestamp):
+        return self._xyz.detach() + float(timestamp) * self.motion_velocity
 
     def _named_parameters(self):
         return [
@@ -635,6 +691,293 @@ class PruneMaintenanceTests(unittest.TestCase):
         model = _CpuPruneModel(rows=6)
         model.prune_points(torch.tensor([False, True, False, False, True, False]))
         self.assertEqual(int(model._packet_ids.numel()), 0)
+
+
+INSIDE_PIXEL = (1, 1)  # (col, row); a member of BLOCK_PIXELS
+OUTSIDE_PIXEL = (5, 5)  # inside the frame, outside the block mask
+
+
+class DonorEligibilityTests(unittest.TestCase):
+    """The B1-D gate itself: which rows the dynamic mask admits."""
+
+    def _model(self, points):
+        gaussians = _StubGaussians(rows=len(points))
+        with torch.no_grad():
+            gaussians._xyz.copy_(torch.stack(points))
+        return gaussians
+
+    def test_only_centres_inside_a_masked_pixel_are_eligible(self):
+        gaussians = self._model(
+            [_donor_point(*INSIDE_PIXEL), _donor_point(*OUTSIDE_PIXEL), _donor_point(0, 2)]
+        )
+        eligible = donor_dynamic_mask_eligibility(
+            gaussians, _StubCamera(), _block_mask(), TIMESTAMP
+        )
+        # (1, 1) and (0, 2) are BLOCK_PIXELS; (5, 5) is not.
+        self.assertEqual(eligible.tolist(), [True, False, True])
+
+    def test_centres_behind_the_camera_are_ineligible(self):
+        """The mirrored point projects onto the SAME pixel with w < 0."""
+
+        behind = _donor_point(*INSIDE_PIXEL, depth=-SITE_DEPTH)
+        gaussians = self._model([_donor_point(*INSIDE_PIXEL), behind])
+        eligible = donor_dynamic_mask_eligibility(
+            gaussians, _StubCamera(), _block_mask(), TIMESTAMP
+        )
+        self.assertEqual(eligible.tolist(), [True, False])
+
+    def test_centres_outside_the_frame_are_ineligible(self):
+        gaussians = self._model(
+            [_donor_point(*INSIDE_PIXEL), _donor_point(40, 1), _donor_point(1, -30)]
+        )
+        eligible = donor_dynamic_mask_eligibility(
+            gaussians, _StubCamera(), _block_mask(), TIMESTAMP
+        )
+        self.assertEqual(eligible.tolist(), [True, False, False])
+
+    def test_eligibility_follows_the_motion_model_not_the_canonical_xyz(self):
+        outside = _donor_point(*OUTSIDE_PIXEL)
+        inside = _donor_point(*INSIDE_PIXEL)
+        gaussians = self._model([outside, inside])
+        with torch.no_grad():
+            # row 0 drifts INTO the mask by TIMESTAMP; row 1 drifts OUT of it.
+            gaussians.motion_velocity[0] = (inside - outside) / TIMESTAMP
+            gaussians.motion_velocity[1] = (outside - inside) / TIMESTAMP
+        camera, mask = _StubCamera(), _block_mask()
+        self.assertEqual(
+            donor_dynamic_mask_eligibility(gaussians, camera, mask, TIMESTAMP).tolist(),
+            [True, False],
+        )
+        # at t = 0 the canonical positions decide, and the verdict flips
+        self.assertEqual(
+            donor_dynamic_mask_eligibility(gaussians, camera, mask, 0.0).tolist(),
+            [False, True],
+        )
+
+    def test_the_threshold_is_strictly_above_one_half(self):
+        gaussians = self._model([_donor_point(*INSIDE_PIXEL)])
+        col, row = INSIDE_PIXEL
+        camera = _StubCamera()
+        mask = torch.zeros(1, IMAGE_SIZE, IMAGE_SIZE)
+        mask[0, row, col] = 0.5
+        self.assertEqual(
+            donor_dynamic_mask_eligibility(gaussians, camera, mask, TIMESTAMP).tolist(),
+            [False],
+        )
+        mask[0, row, col] = 0.51
+        self.assertEqual(
+            donor_dynamic_mask_eligibility(gaussians, camera, mask, TIMESTAMP).tolist(),
+            [True],
+        )
+
+    def test_a_model_without_a_motion_position_fails_closed(self):
+        with self.assertRaises(ContractError):
+            donor_dynamic_mask_eligibility(
+                types.SimpleNamespace(), _StubCamera(), _block_mask(), TIMESTAMP
+            )
+
+
+class EligibleDonorRankingTests(unittest.TestCase):
+    """The ranking rule is unchanged; the gate only removes candidates."""
+
+    OPACITY = torch.tensor([[3.0], [-3.0], [0.0], [1.0], [-1.0], [2.0]])
+    RADII = torch.ones(6)
+
+    def test_no_eligibility_mask_reproduces_the_original_cohort(self):
+        expected = select_packet_donors(self.OPACITY, self.RADII, 0.5)
+        explicit = select_packet_donors(self.OPACITY, self.RADII, 0.5, eligible=None)
+        self.assertTrue(torch.equal(expected, explicit))
+        self.assertEqual(expected.tolist(), [1, 4, 2])
+
+    def test_ranking_among_eligible_rows_is_the_same_score_rule(self):
+        eligible = torch.tensor([True, False, True, True, False, True])
+        donors = select_packet_donors(self.OPACITY, self.RADII, 0.5, eligible=eligible)
+        # ineligible rows 1 and 4 (the two lowest scores) are skipped entirely
+        self.assertEqual(donors.tolist(), [2, 3, 5])
+
+    def test_fewer_eligible_than_requested_returns_all_eligible(self):
+        eligible = torch.tensor([False, False, True, True, False, False])
+        donors = select_packet_donors(self.OPACITY, self.RADII, 0.5, eligible=eligible)
+        self.assertEqual(requested_donor_count(6, 0.5), 3)
+        self.assertEqual(donors.tolist(), [2, 3])
+
+    def test_no_eligible_row_selects_nothing(self):
+        donors = select_packet_donors(
+            self.OPACITY, self.RADII, 0.5, eligible=torch.zeros(6, dtype=torch.bool)
+        )
+        self.assertEqual(int(donors.numel()), 0)
+
+
+class DynamicMaskDonorEventTests(unittest.TestCase):
+    """End-to-end events with the B1-D flag on and off."""
+
+    def _run(self, placements, dynamic_mask, flag=True, iteration=3):
+        """``placements``: {row -> (col, row_px)} screen targets; rest OUTSIDE."""
+
+        gaussians = _StubGaussians()
+        with torch.no_grad():
+            gaussians._xyz.copy_(
+                _donor_point(*OUTSIDE_PIXEL).reshape(1, 3).expand(ROWS, 3)
+            )
+            for index, pixel in placements.items():
+                gaussians._xyz[index] = _donor_point(*pixel)
+        before = {name: value.detach().clone() for name, value in gaussians._named_parameters()}
+        state = setup_packet_birth(
+            _stub_opt(packet_birth_dynamic_mask_donors=flag)
+        )
+        image, gt_image, depth, alpha = _event_inputs()
+        record = maybe_packet_birth(
+            state, gaussians, iteration, _StubCamera(), image, gt_image,
+            depth, alpha, dynamic_mask,
+        )
+        return gaussians, state, record, before
+
+    def _moved_rows(self, gaussians, before):
+        changed = (gaussians._xyz.detach() != before["_xyz"]).any(dim=1)
+        return changed.nonzero().reshape(-1).tolist()
+
+    # ---- (a) flag off ------------------------------------------------------
+
+    def test_flag_off_with_a_mask_present_keeps_the_pre_change_donor_set(self):
+        gaussians, state, record, before = self._run({}, _block_mask(), flag=False)
+        self.assertFalse(record["donor_mask"])
+        # the pre-change rule is bottom-fraction over ALL rows: 0..9, then
+        # truncated to the six masked residual sites -> rows 0..5
+        self.assertEqual(self._moved_rows(gaussians, before), list(range(len(BLOCK_PIXELS))))
+        self.assertEqual(record["donors"], len(BLOCK_PIXELS))
+        self.assertEqual(record["realized"], len(BLOCK_PIXELS))
+        self.assertEqual(record["requested"], int(DONOR_FRACTION * ROWS))
+        self.assertEqual(record["eligible_donors"], ROWS)
+        self.assertEqual(record["shortfall"], 0)
+        self.assertEqual(state.summary()["donors_shortfall_total"], 0)
+        self.assertFalse(state.summary()["donor_mask"])
+
+    def test_flag_off_ignores_the_mask_when_ranking_donors(self):
+        """Every row sits OUTSIDE the mask; the flag-off cohort is unaffected."""
+
+        gaussians, _, record, before = self._run({}, _block_mask(), flag=False)
+        self.assertEqual(record["donors"], len(BLOCK_PIXELS))
+        self.assertEqual(self._moved_rows(gaussians, before), list(range(len(BLOCK_PIXELS))))
+
+    # ---- (b) flag on -------------------------------------------------------
+
+    def test_flag_on_relocates_only_eligible_rows_in_score_order(self):
+        placements = {index: INSIDE_PIXEL for index in list(range(2, 12)) + list(range(20, 26))}
+        gaussians, state, record, before = self._run(placements, _block_mask())
+        self.assertTrue(record["donor_mask"])
+        self.assertEqual(record["eligible_donors"], 16)
+        self.assertEqual(record["requested"], 10)
+        self.assertEqual(record["shortfall"], 0)
+        # the ten lowest-scoring ELIGIBLE rows are 2..11 (score is monotone in
+        # the row index); the six masked residual sites then truncate to 2..7
+        self.assertEqual(self._moved_rows(gaussians, before), list(range(2, 8)))
+        self.assertEqual(record["realized"], len(BLOCK_PIXELS))
+        self.assertEqual(record["donors"], len(BLOCK_PIXELS))
+        # rows 0 and 1 outrank every eligible row but are never harvested
+        for name, value in gaussians._named_parameters():
+            self.assertTrue(torch.equal(value.detach()[:2], before[name][:2]), name)
+        summary = state.summary()
+        self.assertEqual(summary["donors_requested_total"], 10)
+        self.assertEqual(summary["donors_eligible_total"], 16)
+        self.assertTrue(summary["donor_mask"])
+
+    def test_flag_on_with_no_eligible_row_reports_no_donors_and_touches_nothing(self):
+        gaussians, _, record, before = self._run({}, _block_mask())
+        self.assertEqual(record["reason"], "no_donors")
+        self.assertEqual(record["eligible_donors"], 0)
+        self.assertEqual(record["shortfall"], 10)
+        self.assertEqual(record["realized"], 0)
+        for name, value in gaussians._named_parameters():
+            self.assertTrue(torch.equal(value.detach(), before[name]), name)
+
+    # ---- (c) shortfall -----------------------------------------------------
+
+    def test_shortfall_relocates_every_eligible_row_and_no_other(self):
+        eligible_rows = [0, 1, 2, 3]
+        placements = {index: INSIDE_PIXEL for index in eligible_rows}
+        gaussians, state, record, before = self._run(placements, _block_mask())
+        self.assertEqual(record["requested"], 10)
+        self.assertEqual(record["eligible_donors"], len(eligible_rows))
+        self.assertEqual(record["shortfall"], 10 - len(eligible_rows))
+        self.assertEqual(record["realized"], len(eligible_rows))
+        self.assertEqual(record["donors"], len(eligible_rows))
+        self.assertEqual(self._moved_rows(gaussians, before), eligible_rows)
+        for name, value in gaussians._named_parameters():
+            self.assertTrue(
+                torch.equal(value.detach()[len(eligible_rows):], before[name][len(eligible_rows):]),
+                "an ineligible row of {} was touched".format(name),
+            )
+        self.assertEqual(state.summary()["donors_shortfall_total"], 6)
+
+    # ---- (d) missing mask --------------------------------------------------
+
+    def test_a_missing_mask_skips_the_event_whole(self):
+        gaussians, state, record, before = self._run({0: INSIDE_PIXEL}, None)
+        self.assertEqual(record["reason"], "no_dynamic_mask")
+        self.assertEqual(record["donors"], 0)
+        self.assertEqual(record["realized"], 0)
+        self.assertEqual(record["packets"], 0)
+        self.assertEqual(state.next_packet_id, 0)
+        self.assertEqual(state.rows_relocated_total, 0)
+        # not even the lazy packet column is materialized
+        self.assertEqual(int(gaussians._packet_ids.numel()), 0)
+        for name, value in gaussians._named_parameters():
+            self.assertTrue(torch.equal(value.detach(), before[name]), name)
+        for _, parameter in gaussians._named_parameters():
+            moment = gaussians.optimizer.state[parameter]["exp_avg"]
+            self.assertEqual(float(moment.abs().min()), 1.0)
+        self.assertEqual(state.summary()["events_skipped_no_dynamic_mask"], 1)
+        self.assertEqual(len(state.events), 1)
+
+    def test_flag_off_with_no_mask_still_runs_the_event(self):
+        gaussians, _, record, before = self._run({}, None, flag=False)
+        self.assertIsNone(record["reason"])
+        self.assertEqual(record["donors"], len(EVENT_PIXELS))
+        self.assertEqual(self._moved_rows(gaussians, before), list(range(len(EVENT_PIXELS))))
+
+
+class B1DConfigTests(unittest.TestCase):
+    CONFIG_DIR = REPO_ROOT / "configs" / "n3v"
+
+    def _flat(self, name):
+        config = OmegaConf.load(self.CONFIG_DIR / name)
+        flat = {}
+
+        def walk(node):
+            for key in node.keys():
+                value = node[key]
+                if hasattr(value, "keys"):
+                    walk(value)
+                else:
+                    flat[key] = value
+
+        walk(config)
+        return flat
+
+    def test_b1d_is_b1_plus_exactly_one_flag(self):
+        b1 = self._flat("ladder_b1_crb.yaml")
+        b1d = self._flat("ladder_b1d_crb.yaml")
+        self.assertEqual(set(b1d) - set(b1), {"packet_birth_dynamic_mask_donors"})
+        self.assertEqual(set(b1) - set(b1d), set())
+        self.assertEqual(
+            {key for key in b1 if b1[key] != b1d[key]}, set()
+        )
+        self.assertIs(b1d["packet_birth_dynamic_mask_donors"], True)
+
+    def test_the_flag_reaches_the_packet_birth_config(self):
+        from argparse import ArgumentParser
+
+        from arguments import OptimizationParams
+
+        parser = ArgumentParser()
+        OptimizationParams(parser)
+        defaults = parser.parse_args([])
+        self.assertFalse(defaults.packet_birth_dynamic_mask_donors)
+        defaults.packet_birth_enable = True
+        defaults.packet_birth_dynamic_mask_donors = True
+        cfg = PacketBirthConfig.from_namespace(defaults, densify_until_iter=4000)
+        self.assertTrue(cfg.dynamic_mask_donors)
+        self.assertIn("dynamic_mask_donors", cfg.as_dict())
 
 
 if __name__ == "__main__":

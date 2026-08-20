@@ -231,6 +231,10 @@ class OptimizationParams(ParamGroup):
         self.packet_birth_t_sigma_frames = 1.5
         self.packet_birth_from_iter = 1000
         self.packet_birth_until_iter = -1
+        # B1-D (ccr-ladder-round1-results-2026-08-20 §6.3): restrict the donor
+        # pool to rows whose motion-model centre projects INSIDE the current
+        # training view's dynamic mask. False reproduces B1 exactly.
+        self.packet_birth_dynamic_mask_donors = False
 
         # ---------------- EL-GS (evidence-lineage) ----------------
         # Category-1 structural constants and the schedule anchors are
