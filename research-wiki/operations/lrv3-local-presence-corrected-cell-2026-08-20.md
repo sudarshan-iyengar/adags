@@ -182,3 +182,56 @@ the 2026-08-19 A0 (experiment 177) is a pure replicate modulo
 nondeterminism and one inert-code commit; the regions differ by 0.09 to
 0.17 dB. The +1.05 dB success margin is ~6–8x that spread. The N3V-smoke
 figure of 3.3e-4 dB does NOT transfer to this configuration.
+
+---
+
+## RESULT 2 (2026-08-20, append-only) — the small-mistiming control: 2 frames of timing error is worse than no gate at all
+
+Authorized by the fired success rule; experiment 191
+(`lrv3_a1_local_shift2` r0, commit `1400b24`), scored by 198. The cell is
+byte-identical to A1-LOCAL except the K=2 program is translated 2 frames
+EARLY (believed absence frames 28–54; per-frame presence verified on the
+production path before submission; return frames 57–59 at exactly 1.0, so
+the control CAN render the return). Disclosed: a translation preserves gap
+length and total presence but moves 0.333 s of duration from episode 1 to
+episode 2 (only a reflection preserves the multiset).
+
+| region (pooled PSNR) | A0′ (no gate) | A1-LOCAL (correct) | **A1-SHIFT2 (2 early)** |
+|---|---:|---:|---:|
+| `event_return` | 27.1432 | 28.1928 | **24.7572** |
+| `event_episode1` | 29.6022 | 30.8449 | 23.6906 |
+| `ghost_gap` | 29.0248 | 22.8333 | 26.5612 |
+| `ordinary_all` | 28.3515 | 27.9660 | 28.2625 |
+| primitives | 149,794 | 148,668 | 149,825 |
+
+```
+A1-LOCAL − A1-SHIFT2 = +3.44 dB at the return
+A1-SHIFT2 − A0′      = −2.39 dB at the return
+```
+
+**A 2-frame timing error does not merely erase the +1.05 dB gain — it
+lands 2.39 dB BELOW the ungated substrate.** The ordering is now
+measured across four cells of one matrix: correct gate (+1.05) > no gate
+(0) > 2-frames-early gate (−2.39) >> maximally wrong gate (−17.16,
+2026-08-19 A2). **Timing precision — not gate existence — is what
+matters**, the exact distinction REVIEW ROUND 1's finding B2 said the
+old A2 could not make.
+
+The mechanism is legible in the per-frame profiles: SHIFT2's ghost
+profile is clean (~46 dB) through the frames both programs call absent,
+then collapses to **24.95 / 20.03 / 19.63 dB on frames 54–56**, where
+the shifted gate asserts presence against true absence — real ghosting,
+not a ramp artifact. Its return profile suffers most at first-return
+frame 57 (23.14 vs A1-LOCAL's 28.76): the object rows spent frames 55–56
+being supervised toward transparency against empty ground truth.
+`event_episode1`'s −5.9 dB is concentrated where the shifted gate zeroes
+the object on true-present frames 28–29.
+
+**Limits:** one direction (early), one magnitude (2 frames), one seed —
+this is not a dose-response curve. And the asymmetric-duration disclosure
+above applies. What it licenses: any real-data hard-gating mechanism
+needs frame-accurate boundaries; roughly-placed gates are NEGATIVE value
+on this event class. Noted for the method lane: CCR's consolidation
+deliberately leaves temporal support untouched (no gating), so it is
+structurally immune to this failure mode; the constraint binds only a
+future explicit-gate limb.

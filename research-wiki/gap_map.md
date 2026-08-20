@@ -731,7 +731,14 @@ reads **33.5050 dB vs STG's published 33.52** on cut_roasted_beef frames
 0-49 at 1352x1014 — parity at 6k vs 25k iterations
 ([[operations/stg-n3v-protocol-parity-2026-08-19]] Appendix C).
 
-**Still open:** the small-mistiming control (experiment 191, running);
+**The small-mistiming control DECIDED (experiment 191/198): a 2-frame
+timing error is worse than no gate at all** — correct gate +1.05 > no
+gate 0 > 2-frames-early −2.39 >> maximally-wrong −17.16 at the return.
+Timing PRECISION, not gate existence, is what matters; real-data hard
+gating therefore requires frame-accurate boundaries. CCR's consolidation
+never gates support and is structurally immune.
+
+**Still open:**
 the −0.39 dB ordinary-region cost is real and unattributed; everything
 about real-data event supply is exactly as open as before — the fixture
 is authored. The method lane that inherits this datum is CCR
