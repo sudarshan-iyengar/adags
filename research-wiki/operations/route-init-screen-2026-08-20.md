@@ -44,3 +44,36 @@ free dgx slot; R40 queues behind the B1-D cells. Hopper untouched.
    actively helped; record as a (fortunate) historical accident.
 3. One seed per arm; if Δ lands in [0.10, 0.15), a second seed pair is
    the only authorized follow-up. No tuning of intermediate values.
+
+---
+
+## RESULT (2026-08-20, append-only) — the defect's 4.0 actively helped; the question closes at screen tier
+
+Cells: R00 = experiment 215 (val 220), R40 = experiment 216 (val 222),
+both commit `5514c66`, seed 0, dgx, admitted V100 image. Endpoint
+`--val` pooled+clamped on `chkpnt6000`:
+
+| arm | PSNR | SSIM | LPIPS | points | router end state |
+|---|---:|---:|---:|---:|---|
+| R40 (4.0) | **33.4871** | 0.95928 | 0.08232 | 599,384 | p_dyn 0.995, 0.59% uncertain |
+| R00 (0.0) | **32.9904** | 0.95857 | 0.08273 | 598,990 | **p_dyn 0.916, 24.7% uncertain** |
+
+**Rule 1 (replicate check): PASS, |Δ| = 0.018 dB.** R40 vs experiment
+194 (33.5050; the same seed and effective init across ~10 intervening
+commits) agree to 0.018 dB pooled+clamped — the training-path-inert
+assumption behind the B1-D comparator reuse is now empirically
+validated, not just diff-argued.
+
+**Rule 2 (the screen): Δ = R00 − R40 = −0.4967 dB ≤ −0.15.** The
+init-order defect's forced 4.0 was a FORTUNATE historical accident:
+starting the router at neutral 0.5 leaves ~25% of primitives soft-mixed
+at 6,000 iterations and costs ~0.5 dB, with SSIM and LPIPS agreeing in
+direction. No 300-frame 0.0 arm is authorized. The canonical family's
+explicit `route_logit_init: 4.0` now rests on measurement.
+
+Labels: numbers verified from primary artifacts (validation.json /
+summary.json pulled from the run dirs); the "soft-mixed router causes
+the deficit" attribution is INFERENCE from the routing histograms (a
+per-region decomposition was not run). Claims consumed:
+`route_init_screen_r{00,40}` r0 (exps 215/216),
+`route_init_r{00,40}_val` r0 (exps 220/222).
