@@ -711,9 +711,21 @@ def main(argv=None):
     for name in LINK_ORDER:                    # prespecified order
         stat = link_stats[name]
         (d_lo, d_hi), (r_lo, r_hi) = link_windows[name]
-        slot = pick_confirmation_slot(
-            slot_pool, set(),                  # fresh per link: shared units
-            d_lo, d_hi, r_lo, r_hi)
+        if (d_lo, d_hi) == (r_lo, r_hi):
+            # Identical windows defeat pick_confirmation_slot: its
+            # recipient side excludes the ENTIRE donor-side availability
+            # list (correct for the CCR pass's disjoint windows, fatal
+            # here — experiment 212 returned INVALID_SLOTS on 120/120
+            # available units). Allocate directly: first 8 units in the
+            # window to the donor side, the NEXT 8 to the recipient
+            # side — internally disjoint by construction.
+            in_window = [u for u, t in slot_pool if d_lo <= t <= d_hi]
+            slot = ((in_window[:8], in_window[8:16])
+                    if len(in_window) >= 16 else None)
+        else:
+            slot = pick_confirmation_slot(
+                slot_pool, set(),              # fresh per link: shared units
+                d_lo, d_hi, r_lo, r_hi)
         stat["slot_available_per_side"] = [
             len([u for u, t in slot_pool if d_lo <= t <= d_hi]),
             len([u for u, t in slot_pool if r_lo <= t <= r_hi]),
