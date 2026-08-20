@@ -87,11 +87,21 @@ record.
   [[operations/ccr-segment-selection-2026-08-20]]). Rejected on the
   record: annealed soft tying (the 5.23 dB pathology class), ballistic
   matching as headline, channel-selective sharing as standalone.
-- **Ladder state at block end: see the 2026-08-20 handover** for
-  experiment IDs (B0/B1 seeds on the STG-matched protocol with
-  reserved parity, preflight, consolidation pass tooling all landed:
+- **Ladder round 1 TERMINAL
+  ([[operations/ccr-ladder-round1-results-2026-08-20]]):** B1
+  (observation-born relocation) globally NEUTRAL over 2 paired seeds
+  (+0.011 mean; per-seed ±0.28 = the measured B0 seed spread — any
+  single-seed claim would have been wrong in one direction or the
+  other) with a consistent event-region gain (union +0.077/+0.345,
+  both seeds; region A +0.09 on both). B2-DC admitted ZERO edges on
+  both seeds — B2 ≡ B1; the funnel names the bottlenecks
+  (confirmation-slot starvation for ~6-frame packet supports; the
+  strict 16-unit certificate; stop-grad DC upside is small by design).
+  Round-2 pre-identified changes are on the results page §6; any
+  relaxation is a NEW frozen spec. Tooling all landed and tested:
   `scene/packet_birth.py`, `scene/appearance_edit.py`,
-  `scripts/consolidate_packets.py`, `main.py --val --appearance_edit`).
+  `scripts/consolidate_packets.py` (+ control arms), `main.py --val
+  --appearance_edit`, `scripts/event_ray_metrics.py`.
 - **Unchanged:** DiVa claim-grade instrumentation PAUSED (the Lane B
   positive is fixture-level; real-data event supply is exactly as
   unresolved as before). EL-GS structural rounds, evidence heads: off.

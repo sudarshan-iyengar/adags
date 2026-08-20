@@ -738,6 +738,19 @@ Timing PRECISION, not gate existence, is what matters; real-data hard
 gating therefore requires frame-accurate boundaries. CCR's consolidation
 never gates support and is structurally immune.
 
+**The CCR ladder round 1 is TERMINAL
+([[operations/ccr-ladder-round1-results-2026-08-20]]):** the
+observation-born relocation operator (B1) is globally NEUTRAL over two
+paired seeds (+0.011 dB mean, per-seed ±0.28 = the B0 seed spread) while
+improving the frozen event-ray union on BOTH seeds (+0.077/+0.345;
+region A +0.09 on both); the certified consolidation pass admitted ZERO
+edges on both seeds (funnel: proposals exist, ~half the screen survivors
+starve on confirmation slots for ~6-frame packet supports, the rest fail
+the deliberately strict 16-unit certificate) — so B2-DC ≡ B1 and the
+finding is "no certified opportunity on this segment", with the two
+bottlenecks named for a round-2 spec. G5's matched-capacity discipline
+held throughout (600k cap binding in every arm, counts within 74 rows).
+
 **Still open:**
 the −0.39 dB ordinary-region cost is real and unattributed; everything
 about real-data event supply is exactly as open as before — the fixture
