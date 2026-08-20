@@ -111,6 +111,7 @@ ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
     "scripts/flow_plumbing_smoke.py",
     "scripts/verify_flow_vjp_runtime.py",
     "scripts/eval_lrv1_event.py",
+    "scripts/consolidate_packets.py",
 )
 
 #: The one shared, mutable, historical worktree path. No evidence-bearing
