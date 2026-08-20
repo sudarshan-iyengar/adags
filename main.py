@@ -1992,7 +1992,12 @@ def training_report(tb_writer, iteration, Ll1, Lssim, loss, l1_loss_fn, elapsed,
                     else:
                         raise ValueError("No ground truth image found for test camera.")
 
-                    psnrs.append(psnr(pred, gt).mean().item())
+                    # Batched (1,3,H,W) input pools the MSE over channels and
+                    # pixels (the standard PSNR); the previous unbatched
+                    # (3,H,W) form split by channel and averaged three
+                    # per-channel PSNRs, a 10*log10(AM/GM) bias measured at
+                    # +0.268 dB (stg-n3v-protocol-parity-2026-08-19).
+                    psnrs.append(psnr(pred.unsqueeze(0), gt.unsqueeze(0)).mean().item())
                     ssims.append(ssim(pred, gt).mean().item())
 
                     prior_cache = getattr(scene, "motion_prior_cache", None)

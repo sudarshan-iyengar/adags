@@ -103,7 +103,10 @@ class GaussianExtractor(object):
 
             
             if stage == "validation":
-                metrics["psnr"].append(psnr(gt_image, rgb))
+                # Batched (1,3,H,W) pools MSE over channels+pixels; the
+                # unbatched form channel-split the PSNR (bias +0.268 dB,
+                # stg-n3v-protocol-parity-2026-08-19).
+                metrics["psnr"].append(psnr(gt_image.unsqueeze(0), rgb.unsqueeze(0)))
                 metrics["ssim"].append(ssim(gt_image, rgb))
                 metrics["lpips"].append(lpips(gt_image.unsqueeze(0), rgb.unsqueeze(0)))
             del render_pkg, rgb, alpha, depth, flow, dynamic, static
