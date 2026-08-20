@@ -219,6 +219,19 @@ class OptimizationParams(ParamGroup):
         self.lifecycle_backproject_sigma_max = 0.12
         self.lifecycle_ledger_interval = 100
 
+        # ---------------- CCR B1 observation-born packet birth ----------------
+        # scene.packet_birth.PacketBirthConfig.from_namespace(opt,
+        # prefix="packet_birth_") reads every field below and MUST keep the
+        # `packet_birth_<field name>` spelling. False leaves the substrate
+        # bit-identical (ccr-method-2026-08-20 §3.1). packet_birth_until_iter
+        # -1 means "densify_until_iter".
+        self.packet_birth_enable = False
+        self.packet_birth_interval = 500
+        self.packet_birth_fraction = 0.005
+        self.packet_birth_t_sigma_frames = 1.5
+        self.packet_birth_from_iter = 1000
+        self.packet_birth_until_iter = -1
+
         # ---------------- EL-GS (evidence-lineage) ----------------
         # Category-1 structural constants and the schedule anchors are
         # NOT tunable here: they load from the hash-recorded prereg

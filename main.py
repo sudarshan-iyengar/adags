@@ -29,6 +29,7 @@ from torch.utils.data import DataLoader
 
 from gaussian_renderer import render
 from scene import Scene, GaussianModel
+from scene.packet_birth import maybe_packet_birth, setup_packet_birth, write_packet_state
 from arguments import ModelParams, PipelineParams, OptimizationParams
 from utils.loss_utils import l1_loss, ssim, msssim
 from utils.image_utils import psnr, easy_cmap
@@ -1031,7 +1032,7 @@ def enforce_train_iteration_guard(args):
     )
 
 
-def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_4d, force_sh_3d, num_pts, num_pts_ratio, wandb_run=None):
+def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_4d, force_sh_3d, num_pts, num_pts_ratio, wandb_run=None, appearance_edit=""):
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
@@ -1044,6 +1045,16 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     train_dir = os.path.join(dataset.model_path, 'train', f"ours_{first_iter}")
     test_dir = os.path.join(dataset.model_path, 'test', f"ours_{first_iter}")
     gaussians.restore(model_params, None)
+    if appearance_edit:
+        from scene.appearance_edit import apply_appearance_edit, load_edit_payload
+
+        edit_payload = load_edit_payload(appearance_edit)
+        apply_appearance_edit(gaussians, edit_payload)
+        print(json.dumps({"appearance_edit_applied": {
+            "path": appearance_edit,
+            "mode": edit_payload["mode"],
+            "num_redirected": edit_payload["num_redirected"],
+        }}, sort_keys=True))
     configure_visibility_events_from_opt(gaussians, opt, dataset.source_path)
     gaussExtractor = GaussianExtractor(gaussians, render, pipe, bg_color=bg_color)
 
@@ -1129,6 +1140,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     # CSVL-VPL v2: built after training_setup and after the optional checkpoint
     # restore so the manager sees the final row count and any stashed state.
     lifecycle_manager = setup_lifecycle(gaussians, scene, dataset, opt)
+    # CCR B1 observation-born packet birth; None unless packet_birth_enable.
+    packet_birth_state = setup_packet_birth(opt)
     # EL-GS: same placement rationale; mutually exclusive with the
     # lifecycle (elgs.trainer_hooks fails closed on both enabled).
     from elgs.trainer_hooks import (
@@ -1713,6 +1726,26 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                         if torch.cuda.is_available() else None,
                     })
 
+                # ================= CCR B1 packet birth =================
+                # Same placement rationale as the lifecycle birth above: after
+                # optimizer.step() so Adam moments exist for every row the
+                # point-neutral transaction relocates. The render tensors are
+                # the last micro-batch's; the operator only reads them.
+                if packet_birth_state is not None:
+                    packet_birth_record = maybe_packet_birth(
+                        packet_birth_state,
+                        gaussians,
+                        iteration,
+                        viewpoint_cam,
+                        image,
+                        gt_image,
+                        depth,
+                        alpha,
+                        dynamic_mask,
+                    )
+                    if packet_birth_record is not None:
+                        print(json.dumps({"packet_birth": packet_birth_record}, sort_keys=True))
+
     final_diagnostics = collect_decomposition_diagnostics(scene.gaussians, opt)
     capacity_ledger_path = write_slice_b_capacity_ledger(scene.model_path, scene.gaussians, opt)
     final_dynamic_points = int(scene.gaussians.get_xyz.shape[0])
@@ -1737,6 +1770,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     if lifecycle_manager is not None:
         summary_updates["lifecycle"] = lifecycle_manager.summary()
         summary_updates["lifecycle_ledger"] = lifecycle_manager.ledger_path
+    if packet_birth_state is not None:
+        summary_updates["packet_birth"] = packet_birth_state.summary()
+        summary_updates["packet_state"] = write_packet_state(
+            scene.model_path, scene.gaussians, packet_birth_state
+        )
     if elgs_trainer_state is not None:
         summary_updates["elgs"] = elgs_summary(elgs_trainer_state)
     if best_val_metrics is not None:
@@ -2091,6 +2129,10 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=6666)
     parser.add_argument("--exhaust_test", action="store_true")
     parser.add_argument("--val", action="store_true", default=False)
+    # CCR v3: optional post-training appearance-edit sidecar applied after
+    # the checkpoint restore in --val, so B2 (= B1 + pointer edit) is
+    # scored by exactly the pipeline that scores B1.
+    parser.add_argument("--appearance_edit", type=str, default="")
     parser.add_argument("--use_wandb", action="store_true", default=False)
     parser.add_argument("--wandb_project", type=str, default="adags")
     parser.add_argument("--wandb_entity", type=str, default=None)
@@ -2148,7 +2190,8 @@ if __name__ == "__main__":
         else:
             summary_updates = validation(lp.extract(args), op.extract(args), pp.extract(args),
                                          args.start_checkpoint, args.gaussian_dim, args.time_duration,
-                                         args.rot_4d, args.force_sh_3d, args.num_pts, args.num_pts_ratio, wandb_run)
+                                         args.rot_4d, args.force_sh_3d, args.num_pts, args.num_pts_ratio, wandb_run,
+                                         appearance_edit=args.appearance_edit)
             summary_updates["model_path"] = args.model_path
     finally:
         if summary_updates is not None:

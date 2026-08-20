@@ -235,6 +235,11 @@ class GaussianModel:
         self._pending_elgs_state = None
         self._elgs_checkpoint_extras = None
 
+        # CCR B1: per-row packet id column (-1 = substrate). Stays empty for
+        # every lane that does not enable packet birth; scene.packet_birth
+        # sizes it lazily at the first event.
+        self._packet_ids = torch.empty(0, dtype=torch.long)
+
         self.setup_functions()
 
     def get_elgs_presence(self, timestamp):
@@ -605,6 +610,20 @@ class GaussianModel:
     def get_features(self):
         features_dc = self._features_dc
         features_rest = self._features_rest
+        # CCR v3 directional donor reuse (scene.appearance_edit): a
+        # POST-TRAINING pointer column redirects a recipient row's
+        # appearance to its donor's. Empty column (every training lane)
+        # is a passthrough; "dc" redirects base radiance only, "full"
+        # redirects every band. Both rendered branches read this
+        # property, so a tie applies to the static twin too.
+        source_idx = getattr(self, "_appearance_source_idx", None)
+        if source_idx is not None and source_idx.numel() == features_dc.shape[0]:
+            from scene.appearance_edit import compose_shared_features
+
+            features_dc, features_rest = compose_shared_features(
+                features_dc, features_rest, source_idx,
+                getattr(self, "_appearance_share_mode", "dc"),
+            )
         return torch.cat((features_dc, features_rest), dim=1)
 
     @property
@@ -1678,6 +1697,11 @@ class GaussianModel:
                 if family_id >= 0:
                     self.elgs_runtime.registry.on_rows_pruned(int(family_id), int(count))
 
+        # CCR B1 row alignment: slice the packet-id column with the surviving
+        # rows. Empty column (no packet-birth lane) is left untouched.
+        if self._packet_ids.numel() > 0:
+            self._packet_ids = self._packet_ids[valid_points_mask.to(self._packet_ids.device)]
+
     def prune_static_points(self, mask):
         valid_points_mask = ~mask
         optimizable_tensors = self._prune_optimizer(valid_points_mask, static=True)
@@ -1924,6 +1948,22 @@ class GaussianModel:
             for family_id, count in zip(*[t.tolist() for t in inherited.unique(return_counts=True)]):
                 if family_id >= 0:
                     self.elgs_runtime.registry.on_rows_added(int(family_id), int(count))
+
+        # CCR B1 row alignment: appended rows inherit the SOURCE rows' packet
+        # ids (clone/split stay inside their packet); rows appended outside a
+        # source context carry -1 = substrate. Empty column is left untouched.
+        if self._packet_ids.numel() > 0:
+            if elgs_source_indices is not None:
+                inherited_packets = self._packet_ids[
+                    elgs_source_indices.to(self._packet_ids.device)
+                ]
+            else:
+                inherited_packets = torch.full(
+                    (int(new_xyz.shape[0]),), -1,
+                    dtype=self._packet_ids.dtype,
+                    device=self._packet_ids.device,
+                )
+            self._packet_ids = torch.cat([self._packet_ids, inherited_packets], dim=0)
 
     def densification_postfix_static(
             self,
