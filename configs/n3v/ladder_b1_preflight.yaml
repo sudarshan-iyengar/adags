@@ -1,43 +1,6 @@
-﻿# B1: the current ADAGS temporal substrate under the STG-matched N3V protocol.
-#
-# EXPLORATORY, evidence_bearing: false. Byte-identical to lane_l0_route0.yaml
-# except for the two lines marked MATCHED, and it exists because the recorded
-# ADAGS figure for this scene is not on the published protocol's scale.
-#
-# `cut_roasted_beef` 34.366 dB was measured at ModelParams.resolution: 2 applied
-# to PNGs that scripts/n3v2blender.py had ALREADY halved -- so 676x507, one
-# quarter of the pixels of the 1352x1014 at which Spacetime Gaussians trains,
-# evaluates and publishes 33.52 dB. It was also a single model over all 300
-# frames, where STG's published number is a 50-frame model (six per scene, run
-# in series). Comparing 34.37 against 33.52 across that gap is not supported,
-# and this cell is what makes the ADAGS side of the comparison legitimate.
-#
-#   MATCHED  batch_size: 2   -> was 4. Experiment 169 died with CUDA OOM at
-#                               iteration 3510/6000 on a V100 32GB, having
-#                               reached the 600k point cap: "Tried to allocate
-#                               2.71 GiB ... 28.98 GiB reserved in total".
-#                               Image-space buffers scale with the raster, and
-#                               this cell quadrupled it. Halving the batch
-#                               halves that peak -- and it also moves the ADAGS
-#                               side TOWARD the published protocol rather than
-#                               away from it, because STG trains N3V at batch 2.
-#                               Disclosed as a change to ADAGS's own budget: at
-#                               a fixed 6000 iterations, batch 2 sees half the
-#                               gradient samples batch 4 did.
-#   MATCHED  resolution: 1   -> 1352x1014, the published training/eval raster
-#   MATCHED  time_duration   -> frames 0-49 inclusive (t = frame/30, so the
-#                               upper bound must exceed 49/30 = 1.63333 and
-#                               fall below 50/30 = 1.66667)
-#
-# Everything else is ADAGS's OWN published budget -- 6000 iterations, batch 4,
-# 600k point cap -- and is deliberately NOT moved toward STG's 30k/batch-2
-# schedule. Truncating STG to 6000 would measure a crippled STG (its
-# densify_until_iter alone is 9000), so each side runs at its own budget and
-# the resource ledger is reported alongside the metric.
-#
-# This cell alone does NOT reproduce STG. It is comparable to a PUBLISHED
-# number on the protocol axes that were previously mismatched, which is a
-# screening measurement, not a reproduction.
+# CCR ladder B1 PREFLIGHT: 1200 iterations, crossing the first relocation
+# event (iteration 1000) and the densification that follows it. Identical
+# to ladder_b1_crb.yaml otherwise.
 
 gaussian_dim: 4
 time_duration: [0.0, 1.6340]

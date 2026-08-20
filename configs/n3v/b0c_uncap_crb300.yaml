@@ -1,19 +1,18 @@
-# CCR ladder B0: the ADAGS temporal substrate under the STG-matched
-# protocol, with the reserved confirmation pool held out.
+# B0-C-UNCAP: the one-variable capacity companion of B0-C.
 #
-# Byte-identical to b1_stg_matched_cut_roasted_beef.yaml except:
-#   route_logit_init: 4.0      EXPLICIT de-facto historical init
-#                              (init-order repair 2026-08-20);
-#   elgs_reserved_parity: true ~25% of training units reserved so the
-#                              B2 consolidation admissions run on units
-#                              no ladder arm ever trained on. Internally
-#                              matched ladder only: NOT comparable to
-#                              experiments 181/194, which trained on all
-#                              units.
-# Frozen ladder + gates: research-wiki/operations/ccr-method-2026-08-20.md.
+# Byte-identical to b0c_canonical_crb300.yaml except
+# densify_until_num_points: -1 (UNCAPPED). Authorized by the user
+# 2026-08-20 as a clean capacity companion on the free hopper slot;
+# recorded in b0c-canonical-300f-2026-08-20.md APPENDIX A. Everything
+# else -- schedule, endpoint, seed, evaluator, comparison boundary --
+# is B0-C's frozen protocol. Expected consequences, recorded before
+# launch: primitive count grows past 600k (the 676x507 uncapped
+# precedent reached 1.24M), runtime and memory grow with splat count
+# (H100 80GB headroom; a late OOM would be reported as a capacity-
+# demand measurement, not retried at reduced settings).
 
 gaussian_dim: 4
-time_duration: [0.0, 1.6340]
+time_duration: [0.0, 10.0]
 num_pts: 300_0000
 num_pts_ratio: 1.0
 rot_4d: False
@@ -44,12 +43,12 @@ PipelineParams:
   eval_shfs_4d: True
 
 OptimizationParams:
-  iterations: 6_000
+  iterations: 36_000
   position_lr_init: 0.00016
   position_t_lr_init: -1.0
   position_lr_final: 0.0000016
   position_lr_delay_mult: 0.01
-  position_lr_max_steps: 6_000
+  position_lr_max_steps: 36_000
   feature_lr: 0.0025
   opacity_lr: 0.05
   scaling_lr: 0.005
@@ -58,12 +57,12 @@ OptimizationParams:
   lambda_dssim: 0.2
   thresh_opa_prune: 0.005
   densification_interval: 100
-  opacity_reset_interval: 30000
+  opacity_reset_interval: 40000
   densify_from_iter: 500
-  densify_until_iter: 6_000
+  densify_until_iter: 30_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.000005
-  densify_until_num_points: 600000
+  densify_until_num_points: -1
   final_prune_from_iter: -1
   sh_increase_interval: 1000
   lambda_opa_mask: 0.0
@@ -112,5 +111,5 @@ OptimizationParams:
   blur_until_iter: 0
   blur_start_sigma: 8.0
   histogram_log_interval: 100
-  elgs_reserved_parity: true
+
 
