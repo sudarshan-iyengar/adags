@@ -25,7 +25,15 @@ page is the operational summary implementers and auditors read.
   `validate_apollo_runtime.py --build-check` gate; pushed; MANIFEST
   DIGEST for all evidence-bearing M1 references:
   `sha256:a2877f26cb8528454fe45e701ce638a6042dd68155fb5359cb7edc608a4a7816`.
-  Tracker weights are NOT baked — separately manifested artifact.
+  Tracker weights are NOT baked — separately manifested artifact. A second
+  H100 revision, `apollo-h100-88ee245` (digest
+  `sha256:0d5771688c9b6580f70133f813b7a4110bd5c967920afe3c5fd1856bb098800e`),
+  was built and pushed 2026-08-20 to bring `hopper` to CUDA-source parity
+  with the V100 `backward.cu` repair admitted in
+  [[renderer-integrity-admission-2026-08-18]] Appendix D; verified
+  on-cluster on `hopper` the same day (Determined experiment 207,
+  `cuda_sources.matches: true`, identical residuals to the V100
+  verification).
 - Storage roots (inside containers): project
   `/apollo/users/sri/proj_adags`, raw data `data/` (read-only),
   runs `runs/elgs/<run_id>/`, logs `logs/`. VERIFIED 2026-08-11 by

@@ -457,3 +457,86 @@ repro_bound_new   r3 (exp 152), r4 (exp 153)   -> next free r5
 
 No further renderer runs are authorised by this page under any outcome, and
 this appendix does not authorise any.
+
+## APPENDIX D (2026-08-20, append-only) — H100 image built to parity, not yet verified on-cluster
+
+Section 1's admission covered `dgx`/V100 only. The `hopper`/H100 image had
+not been rebuilt against the repaired kernel; `apollo-h100-v2`
+(`sha256:a2877f26…`) still carries the pre-repair `backward.cu`. This
+appendix records a workstation build/push closing that gap, on the
+workstation, not on Apollo — no `det` submission, no GPU-hours, no ledger
+entry.
+
+**Precondition checked before building.** `git log --oneline
+05e22be..HEAD -- diff-gaussian-rasterization/ simple-knn/ pointops2/`
+returns nothing: no CUDA-affecting commit has landed since the repair.
+`scripts/verify_flow_vjp_runtime.py --print-cuda-sha256` at HEAD (`88ee245`)
+returns combined hash `99c9fbd7f5eafec3b2d87a53f07fdc2d4faf688e2eac83c8f2fa1fb2c8c82d52`
+— byte-identical to the hash recorded in §1 for the admitted V100 image.
+So the H100 image could be built at current HEAD without re-deriving
+anything about the repair itself.
+
+| item | value |
+|---|---|
+| Branch | `apollo/csvl-vpl-v2-exploratory` |
+| Built at commit | `88ee245` (CUDA sources unchanged since `05e22be`, hash verified equal) |
+| Image tag | `sudarshaniyengar/adags:apollo-h100-88ee245` |
+| **Image digest** | `sha256:0d5771688c9b6580f70133f813b7a4110bd5c967920afe3c5fd1856bb098800e` |
+| CUDA source hash | `99c9fbd7f5eafec3b2d87a53f07fdc2d4faf688e2eac83c8f2fa1fb2c8c82d52` (matches §1) |
+| Build | `Dockerfile.apollo-h100`, unedited; torch 2.0.1+cu118, nvcc 11.8, `TORCH_CUDA_ARCH_LIST="8.9 9.0+PTX"` |
+| Superseded image | `apollo-h100-v2`, `sha256:a2877f26cb8528454fe45e701ce638a6042dd68155fb5359cb7edc608a4a7816` — retained, never overwritten |
+
+The in-Dockerfile `validate_apollo_runtime.py --build-check` gate ran during
+the build and passed: all three extensions
+(`_adags_diff_gaussian_rasterization`, `pointops2_cuda`, `simple_knn._C`)
+compiled and imported, `nvcc` resolved to CUDA 11.8, `cuda_available: false`
+as expected for a build with no GPU device attached. This is a build-time
+smoke check, not a functional verification.
+
+**What this does NOT establish, as first written.** No `det cmd run` or
+`det e create` cell had yet executed against this digest on `hopper` at
+build time. Section 4's `cuda_sources.matches: true` in-container check and
+the gradient-liveness measurement were both run on `dgx` against the V100
+digest; neither had been repeated here. The verification below closes that
+gap.
+
+### RESULT (2026-08-20) — verified on `hopper`, identical residuals to V100
+
+Determined experiment **207**, cell `flow_vjp_h100_verify` retry `r1`
+(`r0` consumed by a `--dry-run`), pool `hopper`, image digest
+`sha256:0d5771688c9b6580f70133f813b7a4110bd5c967920afe3c5fd1856bb098800e`,
+entrypoint `scripts/verify_flow_vjp_runtime.py --expect-commit
+88ee245bf3c813ed3d752d1d0d50aef722de1f07 --expect-cuda-sha256
+99c9fbd7f5eafec3b2d87a53f07fdc2d4faf688e2eac83c8f2fa1fb2c8c82d52`,
+`evidence_bearing: false` (`--exploratory`). `STATE_COMPLETED`, container
+exited zero.
+
+```
+device_name: NVIDIA H100 PCIe, device_capability: 9.0, cuda_available: true
+cuda_sources.matches: true
+tests: run 62, passed 57, failures 4, errors 1, unexpected_failures: []
+verified: true
+```
+
+The 5 residuals (4 failures + 1 error) are the SAME named, tolerated
+defects as V100 experiment 139's §4.2 table, with the SAME finite-difference
+numbers to the last printed digit (e.g. opacity `1.1748790740966797 !=
+1.5871202945709229`; geometry `0.35566091537475586 != -0.657229483127594`).
+None is new. The gradient-routing block also matches V100's routing
+pattern: `flows` is `0.0` under a colour loss and `2.1435470581054688`
+under a flow loss at both scene sizes tested, and
+`max_relative_error_vs_oracle: 1.0052688149127206e-07` on the colour
+forward. This is the H100 counterpart of §4's decisive measurement.
+
+No `terminal.json` was sealed locally: this workstation has no `/apollo`
+mount (workstation reads route through the `apollo:` rclone remote per
+[[apollo-determined-execution-authority]]), and this is an exploratory,
+non-evidence-bearing cell, so a sealed audit was not required to establish
+the result. Consumed claim indices:
+
+```
+flow_vjp_h100_verify   r0 (dry-run, no .experiment), r1 (exp 207)   -> next free r2
+```
+
+`apollo-h100-88ee245` is now VERIFIED on `hopper`, not merely built to
+parity — the same evidentiary standard §4 applied to the V100 image.
