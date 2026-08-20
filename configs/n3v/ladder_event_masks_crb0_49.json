@@ -1,0 +1,25 @@
+{
+ "schema_version": "ccr-event-ray-masks-v1",
+ "source": "research-wiki/operations/ccr-segment-selection-2026-08-20.md",
+ "raster": [1352, 1014],
+ "camera": "cam00",
+ "window_frames": [0, 49],
+ "note": "Frozen BEFORE any ladder cell output was read. Rects are [x0,y0,x1,y1] in the 1352x1014 cam00 raster, hand-estimated +-15 px from cam00 images only. 'frames' lists inclusive [start,end] intervals on which the revealed surface is scored (occluder withdrawn).",
+ "events": [
+  {
+   "name": "A_hand_press_reveal",
+   "bbox": [655, 845, 745, 905],
+   "frames": [[10, 18], [29, 43]]
+  },
+  {
+   "name": "B_knife_stroke_reveal",
+   "bbox": [700, 880, 790, 955],
+   "frames": [[34, 39]]
+  },
+  {
+   "name": "C_tongs_band_reveal",
+   "bbox": [795, 845, 890, 955],
+   "frames": [[34, 39]]
+  }
+ ]
+}
