@@ -1,0 +1,20 @@
+{
+ "schema_version": "elgs-oracle-episodes-v1",
+ "units": "model_time_seconds",
+ "region": {
+  "kind": "sphere",
+  "centre": [
+   0.7,
+   0.1,
+   0.35
+  ],
+  "radius": 0.2
+ },
+ "gaps": [
+  [
+   4.833333333333333,
+   8.833333333333334
+  ]
+ ],
+ "note": "LRV3 SMALL-MISTIMING control: the correct absence (frames 30-56) translated 2 frames EARLY, so the program believes the object absent over frames 28-54 and present again from 55. Same inset convention as oracle_correct.json (boundaries inset by w = 0.3333 s), same gap length (4.0 s), same total present time (6.5 s), both floors cleared. Verified per-frame (CPU, production path): presence 1.0 on the decisive return frames 57-59, 0.5 on true-present frame 28, 0.5 on truly-absent frame 54. DISCLOSED: a translation cannot preserve the episode-duration multiset under latched window ends (correct {5.5, 1.0} vs shifted {5.1667, 1.3333} -- 0.333 s moves from episode 1 to episode 2); only gap length and total presence are matched. Authorized by lrv3-local-presence-corrected-cell-2026-08-20 only because the success rule fired."
+}

@@ -12,10 +12,12 @@
 import torch
 
 def mse(img1, img2):
-    return (((img1 - img2)) ** 2).view(img1.shape[0], -1).mean(1, keepdim=True)
+    # reshape, not view: batched (1,3,H,W) inputs produced by unsqueezing
+    # a non-contiguous render are not viewable (experiment 188).
+    return (((img1 - img2)) ** 2).reshape(img1.shape[0], -1).mean(1, keepdim=True)
 
 def psnr(img1, img2):
-    mse = (((img1 - img2)) ** 2).view(img1.shape[0], -1).mean(1, keepdim=True)
+    mse = (((img1 - img2)) ** 2).reshape(img1.shape[0], -1).mean(1, keepdim=True)
     return 20 * torch.log10(1.0 / torch.sqrt(mse))
 
 def easy_cmap(x: torch.Tensor):

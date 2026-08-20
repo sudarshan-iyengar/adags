@@ -231,6 +231,9 @@ def main():
                 "ghost_gap", "ordinary_return", "ordinary_all")}
     ssims, lpipss = [], []
     per_return_frame = {}
+    # per-frame ghosting: separates the DESIGNED ramp frames (partial
+    # presence inside the gap) from genuine leakage across the absence
+    per_ghost_frame = {}
     missing_masks = 0
 
     # the object's episode-1 footprint per held-out camera: the union over
@@ -285,6 +288,10 @@ def main():
                     # ground truth here is background: any energy the model puts
                     # inside the vacated footprint is ghosting
                     regions["ghost_gap"].add(pred, gt, fp.cuda())
+                    r = Region()
+                    r.add(pred, gt, fp.cuda())
+                    per_ghost_frame.setdefault(str(frame), []).append(
+                        r.summary()["psnr_pooled"])
 
     if missing_masks:
         raise ContractError(
@@ -316,6 +323,9 @@ def main():
         "ordinary_all": regions["ordinary_all"].summary(),
         "event_return_psnr_by_frame": {
             k: float(np.mean(v)) for k, v in sorted(per_return_frame.items())
+        },
+        "ghost_gap_psnr_by_frame": {
+            k: float(np.mean(v)) for k, v in sorted(per_ghost_frame.items())
         },
     }
     out_path.write_text(json.dumps(result, indent=1, sort_keys=True))
