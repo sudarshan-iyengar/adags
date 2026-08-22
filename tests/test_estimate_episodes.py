@@ -683,7 +683,8 @@ class TestStructuralSeparation(unittest.TestCase):
     ESTIMATION_STAGE_FUNCTIONS = (
         "estimate_episode_program", "_pooled_series", "_decide_group",
         "measure_series", "build_footprints", "build_voxel_groups",
-        "freeze_program", "_render_error", "_dilate",
+        "voxel_grid", "freeze_program", "build_v2_program",
+        "_render_error", "_dilate",
     )
 
     #: Attributes an estimation-stage function may never touch.
@@ -769,6 +770,504 @@ class TestProgramFreezing(unittest.TestCase):
         estimate = {"n_groups": 0, "decisions": []}
         program, _ = ee.freeze_program(estimate, FRAME_DT, config)
         self.assertIsInstance(json.dumps(program, sort_keys=True), str)
+
+
+class TestSchemaV1ByteIdentity(unittest.TestCase):
+    """Phase T2 must not perturb the v1 supply path by a single value.
+
+    `tests/test_elgs_oracle_episodes.py` (not owned by this change) is the
+    behavioural regression suite and still passes untouched; this pins the
+    EXACT returned triple for the shipped `configs/lrv3/oracle_correct.json`
+    so a future edit to the shared `_interval_from_gaps` helper cannot drift
+    it silently.
+    """
+
+    #: captured from the loader BEFORE schema v2 existed
+    GOLDEN_REGION = {"kind": "sphere", "centre": [0.7, 0.1, 0.35], "radius": 0.2}
+    GOLDEN_A = (0.0, -0.3877655267715454, -3.332204580307007)
+    GOLDEN_TAU = (0.0, 0.0)
+    GOLDEN_B = (-0.3333333432674408, 9.166666030883789)
+    GOLDEN_D = (5.166666507720947, 10.166666030883789)
+
+    def test_oracle_correct_returns_the_unchanged_triple(self):
+        from elgs.intervals import forward
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        path = REPO_ROOT / "configs" / "lrv3" / "oracle_correct.json"
+        if not path.is_file():
+            self.skipTest("configs/lrv3/oracle_correct.json not present")
+        config = lrv3_config()
+        region, interval, tau = load_oracle_episodes(str(path), config)
+
+        self.assertEqual(region, self.GOLDEN_REGION)
+        self.assertEqual(interval.K, 2)
+        self.assertEqual((interval.latch_pre, interval.latch_post), (True, True))
+        self.assertEqual(interval.a.dtype, torch.float32)
+        self.assertEqual(interval.a.numel(), 3)
+        for got, want in zip(interval.a.tolist(), self.GOLDEN_A):
+            self.assertEqual(float(got), want)
+        self.assertEqual(tau, self.GOLDEN_TAU)
+
+        realization = forward(interval, config)
+        for got, want in zip(realization.b.tolist(), self.GOLDEN_B):
+            self.assertEqual(float(got), want)
+        for got, want in zip(realization.d.tolist(), self.GOLDEN_D):
+            self.assertEqual(float(got), want)
+
+    def test_v1_still_fails_closed_on_an_inadmissible_gap(self):
+        from elgs.trainer_hooks import ORACLE_EPISODES_SCHEMA, load_oracle_episodes
+
+        config = lrv3_config()
+        payload = {
+            "schema_version": ORACLE_EPISODES_SCHEMA,
+            "units": "model_time_seconds",
+            "region": {"kind": "sphere", "centre": [0.0, 0.0, 0.0], "radius": 0.2},
+            "gaps": [[5.0, 5.0 + 0.5 * config.floor_gap]],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "oracle.json"
+            path.write_text(json.dumps(payload))
+            with self.assertRaises(Exception):
+                load_oracle_episodes(str(path), config)
+
+
+def _v2_payload(groups, *, membership_mode="row_ids", row_group_ids=None,
+                cloud=None, spatial=None):
+    from elgs.trainer_hooks import EPISODE_PROGRAM_SCHEMA_V2
+
+    payload = {
+        "schema_version": EPISODE_PROGRAM_SCHEMA_V2,
+        "units": "model_time_seconds",
+        "membership_mode": membership_mode,
+        "groups": groups,
+    }
+    if cloud is not None:
+        payload["cloud"] = cloud
+    if spatial is not None:
+        payload["spatial"] = spatial
+    if row_group_ids is not None:
+        payload["row_group_ids"] = list(row_group_ids)
+    return payload
+
+
+def _write_v2(tmp, payload, name="program_v2.json"):
+    path = Path(tmp) / name
+    path.write_text(json.dumps(payload))
+    return str(path)
+
+
+def _stub_gaussians_for_seeding(xyz):
+    gaussians = types.SimpleNamespace()
+    gaussians._xyz = xyz
+    gaussians._elgs_family_ids = torch.empty(0, dtype=torch.long)
+    gaussians._elgs_checkpoint_extras = {
+        "round_bookkeeping": {}, "moment_reset_log": []}
+    gaussians.optimizer = torch.optim.Adam(
+        [torch.zeros(1, requires_grad=True)], lr=1e-3)
+    return gaussians
+
+
+def _seed_state(config, program_path, local_presence=True):
+    from elgs.families import FamilyRegistry
+    from elgs.runtime import ElgsRuntime, ScheduleAnchors
+    from elgs.trainer_hooks import ElgsTrainerState, load_structural_prereg
+
+    prereg = load_structural_prereg(str(REPO_ROOT / "configs" / "elgs"))
+    sched = prereg["schedule"]["full"]
+    schedule = ScheduleAnchors(
+        seed_iteration=int(sched["seed_iteration"]),
+        audit_iteration=int(sched["audit_iteration"]),
+        round_iterations=tuple(int(v) for v in sched["round_iterations"]),
+        refit_until=int(sched["refit_until"]),
+    )
+    registry = FamilyRegistry()
+    runtime = ElgsRuntime(registry, config, schedule, device="cpu",
+                          dtype=torch.float32)
+    return ElgsTrainerState(
+        runtime=runtime, bundle=None, config=config, schedule=schedule,
+        sampler_params=None, prereg=prereg, frame_dt=FRAME_DT,
+        oracle_episodes=str(program_path), local_presence=local_presence,
+        a_lr=0.0,
+    )
+
+
+class TestSchemaV2Loading(unittest.TestCase):
+    GAP_A = [[5.166666666666666, 9.166666666666666]]
+    GAP_B = [[2.0, 4.0]]
+
+    def test_two_groups_carry_their_own_intervals(self):
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        config = lrv3_config()
+        payload = _v2_payload(
+            [{"group": 0, "gaps": self.GAP_A}, {"group": 3, "gaps": self.GAP_B}],
+            membership_mode="spatial_voxel",
+            spatial={"kind": "voxel_grid", "cells_per_axis": 2,
+                     "lo": [0.0, 0.0, 0.0], "span": [1.0, 1.0, 1.0],
+                     "group_cell_keys": {"0": [0], "3": [7]}},
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            program = load_oracle_episodes(_write_v2(tmp, payload), config)
+        self.assertEqual(sorted(program.intervals), [0, 3])
+        self.assertEqual(program.intervals[0].K, 2)
+        self.assertEqual(program.intervals[3].K, 2)
+        # different gaps must produce genuinely different logit vectors
+        self.assertFalse(torch.equal(program.intervals[0].a, program.intervals[3].a))
+        self.assertEqual(program.taus[0], (0.0, 0.0))
+
+    def test_heterogeneous_k_is_accepted(self):
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        config = lrv3_config()
+        payload = _v2_payload(
+            [{"group": 0, "gaps": self.GAP_A},
+             {"group": 1, "gaps": [[2.0, 3.5], [6.0, 7.5]]}],
+            membership_mode="spatial_voxel",
+            spatial={"kind": "voxel_grid", "cells_per_axis": 2,
+                     "lo": [0.0, 0.0, 0.0], "span": [1.0, 1.0, 1.0],
+                     "group_cell_keys": {"0": [0], "1": [7]}},
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            program = load_oracle_episodes(_write_v2(tmp, payload), config)
+        self.assertEqual(program.intervals[0].K, 2)
+        self.assertEqual(program.intervals[1].K, 3)
+        self.assertEqual(len(program.taus[1]), 3)
+
+    def test_inadmissible_v2_interval_raises_rather_than_being_repaired(self):
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        config = lrv3_config()
+        short = 0.5 * config.floor_gap
+        payload = _v2_payload(
+            [{"group": 0, "gaps": [[5.0, 5.0 + short]]}],
+            membership_mode="spatial_voxel",
+            spatial={"kind": "voxel_grid", "cells_per_axis": 2,
+                     "lo": [0.0, 0.0, 0.0], "span": [1.0, 1.0, 1.0],
+                     "group_cell_keys": {"0": [0]}},
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ContractError):
+                load_oracle_episodes(_write_v2(tmp, payload), config)
+
+    def test_malformed_programs_fail_closed(self):
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        config = lrv3_config()
+        spatial = {"kind": "voxel_grid", "cells_per_axis": 2,
+                   "lo": [0.0, 0.0, 0.0], "span": [1.0, 1.0, 1.0],
+                   "group_cell_keys": {"0": [0]}}
+        bad = [
+            _v2_payload([], membership_mode="spatial_voxel", spatial=spatial),
+            _v2_payload([{"group": 0, "gaps": self.GAP_A}],
+                        membership_mode="nonsense", spatial=spatial),
+            _v2_payload([{"group": 0, "gaps": self.GAP_A},
+                         {"group": 0, "gaps": self.GAP_B}],
+                        membership_mode="spatial_voxel", spatial=spatial),
+            _v2_payload([{"group": -1, "gaps": self.GAP_A}],
+                        membership_mode="spatial_voxel", spatial=spatial),
+            # row_ids without the cloud binding
+            _v2_payload([{"group": 0, "gaps": self.GAP_A}],
+                        membership_mode="row_ids", row_group_ids=[0, -1]),
+            # spatial_voxel without a spatial block
+            _v2_payload([{"group": 0, "gaps": self.GAP_A}],
+                        membership_mode="spatial_voxel"),
+        ]
+        for index, payload in enumerate(bad):
+            payload.setdefault("units", "model_time_seconds")
+            with tempfile.TemporaryDirectory() as tmp:
+                with self.assertRaises(ContractError, msg="payload %d" % index):
+                    load_oracle_episodes(_write_v2(tmp, payload), config)
+
+    def test_wrong_units_are_rejected(self):
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        config = lrv3_config()
+        payload = _v2_payload([{"group": 0, "gaps": self.GAP_A}],
+                              membership_mode="spatial_voxel",
+                              spatial={"kind": "voxel_grid", "cells_per_axis": 2,
+                                       "lo": [0.0] * 3, "span": [1.0] * 3,
+                                       "group_cell_keys": {"0": [0]}})
+        payload["units"] = "frames"
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ContractError):
+                load_oracle_episodes(_write_v2(tmp, payload), config)
+
+
+class TestSchemaV2Membership(unittest.TestCase):
+    """`resolve_v2_membership` on both modes, including the fail-closed path."""
+
+    CLOUD = torch.tensor([[0.1, 0.1, 0.1],     # cell 0
+                          [0.2, 0.2, 0.2],     # cell 0
+                          [0.9, 0.9, 0.9],     # cell 7
+                          [0.9, 0.1, 0.1],     # cell 4
+                          [0.3, 0.3, 0.3]])    # cell 0
+    SPATIAL = {"kind": "voxel_grid", "cells_per_axis": 2,
+               "lo": [0.0, 0.0, 0.0], "span": [1.0, 1.0, 1.0],
+               "group_cell_keys": {"0": [0], "3": [7]}}
+    GROUPS = [{"group": 0, "gaps": [[5.166666666666666, 9.166666666666666]]},
+              {"group": 3, "gaps": [[2.0, 4.0]]}]
+
+    def _load(self, tmp, **kwargs):
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        payload = _v2_payload(self.GROUPS, **kwargs)
+        return load_oracle_episodes(_write_v2(tmp, payload), lrv3_config())
+
+    def test_spatial_membership_assigns_by_cell_key(self):
+        from elgs.trainer_hooks import resolve_v2_membership
+
+        with tempfile.TemporaryDirectory() as tmp:
+            program = self._load(tmp, membership_mode="spatial_voxel",
+                                 spatial=self.SPATIAL)
+        column = resolve_v2_membership(program, self.CLOUD)
+        # rows 0,1,4 are in cell 0 -> group 0; row 2 in cell 7 -> group 3;
+        # row 3 is in cell 4, which no group claims -> ungated
+        self.assertEqual(column.tolist(), [0, 0, 3, -1, 0])
+
+    def test_spatial_membership_leaves_rows_outside_the_bbox_ungated(self):
+        """Without this, clamping would sweep distant rows into an edge cell."""
+        from elgs.trainer_hooks import resolve_v2_membership
+
+        cloud = torch.tensor([[0.1, 0.1, 0.1],      # inside, cell 0
+                              [-5.0, -5.0, -5.0],   # far outside, clamps to 0
+                              [9.0, 9.0, 9.0]])     # far outside, clamps to 7
+        with tempfile.TemporaryDirectory() as tmp:
+            program = self._load(tmp, membership_mode="spatial_voxel",
+                                 spatial=self.SPATIAL)
+        column = resolve_v2_membership(program, cloud)
+        self.assertEqual(column.tolist(), [0, -1, -1])
+
+    def test_row_ids_membership_is_used_verbatim_when_the_cloud_matches(self):
+        from elgs.trainer_hooks import cloud_fingerprint, resolve_v2_membership
+
+        ids = [0, 0, 3, -1, 0]
+        cloud = {"n_rows": 5, "xyz_sha256": cloud_fingerprint(self.CLOUD)}
+        with tempfile.TemporaryDirectory() as tmp:
+            program = self._load(tmp, membership_mode="row_ids",
+                                 row_group_ids=ids, cloud=cloud,
+                                 spatial=self.SPATIAL)
+        self.assertEqual(resolve_v2_membership(program, self.CLOUD).tolist(), ids)
+
+    def test_row_ids_fails_closed_on_a_different_row_count(self):
+        from elgs.trainer_hooks import cloud_fingerprint, resolve_v2_membership
+
+        cloud = {"n_rows": 5, "xyz_sha256": cloud_fingerprint(self.CLOUD)}
+        with tempfile.TemporaryDirectory() as tmp:
+            program = self._load(tmp, membership_mode="row_ids",
+                                 row_group_ids=[0, 0, 3, -1, 0], cloud=cloud,
+                                 spatial=self.SPATIAL)
+        fresh = torch.rand(50, 3)
+        with self.assertRaises(ContractError) as caught:
+            resolve_v2_membership(program, fresh)
+        self.assertIn("spatial_voxel", str(caught.exception))
+
+    def test_row_ids_fails_closed_on_a_different_cloud_of_the_same_size(self):
+        """The row-count check alone would pass; the fingerprint must not."""
+        from elgs.trainer_hooks import cloud_fingerprint, resolve_v2_membership
+
+        cloud = {"n_rows": 5, "xyz_sha256": cloud_fingerprint(self.CLOUD)}
+        with tempfile.TemporaryDirectory() as tmp:
+            program = self._load(tmp, membership_mode="row_ids",
+                                 row_group_ids=[0, 0, 3, -1, 0], cloud=cloud,
+                                 spatial=self.SPATIAL)
+        moved = self.CLOUD.clone()
+        moved[0, 0] += 1e-3
+        with self.assertRaises(ContractError):
+            resolve_v2_membership(program, moved)
+
+    def test_membership_naming_an_intervalless_group_fails_closed(self):
+        from elgs.trainer_hooks import cloud_fingerprint, resolve_v2_membership
+
+        cloud = {"n_rows": 5, "xyz_sha256": cloud_fingerprint(self.CLOUD)}
+        with tempfile.TemporaryDirectory() as tmp:
+            program = self._load(tmp, membership_mode="row_ids",
+                                 row_group_ids=[0, 0, 3, 9, 0], cloud=cloud,
+                                 spatial=self.SPATIAL)
+        with self.assertRaises(ContractError):
+            resolve_v2_membership(program, self.CLOUD)
+
+
+class TestSchemaV2Seeding(unittest.TestCase):
+    """`seed_families` on a computed program: one family per gated group."""
+
+    CLOUD = TestSchemaV2Membership.CLOUD
+    SPATIAL = TestSchemaV2Membership.SPATIAL
+    GROUPS = TestSchemaV2Membership.GROUPS
+
+    def _seed(self, tmp, local_presence=True, **kwargs):
+        from elgs.trainer_hooks import seed_families
+
+        payload = _v2_payload(self.GROUPS, **kwargs)
+        path = _write_v2(tmp, payload)
+        config = lrv3_config()
+        state = _seed_state(config, path, local_presence=local_presence)
+        gaussians = _stub_gaussians_for_seeding(self.CLOUD)
+        seed_families(state, gaussians, iteration=0)
+        return state, gaussians
+
+    def test_two_groups_seed_two_families_with_distinct_interval_states(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state, gaussians = self._seed(tmp, membership_mode="spatial_voxel",
+                                          spatial=self.SPATIAL)
+        registry = state.runtime.registry
+        active = registry.active_ids()
+        self.assertEqual(len(active), 2)
+        first, second = (registry.get(f) for f in active)
+        self.assertEqual(first.interval.K, 2)
+        self.assertEqual(second.interval.K, 2)
+        # the two families carry genuinely DIFFERENT programs
+        self.assertFalse(torch.equal(first.interval.a, second.interval.a))
+        self.assertEqual({first.lineage_key, second.lineage_key},
+                         {"est-group-0", "est-group-3"})
+
+    def test_ungated_rows_keep_family_id_minus_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, gaussians = self._seed(tmp, membership_mode="spatial_voxel",
+                                      spatial=self.SPATIAL)
+        ids = gaussians._elgs_family_ids
+        self.assertEqual(int(ids.numel()), 5)
+        # row 3 sits in an unclaimed cell and must stay substrate
+        self.assertEqual(int(ids[3]), -1)
+        self.assertEqual(int((ids < 0).sum()), 1)
+        # the three cell-0 rows share one family, distinct from row 2's
+        self.assertEqual(int(ids[0]), int(ids[1]))
+        self.assertEqual(int(ids[0]), int(ids[4]))
+        self.assertNotEqual(int(ids[0]), int(ids[2]))
+
+    def test_gated_rows_are_gated_and_ungated_rows_are_not(self):
+        """The renderer-facing consequence: only gated rows lose the marginal."""
+        with tempfile.TemporaryDirectory() as tmp:
+            state, gaussians = self._seed(tmp, membership_mode="spatial_voxel",
+                                          spatial=self.SPATIAL)
+        gated = state.runtime.gated_row_mask(gaussians._elgs_family_ids)
+        self.assertEqual(gated.flatten().tolist(),
+                         [True, True, True, False, True])
+
+    def test_v2_requires_local_presence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ContractError):
+                self._seed(tmp, local_presence=False,
+                           membership_mode="spatial_voxel", spatial=self.SPATIAL)
+
+    def test_a_program_that_gates_nothing_here_fails_closed(self):
+        """A silent no-op would look like a successful run that did nothing."""
+        spatial = dict(self.SPATIAL)
+        spatial["group_cell_keys"] = {"0": [1], "3": [2]}   # cells nothing occupies
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ContractError) as caught:
+                self._seed(tmp, membership_mode="spatial_voxel", spatial=spatial)
+        self.assertIn("no-op", str(caught.exception))
+
+
+class TestV2Emission(unittest.TestCase):
+    """The emitted artifact must round-trip and recompute identically."""
+
+    def _cloud(self):
+        torch.manual_seed(3)
+        corners = torch.tensor([[-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]])
+        a = torch.full((20, 3), -0.9) + torch.rand(20, 3) * 0.01
+        b = torch.full((20, 3), 0.9) - torch.rand(20, 3) * 0.01
+        return torch.cat([corners, a, b], dim=0)
+
+    def _decisions(self, labels):
+        groups = sorted(set(int(v) for v in labels.tolist()) - {-1})
+        self.assertGreaterEqual(len(groups), 2)
+        gaps = {groups[0]: [5.166666666666666, 9.166666666666666],
+                groups[1]: [2.0, 4.0]}
+        decisions = []
+        for group in groups:
+            gated = group in gaps
+            decisions.append({
+                "group": group,
+                "rows": int((labels == group).sum()),
+                "gated": gated,
+                "offset_frame": 30 if gated else None,
+                "onset_frame": 57 if gated else None,
+                "gap_seconds": gaps.get(group),
+                "abstain_reason": None if gated else ee.ABSTAIN_CONTRAST,
+                "agreeing_cameras": 4 if gated else 0,
+            })
+        return decisions, groups[:2]
+
+    def test_emitted_program_round_trips_through_the_loader(self):
+        from elgs.trainer_hooks import load_oracle_episodes
+
+        cloud = self._cloud()
+        labels, _ = ee.build_voxel_groups(cloud)
+        decisions, gated_ids = self._decisions(labels)
+        config = lrv3_config()
+        for mode in ("row_ids", "spatial_voxel"):
+            program, digest = ee.build_v2_program(
+                decisions, labels, cloud, FRAME_DT, config, mode)
+            self.assertEqual(len(digest), 64)
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "p.json"
+                path.write_text(json.dumps(program, sort_keys=True))
+                loaded = load_oracle_episodes(str(path), config)
+            self.assertEqual(sorted(loaded.intervals), sorted(gated_ids))
+            self.assertEqual(loaded.membership_mode, mode)
+            # the spatial block is emitted in BOTH modes so one artifact can be
+            # re-declared for either run protocol
+            self.assertEqual(loaded.spatial["kind"], "voxel_grid")
+
+    def test_both_membership_modes_agree_on_the_originating_cloud(self):
+        """The determinism proof for the recomputation route.
+
+        `spatial_voxel` recomputes membership from the stored absolute grid.
+        On the cloud the program was emitted from it must reproduce the
+        explicit `row_ids` column exactly, or the recomputation route would be
+        binding different primitives than the estimate measured.
+        """
+        from elgs.trainer_hooks import load_oracle_episodes, resolve_v2_membership
+
+        cloud = self._cloud()
+        labels, _ = ee.build_voxel_groups(cloud)
+        decisions, _ = self._decisions(labels)
+        config = lrv3_config()
+        columns = {}
+        for mode in ("row_ids", "spatial_voxel"):
+            program, _ = ee.build_v2_program(
+                decisions, labels, cloud, FRAME_DT, config, mode)
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "p.json"
+                path.write_text(json.dumps(program, sort_keys=True))
+                loaded = load_oracle_episodes(str(path), config)
+            columns[mode] = resolve_v2_membership(loaded, cloud).tolist()
+        self.assertEqual(columns["row_ids"], columns["spatial_voxel"])
+        self.assertGreater(sum(1 for v in columns["row_ids"] if v >= 0), 0)
+
+    def test_grouping_and_emission_are_deterministic(self):
+        cloud = self._cloud()
+        config = lrv3_config()
+        first_labels, _ = ee.build_voxel_groups(cloud)
+        second_labels, _ = ee.build_voxel_groups(cloud.clone())
+        self.assertTrue(torch.equal(first_labels, second_labels))
+        decisions, _ = self._decisions(first_labels)
+        _, hash_a = ee.build_v2_program(decisions, first_labels, cloud,
+                                        FRAME_DT, config, "row_ids")
+        _, hash_b = ee.build_v2_program(decisions, second_labels, cloud.clone(),
+                                        FRAME_DT, config, "row_ids")
+        self.assertEqual(hash_a, hash_b)
+
+    def test_emission_refuses_when_nothing_was_gated(self):
+        cloud = self._cloud()
+        labels, _ = ee.build_voxel_groups(cloud)
+        decisions, _ = self._decisions(labels)
+        for record in decisions:
+            record["gated"] = False
+        with self.assertRaises(ContractError):
+            ee.build_v2_program(decisions, labels, cloud, FRAME_DT,
+                                lrv3_config(), "row_ids")
+
+    def test_row_ids_column_marks_only_gated_groups(self):
+        cloud = self._cloud()
+        labels, n_groups = ee.build_voxel_groups(cloud)
+        decisions, gated_ids = self._decisions(labels)
+        program, _ = ee.build_v2_program(decisions, labels, cloud, FRAME_DT,
+                                         lrv3_config(), "row_ids")
+        column = program["row_group_ids"]
+        self.assertEqual(len(column), int(cloud.shape[0]))
+        self.assertEqual(set(v for v in column if v >= 0), set(gated_ids))
 
 
 @unittest.skipUnless(

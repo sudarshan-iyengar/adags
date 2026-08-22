@@ -40,6 +40,24 @@ from elgs.trainer_hooks import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _scene_importable():
+    """True only where the compiled `pointops2_cuda` extension exists.
+
+    `scene.gaussian_model` imports it transitively, so the route-logit
+    materialization tests below can only run inside the admitted image. They
+    SKIP rather than error elsewhere, so the rest of this file stays runnable
+    on a workstation.
+    """
+    try:
+        import scene.gaussian_model  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
+SCENE_IMPORTABLE = _scene_importable()
+
+
 class _StubCamera:
     def __init__(self, timestamp, name):
         self.timestamp = timestamp
@@ -365,6 +383,9 @@ class RestorationTests(unittest.TestCase):
         self.assertFalse(getattr(gaussians, "_elgs_local_presence", True))
 
 
+@unittest.skipUnless(
+    SCENE_IMPORTABLE,
+    "requires the compiled pointops2_cuda extension (admitted image only)")
 class RouteLogitInitOrderTests(unittest.TestCase):
     """The materialized route logits must come from the CONFIGURED
     value, not the constructor default."""

@@ -21,6 +21,7 @@ never evidence-bearing.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass, field
@@ -630,24 +631,225 @@ def _declared_focal(source_path) -> float | None:
 
 
 ORACLE_EPISODES_SCHEMA = "elgs-oracle-episodes-v1"
+EPISODE_PROGRAM_SCHEMA_V2 = "adags-episode-program-v2"
+V2_MEMBERSHIP_MODES = ("row_ids", "spatial_voxel")
+
+
+def _interval_from_gaps(gaps, config: IntervalConfig, label: str = "oracle episodes"):
+    """(IntervalState, tau) for one family's interior absence gaps.
+
+    Extracted VERBATIM from the v1 loader so both schemas share one
+    admissibility path: the outer endpoints are always the latched ones
+    (-w_m, T + w_m), so the program is latch (1,1) with dim(a) = 2K - 1 and
+    the Omega-sum identity holds by construction. `inverse` performs the floor
+    and admissibility checks, so an inexpressible gap FAILS CLOSED here rather
+    than at render, and is never silently repaired.
+    """
+    if not gaps:
+        raise ContractError(f"{label}: at least one absence gap is required")
+    lo, hi = -config.w_m, config.T + config.w_m
+    edges = [lo] + [x for gap in gaps for x in gap] + [hi]
+    if any(b <= a for a, b in zip(edges, edges[1:])):
+        raise ContractError(f"{label}: boundaries not strictly increasing: {edges}")
+    lens = [edges[i + 1] - edges[i] for i in range(0, len(edges) - 1, 2)]
+    gap_lens = [b - a for a, b in gaps]
+    interval = inverse(
+        len(gaps) + 1, True, True, 0.0, lens, gap_lens, 0.0, config,
+        dtype=torch.float32,
+    )
+    return interval, tuple(0.0 for _ in lens)
+
+
+@dataclass(frozen=True)
+class EpisodeProgramV2:
+    """A COMPUTED per-group episode program (schema v2).
+
+    Where v1 supplies ONE interval plus a sphere that decides membership, v2
+    supplies per-group membership and gives every gated group ITS OWN
+    IntervalState. Heterogeneous K across families is already supported
+    downstream -- `gated_row_mask` tests each family's own K
+    (elgs/runtime.py:225-228) and `presence_multiplier` builds a per-family
+    realization -- so v2 needs no renderer or registry change.
+
+    Membership is carried two ways and the program declares which one binds:
+
+    * `row_ids`      -- an explicit per-row group column. EXACT, but only
+                        meaningful against the very cloud it was computed on,
+                        so it is validated against a row count and an xyz
+                        fingerprint and FAILS CLOSED on any mismatch. A run
+                        that seeds a different cloud (e.g. a fresh
+                        `create_from_pcd` init) cannot use this mode.
+    * `spatial_voxel` -- the ABSOLUTE world-space voxel grid the groups were
+                        cut from, plus each group's cell keys. Reapplies to
+                        ANY cloud, which is what a fresh training run needs.
+                        Rows outside the originating bounding box are left
+                        ungated rather than clamped into an edge cell.
+
+    Rows the program does not gate keep family id -1 and therefore the
+    ordinary temporal marginal -- the abstention path that already exists.
+    """
+
+    membership_mode: str
+    intervals: dict           # group id -> IntervalState
+    taus: dict                # group id -> tau tuple
+    cloud: dict               # {n_rows, xyz_sha256}
+    row_group_ids: tuple = ()
+    spatial: dict = field(default_factory=dict)
+    source: dict = field(default_factory=dict)
+
+
+def cloud_fingerprint(xyz) -> str:
+    """sha256 over the float32 xyz bytes; identifies the seeding cloud."""
+    data = xyz.detach().to("cpu", torch.float32).contiguous().numpy().tobytes()
+    return hashlib.sha256(data).hexdigest()
+
+
+def _load_episode_program_v2(payload: dict, config: IntervalConfig) -> EpisodeProgramV2:
+    if payload.get("units") != "model_time_seconds":
+        raise ContractError("episode program v2: units must be model_time_seconds")
+    mode = payload.get("membership_mode")
+    if mode not in V2_MEMBERSHIP_MODES:
+        raise ContractError(
+            f"episode program v2: membership_mode must be one of "
+            f"{V2_MEMBERSHIP_MODES}, got {mode!r}"
+        )
+    groups = payload.get("groups") or []
+    if not groups:
+        raise ContractError("episode program v2: at least one gated group is required")
+    intervals: dict = {}
+    taus: dict = {}
+    for entry in groups:
+        group_id = int(entry["group"])
+        if group_id < 0:
+            raise ContractError(f"episode program v2: negative group id {group_id}")
+        if group_id in intervals:
+            raise ContractError(f"episode program v2: duplicate group id {group_id}")
+        gaps = [[float(a), float(b)] for a, b in entry["gaps"]]
+        interval, tau = _interval_from_gaps(
+            gaps, config, label=f"episode program v2 group {group_id}"
+        )
+        intervals[group_id] = interval
+        taus[group_id] = tau
+    cloud = dict(payload.get("cloud") or {})
+    spatial = dict(payload.get("spatial") or {})
+    row_ids = payload.get("row_group_ids")
+    if mode == "row_ids":
+        if row_ids is None:
+            raise ContractError(
+                "episode program v2: membership_mode 'row_ids' needs row_group_ids"
+            )
+        if "n_rows" not in cloud or "xyz_sha256" not in cloud:
+            raise ContractError(
+                "episode program v2: membership_mode 'row_ids' needs "
+                "cloud.n_rows and cloud.xyz_sha256 to bind the column to a cloud"
+            )
+        if len(row_ids) != int(cloud["n_rows"]):
+            raise ContractError(
+                f"episode program v2: row_group_ids has {len(row_ids)} entries "
+                f"but cloud.n_rows is {cloud['n_rows']}"
+            )
+    elif not spatial:
+        raise ContractError(
+            "episode program v2: membership_mode 'spatial_voxel' needs a spatial block"
+        )
+    if spatial:
+        if spatial.get("kind") != "voxel_grid":
+            raise ContractError(
+                f"episode program v2: unsupported spatial kind {spatial.get('kind')!r}"
+            )
+        for key in ("cells_per_axis", "lo", "span", "group_cell_keys"):
+            if key not in spatial:
+                raise ContractError(f"episode program v2: spatial.{key} is required")
+    return EpisodeProgramV2(
+        membership_mode=mode,
+        intervals=intervals,
+        taus=taus,
+        cloud=cloud,
+        row_group_ids=tuple(int(v) for v in (row_ids or ())),
+        spatial=spatial,
+        source=dict(payload.get("source") or {}),
+    )
+
+
+def resolve_v2_membership(program: EpisodeProgramV2, xyz):
+    """Per-row GATED-GROUP id for the seeding cloud; -1 means ungated."""
+    n_rows = int(xyz.shape[0])
+    if program.membership_mode == "row_ids":
+        expected = int(program.cloud["n_rows"])
+        if n_rows != expected:
+            raise ContractError(
+                f"episode program v2: row_ids membership was computed on a "
+                f"{expected}-row cloud but seeding sees {n_rows} rows. A fresh "
+                "create_from_pcd run never reproduces a trained cloud; re-emit "
+                "the program with membership_mode 'spatial_voxel', or seed from "
+                "the checkpoint the program was computed on."
+            )
+        digest = cloud_fingerprint(xyz)
+        if digest != str(program.cloud["xyz_sha256"]):
+            raise ContractError(
+                "episode program v2: seeding cloud fingerprint "
+                f"{digest} does not match the program's "
+                f"{program.cloud['xyz_sha256']}; the row column would bind to "
+                "the wrong primitives. Re-emit with membership_mode "
+                "'spatial_voxel' or seed the originating checkpoint."
+            )
+        column = torch.tensor(program.row_group_ids, dtype=torch.long,
+                              device=xyz.device)
+    else:
+        spec = program.spatial
+        cells = int(spec["cells_per_axis"])
+        lo = torch.tensor(spec["lo"], device=xyz.device, dtype=xyz.dtype)
+        span = torch.tensor(spec["span"], device=xyz.device, dtype=xyz.dtype)
+        if not bool((span > 0).all()):
+            raise ContractError("episode program v2: spatial.span must be positive")
+        voxel = ((xyz - lo) / span * cells).clamp(0, cells - 1).long()
+        keys = voxel[:, 0] * cells * cells + voxel[:, 1] * cells + voxel[:, 2]
+        column = torch.full((n_rows,), -1, dtype=torch.long, device=xyz.device)
+        for raw_id, cell_keys in spec["group_cell_keys"].items():
+            group_id = int(raw_id)
+            if group_id not in program.intervals:
+                continue
+            wanted = torch.tensor([int(k) for k in cell_keys], dtype=keys.dtype,
+                                  device=keys.device)
+            column[torch.isin(keys, wanted)] = group_id
+        # Rows outside the originating bounding box would otherwise be CLAMPED
+        # into an edge cell and could join a group they are nowhere near.
+        inside = ((xyz >= lo) & (xyz <= lo + span)).all(dim=1)
+        column[~inside] = -1
+    unknown = set(int(v) for v in torch.unique(column).tolist()) - {-1}
+    unknown -= set(program.intervals)
+    if unknown:
+        raise ContractError(
+            f"episode program v2: membership names groups {sorted(unknown)} "
+            "that carry no interval"
+        )
+    return column
 
 
 def load_oracle_episodes(path: str, config: IntervalConfig):
-    """Parse an oracle-episode JSON into (region, IntervalState, tau).
+    """Parse an episode-program JSON. Schema-dispatched.
+
+    v1 (`elgs-oracle-episodes-v1`) returns the historical
+    `(region, IntervalState, tau)` triple and its behaviour is UNCHANGED --
+    the sphere region plus one shared interval. v2
+    (`adags-episode-program-v2`) returns an `EpisodeProgramV2` carrying
+    per-group membership and per-group intervals; `seed_families`
+    discriminates on the returned type.
 
     EXPLORATORY supply path: the caller hands the seeder a fixed K >= 2
     episode program instead of letting a structural round discover one. The
-    file gives a spatial region and the INTERIOR absence gaps only; the outer
-    endpoints are always the latched ones (-w_m, T + w_m), so the returned
-    program is latch (1,1) with dim(a) = 2K - 1 and the Omega-sum identity
-    holds by construction. `inverse` performs the floor and admissibility
-    checks, so an inexpressible gap fails closed here rather than at render.
+    file gives the INTERIOR absence gaps only; `_interval_from_gaps` performs
+    the floor and admissibility checks, so an inexpressible gap fails closed
+    here rather than at render.
     """
     payload = json.loads(Path(path).read_text())
-    if payload.get("schema_version") != ORACLE_EPISODES_SCHEMA:
+    schema = payload.get("schema_version")
+    if schema == EPISODE_PROGRAM_SCHEMA_V2:
+        return _load_episode_program_v2(payload, config)
+    if schema != ORACLE_EPISODES_SCHEMA:
         raise ContractError(
-            f"oracle episodes: expected schema {ORACLE_EPISODES_SCHEMA}, "
-            f"got {payload.get('schema_version')!r}"
+            f"oracle episodes: expected schema {ORACLE_EPISODES_SCHEMA} or "
+            f"{EPISODE_PROGRAM_SCHEMA_V2}, got {schema!r}"
         )
     if payload.get("units") != "model_time_seconds":
         raise ContractError("oracle episodes: units must be model_time_seconds")
@@ -655,19 +857,8 @@ def load_oracle_episodes(path: str, config: IntervalConfig):
     if region.get("kind") != "sphere":
         raise ContractError(f"oracle episodes: unsupported region {region.get('kind')!r}")
     gaps = [[float(a), float(b)] for a, b in payload["gaps"]]
-    if not gaps:
-        raise ContractError("oracle episodes: at least one absence gap is required")
-    lo, hi = -config.w_m, config.T + config.w_m
-    edges = [lo] + [x for gap in gaps for x in gap] + [hi]
-    if any(b <= a for a, b in zip(edges, edges[1:])):
-        raise ContractError(f"oracle episodes: boundaries not strictly increasing: {edges}")
-    lens = [edges[i + 1] - edges[i] for i in range(0, len(edges) - 1, 2)]
-    gap_lens = [b - a for a, b in gaps]
-    interval = inverse(
-        len(gaps) + 1, True, True, 0.0, lens, gap_lens, 0.0, config,
-        dtype=torch.float32,
-    )
-    return region, interval, tuple(0.0 for _ in lens)
+    interval, tau = _interval_from_gaps(gaps, config)
+    return region, interval, tau
 
 
 def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
@@ -703,20 +894,70 @@ def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
     oracle_interval = None
     oracle_tau = (0.0,)
     in_region = None
+    program_v2 = None
+    v2_membership = None
     if state.oracle_episodes:
-        region, oracle_interval, oracle_tau = load_oracle_episodes(
-            state.oracle_episodes, state.config
-        )
-        centre = torch.tensor(region["centre"], device=xyz.device, dtype=xyz.dtype)
-        in_region = (xyz - centre).norm(dim=1) <= float(region["radius"])
+        loaded = load_oracle_episodes(state.oracle_episodes, state.config)
+        if isinstance(loaded, EpisodeProgramV2):
+            # COMPUTED program: membership comes from the program itself, and
+            # every gated group carries its OWN interval.
+            program_v2 = loaded
+            if not state.local_presence:
+                raise ContractError(
+                    "episode program v2 requires elgs_local_presence: its "
+                    "membership is per-primitive and there is no per-cell "
+                    "fallback that would preserve group identity"
+                )
+            v2_membership = resolve_v2_membership(program_v2, xyz)
+        else:
+            region, oracle_interval, oracle_tau = loaded
+            centre = torch.tensor(region["centre"], device=xyz.device, dtype=xyz.dtype)
+            in_region = (xyz - centre).norm(dim=1) <= float(region["radius"])
 
-    if state.local_presence and oracle_interval is None:
+    if state.local_presence and oracle_interval is None and program_v2 is None:
         raise ContractError(
             "local presence seeding requires an oracle-episode program"
         )
     family_ids = torch.empty_like(inverse_map)
     oracle_cells = 0
-    if state.local_presence:
+    v2_group_rows: dict = {}
+    if program_v2 is not None:
+        # LOCALIZED presence from a COMPUTED program: one family per gated
+        # group, each with its own IntervalState. Every row the program does
+        # not gate stays unassigned (-1) and keeps the ordinary temporal
+        # marginal -- the same abstention path the v1 localized branch uses.
+        family_ids.fill_(-1)
+        gated_ids = sorted(program_v2.intervals)
+        if len(gated_ids) > max_families:
+            raise ContractError(
+                f"episode program v2 carries {len(gated_ids)} gated groups "
+                f"above the preregistered cap {max_families}"
+            )
+        for group_id in gated_ids:
+            member_mask = v2_membership == group_id
+            rows = int(member_mask.sum())
+            v2_group_rows[group_id] = rows
+            if rows == 0:
+                continue
+            centroid = xyz[member_mask].mean(dim=0)
+            oracle_cells += 1
+            record = state.runtime.registry.create_family(
+                birth_time=0.0,
+                birth_site=tuple(float(v) for v in centroid.tolist()),
+                lineage_key=f"est-group-{group_id}",
+                interval=program_v2.intervals[group_id],
+                tau=program_v2.taus[group_id],
+            )
+            state.runtime.registry.on_rows_added(record.family_id, rows)
+            family_ids[member_mask] = record.family_id
+        if oracle_cells == 0:
+            raise ContractError(
+                "episode program v2 gated no rows on the seeding cloud "
+                f"(groups {gated_ids} are all empty here). The program would "
+                "be a silent no-op; check membership_mode against the cloud "
+                "this run seeds."
+            )
+    elif state.local_presence:
         # LOCALIZED presence: membership is PER-PRIMITIVE. Only rows
         # inside the oracle region join a family (one family per
         # nonempty oracle cell, so granularity never exceeds the
@@ -767,6 +1008,21 @@ def seed_families(state: ElgsTrainerState, gaussians, iteration: int) -> None:
         "oracle_families": oracle_cells,
         "oracle_K": None if oracle_interval is None else oracle_interval.K,
         "oracle_rows": 0 if in_region is None else int(in_region.sum()),
+        "program_schema": (
+            EPISODE_PROGRAM_SCHEMA_V2 if program_v2 is not None
+            else (ORACLE_EPISODES_SCHEMA if state.oracle_episodes else None)
+        ),
+        "v2_membership_mode": (
+            None if program_v2 is None else program_v2.membership_mode
+        ),
+        "v2_group_rows": (
+            None if program_v2 is None
+            else {str(k): v for k, v in sorted(v2_group_rows.items())}
+        ),
+        "v2_group_K": (
+            None if program_v2 is None
+            else {str(k): int(v.K) for k, v in sorted(program_v2.intervals.items())}
+        ),
         "local_presence": state.local_presence,
         "routing_pins_enabled": state.routing_pins_enabled,
         "unassigned_rows": int((family_ids < 0).sum()),
@@ -1431,10 +1687,15 @@ def elgs_summary(state) -> dict | None:
 
 
 __all__ = [
+    "EPISODE_PROGRAM_SCHEMA_V2",
     "ElgsTrainerState",
+    "EpisodeProgramV2",
+    "ORACLE_EPISODES_SCHEMA",
+    "V2_MEMBERSHIP_MODES",
     "apply_elgs_routing_pins",
     "build_interval_config",
     "build_reserved_pool",
+    "cloud_fingerprint",
     "elgs_summary",
     "filter_elgs_reserved",
     "filter_reserved_indices",
@@ -1442,6 +1703,7 @@ __all__ = [
     "load_structural_prereg",
     "maybe_run_elgs_schedule",
     "reserved_indices_for_parity",
+    "resolve_v2_membership",
     "run_post_refit_classification",
     "seed_families",
     "setup_elgs",

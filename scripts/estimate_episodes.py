@@ -568,6 +568,25 @@ def assert_min_group_rows_single_sourced():
     return True
 
 
+def voxel_grid(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS):
+    """(lo, span, keys) for the ABSOLUTE grid over the cloud's bounding box.
+
+    Factored out so the emitted v2 program can carry `lo`/`span` and reapply
+    the very same world-space grid to a DIFFERENT cloud -- which is what a
+    fresh training run needs, since it seeds a `create_from_pcd` cloud rather
+    than the trained one the estimate was computed on.
+    """
+    cells = int(cells_per_axis)
+    if cells < 1:
+        raise ContractError("cells_per_axis must be >= 1")
+    points = xyz.detach()
+    lo = points.min(dim=0).values
+    span = (points.max(dim=0).values - lo).clamp_min(1e-6)
+    voxel = ((points - lo) / span * cells).clamp(0, cells - 1).long()
+    keys = voxel[:, 0] * cells * cells + voxel[:, 1] * cells + voxel[:, 2]
+    return lo, span, keys
+
+
 def build_voxel_groups(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS,
                        min_rows=MIN_GROUP_ROWS):
     """Per-row group labels over the cloud's own bounding box; -1 = substrate.
@@ -575,18 +594,12 @@ def build_voxel_groups(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS,
     Identical construction to `seed_families` (elgs/trainer_hooks.py:686-693),
     with sub-threshold cells demoted to -1. Deterministic for a fixed cloud.
     """
-    cells = int(cells_per_axis)
-    if cells < 1:
-        raise ContractError("cells_per_axis must be >= 1")
     points = xyz.detach()
     count = int(points.shape[0])
     labels = torch.full((count,), -1, dtype=torch.long, device=points.device)
     if count == 0:
         return labels, 0
-    lo = points.min(dim=0).values
-    span = (points.max(dim=0).values - lo).clamp_min(1e-6)
-    voxel = ((points - lo) / span * cells).clamp(0, cells - 1).long()
-    keys = voxel[:, 0] * cells * cells + voxel[:, 1] * cells + voxel[:, 2]
+    _, _, keys = voxel_grid(points, cells_per_axis)
     unique_keys, inverse_map = torch.unique(keys, sorted=True, return_inverse=True)
     counts = torch.bincount(inverse_map, minlength=int(unique_keys.numel()))
     keep = counts >= int(min_rows)
@@ -1001,6 +1014,84 @@ def freeze_program(estimate, frame_dt, interval_config):
     return program, hashlib.sha256(blob).hexdigest()
 
 
+def build_v2_program(decisions, labels, xyz, frame_dt, interval_config,
+                     membership_mode, cells_per_axis=VOXEL_CELLS_PER_AXIS,
+                     source=None):
+    """The STANDALONE trainable artifact: schema `adags-episode-program-v2`.
+
+    Derived only from the frozen decisions and the cloud, so it is emitted
+    BEFORE scoring and carries nothing from the ground truth.
+
+    Membership is written BOTH ways and `membership_mode` declares which one
+    binds at seeding:
+
+      row_ids       an explicit per-row column, exact but bound to this cloud
+                    by a row count and an xyz fingerprint. `seed_families`
+                    fails closed if the seeding cloud differs -- which it
+                    always does for a fresh `create_from_pcd` run.
+      spatial_voxel the absolute world-space grid plus each gated group's cell
+                    keys, which reapplies to any cloud.
+
+    The spatial block is emitted in both modes so one artifact can be
+    re-declared for either run protocol without recomputing the estimate.
+    """
+    from elgs.trainer_hooks import EPISODE_PROGRAM_SCHEMA_V2, cloud_fingerprint
+
+    if membership_mode not in ("row_ids", "spatial_voxel"):
+        raise ContractError("unknown membership_mode %r" % (membership_mode,))
+    gated = [d for d in decisions if d.get("gated")]
+    if not gated:
+        raise ContractError(
+            "no group was gated: there is no program to emit. Phase T2 needs a "
+            "T1 pass that admitted at least one group."
+        )
+    gated_ids = sorted(int(d["group"]) for d in gated)
+    labels_cpu = labels.to("cpu")
+    wanted = torch.tensor(gated_ids, dtype=labels_cpu.dtype)
+    row_ids = torch.where(torch.isin(labels_cpu, wanted), labels_cpu,
+                          torch.full_like(labels_cpu, -1))
+    lo, span, keys = voxel_grid(xyz, cells_per_axis)
+    keys_cpu = keys.to("cpu")
+    group_cell_keys = {}
+    for group_id in gated_ids:
+        member = labels_cpu == group_id
+        group_cell_keys[str(group_id)] = sorted(
+            set(int(k) for k in keys_cpu[member].tolist()))
+    program = {
+        "schema_version": EPISODE_PROGRAM_SCHEMA_V2,
+        "units": "model_time_seconds",
+        "membership_mode": membership_mode,
+        "frame_dt": float(frame_dt),
+        "presence_edge_half_width_w": float(interval_config.w),
+        "cloud": {
+            "n_rows": int(xyz.shape[0]),
+            "xyz_sha256": cloud_fingerprint(xyz),
+        },
+        "spatial": {
+            "kind": "voxel_grid",
+            "cells_per_axis": int(cells_per_axis),
+            "lo": [float(v) for v in lo.detach().cpu().tolist()],
+            "span": [float(v) for v in span.detach().cpu().tolist()],
+            "group_cell_keys": group_cell_keys,
+        },
+        "groups": [
+            {
+                "group": int(d["group"]),
+                "gaps": [[float(d["gap_seconds"][0]), float(d["gap_seconds"][1])]],
+                "offset_frame": int(d["offset_frame"]),
+                "onset_frame": int(d["onset_frame"]),
+                "rows_at_estimation": int(d["rows"]),
+            }
+            for d in sorted(gated, key=lambda r: int(r["group"]))
+        ],
+        "source": dict(source or {}),
+    }
+    if membership_mode == "row_ids":
+        program["row_group_ids"] = [int(v) for v in row_ids.tolist()]
+    blob = json.dumps(program, sort_keys=True).encode("utf-8")
+    return program, hashlib.sha256(blob).hexdigest()
+
+
 # ---------------------------------------------------------------------------
 # STAGE 2 -- SCORING. Ground truth is opened here and ONLY here, against an
 # already-frozen program.
@@ -1211,6 +1302,15 @@ def main(argv=None):
     parser.add_argument("--config", required=True)
     parser.add_argument("--start_checkpoint", required=True)
     parser.add_argument("--out_report", required=True)
+    parser.add_argument(
+        "--emit_program", default="",
+        help="write the standalone trainable v2 program to this path")
+    parser.add_argument(
+        "--membership_mode", choices=("row_ids", "spatial_voxel"),
+        default="row_ids",
+        help=("which membership binds at seeding. 'row_ids' is exact but only "
+              "valid when the training run seeds THIS checkpoint's cloud; a "
+              "fresh create_from_pcd run needs 'spatial_voxel'"))
     parser.add_argument("--cameras", type=int, default=4,
                         help="how many train cameras to sample (>= %d)"
                              % MIN_AGREEING_CAMERAS)
@@ -1340,6 +1440,27 @@ def main(argv=None):
     program, program_hash = freeze_program(estimate, frame_dt, interval_config)
     print("estimate frozen: sha256 %s" % program_hash)
 
+    # The trainable artifact is derived from the FROZEN decisions and the
+    # cloud only, and is written here -- still before scoring -- so it
+    # provably carries nothing from the ground truth.
+    v2_program = None
+    v2_hash = None
+    if args.emit_program:
+        Path(args.emit_program).parent.mkdir(parents=True, exist_ok=True)
+        v2_program, v2_hash = build_v2_program(
+            estimate["decisions"], estimate["labels"], gaussians._xyz.detach(),
+            frame_dt, interval_config, args.membership_mode,
+            source={
+                "checkpoint": str(args.start_checkpoint),
+                "config": str(args.config),
+                "estimate_sha256": program_hash,
+            },
+        )
+        with open(args.emit_program, "w", encoding="utf-8") as handle:
+            json.dump(v2_program, handle, indent=1, sort_keys=True)
+        print("v2 program written: %s (membership_mode %s, sha256 %s)"
+              % (args.emit_program, args.membership_mode, v2_hash))
+
     scoring = score_program(program, estimate["labels"], gaussians._xyz.detach(),
                             dataset_params.source_path, chosen)
 
@@ -1350,6 +1471,11 @@ def main(argv=None):
         "source_path": str(dataset_params.source_path),
         "program": program,
         "program_sha256": program_hash,
+        "v2_program": {
+            "path": str(args.emit_program) or None,
+            "membership_mode": args.membership_mode if args.emit_program else None,
+            "sha256": v2_hash,
+        },
         "grouping": {
             "method": "voxel_grid_over_cloud_bounding_box",
             "cells_per_axis": VOXEL_CELLS_PER_AXIS,

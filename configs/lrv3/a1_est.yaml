@@ -1,0 +1,155 @@
+# LRV3 ESTIMATED-program cell A-EST: identical to configs/lrv3/a1_local.yaml
+# except that the episode program is INFERRED from training views rather than
+# authored.
+#
+# A1-LOCAL supplies `configs/lrv3/oracle_correct.json`, whose sphere region IS
+# the event object's true geometry and whose gaps ARE the authored boundaries.
+# This cell instead supplies the schema-v2 program emitted by
+# `scripts/estimate_episodes.py` (phase T1, experiment 235), which used only
+# training views, the trained A0' checkpoint and renderer outputs.
+#
+# THE ONLY DIFFERENCE from a1_local.yaml is the `elgs_oracle_episodes` value.
+# route_logit_init, iterations, densification, the EL-GS constants and every
+# other knob are byte-identical, so a difference at the event is attributable
+# to the program's PROVENANCE and not to any other change.
+#
+# Phase T1 gated 2 of 417 groups (99.52% abstention), both on the event object,
+# both boundaries exact (offset 30, onset 57, 0 frames of error), zero false
+# activations. It gates FEWER rows than the oracle's 8 event-overlapping
+# groups, so a PARTIAL reproduction of A1-LOCAL's +1.0496 dB `event_return`
+# gain is the expected outcome; a LOSS would be the important negative.
+#
+# MEMBERSHIP MODE: the program pointed at below must declare
+# `membership_mode: spatial_voxel`. A fresh run seeds the 50,000-point
+# create_from_pcd cloud, not the 149,794-row trained cloud the estimate was
+# computed on, so a `row_ids` program FAILS CLOSED at seeding by design.
+# See elgs/trainer_hooks.resolve_v2_membership.
+#
+# EXPLORATORY, evidence_bearing: false. Scene LRV3 as in a1_local.yaml.
+
+gaussian_dim: 4
+time_duration: [0.0, 10.0]
+num_pts: 50_000
+num_pts_ratio: 1.0
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+exhaust_test: False
+
+ModelParams:
+  sh_degree: 3
+  source_path: "/apollo/users/sri/proj_adags/data/synthetic/lrv3"
+  images: "images"
+  resolution: 1
+  white_background: False
+  data_device: "cuda"
+  eval: True
+  extension: ".png"
+  num_extra_pts: 0
+  loaded_pth: ""
+  frame_ratio: 1
+  dataloader: True
+
+PipelineParams:
+  convert_SHs_python: False
+  compute_cov3D_python: False
+  debug: False
+  env_map_res: 0
+  env_optimize_until: 5000000000
+  env_optimize_from: 0
+  eval_shfs_4d: True
+
+OptimizationParams:
+  iterations: 6_000
+  position_lr_init: 0.00016
+  position_t_lr_init: -1.0
+  position_lr_final: 0.0000016
+  position_lr_delay_mult: 0.01
+  position_lr_max_steps: 6_000
+  feature_lr: 0.0025
+  opacity_lr: 0.05
+  scaling_lr: 0.005
+  rotation_lr: 0.001
+  percent_dense: 0.01
+  lambda_dssim: 0.2
+  thresh_opa_prune: 0.005
+  densification_interval: 100
+  opacity_reset_interval: 30000
+  densify_from_iter: 500
+  densify_until_iter: 4_000
+  densify_grad_threshold: 0.0002
+  densify_grad_t_threshold: 0.000005
+  densify_until_num_points: 150_000
+  final_prune_from_iter: -1
+  sh_increase_interval: 1000
+  lambda_opa_mask: 0.0
+  lambda_rigid: 0.0
+  enable_hard_static_conversion: false
+  lambda_sparsity: 0.0
+  lambda_motion_gate: 0.0
+  static_conversion_threshold: 0.99
+  gate_activation_iter: 1000
+  gate_warmup_until_iter: 2000
+  enable_soft_routing: true
+  route_logit_init: 4.0
+  route_lr: -1.0
+  motion_model: "lora"
+  motion_poly_order: 2
+  motion_lr_init: -1.0
+  motion_reg_lambda: 0.0
+  motion_lora_rank: 8
+  motion_lora_anchors: 32
+  motion_lora_init_scale: 0.01
+  motion_lora_coeff_lr: -1.0
+  motion_lora_basis_lr: -1.0
+  motion_prior_root: ""
+  dynamic_mask_from_residual: true
+  dynamic_mask_residual_quantile: 0.85
+  dynamic_mask_dilate: 2
+  lambda_dynamic_roi: 0.5
+  lambda_static_exclusion: 0.02
+  lambda_track_flow: 0.0
+  lambda_scaffold_smooth: 0.0
+  lambda_scaffold_reg: 0.0
+  motion_scaffold_enable: false
+  motion_scaffold_count: 512
+  motion_scaffold_rank: 8
+  motion_scaffold_anchors: 32
+  motion_scaffold_knn: 4
+  motion_scaffold_init_scale: 0.01
+  motion_scaffold_weight_temp: 0.05
+  motion_scaffold_chunk: 65536
+  motion_scaffold_coeff_lr: -1.0
+  motion_scaffold_basis_lr: -1.0
+  motion_track_dt: 0.1666666667
+  enable_rendered_flow: false
+  enable_motion_aware_densify: false
+  motion_aware_densify_boost: 1.0
+  blur_until_iter: 0
+  blur_start_sigma: 8.0
+  histogram_log_interval: 100
+  # ---- DIFFERS (A1-LOCAL) ------------------------------------------------
+  # EL-GS localized episodic presence with a FIXED K=2 oracle program.
+  # Structural rounds off; `elgs_a_lr: 0.0` freezes the oracle boundaries.
+  elgs_enable: true
+  elgs_rounds_enabled: false
+  elgs_prereg_dir: "configs/elgs"
+  elgs_smoke_schedule: false
+  elgs_tracks_dir: ""
+  elgs_oracle_episodes: "configs/lrv3/estimated_program_v2.json"
+  elgs_local_presence: true
+  elgs_routing_pins_enabled: false
+  elgs_a_lr: 0.0
+  elgs_reserved_parity: false
+  elgs_beta: 0.1
+  elgs_kappa: 0.01
+  elgs_chi: 0.01
+  elgs_mu: 0.01
+  elgs_tau_b: 1.0
+  elgs_k_se: 1.0
+  elgs_lambda_u: 1.0
+  elgs_c_cap: 4
+  elgs_candidate_cap: 2
+  elgs_confirmation_samples: 8
+  elgs_r_site: 0.5
+  elgs_binding_threshold: 0.25
