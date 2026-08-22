@@ -1,0 +1,192 @@
+# RESULT — no replacement payload has oracle-correct headroom on LRV3
+# (2026-08-23)
+
+EXPLORATORY, `evidence_bearing: false`. Design frozen before output in
+[[payload-headroom-spec-2026-08-23]]; nothing there moved. Cell:
+Determined experiment **233** (`lrv3_payload_headroom` r0, commit
+`2ba6a62`, pool `dgx`, admitted V100 image
+`sha256:70a28e3d…`, seed 0), COMPLETED. Report
+`payload_headroom_report.json` in experiment 209's run dir, sha256
+`2708eb250a8195a50a338af097e6ffc52e60777c0292d9601eab981802165012`,
+schema `adags-payload-headroom-v1`, **`renders_performed: 0`**.
+
+## 1. The screen reproduces the recorded DC falsification EXACTLY
+
+The DC row is carried as a control precisely so this can be checked.
+Against [[b2-edit-falsification-2026-08-20]] §2:
+
+| quantity | recorded 2026-08-20 | measured here |
+|---|---:|---:|
+| L1 oracle-correct DC distance (mean) | 0.0464 | **0.046438** |
+| L3 same-surface floor (mean) | 0.0325 | **0.032503** |
+| L2 wrong-identity distance (mean) | 0.706 | **0.705927** |
+| donor rows | 3,722 | **3,722** |
+| recipient rows | 3,912 | **3,912** |
+| spanning rows excluded | 229 | **229** |
+| wrong-identity pool | 29,351 | **29,351** |
+
+The row sets are byte-identical because they are IMPORTED from
+`falsify_b2_edit.build_row_sets` rather than reimplemented. Every number
+below is therefore on the same footing as the recorded DC result.
+
+## 2. The measurement (dc_primary map; `headroom = L1/L3`, `discrimination = L2/L3`)
+
+| tensor | space | L1 mean | L3 floor | L2 wrong | **headroom** | discrimination |
+|---|---|---:|---:|---:|---:|---:|
+| `_features_dc` *(falsified control)* | raw | 0.046438 | 0.032503 | 0.705927 | **1.429** | 21.72 |
+| `_opacity` | activated | 0.240105 | 0.196262 | 0.582064 | **1.223** | 2.97 |
+| `_opacity` | raw logit | 7.180769 | 5.711843 | 10.048712 | **1.257** | 1.76 |
+| `_scaling_t` | activated | 0.330925 | 0.428751 | 0.469926 | **0.772** | 1.10 |
+| `_scaling_t` | raw log | 1.936163 | 1.597236 | 2.797251 | **1.212** | 1.75 |
+| `_xyz` | raw | 0.183719 | 0.168241 | 1.759687 | **1.092** | 10.46 |
+| `_scaling` | activated | 0.018138 | 0.017516 | 0.026819 | **1.036** | 1.53 |
+| `_rotation` | geodesic° | 80.34° | 68.52° | 72.28° | **1.172** | 1.05 |
+| `_t` | raw | 6.221777 | 1.286162 | 7.323632 | 4.837 | 5.69 |
+
+Payload-native row maps (matching rows in each tensor's own space rather
+than by DC) do not rescue anything: `_opacity` reads **0.301** activated
+and **1.919** raw, `_scaling_t` **0.026**, `_scaling` **0.754**, `_xyz`
+**1.065**.
+
+## 3. Verdict — the screen is NEGATIVE for every usable payload
+
+**Not one transferable quantity clears the frozen screening rule
+(`headroom ≥ 2.0` AND `discrimination ≥ 5.0`).** Every candidate sits
+between **0.77 and 1.43** times the same-identity floor — that is, the
+oracle-correct donor's value is about as far from the recipient's as two
+rows of the SAME surface in the SAME episode are from each other, and in
+two cases (`_scaling_t` activated at 0.772, `_scaling` raw at 0.966) it
+is CLOSER than that floor.
+
+**`_opacity` — the payload this block implemented and the one that was
+cheapest and most attributable — has LESS headroom than the DC payload
+already falsified** (1.223 against 1.429 activated). Its discrimination
+ratio of 2.97 also says base opacity barely distinguishes a
+wrong-identity donor from a same-surface one.
+
+**`_xyz` confirms the vacuity prediction empirically.** It DISCRIMINATES
+identity well (10.46, and 35.40 under its native map — position tells you
+which surface you are on) but has **no headroom at all** (1.092). That is
+exactly the signature predicted from source inspection in
+[[lrv3-fixture-hazards-2026-08-23]] §1: the object returns at the
+identical world pose, so the donor's position is already the recipient's
+position.
+
+### `_t` passes the rule and is EXCLUDED — a degenerate pass, and the screen exposing it is the point
+
+`_t` is the temporal mean. Donor rows live in episode 1 and recipient
+rows in the return, so their `_t` differ by ~6.2 — **that difference IS
+the designed episode separation**, not recoverable information.
+Transferring it would move the recipient's temporal centre back into
+episode 1 and thereby DELETE the return the payload exists to improve.
+
+The numbers say the same thing independently: the wrong-identity link's
+`_t` distance is **7.324** against the oracle-correct **6.222**, only 18%
+apart, so `_t` carries almost no identity signal. Its apparent
+discrimination of 5.69 is an artifact of a small same-episode floor
+(1.286), not of the link being informative. **`_t` is not a payload.**
+
+## 4. What this establishes, and what it does not
+
+**Established.** On LRV3, with proposal ambiguity fully removed by an
+oracle-correct link, **no payload — appearance, opacity, temporal
+support, position, extent or orientation — has material headroom.** The
+2026-08-20 DC falsification therefore generalizes: it was not evidence
+that appearance is the wrong payload, it was evidence about **this
+fixture**. This was pre-registered as the predicted outcome in
+[[payload-headroom-spec-2026-08-23]] §6 before the cell ran.
+
+**The mechanism, and it is now measured rather than argued.** LRV3's
+returning surface is identical to the departing one in pose, colour and
+texture, and its return is observed by 3 frames × 16 training cameras =
+48 view-frames. The recipient rows are therefore wrong about NOTHING.
+A consolidation payload can only recover what the recipient failed to
+learn, so the headroom question is a question about **observation
+supply**, not about which tensor is carried.
+
+**NOT established.** That consolidation is dead as a concept. What is
+refuted is that any payload can be demonstrated on an
+observation-SUFFICIENT fixture. An observation-STARVED fixture — where
+the returning surface is genuinely under-determined — remains the
+untested case, and is now the design that the per-tensor numbers here
+should inform rather than a design chosen blind.
+
+**Also not established:** anything about N3V. No real-data claim is
+licensed by this cell, and per the frozen rule no N3V B2 follows a
+negative.
+
+---
+
+## 5. THE EDIT — the opacity payload is FALSIFIED, and more strongly than DC
+
+The frozen spec required the edit to run REGARDLESS of the screen, so a
+measured reconstruction delta could be set against a measured headroom
+bound. Cell: Determined experiment **236** (`lrv3_falsify_opacity` r0,
+commit `2ba6a62`, dgx, admitted V100 image, seed 0), COMPLETED. Report
+`falsify_opacity_report.json` in experiment 209's run dir, sha256
+`b5617f9cd8f12b03a2b0a51aea6bda3ad8717590b6b3709e93a8c73d8b1d61e1`.
+
+**Anti-vacuity, established before any delta was read:** the tool's own
+comparative gate PASSES — L1 pre-edit opacity distance **7.1808**
+strictly exceeds the L3 same-surface floor **5.7118**, all 3,912
+recipient rows change, and every link's reserved slot is satisfiable
+(120 units in W1, 12 in WR, 8 per side used). The edit is non-vacuous by
+the same rule the DC experiment used.
+
+| link | reserved slot Δ (mean ± SE) | held-out `event_return` | certificate |
+|---|---:|---:|---|
+| **L1 oracle-correct** | **+6.588e-05 ± 3.237e-05** | 27.2181 → 26.0275 (**−1.1906 dB**) | REJECTED |
+| L2 wrong-identity | +5.095e-04 ± 2.341e-04 | 27.2181 → 21.1718 (**−6.0463 dB**) | REJECTED |
+| L3 same-identity no-op | +3.600e-05 ± 6.407e-06 | 27.2181 → 27.2284 (+0.0103 dB) | rejected |
+
+**The oracle-correct opacity edit is ACTIVELY HARMFUL.** Its reserved
+loss delta is POSITIVE — worse, not merely non-negative — and it costs
+**1.19 dB** of held-out event return. Against the frozen promotion gate:
+condition 1 (negative reserved loss) FAILS, condition 2 (≥ +0.5 dB)
+FAILS by 1.69 dB, condition 3 (wrong identity rejected and harmful)
+PASSES. **The payload is falsified**, and unlike DC — which was
+indistinguishable from nothing at +0.008 dB — opacity does measurable
+damage.
+
+The certificate behaved exactly as designed throughout: it rejected all
+three links, and it correctly identified the wrong-identity edit that
+would have cost 6.05 dB.
+
+### An instrument finding: the L3 placebo does NOT transfer across payloads
+
+Frozen gate condition 4 requires the no-op to be NUMERICAL ZERO. **It is
+not here** (+3.600e-05, +0.0103 dB), and the reason is structural rather
+than a fault.
+
+L3 maps donor rows to other donor rows of the SAME surface, paired by the
+**nearest-DC** row map. For the DC payload that is a genuine placebo by
+construction — a row redirected to its nearest-DC neighbour receives
+almost its own value, which is why DC's L3 read ≈1e-11. For opacity it
+is not: DC-nearness does not imply opacity-nearness, and two rows of the
+same surface differ in activated opacity by 0.196 on average. So under a
+nearest-DC map, L3 is a **same-surface, different-row opacity transfer**,
+not a placebo.
+
+That is still informative — it bounds the cost of moving opacity between
+same-surface rows at ≈+0.01 dB, which isolates the −1.19 dB as a property
+of the CROSS-EPISODE link rather than of opacity transfer as such. But
+**gate condition 4 is inapplicable as written for this payload**, and is
+recorded as inapplicable rather than reported as passed or failed. Any
+future non-appearance payload needs a payload-native placebo (a
+nearest-in-its-own-space map) if the numerical-zero condition is to mean
+anything. Recorded as a required amendment to the certificate's control
+set, not applied retroactively.
+
+## 6. Bookkeeping and an incidental observation
+
+Claims consumed: `lrv3_payload_headroom` r0 (experiment 233) and
+`lrv3_falsify_opacity` r0 (experiment 236). Cost ≈ 0.2 + 0.3 slot-h. Input hashes recorded in the report:
+`configs/lrv3/b1_packets.yaml` sha256 `9085d3bd…` (matching experiment
+209's manifest), `configs/lrv3/oracle_correct.json` sha256 `4d7d7d84…`.
+
+Incidental, recorded because it bears on the ladder's zero-admit result:
+of 149,800 rows the B1 packet column marks **2,255 rows across 103
+packets**, and **zero recipient rows carry a packet id** — the return
+region contains no packet at all on this fixture. That is consistent
+with, and independent of, the round-1 funnel finding that the same
+surface rarely produces two temporally disjoint well-trained packets.
