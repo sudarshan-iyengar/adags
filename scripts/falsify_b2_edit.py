@@ -93,6 +93,26 @@ ROW_MAP_CHUNK = 4096
 WINDOW_EPS = 1e-9
 
 EDIT_MODE = "dc"                           # the B2 PRIMARY arm, unchanged
+
+# ---- payloads -------------------------------------------------------------
+# `--payload dc` is the DEFAULT and reproduces the recorded 2026-08-20 run
+# exactly. `--payload opacity` swaps ONLY the redirected tensor and the
+# anti-vacuity quantity; the row SETS, the row MAP, the certificate rule,
+# the reserved-slot allocation and the report-only event_return metric are
+# untouched, so the two arms are directly comparable.
+PAYLOAD_DC = "dc"
+PAYLOAD_OPACITY = "opacity"
+PAYLOADS = (PAYLOAD_DC, PAYLOAD_OPACITY)
+#: payload -> (model attribute redirected, scene.appearance_edit mode)
+PAYLOAD_TENSOR = {
+    PAYLOAD_DC: "_features_dc",
+    PAYLOAD_OPACITY: "_opacity",
+}
+PAYLOAD_MODE = {
+    PAYLOAD_DC: "dc",
+    PAYLOAD_OPACITY: "opacity",
+}
+
 LINK_L1 = "L1_oracle_correct"
 LINK_L2 = "L2_wrong_identity"
 LINK_L3 = "L3_same_identity_noop"
@@ -248,22 +268,38 @@ def assert_sets_disjoint(sets):
     return True
 
 
-def nearest_dc_row_map(features_dc, recipient_rows, donor_rows):
-    """recipient row -> donor row by nearest DC, chunked — mirrors
-    consolidate_packets.row_map semantics on explicit row sets."""
-    dc = torch.as_tensor(features_dc, dtype=torch.float64)
-    dc = dc.reshape(dc.shape[0], -1)
+def nearest_row_map(values, recipient_rows, donor_rows):
+    """recipient row -> donor row by nearest `values`, chunked.
+
+    The generalized nearest-map. `values` is any (N, ...) per-row tensor;
+    rows are flattened to vectors and matched by Euclidean distance in
+    that space. `nearest_dc_row_map` is this function on `_features_dc`
+    and is the FROZEN primary correspondence; a payload-native map is
+    this function on the payload's own tensor.
+    """
+    matrix = torch.as_tensor(values, dtype=torch.float64)
+    matrix = matrix.reshape(matrix.shape[0], -1)
     r_rows = torch.as_tensor(recipient_rows).reshape(-1).to(torch.long)
     d_rows = torch.as_tensor(donor_rows).reshape(-1).to(torch.long)
     if r_rows.numel() == 0 or d_rows.numel() == 0:
         raise ContractError("row map needs a non-empty donor and recipient set")
-    d_dc = dc[d_rows]
-    r_dc = dc[r_rows]
+    d_values = matrix[d_rows]
+    r_values = matrix[r_rows]
     idx_chunks = []
-    for start in range(0, r_dc.shape[0], ROW_MAP_CHUNK):
-        chunk = r_dc[start:start + ROW_MAP_CHUNK]
-        idx_chunks.append(torch.cdist(chunk, d_dc).argmin(dim=1))
+    for start in range(0, r_values.shape[0], ROW_MAP_CHUNK):
+        chunk = r_values[start:start + ROW_MAP_CHUNK]
+        idx_chunks.append(torch.cdist(chunk, d_values).argmin(dim=1))
     return r_rows, d_rows[torch.cat(idx_chunks)]
+
+
+def nearest_dc_row_map(features_dc, recipient_rows, donor_rows):
+    """recipient row -> donor row by nearest DC, chunked — mirrors
+    consolidate_packets.row_map semantics on explicit row sets.
+
+    The FROZEN primary correspondence: every payload arm uses it, so
+    every arm is scored on the same authored row pairing.
+    """
+    return nearest_row_map(features_dc, recipient_rows, donor_rows)
 
 
 def link_pointer(n_rows, recipient_rows, donor_rows):
@@ -283,22 +319,62 @@ def link_pointer(n_rows, recipient_rows, donor_rows):
     return pointer
 
 
-def pre_edit_dc_stats(features_dc, recipient_rows, donor_rows):
+def pre_edit_stats(values, recipient_rows, donor_rows, payload=None):
     """Anti-vacuity measurement: how different are the mapped pairs
-    BEFORE the edit? Computed with no render."""
-    dc = torch.as_tensor(features_dc, dtype=torch.float64)
-    dc = dc.reshape(dc.shape[0], -1)
+    BEFORE the edit? Computed with no render.
+
+    The measured quantity is whichever per-row tensor the payload
+    redirects. The legacy `pre_edit_dc_distance_*` keys are ALWAYS
+    emitted so the recorded `ccr-b2-falsification-v1` schema and every
+    downstream reader keep working unchanged; when `payload` is given
+    (i.e. anything other than the default DC run) payload-neutral keys
+    are added alongside, and the DC-named keys carry the payload's
+    distance rather than a DC distance.
+    """
+    matrix = torch.as_tensor(values, dtype=torch.float64)
+    matrix = matrix.reshape(matrix.shape[0], -1)
     r_rows = torch.as_tensor(recipient_rows).reshape(-1).to(torch.long)
     d_rows = torch.as_tensor(donor_rows).reshape(-1).to(torch.long)
-    dist = (dc[r_rows] - dc[d_rows]).norm(dim=1)
+    dist = (matrix[r_rows] - matrix[d_rows]).norm(dim=1)
     changed = int((r_rows != d_rows).sum())
-    return {
-        "pre_edit_dc_distance_mean": float(dist.mean()) if dist.numel() else 0.0,
-        "pre_edit_dc_distance_max": float(dist.max()) if dist.numel() else 0.0,
+    mean = float(dist.mean()) if dist.numel() else 0.0
+    maximum = float(dist.max()) if dist.numel() else 0.0
+    stat = {
+        "pre_edit_dc_distance_mean": mean,
+        "pre_edit_dc_distance_max": maximum,
         "rows_changed": changed,
         "rows_changed_fraction": (changed / int(r_rows.numel())
                                   if r_rows.numel() else 0.0),
     }
+    if payload is not None:
+        stat["pre_edit_distance_mean"] = mean
+        stat["pre_edit_distance_max"] = maximum
+        stat["payload"] = str(payload)
+        stat["payload_tensor"] = PAYLOAD_TENSOR.get(payload)
+    return stat
+
+
+def pre_edit_dc_stats(features_dc, recipient_rows, donor_rows):
+    """The DC-payload anti-vacuity measurement (unchanged surface)."""
+    return pre_edit_stats(features_dc, recipient_rows, donor_rows)
+
+
+def stat_distance_mean(stat):
+    """Payload-neutral read of a link stat's mean pre-edit distance.
+
+    Falls back to the legacy DC-named key so hand-built stats and every
+    recorded report stay readable.
+    """
+    if "pre_edit_distance_mean" in stat:
+        return float(stat["pre_edit_distance_mean"])
+    return float(stat["pre_edit_dc_distance_mean"])
+
+
+def stat_distance_max(stat):
+    """Payload-neutral read of a link stat's max pre-edit distance."""
+    if "pre_edit_distance_max" in stat:
+        return float(stat["pre_edit_distance_max"])
+    return float(stat["pre_edit_dc_distance_max"])
 
 
 def gate_decision(link_stats):
@@ -306,6 +382,11 @@ def gate_decision(link_stats):
 
     `link_stats` maps link name -> dict with at least
     `pre_edit_dc_distance_mean`, `rows_changed`, `slot_ok`.
+
+    The measured quantity is whatever the payload redirects; the rule
+    itself is payload-agnostic and unchanged. Payload-neutral keys are
+    mirrored in only when the stats carry them (i.e. never on the
+    default DC run, whose report stays byte-identical).
 
     Returns (verdict_or_None, anti_vacuity_block). A non-None verdict
     means NO reconstruction delta may be computed. Precedence:
@@ -315,8 +396,7 @@ def gate_decision(link_stats):
     """
     l1 = link_stats[LINK_L1]
     l3 = link_stats[LINK_L3]
-    comparative_ok = bool(float(l1["pre_edit_dc_distance_mean"])
-                          > float(l3["pre_edit_dc_distance_mean"]))
+    comparative_ok = bool(stat_distance_mean(l1) > stat_distance_mean(l3))
     rows_ok = int(l1["rows_changed"]) >= 1
     slots_ok = all(bool(link_stats[name].get("slot_ok")) for name in LINK_ORDER)
 
@@ -329,39 +409,57 @@ def gate_decision(link_stats):
     anti = {
         "rule": ("L1 pre-edit mean DC distance STRICTLY > L3's, L1 rows "
                  "changed >= 1, and every link's reserved slot satisfiable"),
-        "l1_pre_edit_dc_distance_mean": float(l1["pre_edit_dc_distance_mean"]),
-        "l3_pre_edit_dc_distance_mean": float(l3["pre_edit_dc_distance_mean"]),
+        "l1_pre_edit_dc_distance_mean": stat_distance_mean(l1),
+        "l3_pre_edit_dc_distance_mean": stat_distance_mean(l3),
         "comparative_ok": comparative_ok,
         "l1_rows_changed": int(l1["rows_changed"]),
         "l1_rows_changed_ok": rows_ok,
         "slots_ok": slots_ok,
         "per_link": {
-            name: {
-                "pre_edit_dc_distance_mean": float(
-                    link_stats[name]["pre_edit_dc_distance_mean"]),
-                "pre_edit_dc_distance_max": float(
-                    link_stats[name]["pre_edit_dc_distance_max"]),
-                "rows_changed": int(link_stats[name]["rows_changed"]),
-                "rows_changed_fraction": float(
-                    link_stats[name]["rows_changed_fraction"]),
-                "slot_ok": bool(link_stats[name].get("slot_ok")),
-                "slot_units_per_side": link_stats[name].get(
-                    "slot_units_per_side"),
-                "slot_available_per_side": link_stats[name].get(
-                    "slot_available_per_side"),
-            }
+            name: _per_link_gate_entry(link_stats[name])
             for name in LINK_ORDER
         },
         "verdict": verdict,
     }
+    _mirror_payload_keys(anti, l1, prefix="l1_")
+    _mirror_payload_keys(anti, l3, prefix="l3_", identity_only=True)
     return verdict, anti
 
 
+def _per_link_gate_entry(stat):
+    entry = {
+        "pre_edit_dc_distance_mean": stat_distance_mean(stat),
+        "pre_edit_dc_distance_max": stat_distance_max(stat),
+        "rows_changed": int(stat["rows_changed"]),
+        "rows_changed_fraction": float(stat["rows_changed_fraction"]),
+        "slot_ok": bool(stat.get("slot_ok")),
+        "slot_units_per_side": stat.get("slot_units_per_side"),
+        "slot_available_per_side": stat.get("slot_available_per_side"),
+    }
+    if "pre_edit_distance_mean" in stat:
+        entry["pre_edit_distance_mean"] = stat_distance_mean(stat)
+        entry["pre_edit_distance_max"] = stat_distance_max(stat)
+        entry["payload"] = stat.get("payload")
+        entry["payload_tensor"] = stat.get("payload_tensor")
+    return entry
+
+
+def _mirror_payload_keys(block, stat, prefix="", identity_only=False):
+    """Add the payload-neutral mirror keys, and only then."""
+    if "pre_edit_distance_mean" not in stat:
+        return
+    block[prefix + "pre_edit_distance_mean"] = stat_distance_mean(stat)
+    if identity_only:
+        return
+    block["payload"] = stat.get("payload")
+    block["payload_tensor"] = stat.get("payload_tensor")
+
+
 def _empty_link_entry(name, stat):
-    return {
+    entry = {
         "name": name,
-        "pre_edit_dc_distance_mean": float(stat["pre_edit_dc_distance_mean"]),
-        "pre_edit_dc_distance_max": float(stat["pre_edit_dc_distance_max"]),
+        "pre_edit_dc_distance_mean": stat_distance_mean(stat),
+        "pre_edit_dc_distance_max": stat_distance_max(stat),
         "rows_changed": int(stat["rows_changed"]),
         "rows_changed_fraction": float(stat["rows_changed_fraction"]),
         "slot_units_per_side": stat.get("slot_units_per_side"),
@@ -380,6 +478,12 @@ def _empty_link_entry(name, stat):
             "side_means": None,
         },
     }
+    if "pre_edit_distance_mean" in stat:
+        entry["pre_edit_distance_mean"] = stat_distance_mean(stat)
+        entry["pre_edit_distance_max"] = stat_distance_max(stat)
+        entry["payload"] = stat.get("payload")
+        entry["payload_tensor"] = stat.get("payload_tensor")
+    return entry
 
 
 def falsification_flow(sets_block, link_stats, measure_fn, packet_block=None):
@@ -492,8 +596,31 @@ def _merge_config(args, config_path):
 
 
 def set_pointer(gaussians, pointer, mode=EDIT_MODE):
+    """Install one pointer column in `mode`.
+
+    The mode selects WHICH per-row tensor the column redirects
+    (scene.appearance_edit); the column itself is payload-independent.
+    """
     gaussians._appearance_source_idx = pointer.to(gaussians._features_dc.device)
     gaussians._appearance_share_mode = mode
+
+
+def payload_values(gaussians, payload):
+    """The CPU float64 (N, C) matrix a payload's anti-vacuity distance
+    and its native row map are measured in — the RAW stored parameter,
+    matching what the pointer actually redirects."""
+    if payload not in PAYLOAD_TENSOR:
+        raise ContractError(f"unknown payload: {payload!r}")
+    name = PAYLOAD_TENSOR[payload]
+    tensor = getattr(gaussians, name, None)
+    if tensor is None or int(tensor.numel()) == 0:
+        raise ContractError(
+            f"payload {payload!r} needs {name}, which is empty on this model")
+    n_rows = int(gaussians._xyz.shape[0])
+    if int(tensor.shape[0]) != n_rows:
+        raise ContractError(
+            f"{name} has {int(tensor.shape[0])} rows, model has {n_rows}")
+    return tensor.detach().reshape(n_rows, -1).cpu().to(torch.float64)
 
 
 def event_return_psnr(gaussians, scene, pipe, background, gt_dir, obj_id):
@@ -539,65 +666,55 @@ def event_return_psnr(gaussians, scene, pipe, background, gt_dir, obj_id):
 
 
 # ---------------------------------------------------------------------------
-# main
+# state loading — shared with scripts/payload_headroom.py so both tools see
+# the SAME restored state and therefore the same authored row sets
 # ---------------------------------------------------------------------------
 
 
-def main(argv=None):
-    parser = ArgumentParser(description="Lane-4 B2 edit falsification (LRV3)")
-    from arguments import ModelParams, OptimizationParams, PipelineParams
-
-    lp = ModelParams(parser)
-    op = OptimizationParams(parser)
-    pp = PipelineParams(parser)
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--start_checkpoint", required=True)
-    parser.add_argument("--packet_state", default="")
-    parser.add_argument("--oracle_region",
-                        default=str(REPO_ROOT / "configs" / "lrv3"
-                                    / "oracle_correct.json"))
-    parser.add_argument("--out_report", required=True)
-    parser.add_argument("--gaussian_dim", type=int, default=4)
-    parser.add_argument("--time_duration", nargs=2, type=float,
-                        default=[0.0, 10.0])
-    parser.add_argument("--num_pts", type=int, default=50_000)
-    parser.add_argument("--num_pts_ratio", type=float, default=1.0)
-    parser.add_argument("--rot_4d", action="store_true")
-    parser.add_argument("--force_sh_3d", action="store_true")
-    parser.add_argument("--batch_size", type=int, default=1)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--exhaust_test", action="store_true")
-    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
-    _merge_config(args, args.config)
-
-    from elgs.trainer_hooks import build_reserved_pool
-    from scene import Scene, GaussianModel
-    from scene.appearance_edit import clear_appearance_edit
-    from scripts.consolidate_packets import paired_delta, pick_confirmation_slot
-
+def resolve_model_path(args):
+    """Fill `model_path` from $ADAGS_RUN_DIR and make sure it exists."""
     run_dir = os.environ.get("ADAGS_RUN_DIR", "").strip()
     if not str(getattr(args, "model_path", "") or "").strip():
         if not run_dir:
             raise ContractError("--model_path is required when ADAGS_RUN_DIR is unset")
         args.model_path = run_dir
     os.makedirs(args.model_path, exist_ok=True)
-    Path(args.out_report).parent.mkdir(parents=True, exist_ok=True)
+    return args.model_path
 
-    region = json.loads(Path(args.oracle_region).read_text())["region"]
+
+def load_oracle_region(path):
+    """(centre, radius) of the authored sphere the row sets live on."""
+    region = json.loads(Path(path).read_text())["region"]
     if region.get("kind") != "sphere":
         raise ContractError(
             f"oracle region kind {region.get('kind')!r} is not a sphere; the "
             "authored row sets are defined on a sphere only")
-    centre, radius = region["centre"], float(region["radius"])
+    return region["centre"], float(region["radius"])
 
-    spec = json.loads((Path(args.source_path) / "event_spec.json").read_text())
+
+def load_event_spec(source_path):
+    """The frozen LRV3 fixture guard, plus (spec, obj_id, gt_dir)."""
+    spec = json.loads((Path(source_path) / "event_spec.json").read_text())
     obj_id = int(spec["event_object"]["id"])
-    gt_dir = Path(args.source_path) / "gt_identity"
+    gt_dir = Path(source_path) / "gt_identity"
     spec_return = tuple(sorted(int(f) for f in spec["return_frames"]))
     if spec_return != RETURN_FRAMES:
         raise ContractError(
             f"fixture return frames {spec_return} are not the frozen "
             f"{RETURN_FRAMES}; this tool is specified for the LRV3 fixture")
+    return spec, obj_id, gt_dir
+
+
+def restore_model_and_scene(args, lp, op, pp):
+    """Restore the trained state exactly as the falsification does.
+
+    Returns (gaussians, scene, dataset, opt, pipe). No render happens
+    here and no optimizer step is ever taken: the checkpoint carries
+    every per-row parameter, so an edit can be installed and scored
+    without retraining.
+    """
+    from scene import Scene, GaussianModel
+    from scene.appearance_edit import clear_appearance_edit
 
     torch.manual_seed(args.seed)
     dataset = lp.extract(args)
@@ -622,7 +739,16 @@ def main(argv=None):
             "this falsification is specified on the b1_packets substrate "
             "(elgs_enable false); an EL-GS cell would need its presence "
             "program restored before any render")
+    return gaussians, scene, dataset, opt, pipe
 
+
+def probe_row_state(gaussians):
+    """The frozen probe of the restored state the row sets are built
+    from: both probe positions, the DC matrix and the effective support.
+
+    Payload-independent on purpose — every payload arm must select the
+    SAME authored donor/recipient rows.
+    """
     n_rows = int(gaussians._xyz.shape[0])
     with torch.no_grad():
         pos_ep1 = gaussians.get_dynamic_xyz(DONOR_PROBE_T).detach().cpu()
@@ -630,6 +756,75 @@ def main(argv=None):
         dc = gaussians._features_dc.detach().reshape(n_rows, -1).cpu()
         sup_lo, sup_hi = effective_support(
             gaussians._t.detach().cpu(), gaussians._scaling_t.detach().cpu())
+    return {
+        "n_rows": n_rows, "pos_ep1": pos_ep1, "pos_ret": pos_ret,
+        "dc": dc, "sup_lo": sup_lo, "sup_hi": sup_hi,
+    }
+
+
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
+
+def main(argv=None):
+    parser = ArgumentParser(description="Lane-4 B2 edit falsification (LRV3)")
+    from arguments import ModelParams, OptimizationParams, PipelineParams
+
+    lp = ModelParams(parser)
+    op = OptimizationParams(parser)
+    pp = PipelineParams(parser)
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--start_checkpoint", required=True)
+    parser.add_argument("--packet_state", default="")
+    parser.add_argument("--oracle_region",
+                        default=str(REPO_ROOT / "configs" / "lrv3"
+                                    / "oracle_correct.json"))
+    parser.add_argument("--out_report", required=True)
+    parser.add_argument("--payload", choices=PAYLOADS, default=PAYLOAD_DC,
+                        help="which per-row tensor the pointer redirects; "
+                             "'dc' (default) reproduces the recorded run")
+    parser.add_argument("--gaussian_dim", type=int, default=4)
+    parser.add_argument("--time_duration", nargs=2, type=float,
+                        default=[0.0, 10.0])
+    parser.add_argument("--num_pts", type=int, default=50_000)
+    parser.add_argument("--num_pts_ratio", type=float, default=1.0)
+    parser.add_argument("--rot_4d", action="store_true")
+    parser.add_argument("--force_sh_3d", action="store_true")
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--exhaust_test", action="store_true")
+    args = parser.parse_args(argv if argv is not None else sys.argv[1:])
+    _merge_config(args, args.config)
+
+    from elgs.trainer_hooks import build_reserved_pool
+    from scene.appearance_edit import clear_appearance_edit
+    from scripts.consolidate_packets import paired_delta, pick_confirmation_slot
+
+    payload = args.payload
+    edit_mode = PAYLOAD_MODE[payload]
+    # The DC arm keeps the recorded report byte-for-byte: no payload
+    # annotation is threaded, so `pre_edit_stats` emits the legacy keys
+    # only. Any other payload annotates.
+    stats_payload = None if payload == PAYLOAD_DC else payload
+
+    resolve_model_path(args)
+    Path(args.out_report).parent.mkdir(parents=True, exist_ok=True)
+
+    centre, radius = load_oracle_region(args.oracle_region)
+    spec, obj_id, gt_dir = load_event_spec(args.source_path)
+
+    gaussians, scene, dataset, opt, pipe = restore_model_and_scene(
+        args, lp, op, pp)
+
+    probe = probe_row_state(gaussians)
+    n_rows = probe["n_rows"]
+    pos_ep1, pos_ret = probe["pos_ep1"], probe["pos_ret"]
+    dc = probe["dc"]
+    sup_lo, sup_hi = probe["sup_lo"], probe["sup_hi"]
+    # The anti-vacuity quantity follows the payload; the row SETS and the
+    # row MAP never do (both stay DC-derived), so the arms are comparable.
+    measured = dc if payload == PAYLOAD_DC else payload_values(gaussians, payload)
 
     sets = build_row_sets(pos_ep1, pos_ret, sup_lo, sup_hi, dc, centre, radius)
     sets_block = sets_summary(sets)
@@ -671,7 +866,7 @@ def main(argv=None):
                 f"link {name} has an empty side ({int(r_set.numel())} recipient "
                 f"rows, {int(d_set.numel())} donor rows)")
         r_rows, d_rows = nearest_dc_row_map(dc, r_set, d_set)
-        stat = dict(pre_edit_dc_stats(dc, r_rows, d_rows))
+        stat = dict(pre_edit_stats(measured, r_rows, d_rows, stats_payload))
         stat["pointer"] = link_pointer(n_rows, r_rows, d_rows)
         link_stats[name] = stat
 
@@ -762,23 +957,26 @@ def main(argv=None):
         pointer = stat["pointer"]
         side_d, side_r = stat["slot"]
         with torch.no_grad():
+            # `paired_delta` is reused UNCHANGED: the payload rides its
+            # existing `mode` parameter, which is exactly the flag
+            # scene.appearance_edit dispatches on.
             dd = paired_delta([train_units[u] for u in side_d], gaussians, pipe,
-                              background, identity, pointer, EDIT_MODE)
+                              background, identity, pointer, edit_mode)
             dr = paired_delta([train_units[u] for u in side_r], gaussians, pipe,
-                              background, identity, pointer, EDIT_MODE)
+                              background, identity, pointer, edit_mode)
             pooled_mean, pooled_se = mean_se(dd + dr)
             side_means = [sum(dd) / len(dd), sum(dr) / len(dr)]
             stage, admitted = certificate_stage(pooled_mean, pooled_se,
                                                 side_means)
             ret = paired_delta([train_units[u] for u in return_units], gaussians,
-                               pipe, background, identity, pointer, EDIT_MODE)
+                               pipe, background, identity, pointer, edit_mode)
             return_mean, _ = mean_se(ret)
 
             if base_psnr["value"] is None:
-                set_pointer(gaussians, identity)
+                set_pointer(gaussians, identity, edit_mode)
                 base_psnr["value"] = event_return_psnr(
                     gaussians, scene, pipe, background, gt_dir, obj_id)
-            set_pointer(gaussians, pointer)
+            set_pointer(gaussians, pointer, edit_mode)
             edited = event_return_psnr(gaussians, scene, pipe, background,
                                        gt_dir, obj_id)
             clear_appearance_edit(gaussians)
@@ -805,7 +1003,10 @@ def main(argv=None):
     report = falsification_flow(sets_block, link_stats, measure, packet_block)
     report["checkpoint"] = str(args.start_checkpoint)
     report["config"] = str(args.config)
-    report["arm"] = EDIT_MODE
+    report["arm"] = edit_mode          # == EDIT_MODE on the default DC arm
+    if stats_payload is not None:
+        report["payload"] = payload
+        report["payload_tensor"] = PAYLOAD_TENSOR[payload]
     report["evidence_bearing"] = False
     report["reserved_units"] = len(reserved)
     report["reserved_units_in_W1"] = len(avail_d_all)

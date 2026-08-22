@@ -615,20 +615,49 @@ class GaussianModel:
         # appearance to its donor's. Empty column (every training lane)
         # is a passthrough; "dc" redirects base radiance only, "full"
         # redirects every band. Both rendered branches read this
-        # property, so a tie applies to the static twin too.
+        # property, so a tie applies to the static twin too. A pointer
+        # installed for a NON-appearance payload (mode "opacity") leaves
+        # appearance exactly alone — one column, one payload.
         source_idx = getattr(self, "_appearance_source_idx", None)
         if source_idx is not None and source_idx.numel() == features_dc.shape[0]:
-            from scene.appearance_edit import compose_shared_features
-
-            features_dc, features_rest = compose_shared_features(
-                features_dc, features_rest, source_idx,
-                getattr(self, "_appearance_share_mode", "dc"),
+            from scene.appearance_edit import (
+                compose_shared_features,
+                redirects_features,
             )
+
+            mode = getattr(self, "_appearance_share_mode", "dc")
+            if redirects_features(mode):
+                features_dc, features_rest = compose_shared_features(
+                    features_dc, features_rest, source_idx, mode,
+                )
         return torch.cat((features_dc, features_rest), dim=1)
 
     @property
     def get_opacity(self):
-        return self.opacity_activation(self._opacity)
+        # CCR payload edit (scene.appearance_edit): the same POST-TRAINING
+        # pointer column can redirect the RAW OPACITY LOGIT instead of
+        # appearance, so a recipient row renders with its donor's base
+        # opacity. The redirect is applied BEFORE `opacity_activation`
+        # deliberately: the logit is the stored parameter, and the sigmoid
+        # is a monotone bijection, so redirecting the logit and redirecting
+        # the activated value are the same rendered opacity. Empty column
+        # (every training lane) is a passthrough, and a pointer installed
+        # in an appearance mode leaves this property untouched. This single
+        # read feeds BOTH rendered branches (gaussian_renderer/__init__.py
+        # :202 -> :210 dynamic, :351 soft-routing static twin), so a tie
+        # applies to the static twin too.
+        opacity = self._opacity
+        source_idx = getattr(self, "_appearance_source_idx", None)
+        if source_idx is not None and source_idx.numel() == opacity.shape[0]:
+            from scene.appearance_edit import (
+                compose_shared_opacity,
+                redirects_opacity,
+            )
+
+            mode = getattr(self, "_appearance_share_mode", "dc")
+            if redirects_opacity(mode):
+                opacity = compose_shared_opacity(opacity, source_idx, mode)
+        return self.opacity_activation(opacity)
 
     @property
     def get_static_xyz(self):

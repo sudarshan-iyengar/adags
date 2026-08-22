@@ -12,6 +12,8 @@ whose expected membership is closed-form.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -340,6 +342,254 @@ class PacketSummaryTests(unittest.TestCase):
         self.assertEqual(block["donor_rows_with_packet"], 1)
         self.assertEqual(block["recipient_rows_with_packet"], 2)
         self.assertEqual(block["recipient_packet_ids"], [5, 7])
+
+
+# ---------------------------------------------------------------------------
+# --payload dc must reproduce the recorded behaviour EXACTLY
+# ---------------------------------------------------------------------------
+
+#: An 18-row scenario that exercises every branch the DC arm takes:
+#: 8 donors, 4 recipients, 6 wrong-identity rows, no spanning rows.
+#: (d_ep1, d_ret, sup_lo, sup_hi, dc_value)
+_DC_SPECS = (
+    [(0.02 + 0.01 * i, 0.02 + 0.01 * i, 0.5 + 0.1 * i, 2.0 + 0.2 * i,
+      0.10 + 0.01 * i) for i in range(8)]
+    + [(0.90, 0.03 + 0.02 * i, 9.35 + 0.01 * i, 9.85 + 0.02 * i,
+        0.80 + 0.015 * i) for i in range(4)]
+    + [(1.10 + 0.2 * i, 1.10 + 0.2 * i, 0.4 + 0.1 * i, 2.5 + 0.1 * i,
+        0.30 + 0.09 * i) for i in range(6)]
+)
+
+#: sha256 of the canonical fingerprint below, captured from the
+#: implementation as it stood BEFORE the payload generalization
+#: (commit a5fb0e0 + no local edits). Stable across torch 1.12/py3.7 and
+#: torch 2.6/py3.12. If a change to the DC arm moves this digest, the
+#: recorded 2026-08-20 falsification is no longer reproducible and the
+#: change must be reverted or re-frozen as a NEW spec.
+_DC_FINGERPRINT_SHA256 = (
+    "f5d8bdb6870725970e475c92713b0a5a87e63ecf964ea04614df9faa4fecce59"
+)
+
+_DC_EXPECTED_SETS = {
+    "donor": [0, 1, 2, 3, 4, 5, 6, 7],
+    "donor_a": [0, 2, 4, 6],
+    "donor_b": [1, 3, 5, 7],
+    "recipient": [8, 9, 10, 11],
+    "spanning": [],
+    "wrong": [17, 16, 15, 14, 13, 12],
+    "wrong_pool": [12, 13, 14, 15, 16, 17],
+}
+
+_DC_EXPECTED_POINTERS = {
+    fb.LINK_L1: [0, 1, 2, 3, 4, 5, 6, 7, 7, 7, 7, 7, 12, 13, 14, 15, 16, 17],
+    fb.LINK_L2: [0, 1, 2, 3, 4, 5, 6, 7, 17, 17, 17, 17,
+                 12, 13, 14, 15, 16, 17],
+    fb.LINK_L3: [0, 0, 2, 2, 4, 6, 6, 6, 8, 9, 10, 11,
+                 12, 13, 14, 15, 16, 17],
+}
+
+
+def _dc_measure(name, stat):
+    """A deterministic stand-in for the render-backed measurement, so the
+    report can be assembled and fingerprinted with no GPU."""
+    seed = float(len(name))
+    return {
+        "raw_slot_delta_mean": -0.001 * seed,
+        "raw_slot_delta_se": 0.0001 * seed,
+        "return_side_delta_mean": -0.002 * seed,
+        "return_side_units": 12,
+        "event_return_psnr_base": 27.0,
+        "event_return_psnr_edited": 27.0 + 0.01 * seed,
+        "event_return_psnr_delta": 0.01 * seed,
+        "event_return_pixels": 1234,
+        "event_return_frames": 12,
+        "certificate": {
+            "stage_reached": "admitted", "admitted": True,
+            "pooled_mean": -0.001 * seed, "pooled_se": 0.0001 * seed,
+            "side_means": [-0.001 * seed, -0.002 * seed],
+        },
+    }
+
+
+def _dc_pipeline(payload=None):
+    """Run the no-render half of `main` for one payload.
+
+    `payload=None` is the DC arm exactly as `main` runs it (it threads
+    None so `pre_edit_stats` emits the legacy keys only).
+    """
+    pos1, posr, lo, hi, dc = _rows(_DC_SPECS)
+    sets = fb.build_row_sets(pos1, posr, lo, hi, dc, CENTRE, RADIUS)
+    fb.assert_sets_disjoint(sets)
+    n_rows = int(dc.shape[0])
+
+    link_rows = {
+        fb.LINK_L1: (sets["recipient"], sets["donor"]),
+        fb.LINK_L2: (sets["recipient"], sets["wrong"]),
+        fb.LINK_L3: (sets["donor_b"], sets["donor_a"]),
+    }
+    link_stats = {}
+    pointers = {}
+    for name, (r_set, d_set) in link_rows.items():
+        r_rows, d_rows = fb.nearest_dc_row_map(dc, r_set, d_set)
+        stat = dict(fb.pre_edit_stats(dc, r_rows, d_rows, payload))
+        pointers[name] = fb.link_pointer(n_rows, r_rows, d_rows).tolist()
+        stat["slot_ok"] = True
+        stat["slot_units_per_side"] = [8, 8]
+        stat["slot_available_per_side"] = [40, 12]
+        link_stats[name] = stat
+
+    sets_block = fb.sets_summary(sets)
+    sets_block["rows"] = n_rows
+    report = fb.falsification_flow(sets_block, link_stats, _dc_measure,
+                                   {"packets": 2})
+    return {
+        "sets": {k: v.tolist() for k, v in sets.items()},
+        "pointers": pointers,
+        "report": report,
+        "sufficient": fb.sets_are_sufficient(sets),
+    }
+
+
+class PayloadDcIdentityTests(unittest.TestCase):
+    """The hard requirement: `--payload dc` is the recorded arm."""
+
+    def test_dc_row_sets_are_unchanged(self):
+        self.assertEqual(_dc_pipeline()["sets"], _DC_EXPECTED_SETS)
+
+    def test_dc_pointers_are_unchanged(self):
+        self.assertEqual(_dc_pipeline()["pointers"], _DC_EXPECTED_POINTERS)
+
+    def test_dc_report_keys_are_unchanged(self):
+        report = _dc_pipeline()["report"]
+        self.assertEqual(report["verdict"], "COMPLETED")
+        for link in report["links"]:
+            for key in link:
+                self.assertFalse(
+                    key.startswith("pre_edit_distance"),
+                    "the DC arm must not gain payload-neutral keys")
+                self.assertNotEqual(key, "payload")
+                self.assertNotEqual(key, "payload_tensor")
+        self.assertNotIn("payload", report["anti_vacuity"])
+        self.assertNotIn("payload_tensor", report["anti_vacuity"])
+        self.assertNotIn("l1_pre_edit_distance_mean", report["anti_vacuity"])
+
+    def test_dc_fingerprint_is_byte_identical_to_the_recorded_arm(self):
+        text = json.dumps(_dc_pipeline(), indent=1, sort_keys=True)
+        self.assertEqual(hashlib.sha256(text.encode()).hexdigest(),
+                         _DC_FINGERPRINT_SHA256)
+
+    def test_default_payload_is_dc_and_mode_matches(self):
+        self.assertEqual(fb.PAYLOAD_DC, "dc")
+        self.assertEqual(fb.PAYLOADS[0], fb.PAYLOAD_DC)
+        self.assertEqual(fb.PAYLOAD_MODE[fb.PAYLOAD_DC], fb.EDIT_MODE)
+        self.assertEqual(fb.PAYLOAD_TENSOR[fb.PAYLOAD_DC], "_features_dc")
+        self.assertEqual(fb.PAYLOAD_TENSOR[fb.PAYLOAD_OPACITY], "_opacity")
+        self.assertEqual(fb.PAYLOAD_MODE[fb.PAYLOAD_OPACITY], "opacity")
+
+    def test_pre_edit_dc_stats_wrapper_is_the_unannotated_call(self):
+        dc = torch.tensor([[0.0], [1.0], [0.9], [0.1]], dtype=torch.float64)
+        r_rows, d_rows = fb.nearest_dc_row_map(
+            dc, torch.tensor([2, 3]), torch.tensor([0, 1]))
+        self.assertEqual(fb.pre_edit_dc_stats(dc, r_rows, d_rows),
+                         fb.pre_edit_stats(dc, r_rows, d_rows, None))
+
+
+class PayloadGeneralizationTests(unittest.TestCase):
+    def test_non_dc_payload_adds_neutral_keys_without_dropping_legacy(self):
+        result = _dc_pipeline(fb.PAYLOAD_OPACITY)
+        for link in result["report"]["links"]:
+            self.assertIn("pre_edit_dc_distance_mean", link)
+            self.assertIn("pre_edit_distance_mean", link)
+            self.assertEqual(link["pre_edit_distance_mean"],
+                             link["pre_edit_dc_distance_mean"])
+            self.assertEqual(link["payload"], fb.PAYLOAD_OPACITY)
+            self.assertEqual(link["payload_tensor"], "_opacity")
+        anti = result["report"]["anti_vacuity"]
+        self.assertEqual(anti["payload"], fb.PAYLOAD_OPACITY)
+        self.assertEqual(anti["l1_pre_edit_distance_mean"],
+                         anti["l1_pre_edit_dc_distance_mean"])
+        self.assertEqual(anti["l3_pre_edit_distance_mean"],
+                         anti["l3_pre_edit_dc_distance_mean"])
+
+    def test_gate_verdict_is_identical_across_payload_annotation(self):
+        plain = _dc_pipeline()["report"]
+        annotated = _dc_pipeline(fb.PAYLOAD_OPACITY)["report"]
+        self.assertEqual(plain["verdict"], annotated["verdict"])
+        self.assertEqual(plain["anti_vacuity"]["comparative_ok"],
+                         annotated["anti_vacuity"]["comparative_ok"])
+
+    def test_stat_distance_readers_fall_back_to_the_legacy_keys(self):
+        legacy = {"pre_edit_dc_distance_mean": 0.25,
+                  "pre_edit_dc_distance_max": 0.5}
+        self.assertEqual(fb.stat_distance_mean(legacy), 0.25)
+        self.assertEqual(fb.stat_distance_max(legacy), 0.5)
+        neutral = dict(legacy)
+        neutral["pre_edit_distance_mean"] = 0.75
+        neutral["pre_edit_distance_max"] = 0.9
+        self.assertEqual(fb.stat_distance_mean(neutral), 0.75)
+        self.assertEqual(fb.stat_distance_max(neutral), 0.9)
+
+    def test_nearest_row_map_is_the_generalized_nearest_dc_row_map(self):
+        dc = torch.tensor([[0.0], [1.0], [0.9], [0.1]], dtype=torch.float64)
+        self.assertEqual(
+            [t.tolist() for t in fb.nearest_dc_row_map(
+                dc, torch.tensor([2, 3]), torch.tensor([0, 1]))],
+            [t.tolist() for t in fb.nearest_row_map(
+                dc, torch.tensor([2, 3]), torch.tensor([0, 1]))])
+
+    def test_nearest_row_map_follows_the_space_it_is_given(self):
+        # DC ranks donor 0 closest to both recipients; opacity ranks
+        # donor 1 closest, so the two correspondences must disagree.
+        dc = torch.tensor([[0.0], [5.0], [0.1], [0.2]], dtype=torch.float64)
+        opacity = torch.tensor([[9.0], [0.0], [0.1], [0.2]],
+                               dtype=torch.float64)
+        recipients = torch.tensor([2, 3])
+        donors = torch.tensor([0, 1])
+        _, by_dc = fb.nearest_row_map(dc, recipients, donors)
+        _, by_opacity = fb.nearest_row_map(opacity, recipients, donors)
+        self.assertEqual(by_dc.tolist(), [0, 0])
+        self.assertEqual(by_opacity.tolist(), [1, 1])
+
+    def test_pre_edit_stats_measures_the_tensor_it_is_handed(self):
+        values = torch.tensor([[0.0], [1.0], [4.0], [6.0]],
+                              dtype=torch.float64)
+        stat = fb.pre_edit_stats(values, torch.tensor([2, 3]),
+                                 torch.tensor([0, 1]), fb.PAYLOAD_OPACITY)
+        self.assertAlmostEqual(stat["pre_edit_distance_mean"], 4.5, places=9)
+        self.assertAlmostEqual(stat["pre_edit_distance_max"], 5.0, places=9)
+        self.assertEqual(stat["rows_changed"], 2)
+        self.assertEqual(stat["payload_tensor"], "_opacity")
+
+    def test_payload_values_refuses_an_unknown_payload(self):
+        import types
+
+        model = types.SimpleNamespace(
+            _xyz=torch.zeros(3, 3), _opacity=torch.zeros(3, 1))
+        with self.assertRaises(ContractError):
+            fb.payload_values(model, "geometry")
+
+    def test_payload_values_refuses_an_empty_or_mismatched_tensor(self):
+        import types
+
+        empty = types.SimpleNamespace(
+            _xyz=torch.zeros(3, 3), _opacity=torch.empty(0))
+        with self.assertRaises(ContractError):
+            fb.payload_values(empty, fb.PAYLOAD_OPACITY)
+        short = types.SimpleNamespace(
+            _xyz=torch.zeros(3, 3), _opacity=torch.zeros(2, 1))
+        with self.assertRaises(ContractError):
+            fb.payload_values(short, fb.PAYLOAD_OPACITY)
+
+    def test_payload_values_returns_the_raw_stored_column(self):
+        import types
+
+        model = types.SimpleNamespace(
+            _xyz=torch.zeros(3, 3),
+            _opacity=torch.tensor([[-2.0], [0.0], [3.0]]))
+        values = fb.payload_values(model, fb.PAYLOAD_OPACITY)
+        self.assertEqual(values.dtype, torch.float64)
+        self.assertEqual(values.shape, (3, 1))
+        self.assertEqual(values.reshape(-1).tolist(), [-2.0, 0.0, 3.0])
 
 
 if __name__ == "__main__":
