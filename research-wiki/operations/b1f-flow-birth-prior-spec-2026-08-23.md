@@ -167,6 +167,99 @@ B1-X control is what makes a null informative: `B1-F ≈ B1-X ≈ B1` would
 close the BIRTH-prior role for zero-acquisition flow — the last live
 zero-acquisition prior experiment — rather than leaving it open.
 
+---
+
+## APPENDIX A (append-only) — asset direction VERIFIED empirically, and the measured motion scale
+
+Nothing in the code can verify that the SEA-RAFT assets are FORWARD rather
+than BACKWARD flow — `MotionPriorCache` resolves them by filename only —
+and a backward asset would silently initialize REVERSED velocities in the
+correct arm while leaving the camera-swapped control unaffected, which is
+the worst possible failure because it would corrupt B1-F specifically. The
+sealed provenance record asserting `forward_t_to_t_plus_1` lives on
+Leonardo and is unreachable from this workstation, so the convention was
+tested against the pixels instead.
+
+Test: pull `cam01` frames 0099/0100/0101 and `flow/cam01_0100.npz`;
+sample frame 101 and frame 99 at `p + f(p)` and compare each to frame 100,
+over masked pixels with `|f| > 0.5 px`.
+
+| reconstruction of frame 100 | mean abs error |
+|---|---:|
+| **FORWARD:** `I101(p + f(p))` | **0.008032** |
+| BACKWARD: `I099(p + f(p))` | 0.024695 |
+| no warp: `I101` | 0.015302 |
+| no warp: `I099` | 0.017304 |
+
+**VERDICT: the assets are FORWARD flow, `t → t+1`.** Forward is 3.1× better
+than backward and improves on the un-warped frame by **47.5%**, so the
+field is genuinely explanatory rather than merely small. The npz layout is
+confirmed `(H, W, 2)` channel-LAST with a boolean `mask` (99.56% valid),
+which `normalize_flow_tensor` permutes to `(2, H, W)`.
+
+**Measured motion scale, and it sharpens §6's expectation from an argument
+into a number.** On this frame, flow magnitude percentiles over the valid
+mask are **p50 0.057 px, p90 0.436 px, p99 3.076 px, p99.9 3.940 px, max
+4.258 px**, and only **8.6%** of pixels move more than 0.5 px.
+
+A birth site's one-frame displacement is therefore at most ~4 px even in
+the moving minority, so the flow-derived velocity is a SMALL perturbation
+to a row that subsequently trains for thousands of iterations. This is now
+a measured pre-registration, not a guess.
+
+**Consequence for execution.** The 1,200-iteration preflight is promoted
+from a mechanical check to a DECISION POINT. It crosses the first birth
+event at iteration 1,000 and reports the funnel — valid-flow site count,
+`flow_realized_ratio_mean`, and the coefficient-norm distribution. The six
+training cells are launched only if that funnel shows the mechanism
+delivering non-negligible velocities to a meaningful share of sites.
+If it does not, the measured funnel is itself the finding, and spending
+~11 slot-hours to observe a null already visible in the preflight would be
+poor use of a 24 slot-hour ceiling.
+
+## APPENDIX B (append-only) — the magnitude guard is AMENDED, before any output
+
+The guard frozen in §2 item 8 — clamp the solved coefficient's L2 norm to
+the MEDIAN coefficient norm of existing rows — is **WITHDRAWN and
+replaced**. It was measured, during implementation and before any cell ran,
+to require a coefficient norm of **~328** for a realistic one-frame
+displacement against a population median of **~1.6**. It would have shrunk
+every flow-derived velocity by roughly 200×, so B1-F would have measured
+the guard rather than the flow: a vacuous cell.
+
+**Why the original was wrong, recorded because the error class generalizes.**
+It was modelled on `_median_log_scaling`, which clamps a donor's SCALING to
+the population median. That works because a donor's scaling and the
+population's scaling are the same kind of physical quantity. **A LoRA
+coefficient is not.** Its magnitude is set by the arbitrary scale of the
+learned basis (init 0.01), so the coefficient needed to express a fixed
+physical displacement bears no relation to the population's coefficient
+distribution. The specification conflated "do not be a population outlier"
+with "represent this velocity".
+
+**The amended guard, frozen:**
+
+1. No clamp on the coefficient norm. The minimum-norm least-squares
+   solution can never OVERSHOOT the target: `c^T B = d · pinv(B) · B` is the
+   projection of `d` onto `B`'s row space, so its norm is at most `|d|`.
+   No displacement-space overshoot guard is needed. `pinv`'s rcond
+   regularization is retained.
+2. Per-row fail-closed if the solved coefficient or the realized
+   displacement is non-finite.
+3. Input-side outlier rejection: fail closed for a site whose flow
+   magnitude exceeds the **99th percentile of that view's valid flow
+   magnitudes**. This acts in PIXELS, where the quantity is physical and
+   measurable, and can only REMOVE extreme sites — it can never manufacture
+   an effect.
+4. The funnel must report `flow_coeff_norm_mean`, `flow_coeff_norm_max`
+   and `flow_realized_ratio_mean` (realized ÷ target displacement).
+   The last makes basis rank-deficiency VISIBLE: far below 1 means the
+   basis cannot represent the requested velocities and the cell is
+   measuring that, not the flow.
+
+Decided before any cell output, and therefore an amendment rather than a
+post-hoc adjustment. The gates in §5 are unchanged.
+
 ## 7. Execution priority
 
 This lane is SUPPORTING. It yields GPU precedence to the payload and

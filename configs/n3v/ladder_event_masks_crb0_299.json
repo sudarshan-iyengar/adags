@@ -1,0 +1,82 @@
+{
+ "schema_version": "ccr-event-ray-masks-v1",
+ "source": "research-wiki/operations/crb300-event-mask-curation-2026-08-23.md",
+ "raster": [1352, 1014],
+ "camera": "cam00",
+ "window_frames": [0, 299],
+ "note": "Curated from GROUND-TRUTH cam00 imagery ONLY (data/synthetic/b0c_eval/gt, frames 00000-00299), before any 300-frame arm output was read; renders36k/ and uncap/ were excluded from mask SELECTION so the event definition stays method-independent. Rects are [x0,y0,x1,y1] in the 1352x1014 cam00 raster, hand-estimated +-15 px. 'frames' lists inclusive [start,end] intervals on which the REVEALED surface is scored (occluder withdrawn). Events carry a 'class': 'dynamic_content' reveals a moving/manipulated surface, 'static_background' reveals a rigid scene surface uncovered by the cook's body. The PRIMARY endpoint is the dynamic_content class; static_background is a SECONDARY diagnostic, because the B1 operator relocates capacity into dynamic-mask regions and would not be expected to act on static background. A/B/C are carried over VERBATIM from ladder_event_masks_crb0_49.json for continuity with the frozen 50-frame dev spec; a ground-truth audit did NOT confirm them and they are excluded from the primary endpoint. Class-pooled PSNR is recovered exactly from the per-event outputs of scripts/event_ray_metrics.py as pooled_mse = sum_e(n_e * 10^(-psnr_e/10)) / sum_e(n_e) with n_e = 3 * pixel_times_e. Segment 100-149 contains no qualifying occlude-and-return reveal and segment 0-49 contains none beyond the unconfirmed inherited A/B/C.",
+ "events": [
+  {
+   "name": "A_hand_press_reveal",
+   "bbox": [655, 845, 745, 905],
+   "frames": [[10, 18], [29, 43]],
+   "class": "dynamic_content",
+   "confidence": "low_inherited",
+   "occluder": "hand (dev-spec annotation; not confirmed by the ground-truth audit)"
+  },
+  {
+   "name": "B_knife_stroke_reveal",
+   "bbox": [700, 880, 790, 955],
+   "frames": [[34, 39]],
+   "class": "dynamic_content",
+   "confidence": "low_inherited",
+   "occluder": "knife (dev-spec annotation; the audit places the blade tip INSIDE this box on 34-40)"
+  },
+  {
+   "name": "C_tongs_band_reveal",
+   "bbox": [795, 845, 890, 955],
+   "frames": [[34, 39]],
+   "class": "dynamic_content",
+   "confidence": "low_inherited",
+   "occluder": "tongs/knife (dev-spec annotation; the audit finds a local deviation MAXIMUM on 34-39)"
+  },
+  {
+   "name": "D_left_mullion_sleeve_reveal",
+   "bbox": [560, 640, 640, 704],
+   "frames": [[66, 86]],
+   "class": "static_background",
+   "confidence": "medium",
+   "occluder": "cook's left sleeve; occluded ~[10,56]; white window mullion re-exposed 66-86"
+  },
+  {
+   "name": "E_blind_head_reveal",
+   "bbox": [650, 470, 724, 528],
+   "frames": [[156, 180], [263, 282]],
+   "class": "static_background",
+   "confidence": "high",
+   "occluder": "cook's head/hair; occluded ~[92,150] and ~[212,261]; rigid blind, exact return"
+  },
+  {
+   "name": "F_blade_over_beef_reveal",
+   "bbox": [664, 912, 744, 976],
+   "frames": [[190, 209]],
+   "class": "dynamic_content",
+   "confidence": "high",
+   "occluder": "wide flat blade laid across the beef pile; occluded [158,187]; the pile returns to the same location slightly fanned"
+  },
+  {
+   "name": "H_counter_edge_blade_reveal",
+   "bbox": [688, 856, 760, 912],
+   "frames": [[216, 240]],
+   "class": "static_background",
+   "confidence": "medium_high",
+   "occluder": "blade and hand across the butcher-block counter edge; occluded [186,214]"
+  },
+  {
+   "name": "I_left_sill_long_absence_reveal",
+   "bbox": [520, 660, 600, 730],
+   "frames": [[252, 258]],
+   "class": "static_background",
+   "confidence": "medium",
+   "occluder": "cook's sleeve and upper arm; occluded ~[103,251], the longest absence in the clip"
+  },
+  {
+   "name": "J_board_upper_right_blade_reveal",
+   "bbox": [796, 880, 868, 936],
+   "frames": [[286, 297]],
+   "class": "static_background",
+   "confidence": "high",
+   "occluder": "final blade pass across the empty upper-right cutting board; occluded [258,284]"
+  }
+ ]
+}
