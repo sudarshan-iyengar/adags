@@ -2,7 +2,10 @@
 # (2026-08-23)
 
 EXPLORATORY, `evidence_bearing: false`. Design frozen before output in
-[[payload-headroom-spec-2026-08-23]]; nothing there moved. Cell:
+[[payload-headroom-spec-2026-08-23]]. **CORRECTED — the original text
+here read "nothing there moved", which is FALSE in three respects; see
+§6 C1.** Commit, pool, image and seed below are LEDGER claims, not
+report-verifiable ones (§6 C9). Cell:
 Determined experiment **233** (`lrv3_payload_headroom` r0, commit
 `2ba6a62`, pool `dgx`, admitted V100 image
 `sha256:70a28e3d…`, seed 0), COMPLETED. Report
@@ -58,11 +61,16 @@ rows of the SAME surface in the SAME episode are from each other, and in
 two cases (`_scaling_t` activated at 0.772, `_scaling` raw at 0.966) it
 is CLOSER than that floor.
 
-**`_opacity` — the payload this block implemented and the one that was
-cheapest and most attributable — has LESS headroom than the DC payload
-already falsified** (1.223 against 1.429 activated). Its discrimination
-ratio of 2.97 also says base opacity barely distinguishes a
-wrong-identity donor from a same-surface one.
+**`_opacity` — CORRECTED.** The original text here claimed it has LESS
+headroom than the falsified DC payload (1.223 against 1.429 activated).
+**That is FALSE in the raw-logit space the edit actually operates on,
+where opacity reads 1.9187 under its native map against DC's 1.4287 —
+34% MORE (§6 C4).** What actually defeats opacity is (i) its
+discrimination ratio failing the 5.0 floor by roughly 2× under EVERY map
+(max 2.9657), so base opacity barely distinguishes a wrong-identity donor
+from a same-surface one, and (ii) the ABSOLUTE distance behind that
+ratio being 0.0297 logits (7.51e-05 activated) — rendered-negligible.
+The frozen rule is scale-free and cannot see that difference.
 
 **`_xyz` confirms the vacuity prediction empirically.** It DISCRIMINATES
 identity well (10.46, and 35.40 under its native map — position tells you
@@ -177,7 +185,159 @@ nearest-in-its-own-space map) if the numerical-zero condition is to mean
 anything. Recorded as a required amendment to the certificate's control
 set, not applied retroactively.
 
-## 6. Bookkeeping and an incidental observation
+## 6. CORRECTIONS from a fresh-context adversarial review (append-only, 2026-08-23)
+
+A fresh reviewer with no prior involvement recomputed all 24
+(tensor × space × map) ratio pairs from the link means, re-verified both
+report sha256s, and re-derived every certificate figure. **Everything it
+could check numerically it confirmed** — all 24 ratios agree to 1e-9
+relative, both hashes verify byte-exactly, each `pooled_mean` equals the
+mean of its `side_means`, and the arithmetic "FAILS by 1.69 dB" is
+exact. Its verdict on the headline was **STANDS WITH QUALIFICATIONS**.
+The qualifications are real and are recorded here rather than absorbed
+silently.
+
+**C1 — "nothing there moved" (§ opening) is FALSE in three respects.**
+The spec did move: (a) `_t`'s exclusion is an outcome the frozen §6 did
+not enumerate; (b) gate condition 4 was reclassified as inapplicable;
+and (c) **the spec's frozen no-pass consequence was dropped** — §5
+required "record that consolidation currently has no useful payload, and
+recommend the representation-only pivot", and this page recommended an
+observation-starved fixture instead without recording the pivot.
+**Recorded now, as the spec required: on the evidence of this block,
+consolidation has no useful payload, and the representation-only pivot
+is the recommendation the frozen rule calls for.** The starved-fixture
+test is a pre-identified ALTERNATIVE, not a substitute for that
+recommendation, and is pursued as a test of this page's own mechanism
+claim rather than as a rescue.
+
+**C2 — a mandatory control was NOT run, and its absence was undisclosed.**
+Spec §4 lists `non_pointer_state_hash` unchanged across install→clear as
+mandatory. `non_pointer_state_hash` is called only from
+`scripts/consolidate_packets.py`; it appears nowhere in
+`scripts/falsify_b2_edit.py`, and no such key exists in the report. The
+"no parameter tensor was written" guarantee is therefore **unestablished
+for the opacity arm**. The identical base PSNR across all three links
+(27.21810902385908, three times) is weak corroboration only.
+
+**C3 — the "isolates" claim is WITHDRAWN.** §5 stated that L3 isolates
+the −1.19 dB as a property of the cross-episode link. It does not. L3
+edits DONOR rows, selected with support ending at ≤ 5.0 s, while
+`event_return` is measured on frames 57-59 = [9.5, 9.833] s — so **L3's
+edited rows are largely invisible to the metric**, and the two links
+differ in two variables at once. The comparison cannot attribute.
+**The discriminating control that was NOT run is a within-recipient
+random permutation** — the same 3,912 recipient rows, same marginal
+opacity distribution, identity destroyed — which alone separates "the
+opacity payload carries nothing" from "any opacity reshuffle over these
+rows costs ~1 dB regardless of identity". Both remain consistent with
+the evidence. Note also that a monotone damage-versus-magnitude curve
+fits both L1 (0.240 activated → −1.19 dB) and L2 (0.582 → −6.05 dB), so
+L2's correct rejection does not discriminate the two hypotheses either.
+
+**C4 — "`_opacity` has LESS headroom than the falsified DC payload" is
+FALSE in the space the edit operates on.** The redirect targets the RAW
+LOGIT, and in raw-logit space under opacity's own native map `_opacity`
+reads **1.9187 — 34% MORE than DC's 1.4287**, and only 4.1% short of the
+frozen 2.0 floor. That number is printed in §2 and then contradicted by
+the §3 sentence. **The correct argument, which is stronger:** opacity's
+discrimination fails 5.0 by roughly 2× under EVERY map (max 2.9657), and
+the absolute distance behind that 1.9187 ratio is **0.0297 logits**
+(payload-native activated L1 mean **7.51e-05**, median 1.09e-07) — a
+rendered-negligible difference. **The frozen screening rule is
+scale-free and therefore cannot distinguish "1.92× of 0.03 logits" from
+"1.92× of 3 logits". That is a genuine methodological weakness of the
+rule**, and it produced both this misleading near-miss and the `_t`
+false positive.
+
+**C5 — `_t` is re-labelled an UNANTICIPATED THIRD OUTCOME.** The
+exclusion is substantively correct but was framed retrospectively as
+"the screen exposing it is the point". The decisive argument does not
+need any measured PSNR: recipients are selected by `lo >= 9.3` and
+donors by `hi <= 5.0`, so **copying a donor's `_t` into a recipient makes
+that recipient satisfy the DONOR's membership predicate and removes the
+row from the window the metric evaluates. That is deletion, not
+transfer.** Two supporting numbers this page under-used: under the
+payload-native map `_t`'s L2/L1 is **1.018 — 1.8% apart**, not the 18%
+quoted; and `_scaling_t`, the gauge-invariant partner that survives a
+time shift, has no headroom at all. **Required amendment to the rule:**
+a frozen non-degeneracy precondition — a transferability check that a
+payload cannot change a row's set membership, plus an absolute-magnitude
+floor. Recorded as needed, not applied retroactively. A defect in the
+SPEC is also recorded: §4 pre-committed `_opacity` as the edit target
+unconditionally, so §3's "PREFERRED" selection clause was dead text at
+freeze time and no screen outcome could have redirected any action.
+
+**C6 — the conclusion is NOT threshold-independent.** A sweep shows both
+thresholds do independent work (HR binds on `_xyz` and `_features_dc`;
+DR binds on `_opacity` and `_rotation`), but at **(HR ≥ 1.5, DR ≥ 2.0)
+`_opacity` passes while the falsified DC control still does not.** So a
+modest, non-absurd reweighting admits a tensor. The conclusion survives
+**empirically** — because opacity was edited anyway and failed at
+−1.19 dB — not by threshold-independence, and that contingency is stated
+here rather than left to look like robustness.
+
+**C7 — `_rotation` was omitted from the payload-native paragraph, and it
+is the third-largest foothold.** Its raw payload-native headroom is
+**1.4892, above DC's 1.4287**. It is defeated by discrimination 1.9782
+and, decisively, by the fact that under `dc_primary` its oracle-correct
+link is **FARTHER than the wrong-identity link** (geodesic 80.34° >
+72.28° > 68.52° floor): orientation carries anti-correlated identity
+information on this fixture.
+
+**C8 — the scope claim overreaches in two specific ways.**
+(a) **`_features_rest` was never screened**, so "appearance" in this
+result means degree-0 SH ONLY; view-dependent appearance is unmeasured.
+(b) The metric covers ONE payload FORM — per-row L2 between two existing
+tensor values under a nearest-row map. It is structurally blind to
+joint/structured payloads (e.g. a RELATIVE support schedule rather than
+absolute `_t`/`_scaling_t` values), to residual or variance-reducing
+payloads that regularize rather than replace, and to capacity-freeing
+payloads whose benefit is budget rather than value. **The evidence does
+not rule out a payload helping on this fixture through a mechanism this
+metric cannot see.** §4's "NOT established" paragraph conceded only the
+observation-starvation axis.
+
+**C9 — label corrections.** "The mechanism, and it is now measured
+rather than argued" overstates: what is MEASURED is L1 ≈ L3 per tensor;
+that this is *because of observation supply* is INFERENCE, and it is the
+inference LRV4 exists to test. Separately, the commit, pool, image digest
+and seed in the opening are **ledger claims, not report-verifiable
+ones** — neither JSON contains a `commit`, `image`, `digest` or `seed`
+key — and were presented alongside report-verifiable figures without
+that distinction.
+
+**C10 — smaller inaccuracies.** The "0.77 to 1.43" span holds for
+`dc_primary` only; across payload-native the span is **0.026 to 1.919**
+excluding `_t`. "Two cases below the floor" is two under `dc_primary`;
+**five** sub-1.0 entries exist across both maps. §2's table omits
+`_scaling` raw (0.9656 / 2.6822) and both `_rotation` raw and activated.
+The exp-236 JSON carries a **naming defect** — fields named
+`pre_edit_dc_distance_*` hold the OPACITY-logit distance and
+`anti_vacuity.rule` still says "DC distance", although the gate was
+correctly evaluated in opacity space (clearing at 1.2572×, LESS than the
+DC arm's 1.4287×). Finally, "the return region contains no packet at
+all" overstates `recipient_rows_with_packet: 0`; rows in the return
+region outside the oracle sphere or the `lo >= 9.3` cut are not covered.
+
+**C11 — L3 is significantly non-zero, and that is useful.** Its slot
+delta is **+3.5997e-05 ± 6.4074e-06 = 5.62 SE from zero** — not
+small-but-noisy. What it legitimately establishes is a **measurement
+floor of ≈0.01 dB on `event_return`**, against which the −1.19 dB is
+**~115× the floor and certainly not noise**.
+
+**C12 — the DC reproduction is a PLUMBING check, not a footing
+guarantee.** §1's "every number below is therefore on the same footing"
+is wrong for a reason not stated there: for DC the `dc_primary` map IS
+its own native map, so DC's 1.4287 is a best-case ratio, while every
+other tensor's `dc_primary` column comes from a FOREIGN map. The
+payload-native column is the like-for-like comparison — and there both
+`_opacity` (1.9187) and `_rotation` (1.4892) exceed DC. The exact
+agreement was guaranteed absent a defect (imported row sets, same
+checkpoint, same oracle file, zero renders); it proves determinism and
+no code drift, which is worth having, and nothing more.
+
+## 7. Bookkeeping and an incidental observation
 
 Claims consumed: `lrv3_payload_headroom` r0 (experiment 233) and
 `lrv3_falsify_opacity` r0 (experiment 236). Cost ≈ 0.2 + 0.3 slot-h. Input hashes recorded in the report:
