@@ -3,6 +3,88 @@
 Updated 2026-08-08 (night) after Loop 2 ([[operations/elgs-method]]).
 Earlier updates remain binding history.
 
+## Timing-Inference Update — 2026-08-23
+
+**G13's representation limb crosses the threshold that mattered most:
+episode boundaries are recoverable from TRAINING VIEWS ALONE, to exact
+frame accuracy** ([[operations/nonoracle-episode-timing-result-2026-08-23]],
+Determined experiment 235). Every positive episodic-presence result to
+date used AUTHORED boundaries, and the measured mistiming control put a
+2-frame error at −2.39 dB — *below* not gating at all. So "can inference
+be frame-accurate?" was the binding question, not "does gating help".
+
+Measured: 417 candidate groups from a voxel grid over the trained
+cloud's own bounding box; **2 gated, 415 abstained (99.52%)**; both
+gated groups on the event object with 4-of-4 camera agreement; **onset
+and offset both exactly right (30 and 57, 0 frames error)**; **zero false
+activations**; 0.188 slot-hours. All 60 frames evaluated, so no boundary
+was interpolated.
+
+**The load-bearing design fact is what was NOT inherited.** The oracle
+`region` is the event object's TRUE geometry, so an estimator that infers
+only the gaps while inheriting that sphere is still oracle-supervised and
+would have produced a fake success. Membership came from the cloud's own
+bounds. Held-out cameras — the only ones carrying identity buffers —
+were never touched, and the artifact records every anti-leakage check.
+
+**Abstention needed no new mechanism**: `family_id = -1` already means
+ungated, so an abstaining group keeps the ordinary temporal marginal
+bit-for-bit. A mechanism whose errors are worse than inaction gets a
+first-class way to decline, and it used it 99.5% of the time.
+
+**Limits, recorded as limits:** recall is 2 of 8 event-overlapping
+groups — a high-precision, low-recall instrument. Nothing was retrained,
+so **the localized-presence positive still rests on authored
+boundaries**; phase T2 is what would change that. And LRV3's absence is
+genuine removal from the ray-trace, not occlusion, so the ablation signal
+is a clean step that real data will not supply.
+
+## Consolidation-Payload Update — 2026-08-23
+
+**G14's identity-conserving-promotion limb gets a decisive negative, and
+it is about the FIXTURE rather than the payload**
+([[operations/payload-headroom-result-2026-08-23]], experiments 233/236).
+
+With proposal ambiguity fully removed by an oracle-correct link, **no
+transferable per-row quantity has material headroom on LRV3** —
+appearance, opacity, temporal support width, position, extent and
+orientation all sit at or below the same-identity floor. Position
+DISCRIMINATES identity well (10.5-35.4) while having no headroom
+(1.09), which is the clean signature of an instrument that detects
+identity when identity is detectable and still finds nothing to recover.
+The oracle-correct opacity edit was then measured **actively harmful
+(−1.19 dB)**, not merely neutral.
+
+**The generalization:** the 2026-08-20 DC falsification was not evidence
+that appearance is the wrong payload — it was evidence about this
+fixture. LRV3's returning surface is identical in pose, colour and
+texture and is observed by 48 training view-frames, so the recipient rows
+are wrong about nothing, and **headroom is a question about OBSERVATION
+SUPPLY rather than about which tensor is carried.** That is an inference,
+and it is falsifiable; an observation-starved fixture is what tests it.
+
+**Per the frozen rule, the recommendation on the record is the
+representation-only pivot.**
+
+**New negative knowledge that generalizes past this experiment.** A
+fresh-context adversarial review confirmed every number and returned
+STANDS WITH QUALIFICATIONS; three of its findings are method-level:
+
+* **A scale-free ratio screen is not sufficient.** "1.92× of 0.03
+  logits" and "1.92× of 3 logits" are indistinguishable to it. The rule
+  needs an absolute-magnitude floor.
+* **A screen needs a non-degeneracy precondition.** `_t` passed the rule
+  and is not a payload at all: copying a donor's temporal centre makes
+  the recipient satisfy the DONOR's membership predicate, removing the
+  row from the window the metric evaluates. That is deletion, not
+  transfer — decidable from the row-set definitions with no measurement.
+* **A placebo does not transfer across payloads.** The same-identity
+  no-op is a genuine placebo for appearance under a nearest-appearance
+  map and a REAL edit for any other tensor. Worse, it edits donor rows
+  whose support ends before the scored frames, so it cannot attribute
+  harm. The discriminating control is a within-recipient permutation,
+  which was not run.
+
 ## Audit-Instrument Update — 2026-08-18 (block 4)
 
 **G13's absence limb does not get its decision this block, and the reason is
