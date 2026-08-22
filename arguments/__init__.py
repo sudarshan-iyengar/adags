@@ -235,6 +235,13 @@ class OptimizationParams(ParamGroup):
         # pool to rows whose motion-model centre projects INSIDE the current
         # training view's dynamic mask. False reproduces B1 exactly.
         self.packet_birth_dynamic_mask_donors = False
+        # B1-F / B1-X: initialize a relocated row's LoRA motion coefficients
+        # from the SEA-RAFT flow at its birth site instead of zero (see
+        # scene/packet_birth_flow.py). False reproduces B1 exactly.
+        # packet_birth_flow_source selects the arm: "correct" reads the
+        # training view's own flow, "camera_swapped" is the wrong-flow control.
+        self.packet_birth_flow_init = False
+        self.packet_birth_flow_source = "correct"
 
         # ---------------- EL-GS (evidence-lineage) ----------------
         # Category-1 structural constants and the schedule anchors are

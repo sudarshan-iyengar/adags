@@ -1141,7 +1141,22 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     # restore so the manager sees the final row count and any stashed state.
     lifecycle_manager = setup_lifecycle(gaussians, scene, dataset, opt)
     # CCR B1 observation-born packet birth; None unless packet_birth_enable.
-    packet_birth_state = setup_packet_birth(opt)
+    # B1-F/B1-X additionally need the SEA-RAFT flow provider, which lives on
+    # the Scene rather than on opt. It is built ONLY when the flag is set, so
+    # the B0/B1/B1-D path reaching setup_packet_birth is unchanged. The
+    # held-out cameras are passed in precisely so the provider can REFUSE
+    # them: assert_not_holdout guards the correct arm and the camera-swapped
+    # control removes them from its roster before choosing a substitute.
+    _packet_flow_assets = None
+    if bool(getattr(opt, "packet_birth_flow_init", False)):
+        from scene.packet_birth_flow import build_flow_assets
+
+        _packet_flow_assets = build_flow_assets(
+            scene.motion_prior_cache,
+            train_cameras=scene.getTrainCameras(),
+            holdout_cameras=scene.getTestCameras(),
+        )
+    packet_birth_state = setup_packet_birth(opt, flow_assets=_packet_flow_assets)
     # EL-GS: same placement rationale; mutually exclusive with the
     # lifecycle (elgs.trainer_hooks fails closed on both enabled).
     from elgs.trainer_hooks import (

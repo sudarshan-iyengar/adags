@@ -260,6 +260,33 @@ with "represent this velocity".
 Decided before any cell output, and therefore an amendment rather than a
 post-hoc adjustment. The gates in §5 are unchanged.
 
+## APPENDIX C (append-only) — the event masks this gate scores on are weaker than assumed
+
+The 300-frame mask curation ran a ground-truth audit of the frozen 0-49
+dev masks that this screen's gate 1 and gate 3 score on
+([[crb300-event-mask-curation-2026-08-23]] §6). It does **not** confirm
+them: `B`'s and `C`'s `[34,39]` interval appears to label the
+occluder-PRESENT window rather than the withdrawn one, and all three
+boxes are larger than the region that actually changes, so they score
+mostly static pixels. An occlusion kymograph places all 0-49 occluder
+activity at x≈745-810 in two blobs at f≈19-27 and f≈31-41.
+
+**No recorded number is retracted and the frozen file is unchanged.**
+The B1-F-vs-B1 comparison remains valid as a PAIRED delta on identical
+masks. What changes is the expected sensitivity: a mask that mostly
+scores static pixels dilutes whatever effect exists, so the gate carries
+a raised risk of a FALSE NEGATIVE.
+
+Combined with Appendix A's measured motion scale — p99 flow of ~3 px,
+only 8.6% of pixels moving more than half a pixel — this screen is now
+understood to be looking for a small effect through a diluting
+instrument. That is a further reason the 1,200-iteration preflight is a
+decision point rather than a formality, and it is recorded BEFORE any
+outcome so that a null is not later reinterpreted as a strong negative.
+If the six cells do run, a corrected-mask secondary endpoint may be
+reported alongside the frozen one, clearly labelled and never
+substituted for it.
+
 ## 7. Execution priority
 
 This lane is SUPPORTING. It yields GPU precedence to the payload and

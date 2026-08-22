@@ -23,6 +23,14 @@ the current training view's dynamic mask, so static-support rows are never
 harvested. Ranking among eligible rows is the unchanged (opacity x radius)
 rule; see :func:`donor_dynamic_mask_eligibility` for the frozen semantics.
 
+B1-F/B1-X (``packet_birth_flow_init``, ``packet_birth_flow_source``, default
+False/"correct") is the flow-derived VELOCITY INITIALIZATION variant: relocated
+rows are born motionless here, and with the flag on they instead start from a
+SEA-RAFT flow-derived world velocity projected into the LoRA motion basis. All
+of that logic lives in :mod:`scene.packet_birth_flow`; this module only threads
+the two knobs and hands the solved coefficients to
+:func:`_build_packet_target_rows`.
+
 Every entry point is a no-op unless ``packet_birth_enable`` is set, so a B0
 cell is bit-identical to the substrate.
 """
@@ -79,6 +87,10 @@ class PacketBirthConfig:
     until_iter: int = -1
     #: B1-D. False = B1 exactly (every row is an eligible donor).
     dynamic_mask_donors: bool = False
+    #: B1-F. False = B1 exactly (relocated rows are born motionless).
+    flow_init: bool = False
+    #: B1-F arm ("correct") vs B1-X wrong-flow control ("camera_swapped").
+    flow_source: str = "correct"
 
     def validate(self) -> "PacketBirthConfig":
         if not self.enable:
@@ -93,6 +105,14 @@ class PacketBirthConfig:
             raise ContractError("packet_birth_from_iter must be positive")
         if int(self.until_iter) < int(self.from_iter):
             raise ContractError("packet_birth_until_iter must not precede packet_birth_from_iter")
+        from scene.packet_birth_flow import PACKET_FLOW_SOURCES
+
+        if str(self.flow_source) not in PACKET_FLOW_SOURCES:
+            raise ContractError(
+                "packet_birth_flow_source must be one of {}; got {!r}".format(
+                    ", ".join(PACKET_FLOW_SOURCES), self.flow_source
+                )
+            )
         return self
 
     @classmethod
@@ -121,11 +141,19 @@ class PacketBirthConfig:
 class PacketBirthState:
     """Cadence, packet-id allocation and the per-event log."""
 
-    def __init__(self, cfg: PacketBirthConfig, frame_dt: float) -> None:
+    def __init__(
+        self,
+        cfg: PacketBirthConfig,
+        frame_dt: float,
+        flow_assets: Optional[Any] = None,
+    ) -> None:
         self.cfg = cfg.validate()
         if float(frame_dt) <= 0.0:
             raise ContractError("packet birth requires a positive frame dt")
         self.frame_dt = float(frame_dt)
+        # B1-F flow asset provider; None for B1 and for every B0 cell. See
+        # scene.packet_birth_flow.build_flow_assets for the trainer wiring.
+        self.flow_assets = flow_assets
         self.events: list = []
         self.next_packet_id = 0
         self.rows_assigned_total = 0
@@ -168,15 +196,25 @@ class PacketBirthState:
         }
 
 
-def setup_packet_birth(opt: Any) -> Optional[PacketBirthState]:
-    """Return the packet-birth state, or ``None`` when the operator is off."""
+def setup_packet_birth(opt: Any, flow_assets: Optional[Any] = None) -> Optional[PacketBirthState]:
+    """Return the packet-birth state, or ``None`` when the operator is off.
+
+    ``flow_assets`` is the B1-F flow provider (
+    :func:`scene.packet_birth_flow.build_flow_assets`). It defaults to None so
+    a B0/B1/B1-D call site is unchanged; a ``packet_birth_flow_init: true`` run
+    without it raises ``ContractError`` at its first birth event.
+    """
 
     if not bool(getattr(opt, "packet_birth_enable", False)):
         return None
     cfg = PacketBirthConfig.from_namespace(
         opt, densify_until_iter=getattr(opt, "densify_until_iter", 0)
     )
-    return PacketBirthState(cfg, frame_dt=float(getattr(opt, "motion_track_dt", 1.0 / 30.0)))
+    return PacketBirthState(
+        cfg,
+        frame_dt=float(getattr(opt, "motion_track_dt", 1.0 / 30.0)),
+        flow_assets=flow_assets,
+    )
 
 
 def ensure_packet_column(gaussians: Any) -> torch.Tensor:
@@ -471,8 +509,14 @@ def _build_packet_target_rows(
     timestamp: float,
     sigma_t: float,
     route_logit_init: Optional[float],
+    motion_lora_coeff: Optional[torch.Tensor] = None,
 ) -> dict:
-    """Target rows for one relocation cohort (§3.1)."""
+    """Target rows for one relocation cohort (§3.1).
+
+    ``motion_lora_coeff`` is the B1-F flow-derived velocity initialization for
+    ``_motion_lora_coeff``. ``None`` (B1, B1-D, and every B0 cell) leaves that
+    parameter in the generic ``else`` branch below, i.e. exactly zero.
+    """
 
     k = int(points.shape[0])
     rows = {}
@@ -517,6 +561,14 @@ def _build_packet_target_rows(
         elif name == "_route_logit":
             fill = 0.0 if route_logit_init is None else float(route_logit_init)
             value = torch.full((k, *trailing), fill, dtype=dtype, device=device)
+        elif name == "_motion_lora_coeff" and motion_lora_coeff is not None:
+            # B1-F: flow-derived velocity in place of the zero initialization.
+            value = motion_lora_coeff.to(device=device, dtype=dtype)
+            if tuple(value.shape) != (k, *trailing):
+                raise ContractError(
+                    "flow-derived motion coefficients have shape {} but the "
+                    "parameter needs {}".format(tuple(value.shape), (k, *trailing))
+                )
         else:
             # motion coefficients (poly and LoRA) and the staticness score
             value = torch.zeros((k, *trailing), dtype=dtype, device=device)
@@ -581,6 +633,11 @@ def _packet_birth(
         "realized": 0,
         "shortfall": 0,
     }
+    # B1-F funnel. Present on EVERY record, including the early-exit paths, so
+    # that a run whose flow never applied is detectable from the record alone.
+    from scene import packet_birth_flow
+
+    record.update(packet_birth_flow.idle_record_fields(state.cfg))
     optimizer = getattr(gaussians, "optimizer", None)
     if optimizer is None:
         raise ContractError("packet birth requires an initialized optimizer")
@@ -651,6 +708,18 @@ def _packet_birth(
         1, pixels.to(gt_image.device)
     ).transpose(0, 1).to(torch.float32)
 
+    motion_lora_coeff = None
+    if bool(state.cfg.flow_init):
+        if "_motion_lora_coeff" not in bank.parameters:
+            raise ContractError(
+                "packet_birth_flow_init is on but the capacity bank exposes no "
+                "_motion_lora_coeff parameter to initialize"
+            )
+        motion_lora_coeff, flow_fields = packet_birth_flow.flow_motion_lora_coefficients(
+            state, gaussians, viewpoint_camera, pixels, points
+        )
+        record.update(flow_fields)
+
     target_rows = _build_packet_target_rows(
         bank,
         donors,
@@ -659,6 +728,7 @@ def _packet_birth(
         timestamp,
         state.sigma_t,
         getattr(gaussians, "route_logit_init", None),
+        motion_lora_coeff=motion_lora_coeff,
     )
     transaction = apply_point_neutral_transaction(
         bank, optimizer, donors, target_rows, iteration=int(iteration), mode="reassign"
