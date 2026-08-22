@@ -1,5 +1,101 @@
 # Query Pack
 
+## 2026-08-23 BLOCK — timing inference WORKS; consolidation has no payload; the dev scene has almost no events
+
+Full records: [[operations/nonoracle-episode-timing-result-2026-08-23]],
+[[operations/payload-headroom-result-2026-08-23]],
+[[operations/crb300-event-mask-curation-2026-08-23]],
+[[operations/block-2026-08-23-schedule-amendment]]. Experiments 233-236.
+**Schedule: user-directed 12,000-iteration ABSOLUTE CEILING, 6k the
+default, 24 slot-hour block ceiling. The 18k 300-frame proposal is
+historical and NOT authorized.**
+
+**(1) THE POSITIVE — non-oracle episode boundaries are recoverable
+EXACTLY.** A training-view-only estimator on the A0′ substrate gated 2 of
+417 voxel groups, both on the event object, with **onset and offset both
+0 frames in error** (30 and 57), **zero false activations**, 99.52%
+abstention, in 0.188 slot-h. This is the first evidence against the
+standing concern that inferred timing must be too imprecise to use — a
+concern that was well-founded, since a 2-frame error measures −2.39 dB,
+*below* not gating at all. Load-bearing: **membership came from the
+cloud's own bounding box, NOT the oracle sphere** (which is the object's
+true geometry and would have faked the result); held-out cameras were
+never touched; abstention reused the existing `family_id = -1` path.
+**Limits: recall is 2 of 8 event-overlapping groups, and NOTHING was
+retrained — the +1.05 dB localized-presence positive still rests on
+authored boundaries.** Phase T2 (schema v2 + computed-program seeding +
+A-est cells) is justified and specified.
+
+**(2) THE NEGATIVE — no consolidation payload has headroom, and it is the
+FIXTURE not the payload.** With an oracle-correct link, every
+transferable per-row quantity on LRV3 sits at or below the same-identity
+floor: appearance 1.43 (already falsified), opacity 1.22 activated,
+`_scaling_t` 0.77, position 1.09, extent 1.04, orientation 1.17. Position
+DISCRIMINATES identity (10.5-35.4) while having no headroom — the
+signature of a working instrument finding nothing to recover. The
+oracle-correct opacity edit is **actively harmful (−1.19 dB)**, not
+neutral. LRV3's return is identical in pose, colour and texture and is
+observed by 48 training view-frames, so the recipient rows are wrong
+about nothing: **headroom is a question about OBSERVATION SUPPLY, not
+about which tensor is carried** (inference, and LRV4 is built to test
+it). **Per the frozen rule the recommendation on the record is the
+representation-only pivot.** Geometry was dropped before compute —
+`EVENT_SPHERE_CENTRE` is a constant applied in both episodes, so an
+oracle-correct geometry transfer is the identity map.
+
+**(3) THREE METHOD-LEVEL NEGATIVES from a fresh adversarial review**
+(which confirmed every number and returned STANDS WITH QUALIFICATIONS):
+a **scale-free ratio screen is insufficient** — it cannot tell "1.92× of
+0.03 logits" from "1.92× of 3 logits", and needs an absolute-magnitude
+floor; **a screen needs a non-degeneracy precondition** — `_t` passed
+while being DELETION not transfer, since copying a donor's temporal
+centre makes the recipient satisfy the donor's membership predicate and
+leaves the scored window; and **a placebo does not transfer across
+payloads** — the same-identity no-op is a real edit for any non-
+appearance tensor AND edits donor rows whose support ends before the
+scored frames, so it cannot attribute harm. The discriminating control
+is a within-recipient permutation; it was not run, so "the payload
+carries nothing" and "any opacity reshuffle costs ~1 dB" remain equally
+consistent.
+
+**(4) REAL-DATA EVENT SUPPLY on the dev scene is nearly absent.** A
+ground-truth-only curation of all 300 `cut_roasted_beef` cam00 frames
+found that **frames 0-299 contain essentially ONE large, clean
+occlude-and-return event on DYNAMIC content** (a blade laid across the
+beef pile, occluded 158-187, revealed 190-209). Every other
+high-confidence event is STATIC BACKGROUND revealed by the cook's body.
+Reveal onsets are heavily back-loaded (0-49: 2, 100-149: 10, 250-299:
+143); **segment 100-149 has none**. This is the N3V analogue of the
+DiVa-360 supply problem. The 300-frame mask spec
+(`configs/n3v/ladder_event_masks_crb0_299.json`) is frozen with a
+CLASS-SPLIT endpoint — `dynamic_content` primary, `static_background` a
+separate diagnostic — because B1 relocates into dynamic-mask regions and
+has no mechanism to act on background. **The frozen 0-49 dev masks are
+NOT confirmed by ground truth**: B's and C's `[34,39]` appears to label
+the occluder-PRESENT window, and all three boxes score mostly static
+pixels. No recorded number is retracted, but reading the ladder's
++0.077/+0.345 as an event-region effect is weakened.
+
+**(5) The 300-frame B0-R vs B1 comparison is FROZEN and DEFERRED.** Four
+cells at 12k cost ≈21 of the 24 slot-hour ceiling and would displace the
+paper-blocking lanes. A 6k variant would have fit and was REJECTED: both
+arms peak near 12k, so 6k measures a pre-peak transient. B0-C cannot
+substitute for B0-R — it has no reserved parity and trained on all units.
+
+**(6) Flow as a B1 BIRTH prior is implemented and verified.** Flow-gated
+SITE selection was rejected on inspection (sites are already multiplied
+by the dynamic mask); the one-variable experiment with real content is
+flow-derived VELOCITY initialization, since relocated rows are born
+motionless. **Verified empirically that the SEA-RAFT assets are FORWARD
+flow** (forward warp error 0.0080 vs backward 0.0247, 47.5% better than
+no warp) — nothing in the code could check this and a backward asset
+would have silently reversed every velocity. **Motion is small: p50 0.06
+px, p99 3.1 px, only 8.6% of pixels move >0.5 px**, so a null is a
+likely and legitimate outcome and the camera-swapped wrong-flow control
+is what makes it informative. A magnitude guard frozen in the original
+spec was WITHDRAWN before any run on measurement: it would have shrunk
+every velocity ~200× and made the cell measure the guard.
+
 ## 2026-08-14 MEASUREMENT CLOSURE — the absence instrument has a material defect
 
 Read [[operations/elgs-absence-diagnostic-result]] before citing any
