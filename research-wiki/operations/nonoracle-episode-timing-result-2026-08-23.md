@@ -123,7 +123,42 @@ puts a 2-frame error at −2.39 dB, *below* not gating at all.
   time. Whether the result survives on a differently-trained substrate
   is untested.
 
-## 6. Bookkeeping
+## 6. Phase T2 comparator validity — VERIFIED, not assumed
+
+T2 will compare an A-est arm against the RECORDED A0′ (experiment 184)
+and A1-LOCAL (experiment 185) numbers, both trained at commit `b7952b0`.
+Since then the training path has gained **1,959 insertions across 8
+files**, so reuse cannot be assumed. Re-verified line by line:
+
+* **`scripts/eval_lrv1_event.py` — the evaluator that produced the
+  +1.0496 dB figure — changed by 10 insertions and ZERO deletions.** The
+  addition is a new reported quantity (`ghost_gap_psnr_by_frame`) built
+  on its own fresh `Region()` instance; no existing accumulator is
+  touched. **Every existing region is bit-identical.**
+* **`main.py` has only 3 removed lines**, all inside the `validation()`
+  signature and its training-time `psnr` call — the `--val` path, which
+  Lane T does not use. LRV3 training is untouched.
+* `utils/mesh_utils.py` changed the **`--val`** PSNR from channel-split
+  to pooled. That repair does NOT reach this comparison:
+  `eval_lrv1_event.py` pools squared error over channels inside
+  `Region.add` and never had the channel-split bias.
+* `utils/image_utils.py` changed `.view` to `.reshape`, a
+  non-contiguity fix that is numerically identical where `.view` was
+  legal.
+* Everything else added — `scene/packet_birth.py`,
+  `scene/packet_birth_flow.py`, `scene/appearance_edit.py`, and the
+  `get_features`/`get_opacity` redirects — is flag-gated. Confirmed from
+  the configs: `configs/lrv3/a1_local.yaml` and
+  `configs/lrv3/a0_local_control.yaml` set no `packet_birth_*` key and no
+  appearance-edit key, and the redirects require an
+  `_appearance_source_idx` column that training never installs.
+
+**Conclusion: A-est trained at the current commit is comparable to the
+recorded A0′ and A1-LOCAL figures**, provided it is scored with
+`scripts/eval_lrv1_event.py` and its existing regions — not with
+`main.py --val`, whose convention did move.
+
+## 7. Bookkeeping
 
 Claim consumed: `lrv3_episode_estimate_t1` r0 (experiment 235). Cost
 **0.188 slot-h** measured. Grouping: 417 groups over 149,794 rows,
