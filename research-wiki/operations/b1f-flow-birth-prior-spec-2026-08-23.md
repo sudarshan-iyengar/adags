@@ -287,6 +287,39 @@ If the six cells do run, a corrected-mask secondary endpoint may be
 reported alongside the frozen one, clearly labelled and never
 substituted for it.
 
+## APPENDIX D (append-only) — the preflight launch rule, frozen BEFORE the funnel was read
+
+The preflight is Determined experiment **234** (`ladder_b1f_preflight`
+r0, commit `2ba6a62`, pool `hopper`, admitted H100 image
+`sha256:0d577168…`, seed 0, 1,200 iterations). Its rendered entrypoint
+was inspected before submission and contains no `Program Files`
+substring.
+
+**The six training cells launch if and only if BOTH mechanism conditions
+hold, and at least 12 slot-hours of the block ceiling remain:**
+
+* **(a) flow actually applied** — `flow_sites_valid ≥ 50%` of
+  `flow_sites_total` at every birth event in the preflight, and no event
+  reports `flow_sites_valid = 0`;
+* **(b) the basis can represent the velocities** —
+  `flow_realized_ratio_mean ≥ 0.9`, i.e. the LoRA probe basis reproduces
+  at least 90% of the requested displacement. A value far below 1 means
+  the cell would be measuring basis rank-deficiency rather than flow.
+
+**Stated honestly: the preflight CANNOT answer whether the effect is
+worth measuring.** It observes the mechanism at birth; whether a velocity
+initialization survives thousands of subsequent Adam steps is exactly
+what the six cells exist to measure and cannot be inferred from a
+1,200-iteration run. The launch rule is therefore a MECHANISM-HEALTH
+rule, not an effect-size rule, and it is recorded as such so that a
+later null is not misread as having been foreseeable from the preflight.
+
+What justifies spending the cells on a likely-small effect is the
+wrong-flow control: `B1-F ≈ B1-X ≈ B1` would close the BIRTH-prior role
+for zero-acquisition flow — the last live zero-acquisition prior
+experiment — rather than leaving it open, and a terminal negative on a
+named open question is worth its cost.
+
 ## 7. Execution priority
 
 This lane is SUPPORTING. It yields GPU precedence to the payload and
