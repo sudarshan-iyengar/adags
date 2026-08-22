@@ -34,6 +34,31 @@ current lead method candidate) and the first POSITIVE episodic-presence
 result. The 2026-07-29 section remains the last user-approved direction
 record.
 
+## 2026-08-20/22 BLOCK 2 — 300-frame canon, B1-D rejected, B2 DC edit falsified
+
+Full record: [[operations/block-2026-08-20b-decisions.md]]. Headlines:
+**(1)** canonical 300-frame substrate B0-C = **33.251 / 0.9535 / 0.0898**
+pooled+clamped over ALL 300 held-out frames, one model, per-frame spread
+0.73 dB; both capacity regimes PEAK AT ~12k ITERATIONS (~4.2
+presentations/unit) then lose PSNR to densification churn + late
+overfit (NOT the cap); uncapped (2.05M pts, 2.4x cost) wins LPIPS −7.6%
+but loses endpoint PSNR; the quarter-raster era inflated the family
+~1.1–1.5 dB. **(2)** B1-D (dynamic-mask donors) REJECTED on both seeds —
+it removes B1's event-region benefit; donors must come from OUTSIDE the
+events (inference, recorded). **(3)** the B2 DC edit is FALSIFIED: a
+non-vacuous oracle-correct link on the fixture yields ~zero improvement
+(+2.7e-6 loss delta; +0.008 dB event return) while the certificate
+correctly rejects a −7.34 dB wrong-identity edit — replace or abandon
+the DC payload; consolidation itself not dead (geometry/support
+payloads and appearance-starved fixtures untested). **(4)** SEA-RAFT
+dense flow exists for all six N3V scenes in the MotionPriorCache layout
+— the flow BIRTH prior is the first zero-acquisition prior experiment;
+lineage priors blocked (no N3V tracks + decision 3's precondition).
+**(5)** next 300f pair: B0-R vs B1, 2 seeds, NEW 18k frozen schedule,
+≈35 H100 slot-h. **Bonus:** the init-order defect's forced route-logit
+4.0 HELPED +0.50 dB over neutral 0.0 (24.7% routes left uncertain);
+replicate check across ~10 commits passed at 0.018 dB.
+
 ## 2026-08-20 LOOP 3 — localized presence WINS on the fixture; CCR frozen; substrate at STG parity
 
 - **Lane B positive (first ever for episodic presence).** The corrected

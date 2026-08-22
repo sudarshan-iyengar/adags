@@ -106,3 +106,57 @@ gitignored). The uncap arm: `b0c_uncap_crb300` r0 = exp 214 (running);
 `b0c_uncap_eval6k` r0 consumed by a hung submission that never reached
 the master (preserved), r1 = exp 221; `b0c_uncap_eval12k` r0 = exp 225;
 18k/24k evals submitted as checkpoints landed.
+
+---
+
+## APPENDIX B (2026-08-22, append-only) — B0-C-UNCAP terminal, and a correction to §2's churn attribution
+
+Experiment **214** (`b0c_uncap_crb300` r0, commit `d22e8e2`, hopper,
+seed 0) COMPLETED 36,000/36,000; wall **38 h 10 m** (2026-08-20 17:19 →
+08-22 07:30 UTC) — 2.4× the capped arm, rasterization scaling with
+splat count. Final primitives **2,052,105** (3.42× the cap; growth
+1.08M → 1.42M → 1.65M → 1.85M → 2.05M, stopping at the 30k densify
+boundary).
+
+Curve (`--val` pooled+clamped; evals 221/225 and the rolling
+18k/24k/30k/36k cells; endpoint = exp 232):
+
+| iter | PSNR | SSIM | LPIPS | points |
+|---:|---:|---:|---:|---:|
+| 6,000 | 33.038 | 0.9548 | 0.0922 | 1,078,395 |
+| 12,000 | **33.614** | 0.9578 | 0.0847 | 1,424,077 |
+| 18,000 | 33.516 | 0.9572 | 0.0829 | 1,649,295 |
+| 24,000 | 33.435 | 0.9565 | 0.0828 | 1,851,495 |
+| 30,000 | 33.191 | 0.9557 | 0.0835 | 2,052,105 |
+| **36,000 (frozen endpoint)** | **33.074** | 0.9559 | **0.0829** | 2,052,105 |
+
+`best_val_iter = 12000` in this arm too.
+
+**Frozen-endpoint comparison (the one-variable capacity answer):** the
+capped arm WINS endpoint PSNR (33.251 vs 33.074) while the uncapped arm
+wins SSIM (+0.0024) and LPIPS (−0.0069, ~7.6% relative) at 3.42×
+capacity and 2.4× compute. At the descriptive 12k peaks: 33.508 vs
+33.614 (+0.106 for capacity) with the LPIPS gap already open.
+
+**CORRECTION to §2's attribution (append-only):** §2 attributed the
+post-12k PSNR decline to churn "at the 600k cap". The uncapped arm
+reproduces the SAME peak-at-12k-then-decline shape with no cap, and —
+stronger — continues losing PSNR (33.19 → 33.07) through the 30k→36k
+settle phase where its point count is FROZEN, while SSIM/LPIPS hold or
+improve. So the decline is a property of continued optimization under
+this family's schedule — densification churn plus late train-view
+overfit that is PSNR-specific — not of the capacity cap. The capped
+arm's +0.08 settle recovery now reads as the cap LIMITING overfit
+capacity rather than churn ending.
+
+**Schedule consequence, for any future 300-frame arm (a NEW spec, not a
+retro-fit):** both capacity regimes peak at ~12,000 iterations
+(~4.2 presentations/unit); the exposure-matched 36k schedule overshoots
+for PSNR in both. An 18k schedule (densify to 12k + settle) would
+capture the peak at ~45% of the cost. Disclosed: this observation
+derives from held-out-view convergence curves of these two runs; using
+it to design a future experiment's schedule is design-from-prior-
+evidence and must be stated in that experiment's freeze.
+
+Claims: `b0c_uncap_eval{18k,24k,30k,36k}` r0 consumed (the ledger holds
+the exp ids; endpoint = 232).
