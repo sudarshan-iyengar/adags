@@ -124,3 +124,55 @@ Planned allocation of the 24 slot-h ceiling, priority-ordered:
 Lane F's required outcome is satisfiable either by execution OR by an
 implementation-complete, admitted launch packet; it yields GPU
 precedence to P and T if the ceiling binds.
+
+## 7. Workstation test environment — measured, and it constrains verification
+
+The project's own `adags` conda environment is BROKEN on this
+workstation (`numpy` fails its C-extension import), and the default
+`python` has no torch at all. The only usable test interpreter found is
+`C:\Users\sucar\anaconda3\envs\DVS-Voltmeter\python.exe`
+(torch 2.6.0+cpu, numpy 2.2.3); `pytest`, `omegaconf`, `pyyaml`,
+`plyfile` and `pillow` were installed into it this block purely as test
+tooling. No repository file and no other environment was changed.
+
+**`pointops2_cuda` is a compiled CUDA extension that cannot be built
+here.** Anything importing `scene.gaussian_model`, `scene.cameras`, or
+`scene/__init__.py` transitively pulls it in and fails at COLLECTION.
+Nine test files are affected, including the pre-existing
+`tests/test_packet_birth.py` — so the "14 CPU tests" recorded for B1-D
+were never runnable on this workstation and must have been executed
+elsewhere.
+
+**Measured baseline before any change of this block** (whole suite minus
+the nine CUDA-blocked files): **954 passed, 44 failed, 74 skipped, 39
+errors**. Those failures and errors are PRE-EXISTING and environmental;
+they are recorded here so that any increase attributable to this
+block's changes is detectable. Per-file baselines that matter:
+`tests/test_falsify_b2_edit.py` = **21 passed** (matching the "21 CPU
+tests" recorded with the B2 falsification).
+
+Consequence for verification: unit tests whose logic is pure arithmetic
+are required to be written so they run locally, and end-to-end
+validation of anything touching the renderer or the Gaussian model is
+done by a bounded ADMITTED-IMAGE PREFLIGHT rather than by container
+pytest. The precedent is `configs/n3v/ladder_b1_preflight.yaml` at
+1,200 iterations — enough to cross iteration 1,000, where the first
+packet-birth event fires.
+
+## 8. Submission plan and pool assignment
+
+LRV3-derived cells run on **dgx** with the admitted V100 image, matching
+the pool and image of the checkpoints they read (experiments 184 and
+209) and of the recorded DC falsification (experiment 213), so the new
+payload numbers stay comparable to the falsified DC numbers. dgx has one
+free slot, which is sufficient because these cells are minutes long and
+run serially. **hopper**'s three free slots are reserved for the flow
+screen, whose arms must all share one pool.
+
+| order | cell | pool | projected slot-h |
+|---:|---|---|---:|
+| 1 | payload headroom screen (exp 209 checkpoint) | dgx | ≈ 0.2 |
+| 2 | opacity payload edit + L1/L2/L3 controls | dgx | ≈ 0.3 |
+| 3 | non-oracle episode-timing screen (exp 184 checkpoint) | dgx | ≈ 0.3 |
+| 4 | flow preflight, 1,200 iterations | hopper | ≈ 0.35 |
+| 5 | flow screen, 6 cells (conditional) | hopper | ≈ 11 |
