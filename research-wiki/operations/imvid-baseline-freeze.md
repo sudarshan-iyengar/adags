@@ -566,3 +566,52 @@ reprojection gate of B5 has been *specified* but not *executed*. And the
 fixed-rig property remains verified only for the 300-frame sample at frames
 0/150/299 — metadata cannot certify a full take, because a moving take
 registered at frame 0 produces an identical `images.txt`.
+
+## B10 (2026-08-24) — the FULL Opera take is 15,215 frames, and that makes B7's exposure gap 50x worse
+
+Measured on the first fully-downloaded full-take file, not inferred:
+
+```
+scene1_opera/cam00.mp4      3,224,052,860 bytes   (== inventory expected, == manifest observed)
+  codec h264   5312x2988   pix_fmt yuv420p
+  r_frame_rate 60000/1001  avg_frame_rate 60000/1001
+  duration     253.836917 s
+  nb_frames    15,215
+```
+
+**End-to-end transfer integrity verified independently:** the SHA-256
+recomputed on Apollo from the landed bytes equals the downloader's
+recorded manifest hash exactly
+(`764d9c72cd98ccae3d3042f41978735ceb43655c7b77a02840d72c946133234a`), and
+a real frame decoded to a 90,166-byte PNG — which also proves the `moov`
+atom arrived and the file is not truncated.
+
+### The correction
+
+B7 computed the exposure gap from the **300-frame SAMPLE** dimensions
+(300 x 35 = 10,500 units, an 11.05x gap). The **full take is 15,215
+frames**, i.e. **50.7x** the sample, so:
+
+| protocol | frames | train cams | units | ratio vs N3V-50f |
+|---|---:|---:|---:|---:|
+| N3V 50-frame | 50 | 19 | 950 | 1x |
+| ImViD Opera, 300-frame sample | 300 | 35 | 10,500 | 11.05x |
+| **ImViD Opera, FULL take** | **15,215** | 35 | **532,525** | **560.6x** |
+
+**Consequence, and it is now binding rather than advisory: the full Opera
+take cannot be trained at any authorized schedule.** At the 12,000-iteration
+absolute ceiling it receives roughly 1/560th of the per-unit exposure that
+the N3V 50-frame protocol gets at 6k. B7's conclusion — that a meaningful
+sub-ceiling pilot needs a frozen, event-selected frame tranche rather than
+the whole take — stands, and the margin by which it stands is 50x larger
+than B7 knew.
+
+**Also corrected:** [[imvid-sample-ingestion]] records Opera's full take as
+"3 min 22 s / 226 GB". The measured duration is **253.84 s = 4 min 14 s**,
+and the accessible folder's 39 files total 125,649,776,270 bytes
+(117.02 GiB). Both figures on that page are superseded by measurement;
+neither was verified there and both are marked as such in the original.
+
+**NOT verified in this probe:** the read-only (0444) promotion of completed
+raw files. The permission listing was emitted but filtered out of the
+captured output, so it is recorded here as unchecked rather than as passing.
