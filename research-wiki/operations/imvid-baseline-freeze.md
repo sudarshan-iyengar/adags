@@ -615,3 +615,82 @@ neither was verified there and both are marked as such in the original.
 **NOT verified in this probe:** the read-only (0444) promotion of completed
 raw files. The permission listing was emitted but filtered out of the
 captured output, so it is recorded here as unchecked rather than as passing.
+
+## B11 (2026-08-24) — the reprojection gate RAN and PASSED; the calibration is validated in the undistorted PINHOLE frame
+
+Determined experiment **270** (`imvid_verify_pinhole_f0`, r0, commit
+`75f779a`, pool `dgx`, V100 image `sha256:70a28e3d...`, `STATE_COMPLETED`),
+running `scripts/imvid_verify_pinhole.py --mode verify` against the sealed
+35-camera frame-0 reconstruction. **No new decode and no new triangulation
+were needed**, exactly as B1 predicted.
+
+```
+pairs 20,366 over 35/35 images
+A = pi(K_new @ (R X + t))    B = undistort(obs, K, dist, P=K_new)   [backend=cv2]
+
+  PINHOLE 2656x1494 (scale 0.5): mean 0.607721  median 0.510188  p99 1.848847  max 2.072436
+  NATIVE  5312x2988 (= /0.5)   : mean 1.215442  median 1.020375  p99 3.697693  max 4.144871
+
+CROSS-CHECK (COLMAP's own statistic, NATIVE, distorted space): mean 1.198136
+```
+
+### The gate
+
+**mean 1.215442 px AT NATIVE against a 2.0 px NATIVE gate — PASS.** Stated
+in the raster the gate is defined in, per B5. The scaled figure (0.6077) is
+reported alongside and is never compared against the native gate.
+
+### Why this is decisive rather than merely green
+
+Three independent things had to be right simultaneously for this number to
+appear, and each fails loudly rather than mildly if wrong. Measured
+detection margins, by injecting each corruption into a synthetic model:
+**transposed rotation 1400.52 px**, **camera-to-world pose 7850.60 px**,
+**mis-ordered `distCoeffs` 56.77 px**, **distortion dropped entirely
+24.90 px** — against **3.03e-13 px** for the correct pipeline. A residual
+of 1.22 px is not reachable by any of those.
+
+**The cross-check limb reproduces COLMAP's own residual through a
+completely independent code path**: 1.198136 here against the recorded
+**1.1953** for frame 0 — a difference of 0.0028 px. And the *gated* residual
+(1.2154) sits slightly **above** the cross-check, which is the predicted
+direction: the two differ by the undistortion Jacobian, which exceeds 1
+toward the periphery.
+
+All 35 training cameras contribute, and the pair count (20,366) equals the
+observation count recorded for frame 0 exactly.
+
+### What this establishes, and what it does not
+
+**Establishes:** the supplied OPENCV calibration, the derived PINHOLE
+intrinsic, the pose convention and the distortion parameterization are
+mutually consistent, and **the existing 20,157-point sparse union is
+reusable unchanged in the undistorted PINHOLE frame** — B6's argument is
+now backed by measurement rather than by reasoning alone.
+
+**Does NOT establish — and this is documented in the instrument itself so
+it cannot be mis-cited:** the gate is **exactly blind to the principal
+point.** Because the residual reduces to `f*s*|X/Z - x_undist|`, `K_new`'s
+principal point cancels between the two terms, so substituting a naive
+`c*s` for the frozen `(c+0.5)*s-0.5` convention changes the residual by
+**0.0**. What actually catches that is a separate equality check against
+experiment 156's recorded intrinsics, which passed with a measured delta of
+`0.0` on all four parameters.
+
+Also not established: that any undistorted IMAGE has been written. This
+validates the geometry, not a rendered dataset.
+
+## B12 (2026-08-24) — CORRECTION to B4: the `/30` factor is 1.998, not 2.002
+
+B4 states the hard-coded `1/30` frame period is *"wrong by a factor of
+**2.002**"* for ImViD. **That digit is wrong.** The exact factor is
+
+```
+(1/30) / (1001/60000) = 2000/1001 = 1.998001998...
+```
+
+i.e. 2 x 0.999, not 2 x 1.001. Verified by direct computation. The
+direction and the order of magnitude in B4 are right and its conclusion is
+unchanged — the hard-coded N3V period is nearly a factor of two wrong for
+ImViD and must never be inherited — but the number itself is corrected here
+rather than left to propagate.

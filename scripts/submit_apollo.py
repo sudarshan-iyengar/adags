@@ -105,6 +105,7 @@ ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
     "scripts/imvid_sparse_init.py",
     "scripts/imvid_build_initialization.py",
     "scripts/imvid_verify_pinhole.py",
+    "scripts/imvid_event_proxy.py",
     "scripts/fetch_immersive_scene.py",
     "scripts/benchmark_elgs_q.py",
     "scripts/eval_diva360_heldout.py",

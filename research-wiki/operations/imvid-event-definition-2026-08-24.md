@@ -93,7 +93,7 @@ Every candidate is classified into exactly one of three classes, and
 * **B — ordinary occlusion.** The object is still present but hidden by
   something else from the applicable cameras.
 * **C — rig- or camera-induced visibility change.** The object left the
-  frustum, the camera moved, exposure/白balance changed, or the applicable
+  frustum, the camera moved, exposure/white balance changed, or the applicable
   set itself changed.
 
 **The classification must be POSITIVE for A, never residual.** "We could
@@ -232,3 +232,69 @@ take that has not passed §4. To relax any threshold in §2.1 after seeing
 a scene's candidate list. To report a class-B occlusion under a heading
 implying absence. To let a proxy-derived candidate list stand as ground
 truth — it is a scouting instrument and must be labelled as one.
+
+---
+
+## AMENDMENT (2026-08-24, append-only) — the proxy census CANNOT satisfy §5 at scouting rates, and that is a constraint on the instrument, not a relaxation of the spec
+
+Nothing above is rewritten. §5 requires that, before any ImViD gating
+experiment, the census report each multi-camera candidate's per-camera
+timing spread **in frames and in milliseconds**, and forbids assuming a
+shared frame boundary when that spread exceeds one frame.
+
+`scripts/imvid_event_proxy.py` is now built and self-tested (91/91, with
+end-to-end ffmpeg verification on synthetic media, including a byte-exact
+check that a strided proxy frame is identical to an independently decoded
+source frame at the same index). **It cannot satisfy §5 at its scouting
+defaults, and it says so in its own manifest.**
+
+At the default 2 fps proxy rate the sampling step is **30 source frames =
+500.5 ms** — **25x coarser** than ImViD's stated 20 ms upper bound
+(~1.2 source frames). The reported `spread_ms` column at that rate is
+dominated by proxy sampling, not by camera synchronization. The manifest
+therefore carries `sync_uncertainty_resolvable_at_this_proxy_rate: false`,
+and only a near-native proxy rate would flip it.
+
+**The consequence is a two-stage requirement, and §5 is UNCHANGED by it:**
+
+1. **Scouting** — the low-rate proxy census locates candidate windows.
+   Its timing numbers are *localization brackets*, not synchronization
+   measurements, and may not be cited as satisfying §5.
+2. **Sync measurement** — before any gating cell on a selected candidate,
+   the per-camera timing spread must be measured at a rate fine enough to
+   resolve ~1 frame, on the *narrow* window the scouting stage selected.
+
+That two-stage split is what makes the requirement affordable: a
+near-native-rate measurement over a 15,215-frame take is prohibitive,
+while the same measurement over one selected ~50-frame window is cheap.
+
+### Other census limitations, recorded now so no later reading over-claims
+
+* **Localization is one proxy step.** A "rise at frame 120" means
+  *somewhere in (90, 120]*. Every candidate carries its bracket.
+* **Polarity is a signal direction, not a semantic.** A rise is equally
+  consistent with an occluder arriving, content leaving, a light change,
+  or auto-exposure. This instrument has **no return-fidelity gate**, which
+  is the thing the N3V curation needed to separate occlude-and-return from
+  permanent change. It therefore cannot by itself assign the A/B/C classes
+  of §3 — it can only propose candidates for that classification.
+* **Global-mean signals are blind to small objects.** At a 480 px long
+  edge on a 5312 px source (11x down) a small object cannot move a
+  whole-frame mean. The N3V pass needed a box search at quarter resolution
+  and still put sub-8-px features near its detection floor.
+* **The window's own temporal median is the template**, so content
+  occluded for more than half a window becomes the template and inverts
+  the polarity — the exact contamination the N3V curation hit and fixed
+  with hand-chosen exposed-reference windows.
+* **Cross-camera clustering is greedy and anchored on its first member**,
+  so a chain spaced just under tolerance fragments differently depending
+  on camera-name order.
+* **No occlusion reasoning at all.** A cluster with 3-of-39 support may be
+  one real event seen from three views or three coincidences. Support
+  count is evidence of scene-level structure, **never proof** — which is
+  precisely why §3 requires positive geometric evidence for class A.
+
+**None of the above relaxes any threshold in §2.1 or any requirement in
+§3 or §5.** It records what the available instrument can and cannot
+measure, so that a candidate list is read as what it is: a scouting
+output for human/ground-truth curation.
