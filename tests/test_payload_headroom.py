@@ -401,6 +401,16 @@ class SpecTableTests(unittest.TestCase):
         self.assertIs(ph.restore_model_and_scene, fb.restore_model_and_scene)
         self.assertIs(ph.probe_row_state, fb.probe_row_state)
 
+    def test_the_screen_reuses_the_fixture_protocol(self):
+        # The screen must not carry its own copy of the windows/probes:
+        # pointing it at LRV4 has to move the recipient probe onto LRV4's
+        # single return instant, and that only happens if it derives the
+        # protocol through the same code the falsification does.
+        self.assertIs(ph.protocol_from_event_spec, fb.protocol_from_event_spec)
+        self.assertIs(ph.validate_protocol, fb.validate_protocol)
+        self.assertIs(ph.protocol_block, fb.protocol_block)
+        self.assertIs(ph.DEFAULT_PROTOCOL, fb.DEFAULT_PROTOCOL)
+
 
 class ReportRenderingTests(unittest.TestCase):
     @staticmethod
@@ -445,6 +455,29 @@ class ReportRenderingTests(unittest.TestCase):
         report["tensors"]["_rotation_r"] = {"available": False, "spaces": {}}
         text = ph.format_table(report)
         self.assertNotIn("_rotation_r/", text)
+
+    def test_the_table_names_the_fixture_so_a_report_cannot_be_misread(self):
+        report = self._minimal_report()
+        lrv4 = fb.protocol_from_event_spec({
+            "scene_id": "LRV4", "kind": "synthetic_leave_and_return",
+            "fps": 6.0,
+            "presence_frames": {"episode_1": [0, 29], "gap": [30, 58],
+                                "episode_2": [59, 59]},
+            "return_frames": [59],
+        })
+        report["protocol"] = {"fixture": ph.protocol_block(lrv4)}
+        text = ph.format_table(report)
+        self.assertIn("LRV4", text)
+        self.assertIn("[59]", text)
+        self.assertIn("9.8333", text)
+        self.assertIn("derived", text)
+
+    def test_a_report_without_a_fixture_block_still_renders(self):
+        # The fixture line is additive: an older report that predates it
+        # must still render rather than raising a KeyError.
+        text = ph.format_table(self._minimal_report())
+        self.assertNotIn("fixture:", text)
+        self.assertIn(ph.MAP_PRIMARY, text)
 
 
 class InputHashTests(unittest.TestCase):
