@@ -337,7 +337,79 @@ agreement was guaranteed absent a defect (imported row sets, same
 checkpoint, same oracle file, zero renders); it proves determinism and
 no code drift, which is worth having, and nothing more.
 
-## 7. Bookkeeping and an incidental observation
+## 7. THE PERMUTATION CONTROL RAN — and it OVERTURNS the attribution (append-only)
+
+Correction **C3** named a within-recipient permutation as the only run
+that could separate "the opacity payload carries nothing" (H1) from "any
+opacity reshuffle over these rows costs ~1 dB regardless of identity"
+(H2). **It was implemented and run.** Cell: Determined experiment **244**
+(`lrv3_falsify_opacity_l4` r0, commit `662b3e2`, dgx, admitted V100
+image), COMPLETED. Report
+`falsify_opacity_l4_report.json`, sha256
+`082e5c9737051a3157534d577cdb8e290018037f1d1aae27936d342ff9a4218e`.
+
+**L4** permutes the recipient set within itself — identity destroyed,
+temporal window preserved. One-hop is preserved by a row-index-parity
+partition rather than bypassed, so only the edited half (1,917 of 3,912
+rows, **49.0% of L1's edit volume**) is redirected. Permutation seed
+7717, permutation sha256 `f59e01ab…`.
+
+| link | pre-edit distance (logits) | reserved slot Δ | held-out `event_return` Δ | rows edited |
+|---|---:|---:|---:|---:|
+| L3 same-identity no-op | 5.7118 | +3.600e-05 | **+0.0103** | 1,869 (donors) |
+| **L4 recipient permutation** | **7.1376** | +3.957e-05 | **−0.9685** | **1,917** |
+| L1 oracle-correct | 7.1808 | +6.588e-05 | **−1.1906** | 3,912 |
+| L2 wrong-identity | 10.0487 | +5.095e-04 | **−6.0463** | 3,912 |
+
+**H2 is CONFIRMED and H1 is refuted AS AN ATTRIBUTION.** L4's pre-edit
+distance (7.1376) is within **0.6%** of L1's (7.1808), and it costs
+**−0.97 dB while editing HALF as many rows**. Per row edited, the
+identity-destroying permutation is MORE damaging than the oracle-correct
+link. **The −1.19 dB is therefore not a property of the cross-episode
+identity link. It is a property of moving opacity by that much at all.**
+
+**The three links whose edited rows the metric can actually see are
+monotone in edit magnitude**, exactly as the reviewer predicted a
+confounded design would be:
+
+```
+7.1376 → −0.97 dB   (identity destroyed)
+7.1808 → −1.19 dB   (identity oracle-correct)
+10.0487 → −6.05 dB  (identity wrong)
+```
+
+L3 sits off this curve at 5.7118 → +0.01 dB because it edits DONOR rows
+whose support ends before the scored frames — the reason C3 withdrew it
+as an attribution control in the first place.
+
+### What this changes, and what it strengthens
+
+**Weakened:** §5's characterization "actively harmful" was right about
+the SIGN and wrong about the CAUSE. The damage carries no information
+about identity correctness. Any reading of the −1.19 dB as evidence that
+the oracle link is *wrong about identity* is withdrawn.
+
+**Strengthened, and this is the more important direction:** the payload
+negative is now stronger, not weaker. For opacity on this fixture,
+held-out damage is a monotone function of how far the value is moved,
+**independent of whether the move is correct**. There is therefore **no
+regime in which redirecting opacity could help** — a correct link and a
+random permutation of the same magnitude are indistinguishable in their
+effect, and both are destructive. That is a cleaner refutation of the
+payload than a null would have been.
+
+**Unchanged:** the certificate rejected all four links, so nothing was
+admitted and no promotion gate is in play. The frozen conclusion — no
+useful payload, representation-only pivot recommended — stands and is
+reinforced.
+
+**Method note worth carrying:** the adversarial review identified this
+control, it cost well under a minute of GPU, and it overturned a causal
+claim in the page it reviewed. A control that separates *magnitude* from
+*correctness* should be standard in any future edit experiment, not an
+afterthought recovered by review.
+
+## 8. Bookkeeping and an incidental observation
 
 Claims consumed: `lrv3_payload_headroom` r0 (experiment 233) and
 `lrv3_falsify_opacity` r0 (experiment 236). Cost ≈ 0.2 + 0.3 slot-h. Input hashes recorded in the report:
