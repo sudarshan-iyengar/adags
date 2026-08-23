@@ -484,6 +484,140 @@ def build_row_sets(position_episode1, position_return, support_lo, support_hi,
     }
 
 
+#: FROZEN reporting grid for the recipient pre-filter diagnostic, in FRAMES
+#: relative to the fixture's own ``recipient_support_lower_min``. These are
+#: histogram edges for a report field. They are NOT candidate thresholds and
+#: nothing in this module may read them as one.
+LO_HIST_FRAME_EDGES = (-24.0, -16.0, -12.0, -8.0, -6.0, -4.0, -3.0,
+                       -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0)
+
+LO_QUANTILES = (0.0, 0.05, 0.25, 0.5, 0.75, 0.95, 1.0)
+
+
+def _quantile_block(values):
+    """Linear-interpolated quantiles, or all-None on an empty set.
+
+    Same convention as ``payload_headroom.distance_summary``: an empty set
+    is never a silent zero.
+    """
+    v = torch.as_tensor(values).reshape(-1).to(torch.float64)
+    if v.numel() == 0:
+        return {"n": 0, "q": {str(q): None for q in LO_QUANTILES}, "mean": None}
+    return {
+        "n": int(v.numel()),
+        "q": {str(q): float(torch.quantile(v, q)) for q in LO_QUANTILES},
+        "mean": float(v.mean()),
+    }
+
+
+def _frame_histogram(values_in_frames):
+    """Counts on the frozen grid, with the two open end bins."""
+    v = torch.as_tensor(values_in_frames).reshape(-1).to(torch.float64)
+    edges = LO_HIST_FRAME_EDGES
+    counts = [int((v < edges[0]).sum())]
+    labels = ["(-inf, {:g})".format(edges[0])]
+    for lo_e, hi_e in zip(edges[:-1], edges[1:]):
+        counts.append(int(((v >= lo_e) & (v < hi_e)).sum()))
+        labels.append("[{:g}, {:g})".format(lo_e, hi_e))
+    counts.append(int((v >= edges[-1]).sum()))
+    labels.append("[{:g}, +inf)".format(edges[-1]))
+    return {"edges_frames": list(edges),
+            "bins": [{"range": l, "count": c} for l, c in zip(labels, counts)]}
+
+
+def recipient_prefilter_diagnostic(support_lo, support_hi, position_return,
+                                   centre, radius, protocol=None,
+                                   recipient_rows=None):
+    """REPORT-ONLY. The ``lo`` distribution BEFORE the ``lower_min`` cut.
+
+    Authority: [[lrv4-starved-fixture-result-2026-08-23]] section 5, which
+    pre-identifies exactly this diagnostic and requires it to change no
+    decision rule. The LRV4 screen found ONE recipient row, and two readings
+    survive: (a) a threshold artefact, rows existing just below the derived
+    floor; (b) genuinely absent localized supply, no row narrowing onto a
+    one-frame return at any threshold.
+
+    Three NESTED populations, so a temporal loss and a spatial loss are
+    distinguishable:
+
+      P0  hits_wr                              support intersects the return
+      P1  hits_wr & inside_ret                 ... and inside the oracle region
+      P2  hits_wr & inside_ret & ~spanning     the EXACT pre-image of
+                                               ``recipient_mask`` with the
+                                               ``lo >= floor`` conjunct removed
+
+    ``recipient_rows``, when supplied, is checked against P2's
+    at-or-above-floor count. They must be equal -- that identity is what
+    proves this block reads the selector's own pre-image rather than being a
+    second implementation of it.
+
+    THIS FUNCTION SELECTS NOTHING. Its output is never consulted by
+    :func:`build_row_sets`, by :func:`sets_are_sufficient`, or by any gate.
+    """
+    protocol = protocol or DEFAULT_PROTOCOL
+    centre = torch.as_tensor(centre, dtype=torch.float64).reshape(1, 3)
+    radius = float(radius)
+    lo = torch.as_tensor(support_lo, dtype=torch.float64).reshape(-1)
+    hi = torch.as_tensor(support_hi, dtype=torch.float64).reshape(-1)
+    pr = torch.as_tensor(position_return, dtype=torch.float64).reshape(-1, 3)
+    if not (lo.shape[0] == hi.shape[0] == pr.shape[0]):
+        raise ContractError("pre-filter inputs disagree on the row count")
+
+    floor = float(protocol.recipient_support_lower_min)
+    dt = float(protocol.frame_dt)
+    hits_wr = window_intersects(lo, hi, protocol.window_return)
+    hits_w1 = window_intersects(lo, hi, protocol.window_episode1)
+    inside_ret = (pr - centre).norm(dim=1) <= radius
+    # The selector's `spanning_mask` is
+    #   hits_w1 & hits_wr & (inside_ep1 | inside_ret).
+    # Every population below already conjoins `inside_ret`, which makes the
+    # disjunction TRUE, so on those rows the selector's mask is exactly
+    # `hits_w1 & hits_wr`. The episode-1 position is therefore not needed and
+    # the identity with `recipient_mask` is exact, not approximate.
+    spanning = hits_w1 & hits_wr
+
+    populations = (
+        ("P0_intersects_return", hits_wr),
+        ("P1_intersects_return_in_region", hits_wr & inside_ret),
+        ("P2_recipient_but_for_lo", hits_wr & inside_ret & ~spanning),
+    )
+    out = {
+        "semantics": "REPORT ONLY; selects nothing, gates nothing",
+        "recipient_support_lower_min": floor,
+        "frame_dt": dt,
+        "window_return": list(protocol.window_return),
+        "support_sigma_multiple": T_SUPPORT_SIGMA,
+        "histogram_units": "(lo - recipient_support_lower_min) / frame_dt",
+        "histogram_edges_are_not_thresholds": True,
+        "populations": {},
+    }
+    for name, mask in populations:
+        sel = torch.nonzero(mask).reshape(-1)
+        lo_sel = lo[sel]
+        hi_sel = hi[sel]
+        out["populations"][name] = {
+            "n": int(sel.numel()),
+            "lo": _quantile_block(lo_sel),
+            "support_width": _quantile_block(hi_sel - lo_sel),
+            "t_centre": _quantile_block(0.5 * (lo_sel + hi_sel)),
+            "lo_frames_relative_to_floor": _frame_histogram(
+                (lo_sel - floor) / dt if sel.numel() else lo_sel),
+            "n_below_floor": int((lo_sel < floor).sum()),
+            "n_at_or_above_floor": int((lo_sel >= floor).sum()),
+        }
+
+    if recipient_rows is not None:
+        expected = int(recipient_rows)
+        got = out["populations"]["P2_recipient_but_for_lo"]["n_at_or_above_floor"]
+        if got != expected:
+            raise ContractError(
+                "the pre-filter diagnostic is not reading the recipient "
+                "pre-image: P2 at-or-above-floor is {} but the selector "
+                "produced {} recipient rows".format(got, expected))
+        out["matches_selector_recipient_count"] = True
+    return out
+
+
 def split_by_row_parity(rows):
     """No-op link split: D_a = even row indices, D_b = odd (frozen
     design item 1). Disjoint by construction, and independent of any

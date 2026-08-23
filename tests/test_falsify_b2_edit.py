@@ -931,5 +931,82 @@ class LinkOrderTests(unittest.TestCase):
         self.assertNotIn("links", report["anti_vacuity"])
 
 
+class RecipientPrefilterDiagnosticTests(unittest.TestCase):
+    """The LRV4 `lo`-distribution diagnostic: report-only, and provably the
+    selector's own pre-image (lrv4-starved-fixture-result-2026-08-23 S5)."""
+
+    SPECS = [
+        # donors (episode-1 side)
+        (0.05, 0.05, 1.0, 3.0, 0.10),
+        (0.10, 0.10, 0.5, 4.0, 0.12),
+        # recipients: in the sphere at return, support in WR, lo >= 9.3
+        (0.90, 0.05, 9.4, 9.9, 0.80),
+        (0.90, 0.15, 9.35, 10.2, 0.82),
+        # far-outside wrong-identity rows
+        (1.20, 1.20, 1.0, 3.0, 0.81),
+        # in the sphere at return but lo = 9.0, BELOW the 9.3 floor
+        (0.90, 0.05, 9.0, 9.9, 0.83),
+    ]
+
+    def _inputs(self):
+        pos1, posr, lo, hi, dc = _rows(self.SPECS)
+        return pos1, posr, lo, hi, dc
+
+    def test_it_matches_the_selector_preimage_and_selects_nothing(self):
+        pos1, posr, lo, hi, dc = self._inputs()
+        before = fb.build_row_sets(pos1, posr, lo, hi, dc, CENTRE, RADIUS)
+        out = fb.recipient_prefilter_diagnostic(
+            lo, hi, posr, CENTRE, RADIUS,
+            recipient_rows=int(before["recipient"].numel()))
+        self.assertTrue(out["matches_selector_recipient_count"])
+        # build_row_sets is unchanged by the diagnostic having run.
+        after = fb.build_row_sets(pos1, posr, lo, hi, dc, CENTRE, RADIUS)
+        for key in before:
+            self.assertEqual(before[key].tolist(), after[key].tolist())
+
+    def test_rows_below_the_floor_are_counted_not_selected(self):
+        pos1, posr, lo, hi, dc = self._inputs()
+        sets = fb.build_row_sets(pos1, posr, lo, hi, dc, CENTRE, RADIUS)
+        out = fb.recipient_prefilter_diagnostic(lo, hi, posr, CENTRE, RADIUS)
+        p2 = out["populations"]["P2_recipient_but_for_lo"]
+        # row 5 (lo = 9.0) is in the pre-image but not a recipient
+        self.assertNotIn(5, sets["recipient"].tolist())
+        self.assertGreaterEqual(p2["n_below_floor"], 1)
+        self.assertEqual(p2["n"], p2["n_below_floor"] + p2["n_at_or_above_floor"])
+
+    def test_populations_are_nested(self):
+        pos1, posr, lo, hi, dc = self._inputs()
+        out = fb.recipient_prefilter_diagnostic(lo, hi, posr, CENTRE, RADIUS)
+        p = out["populations"]
+        self.assertGreaterEqual(p["P0_intersects_return"]["n"],
+                                p["P1_intersects_return_in_region"]["n"])
+        self.assertGreaterEqual(p["P1_intersects_return_in_region"]["n"],
+                                p["P2_recipient_but_for_lo"]["n"])
+
+    def test_an_empty_population_is_all_none_not_zero(self):
+        block = fb._quantile_block(torch.zeros(0, dtype=torch.float64))
+        self.assertEqual(block["n"], 0)
+        self.assertIsNone(block["mean"])
+        self.assertTrue(all(v is None for v in block["q"].values()))
+
+    def test_the_histogram_grid_is_frozen(self):
+        self.assertEqual(
+            fb.LO_HIST_FRAME_EDGES,
+            (-24.0, -16.0, -12.0, -8.0, -6.0, -4.0, -3.0,
+             -2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0))
+
+    def test_a_mismatched_recipient_count_fails_closed(self):
+        pos1, posr, lo, hi, dc = self._inputs()
+        with self.assertRaises(ContractError):
+            fb.recipient_prefilter_diagnostic(
+                lo, hi, posr, CENTRE, RADIUS, recipient_rows=999)
+
+    def test_ragged_inputs_fail_closed(self):
+        pos1, posr, lo, hi, dc = self._inputs()
+        with self.assertRaises(ContractError):
+            fb.recipient_prefilter_diagnostic(
+                lo[:-1], hi, posr, CENTRE, RADIUS)
+
+
 if __name__ == "__main__":
     unittest.main()

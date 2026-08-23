@@ -85,6 +85,7 @@ from scripts.falsify_b2_edit import (  # noqa: E402
     probe_row_state,
     protocol_block,
     protocol_from_event_spec,
+    recipient_prefilter_diagnostic,
     resolve_model_path,
     restore_model_and_scene,
     sets_are_sufficient,
@@ -104,6 +105,7 @@ _REUSED_FROM_FALSIFICATION = (
     restore_model_and_scene, resolve_model_path, load_oracle_region,
     load_event_spec, sets_summary, sets_are_sufficient,
     protocol_from_event_spec, validate_protocol, protocol_block,
+    recipient_prefilter_diagnostic,
 )
 
 SCHEMA = "adags-payload-headroom-v1"
@@ -495,6 +497,13 @@ def main(argv=None):
     sets_block = sets_summary(sets, protocol)
     sets_block["rows"] = n_rows
 
+    # REPORT-ONLY. The recipient pre-filter `lo` distribution, before the
+    # `lower_min` cut. Selects nothing; its self-check asserts it reads the
+    # selector's own pre-image. See lrv4-starved-fixture-result-2026-08-23 S5.
+    prefilter = recipient_prefilter_diagnostic(
+        probe["sup_lo"], probe["sup_hi"], probe["pos_ret"], centre, radius,
+        protocol, recipient_rows=int(sets["recipient"].numel()))
+
     disjoint = False
     disjoint_error = None
     try:
@@ -614,6 +623,7 @@ def main(argv=None):
         "row_sets_disjoint": disjoint,
         "row_sets_disjoint_error": disjoint_error,
         "row_sets_sufficient": bool(sets_are_sufficient(sets)),
+        "recipient_prefilter": prefilter,
         "tensors": tensors,
     }
     if packet_block is not None:
