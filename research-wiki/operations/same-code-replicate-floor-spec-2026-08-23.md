@@ -191,3 +191,45 @@ distances are reported:
 what genuine run-to-run variation looks like and what one bad run does
 not. n=3 remains a weak estimate of the distribution's shape; it is a
 strong demonstration that the floor is non-negligible.
+
+---
+
+## AMENDMENT (2026-08-24, append-only) — a separately frozen study asks a DIFFERENT question
+
+Nothing above is rewritten. §5's *"No further replicate cells are
+authorized by this spec under any outcome"* and the RESULT section's
+*"does not license re-running at a different protocol to obtain a smaller
+floor"* both **STAND**, and remain the binding reading of this document.
+
+The 2026-08-24 block directive authorizes a new, separately frozen
+protocol: [[n3v-variance-study-spec-2026-08-24]]. It is an amendment
+rather than a reopening because it asks two questions this spec did not
+and could not:
+
+1. **What IS σ?** This spec's `max − min` at n=3 demonstrates the floor is
+   non-negligible — which was its question, and it is answered
+   terminally. It does not estimate σ: the 95% CI for σ from these three
+   runs is **[0.1365, 1.6478]**, a **12.07× ratio**, so every cost and
+   power figure derived from it is undetermined.
+2. **Do alternative endpoints carry lower run-level variance?** This spec
+   fixed its two endpoints in advance and was right to, so it has nothing
+   to say about a third.
+
+**The new study runs at the IDENTICAL protocol** — same config, seed,
+pool, image, schedule, frames, sealed camera and evaluator — precisely so
+that it is not the re-run-at-a-different-protocol this spec forbids.
+Changing the protocol would forfeit the continuity that makes the number
+useful.
+
+**No outcome of the new study can retract or soften R = 0.4945 dB**, and
+the consequence applied above — that the 50-frame two-seed protocol
+cannot resolve any effect the ladder measured, and that N3V utility
+scaling is HALTED — is unchanged by it.
+
+One recomputation from the values already recorded above, which the new
+spec uses and which is worth stating here because it bears directly on
+this result's interpretation: `whole_frame` scores **296×** the
+pixel-times of `all_events_union` and its spread is only **2.8%** smaller
+(0.4809 vs 0.4945). **The variation measured above is a global run-level
+shift, not spatial sampling noise** — if it were sampling noise, 296× the
+pixels would have reduced it by roughly √296 ≈ 17×.
