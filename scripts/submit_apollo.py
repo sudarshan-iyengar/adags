@@ -234,21 +234,34 @@ class ClosureReport:
 def resolve_execution_set(
     repo_root: os.PathLike[str] | str,
     config_paths: Iterable[os.PathLike[str] | str],
+    entrypoint_script: str | None = None,
 ) -> list[str]:
     """Return the declared execution-relevant path set (S10.2 item 1).
 
     Always includes :data:`EXECUTION_DIRS` and :data:`EXECUTION_FILES`, plus
-    every path in ``config_paths`` normalized relative to ``repo_root``.
-    Every entry must exist under ``repo_root`` or this raises
-    :class:`ContractError` (a missing declared path is repo drift, not a
-    dirty-tree condition, so it fails closed here rather than being silently
-    skipped by the closure check).
+    every path in ``config_paths`` normalized relative to ``repo_root``, plus
+    ``entrypoint_script`` when one is named. Every entry must exist under
+    ``repo_root`` or this raises :class:`ContractError` (a missing declared
+    path is repo drift, not a dirty-tree condition, so it fails closed here
+    rather than being silently skipped by the closure check).
+
+    ``entrypoint_script`` closes a gap recorded in
+    ``research-wiki/operations/block-2026-08-23-live-state-and-budget.md``
+    section 9: ``scripts/`` is outside :data:`EXECUTION_DIRS` apart from this
+    wrapper, so a DIRTY working copy of a non-``main.py`` entrypoint did not
+    block a submission that used it. The container runs the committed
+    snapshot, so the result was not wrong -- it was silently misleading,
+    which is exactly what the closure check exists to prevent for
+    ``main.py``. Only the entrypoint actually used enters the set, so
+    editing an unrelated script never blocks an unrelated cell.
     """
 
     root = Path(repo_root)
     entries: set[str] = set(EXECUTION_DIRS) | set(EXECUTION_FILES)
     for raw in config_paths:
         entries.add(_relative_repo_path(root, raw))
+    if entrypoint_script is not None:
+        entries.add(_relative_repo_path(root, entrypoint_script))
     missing = sorted(entry for entry in entries if not (root / entry).exists())
     if missing:
         raise ContractError(
@@ -838,7 +851,9 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     print(f"det CLI: {version}")
 
     repo_root = Path(args.repo_root).resolve()
-    execution_set = resolve_execution_set(repo_root, [args.config])
+    execution_set = resolve_execution_set(
+        repo_root, [args.config], entrypoint_script=args.entrypoint_script
+    )
     closure = check_execution_closure(
         repo_root, execution_set, dirty_smoke=args.dirty_smoke,
         exploratory=args.exploratory,
@@ -851,7 +866,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
         "NAME": args.cell,
         "POOL": args.pool,
         "IMAGE_REF": args.image_ref,
-        "ENTRYPOINT_SCRIPT": "main.py",
+        "ENTRYPOINT_SCRIPT": args.entrypoint_script,
         "ENTRYPOINT_ARGS": "--config placeholder --model_path placeholder",
         "RUN_DIR": "placeholder",
         "MAX_TRAIN_ITERATIONS": str(args.max_train_iterations),
@@ -974,8 +989,12 @@ def cmd_submit(args: argparse.Namespace) -> int:
     # 2. template renders.
     rendered_config = render_template(args.template, substitutions)
 
-    # 3. execution closure.
-    execution_set = resolve_execution_set(repo_root, [args.config])
+    # 3. execution closure -- including the entrypoint actually used, so a
+    # dirty non-main.py entrypoint refuses the run instead of silently
+    # executing its committed twin.
+    execution_set = resolve_execution_set(
+        repo_root, [args.config], entrypoint_script=args.entrypoint_script
+    )
     closure = check_execution_closure(
         repo_root, execution_set, dirty_smoke=args.dirty_smoke,
         exploratory=args.exploratory,
@@ -1225,6 +1244,16 @@ def _add_common_submission_args(parser: argparse.ArgumentParser, *, require_proj
         help="projected GPU-hours for this run (recorded in the manifest; guard against the M0/M1 ceilings)",
     )
     parser.add_argument(
+        "--entrypoint-script",
+        default="main.py",
+        help=(
+            "script the experiment execs (allowlist: "
+            f"{', '.join(ALLOWED_ENTRYPOINT_SCRIPTS)}); non-main.py entrypoints "
+            "take their whole CLI from --extra-arg tokens. Also enters the "
+            "execution-closure set, so a dirty entrypoint refuses the run"
+        ),
+    )
+    parser.add_argument(
         "--max-train-iterations",
         type=int,
         default=DEFAULT_MAX_TRAIN_ITERATIONS,
@@ -1251,15 +1280,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     submit = subparsers.add_parser("submit", help="submit one EL-GS Determined experiment")
     _add_common_submission_args(submit, require_projected_hours=True)
     submit.add_argument("--extra-arg", action="append", default=[], help="extra entrypoint CLI token (repeatable)")
-    submit.add_argument(
-        "--entrypoint-script",
-        default="main.py",
-        help=(
-            "script the experiment execs (allowlist: "
-            f"{', '.join(ALLOWED_ENTRYPOINT_SCRIPTS)}); non-main.py entrypoints "
-            "take their whole CLI from --extra-arg tokens"
-        ),
-    )
     submit.add_argument("--dry-run", action="store_true", help="stop before `det e create`; print the manifest")
     submit.set_defaults(func=cmd_submit)
 

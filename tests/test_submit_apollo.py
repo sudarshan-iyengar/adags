@@ -123,6 +123,53 @@ class ResolveExecutionSetTests(_ScratchRepoTestCase):
         with self.assertRaises(ContractError):
             wrapper.resolve_execution_set(self.repo_root, [outside])
 
+    def test_named_entrypoint_script_enters_the_execution_set(self):
+        # block-2026-08-23-live-state-and-budget.md section 9: `scripts/` is
+        # outside EXECUTION_DIRS apart from submit_apollo.py, so a dirty
+        # non-main.py entrypoint did not block a submission that used it.
+        entrypoint = "scripts/eval_lrv1_event.py"
+        _write(self.repo_root / entrypoint, "# entrypoint placeholder\n")
+        without = wrapper.resolve_execution_set(self.repo_root, [self.config_path])
+        self.assertNotIn(entrypoint, without)
+        with_entry = wrapper.resolve_execution_set(
+            self.repo_root, [self.config_path], entrypoint_script=entrypoint
+        )
+        self.assertIn(entrypoint, with_entry)
+
+    def test_dirty_named_entrypoint_refuses_the_run(self):
+        entrypoint = "scripts/eval_lrv1_event.py"
+        _write(self.repo_root / entrypoint, "# entrypoint placeholder\n")
+        _git("add", entrypoint, cwd=self.repo_root)
+        _git("commit", "-m", "add entrypoint", cwd=self.repo_root)
+        _write(self.repo_root / entrypoint, "# entrypoint placeholder EDITED\n")
+
+        # Without the entrypoint declared the dirty file is invisible to the
+        # closure check -- the pre-repair behaviour.
+        clean = wrapper.check_execution_closure(
+            self.repo_root,
+            wrapper.resolve_execution_set(self.repo_root, [self.config_path]),
+        )
+        self.assertIn(entrypoint, clean.dirty_outside)
+
+        # Declared, it refuses.
+        with self.assertRaises(ContractError):
+            wrapper.check_execution_closure(
+                self.repo_root,
+                wrapper.resolve_execution_set(
+                    self.repo_root, [self.config_path], entrypoint_script=entrypoint
+                ),
+            )
+
+    def test_main_py_entrypoint_is_a_no_op_for_the_execution_set(self):
+        # main.py is already in EXECUTION_FILES, so naming it must not change
+        # the set -- the repair adds nothing for the default entrypoint.
+        self.assertEqual(
+            wrapper.resolve_execution_set(self.repo_root, [self.config_path]),
+            wrapper.resolve_execution_set(
+                self.repo_root, [self.config_path], entrypoint_script="main.py"
+            ),
+        )
+
 
 # ---------------------------------------------------------------------------
 # check_execution_closure
