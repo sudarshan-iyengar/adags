@@ -174,3 +174,20 @@ license re-running at a different protocol to obtain a smaller floor.
 Measured cost: 3 training cells ≈ 6.7 slot-h (they ran on three separate
 hosts, so without the contention the last block measured), plus 3 eval
 cells ≈ 0.6 slot-h.
+
+### Honesty check — is the floor driven by one bad run? NO
+
+`max − min` at n=3 is sensitive to a single outlier, so the pairwise
+distances are reported:
+
+| pair | pooled+clamped PSNR | event union |
+|---|---:|---:|
+| a–b | 0.0283 | 0.3984 |
+| a–c | 0.4017 | 0.4945 |
+| b–c | 0.3735 | 0.0961 |
+
+**The outlier is a DIFFERENT run on each metric** — `c` on global PSNR,
+`a` on the event union. No single cell is systematically off, which is
+what genuine run-to-run variation looks like and what one bad run does
+not. n=3 remains a weak estimate of the distribution's shape; it is a
+strong demonstration that the floor is non-negligible.
