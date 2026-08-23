@@ -176,3 +176,34 @@ screen, whose arms must all share one pool.
 | 3 | non-oracle episode-timing screen (exp 184 checkpoint) | dgx | ≈ 0.3 |
 | 4 | flow preflight, 1,200 iterations | hopper | ≈ 0.35 |
 | 5 | flow screen, 6 cells (conditional) | hopper | ≈ 11 |
+
+## 9. An execution-closure GAP, found while submitting (pre-existing)
+
+`check_execution_closure` refuses a submission when anything under
+`EXECUTION_DIRS` (`elgs`, `scene`, `gaussian_renderer`, `utils`,
+`arguments`, `depth_visibility`) or `EXECUTION_FILES` (`main.py`,
+`scripts/submit_apollo.py`, `det_exp_apollo.yaml`) plus the named config
+is dirty. It worked exactly as intended this block — it correctly blocked
+the flow screen while `elgs/trainer_hooks.py` was mid-edit.
+
+**But `scripts/` is not in either set, apart from `submit_apollo.py`.**
+Every other allowed entrypoint — `scripts/falsify_b2_edit.py`,
+`scripts/payload_headroom.py`, `scripts/estimate_episodes.py`,
+`scripts/consolidate_packets.py`, and the rest of
+`ALLOWED_ENTRYPOINT_SCRIPTS` — executes in the container from the
+`git archive <commit>` snapshot, yet a DIRTY working copy of one of them
+does not block a submission that uses it as the entrypoint.
+
+The consequence is not a wrong result but a silently misleading one: the
+container would run the COMMITTED version while the operator is looking
+at edited source, and nothing would say so. That is exactly the failure
+the closure check exists to prevent for `main.py`.
+
+**Not repaired this block** — changing the closure set mid-block would
+alter the admission behaviour of every cell already submitted, and the
+repair deserves its own review. Recorded here so the next block can
+decide deliberately. **Mitigation used in the meantime: every entrypoint
+script this block executed was committed and pushed before its cell was
+submitted, and each run's manifest records the commit that actually
+ran.** The three `scripts/` files left dirty at the end of this block
+(the LRV4 fixture work) were never the entrypoint of any submitted cell.
