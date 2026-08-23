@@ -694,3 +694,33 @@ direction and the order of magnitude in B4 are right and its conclusion is
 unchanged — the hard-coded N3V period is nearly a factor of two wrong for
 ImViD and must never be inherited — but the number itself is corrected here
 rather than left to propagate.
+
+### B11.1 — all three frozen frames pass; the calibration holds across the whole clip
+
+Experiments **271** (`imvid_verify_pinhole_f000150`) and **272**
+(`_f000299`), same commit `75f779a`, pool `dgx`, V100 image, both
+`STATE_COMPLETED`.
+
+| frame | exp | pairs | cameras | **mean px @ NATIVE** | median | p99 | max | recorded COLMAP residual |
+|---:|---:|---:|---|---:|---:|---:|---:|---:|
+| 0 | 270 | 20,366 | 35/35 | **1.215442** | 1.020375 | 3.697693 | 4.144871 | 1.1953 |
+| 150 | 271 | 31,331 | 35/35 | **1.162289** | 0.964029 | 3.623638 | 4.156681 | 1.1361 |
+| 299 | 272 | 28,986 | 35/35 | **1.213650** | 1.019549 | 3.661733 | 4.211869 | 1.1808 |
+
+**All three pass the 2.0 px NATIVE gate, with every training camera
+contributing at every frame.** Each tracks its independently recorded
+COLMAP residual to within ~0.03 px and sits slightly above it, which is
+the direction the undistortion Jacobian predicts and is therefore a
+consistency check rather than a discrepancy.
+
+**This closes the S5 validation limb for Opera**: the supplied calibration
+is self-consistent on the 35-camera training subset at the start, middle
+AND end of the sample clip, in the undistorted PINHOLE frame the trainer
+would actually use. Combined with B6, the existing 20,157-point union is
+now confirmed usable without re-triangulation.
+
+**Scope, stated because it is easy to over-read:** these three frames come
+from the 300-frame SAMPLE, not from the 15,215-frame full take. Per the
+frozen event definition's rig condition, the full take still requires its
+own fixed-pose residual at frames 0 / mid / end before it may enter the
+event census — and per B10 metadata cannot substitute for that test.
