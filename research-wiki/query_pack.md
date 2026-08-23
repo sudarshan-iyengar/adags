@@ -21,10 +21,27 @@ concern that was well-founded, since a 2-frame error measures −2.39 dB,
 cloud's own bounding box, NOT the oracle sphere** (which is the object's
 true geometry and would have faked the result); held-out cameras were
 never touched; abstention reused the existing `family_id = -1` path.
-**Limits: recall is 2 of 8 event-overlapping groups, and NOTHING was
-retrained — the +1.05 dB localized-presence positive still rests on
-authored boundaries.** Phase T2 (schema v2 + computed-program seeding +
-A-est cells) is justified and specified.
+**Limits: recall is 2 of 8 event-overlapping groups.**
+
+**(1b) BUT PHASE T2 RAN AND FAILED — the positive does NOT carry
+downstream** ([[operations/nonoracle-timing-t2-result-2026-08-23]],
+experiments 245/246/249/250). Retraining with the inferred program costs
+**−2.469 dB** on `event_return` against not gating — essentially the
+2-frame mistiming arm's −2.386 dB — **even though the timing is exact**
+(estimated gaps match the oracle's to ~1e-14). **This is a pure
+MEMBERSHIP failure at the magnitude a timing failure costs.** The
+signature is specific: `event_episode1` 30.20 BEATS the ungated 29.60,
+`ghost_gap` 23.88 sits near the oracle's 22.83, `ordinary_all` is fine —
+only the return collapses. **Decisive ordering: fully gated 28.19 >
+NOT gated 27.14 >> PARTIALLY gated 24.67 — partial membership is worse
+than both**, the membership analogue of the timing result. Two causes
+point the same way and are not separated: voxel cells enclose ~3.8× the
+oracle sphere (over-gating background), and only 2 of 8 groups gated
+(partial object). **Refuted is VOXEL-CELL MEMBERSHIP, not non-oracle
+gating** — the boundary output is exact and reusable. **Next step is
+MEMBERSHIP, not timing**: score a per-row membership instrument against
+the authored sphere BEFORE retraining, reusing the ordering that made T1
+cheap and decisive.
 
 **(2) THE NEGATIVE — no consolidation payload has headroom, and it is the
 FIXTURE not the payload.** With an oracle-correct link, every

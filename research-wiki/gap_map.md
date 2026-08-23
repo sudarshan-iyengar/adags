@@ -33,9 +33,25 @@ bit-for-bit. A mechanism whose errors are worse than inaction gets a
 first-class way to decline, and it used it 99.5% of the time.
 
 **Limits, recorded as limits:** recall is 2 of 8 event-overlapping
-groups — a high-precision, low-recall instrument. Nothing was retrained,
-so **the localized-presence positive still rests on authored
-boundaries**; phase T2 is what would change that. And LRV3's absence is
+groups — a high-precision, low-recall instrument.
+
+**PHASE T2 THEN RAN AND FAILED, and the failure is instructive**
+([[operations/nonoracle-timing-t2-result-2026-08-23]]). Retraining with
+the inferred program costs **−2.469 dB** on `event_return` against not
+gating, matching the 2-frame mistiming arm's −2.386 dB — **while the
+timing is exact to ~1e-14**. So the gate fires at the right times, helps
+during presence (`event_episode1` 30.20 beats the ungated 29.60), renders
+the absence (`ghost_gap` 23.88 near the oracle's 22.83) — and destroys
+the return. **Fully gated 28.19 > NOT gated 27.14 >> PARTIALLY gated
+24.67.**
+
+**This adds a second necessary condition to G13's representation limb.**
+The project had established that the mechanism needs frame-accurate
+TIMING. It now has that timing can be inferred exactly and still leave
+the mechanism HARMFUL, because per-row MEMBERSHIP is an independent
+precision requirement of comparable severity. Imprecise membership, like
+imprecise timing, has negative value. What is refuted is voxel-cell
+membership at 8³, not non-oracle gating. And LRV3's absence is
 genuine removal from the ray-trace, not occlusion, so the ablation signal
 is a clean step that real data will not supply.
 
