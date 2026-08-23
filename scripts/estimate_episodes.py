@@ -1315,6 +1315,12 @@ def main(argv=None):
                         help="how many train cameras to sample (>= %d)"
                              % MIN_AGREEING_CAMERAS)
     parser.add_argument("--coarse_stride", type=int, default=4)
+    parser.add_argument(
+        "--skip-scoring", dest="skip_scoring", action="store_true",
+        help=("omit the ground-truth scoring stage. It builds a SPHERE "
+              "membership test from event_spec.json's event_object "
+              "centre/radius, which a non-spherical fixture deliberately "
+              "omits; such a fixture is scored by a separate tool"))
     # NOTE: --elgs_prereg_dir is NOT declared here. It is already an
     # OptimizationParams field (arguments/__init__.py:257), so declaring it
     # again is an argparse conflict; it is read off `opt` below.
@@ -1461,8 +1467,15 @@ def main(argv=None):
         print("v2 program written: %s (membership_mode %s, sha256 %s)"
               % (args.emit_program, args.membership_mode, v2_hash))
 
-    scoring = score_program(program, estimate["labels"], gaussians._xyz.detach(),
-                            dataset_params.source_path, chosen)
+    if args.skip_scoring:
+        scoring = {"skipped": True, "reason": (
+            "--skip-scoring was passed: the scoring stage reads "
+            "event_object.centre/radius from the fixture's spec and builds a "
+            "sphere membership test from them, which a non-spherical fixture "
+            "deliberately omits. Membership must be scored separately.")}
+    else:
+        scoring = score_program(program, estimate["labels"], gaussians._xyz.detach(),
+                                dataset_params.source_path, chosen)
 
     report = {
         "schema": REPORT_SCHEMA,
@@ -1527,6 +1540,15 @@ def main(argv=None):
 def _print_table(report):
     scoring = report["scoring"]
     counts = report["render_counts"]
+    if scoring.get("skipped"):
+        print("")
+        print("=== phase T1 episode-boundary estimation (SCORING SKIPPED) ===")
+        print("groups                  %d" % report["grouping"]["n_groups"])
+        print("gated groups            %d"
+              % sum(1 for r in report["program"]["groups"] if r["gated"]))
+        print("scoring skipped         %s" % scoring["reason"])
+        print("program sha256          %s" % report["program_sha256"])
+        return
     print("")
     print("=== phase T1 episode-boundary estimation ===")
     print("groups                  %d" % report["grouping"]["n_groups"])
