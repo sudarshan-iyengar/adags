@@ -43,6 +43,21 @@ representation-only pivot.** Geometry was dropped before compute —
 `EVENT_SPHERE_CENTRE` is a constant applied in both episodes, so an
 oracle-correct geometry transfer is the identity map.
 
+**(2b) THE PERMUTATION CONTROL OVERTURNED THE ATTRIBUTION AND
+STRENGTHENED THE NEGATIVE** (experiment 244). Destroying identity
+entirely while preserving the temporal window costs **−0.97 dB at a
+pre-edit distance within 0.6% of the oracle link's, editing HALF as many
+rows** — so per row edited, the identity-DESTROYING edit is more
+damaging. The metric-visible links are monotone in edit magnitude
+(7.14 → −0.97, 7.18 → −1.19, 10.05 → −6.05). **The −1.19 dB therefore
+says NOTHING about identity**: the harm is displacement, not
+incorrectness, and "actively harmful" was right about the sign and wrong
+about the cause. The consequence is stronger than a null — for opacity
+there is **no regime in which redirecting could help**, since a correct
+link and a random permutation of equal magnitude are indistinguishable
+and both destroy. **Carry as METHOD: every edit experiment needs a
+control that separates MAGNITUDE from CORRECTNESS.**
+
 **(3) THREE METHOD-LEVEL NEGATIVES from a fresh adversarial review**
 (which confirmed every number and returned STANDS WITH QUALIFICATIONS):
 a **scale-free ratio screen is insufficient** — it cannot tell "1.92× of

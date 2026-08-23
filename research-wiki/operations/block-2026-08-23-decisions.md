@@ -62,6 +62,24 @@ useful payload, and **the representation-only pivot is the recommendation
 on the record.** The certificate machinery works; the payload does not
 exist.
 
+**APPENDED after the permutation control ran (experiment 244) — the
+attribution changed and the negative got stronger.** A fresh adversarial
+review identified that the L3 no-op could not attribute the harm, because
+it edits donor rows whose support ends before the scored frames. The
+control it named — a within-recipient permutation, identity destroyed,
+window preserved — ran in under a minute and returned **−0.9685 dB at a
+pre-edit distance within 0.6% of the oracle link's, while editing HALF as
+many rows**. The three metric-visible links are monotone in edit
+magnitude (7.14 → −0.97, 7.18 → −1.19, 10.05 → −6.05).
+
+So the −1.19 dB says **nothing about identity**; "actively harmful" was
+right about the sign and wrong about the cause, and that reading is
+withdrawn. **The payload negative is thereby STRENGTHENED**: damage
+tracks displacement independent of correctness, so **there is no regime
+in which redirecting opacity could help.** A correct link and a random
+permutation of equal magnitude are indistinguishable, and both are
+destructive.
+
 **The mechanism claim (INFERENCE, not measurement):** LRV3's return is
 identical in pose, colour and texture and is observed by 48 training
 view-frames, so the recipient rows are wrong about nothing. Headroom is
