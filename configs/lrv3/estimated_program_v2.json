@@ -1,0 +1,64 @@
+{
+ "cloud": {
+  "n_rows": 149794,
+  "xyz_sha256": "460c2736534c4d6d914e83571fd65115884e367fe723308e0fe298861cf3837f"
+ },
+ "frame_dt": 0.16666666666666607,
+ "groups": [
+  {
+   "gaps": [
+    [
+     5.166666666666648,
+     9.166666666666634
+    ]
+   ],
+   "group": 291,
+   "offset_frame": 30,
+   "onset_frame": 57,
+   "rows_at_estimation": 1213
+  },
+  {
+   "gaps": [
+    [
+     5.166666666666648,
+     9.166666666666634
+    ]
+   ],
+   "group": 292,
+   "offset_frame": 30,
+   "onset_frame": 57,
+   "rows_at_estimation": 2412
+  }
+ ],
+ "membership_mode": "spatial_voxel",
+ "presence_edge_half_width_w": 0.33333333333333215,
+ "schema_version": "adags-episode-program-v2",
+ "source": {
+  "checkpoint": "/apollo/users/sri/proj_adags/runs/elgs/20260820T002949Z_lrv3_a0_prime_0_b7952b0/chkpnt6000.pth",
+  "config": "configs/lrv3/a0_local_control.yaml",
+  "estimate_sha256": "3f85c5c5d4693161754b5d3dc86c1626b30758d17ddd02900df7d9ee7c8f553e"
+ },
+ "spatial": {
+  "cells_per_axis": 8,
+  "group_cell_keys": {
+   "291": [
+    364
+   ],
+   "292": [
+    365
+   ]
+  },
+  "kind": "voxel_grid",
+  "lo": [
+   -1.6801106929779053,
+   -1.7641810178756714,
+   -1.7129145860671997
+  ],
+  "span": [
+   3.2317590713500977,
+   3.064145088195801,
+   3.2782649993896484
+  ]
+ },
+ "units": "model_time_seconds"
+}
