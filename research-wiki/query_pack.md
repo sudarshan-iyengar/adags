@@ -139,7 +139,38 @@ no warp) — nothing in the code could check this and a backward asset
 would have silently reversed every velocity. **Motion is small: p50 0.06
 px, p99 3.1 px, only 8.6% of pixels move >0.5 px**, so a null is a
 likely and legitimate outcome and the camera-swapped wrong-flow control
-is what makes it informative. A magnitude guard frozen in the original
+is what makes it informative. **THE SCREEN RAN AND THE PRIOR IS REJECTED** (experiments 237-242,
+254-258, [[operations/b1f-flow-screen-result-2026-08-23]]). The frozen
+attribution rule decides it: **B1-F did NOT beat B1-X** (paired mean
+−0.0952 on the event union), so the result is unattributable and the
+prior is rejected regardless of the plain-B1 comparison. **Honest
+reading: everything is noise** — every delta flips sign across seeds and
+all magnitudes sit far inside the measured 0.341 dB event-union seed
+spread (|B1-F−B1| 0.018, |B1-X−B1| 0.114, |B1-F−B1X| 0.095). **This is
+the SECOND time in this project that camera-swapped flow matched or beat
+correct flow** (CSVL-VPL Stage 1 measured 0.922 vs 0.889); the control
+was mandatory because of that precedent and it held. **This closes the
+LAST live zero-acquisition prior experiment** with a terminal negative.
+
+**MEASURED: the first genuinely-different-seed spread this project has.**
+Plain B1 at seeds 0 and 1 differ by **0.635 dB global / 0.341 dB event
+union** — more than double the fixed-seed replicate spread and 2.3× the
+±0.28 the ladder era cited. **No effect below ~0.64 dB is resolvable by
+two seeds at the 50-frame protocol.**
+
+**Three defects surfaced by a fail-closed crash** (both B1-X arms errored
+at the first birth event): the roster builder was handed a
+`CameraDataset` that iterates as `(image, camera)` tuples; `_camera_ids`
+**skipped unnamed entries SILENTLY**, so a wiring mistake became an EMPTY
+roster — which fails closed for the swap control but leaves the held-out
+guard **INERT** for the correct arm (no leakage occurred; verified that
+all seven birth cameras were training cameras); and the flag-off
+bit-identity test pinned its baseline to **HEAD**, so it self-invalidated
+the moment the code was committed. **Carry as METHOD: a guard that can
+degrade silently to "protects nothing" is worse than no guard, and a
+bit-identity test whose reference moves with the branch proves nothing.**
+
+A magnitude guard frozen in the original
 spec was WITHDRAWN before any run on measurement: it would have shrunk
 every velocity ~200× and made the cell measure the guard.
 

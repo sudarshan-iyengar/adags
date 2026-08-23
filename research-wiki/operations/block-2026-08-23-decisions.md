@@ -178,10 +178,22 @@ basis reproduced the requested displacement in full (ratio 1.0). Six
 cells launched (237-242) with a wrong-flow camera-swap control, all on
 one pool including a fresh plain-B1 comparator.
 
-**Pre-registered expectation:** motion is small (p50 0.06 px, p99 3.1 px,
-8.6% of pixels moving >0.5 px), so a null is likely and legitimate. The
-control is what makes a null terminal for the zero-acquisition BIRTH
-prior rather than leaving it open.
+**RESULT: the prior is REJECTED**
+([[b1f-flow-screen-result-2026-08-23]]). The frozen attribution rule
+decides it: **B1-F did NOT beat B1-X** (paired mean −0.0952 on the event
+union), so the result is unattributable regardless of the plain-B1
+comparison. **Everything is noise** — every delta flips sign across seeds
+and all magnitudes sit far inside the measured 0.341 dB event-union seed
+spread. This is the **second** time in this project that camera-swapped
+flow matched or beat correct flow, and the control was mandatory because
+of that precedent. It **closes the last live zero-acquisition prior
+experiment** with a terminal negative, which is exactly what justified
+spending the cells on a pre-registered likely null.
+
+**Measured en route: the first genuinely-different-seed spread this
+project has** — 0.635 dB global, 0.341 dB event union. **No effect below
+~0.64 dB is resolvable by two seeds at the 50-frame protocol**, which
+bounds every future comparison in this family.
 
 ## 6. Two instrument defects found, both affecting how past results read
 
