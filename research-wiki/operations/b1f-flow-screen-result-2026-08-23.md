@@ -1,12 +1,12 @@
-# B1-F flow screen — machinery health CONFIRMED; metrics PENDING
-# (2026-08-23)
+# RESULT — B1-F flow screen: the flow BIRTH prior is REJECTED, and
+# correct flow did not beat wrong flow (2026-08-23)
 
 EXPLORATORY, `evidence_bearing: false`. Design, arms and gates frozen
 before any output in [[b1f-flow-birth-prior-spec-2026-08-23]]; launch
-rule and preflight in [[b1f-preflight-result-2026-08-23]]. This page is
-opened while the screen is still running so that the machinery-health
-finding — which is already terminal for three arms — is on the record
-independently of the metrics.
+rule and preflight in [[b1f-preflight-result-2026-08-23]]. All six arms
+and their evaluations are TERMINAL. Sections 2-5 were written while the
+screen was still running, so the machinery findings are on the record
+independently of the metrics in §6.
 
 ## 1. Cells
 
@@ -15,11 +15,12 @@ independently of the metrics.
 | plain B1 (fresh on-pool comparator) | 0 | 237 | 251 | COMPLETED |
 | plain B1 | 1 | 238 | 252 | COMPLETED |
 | **B1-F** correct flow | 0 | 239 | 253 | COMPLETED |
-| **B1-F** correct flow | 1 | 240 | — | running |
-| **B1-X** camera-swapped wrong flow | 0 | 241 | — | running |
-| **B1-X** camera-swapped wrong flow | 1 | 242 | — | running |
+| **B1-F** correct flow | 1 | 240 | 256 | COMPLETED |
+| **B1-X** camera-swapped wrong flow | 0 | 241 r0 ERROR → **254 r1** | 257 | COMPLETED |
+| **B1-X** camera-swapped wrong flow | 1 | 242 r0 ERROR → **255 r1** | 258 | COMPLETED |
 
-All commit `789595a`, pool `hopper`, admitted H100 image
+Plain-B1 and B1-F at commit `789595a`, the B1-X reruns at `b4146d5`
+(see §4 for why, and for the inertness argument). Pool `hopper`, admitted H100 image
 `sha256:0d577168…`, 6,000 iterations, frames 0-49, cam00 sealed,
 `route_logit_init: 4.0`, `elgs_reserved_parity: true`, 600k cap.
 
@@ -166,7 +167,93 @@ from noise on the evidence of one seed pair.
 Recorded now because it is independent of the screen's outcome and
 because it bounds what any future two-seed 50-frame cell can claim.
 
-## 6. What is NOT yet established
+## 6. RESULT — the flow birth prior is REJECTED, and wrong flow scored HIGHER than correct flow
+
+All six arms terminal and evaluated. Event regions scored with
+`scripts/event_ray_metrics.py` on the FROZEN
+`configs/n3v/ladder_event_masks_crb0_49.json`, 8-bit saved-render basis;
+`--val` at `chkpnt6000` for every arm, one convention throughout.
+
+| arm | event union | A | B | C | complement | whole |
+|---|---:|---:|---:|---:|---:|---:|
+| plain B1 s0 | 31.7734 | 37.4977 | 36.2967 | 27.2202 | 33.1114 | 33.1061 |
+| plain B1 s1 | 31.4320 | 36.5831 | 35.6523 | 27.0166 | 33.7827 | 33.7722 |
+| B1-F s0 | 31.6853 | 37.4036 | 36.1172 | 27.1416 | 32.9718 | 32.9667 |
+| B1-F s1 | 31.5569 | 37.1409 | 36.0359 | 27.0324 | 33.5731 | 33.5644 |
+| B1-X s0 | 31.5871 | 37.1788 | 35.7321 | 27.0870 | 33.0233 | 33.0176 |
+| B1-X s1 | 31.8456 | 36.8502 | 35.7691 | 27.4959 | 33.2892 | 33.2834 |
+
+Paired deltas on the event union:
+
+```
+B1-F − B1    s0 −0.0881   s1 +0.1249   mean +0.0184
+B1-X − B1    s0 −0.1863   s1 +0.4136   mean +0.1136
+B1-F − B1-X  s0 +0.0982   s1 −0.2887   mean −0.0952
+```
+
+### The frozen gate, applied
+
+| condition | outcome |
+|---|---|
+| 1. event union `B1-F − B1` ≥ 0 on BOTH seeds | **FAIL** (s0 −0.0881) |
+| 2. paired mean event effect > 0 | pass (+0.0184) |
+| 3. **B1-F > B1-X on the event union** | **FAIL** (mean −0.0952) |
+| 4. complement paired mean ≥ −0.10 dB | **FAIL** (−0.1746) |
+| 5. global non-catastrophe ≥ −0.30 dB per seed | pass (−0.139, −0.208) |
+| 6. machinery health | pass (§2) |
+
+**VERDICT: the flow BIRTH prior is REJECTED.** The frozen attribution
+rule is decisive on its own: *if correct flow does not beat wrong flow on
+the event endpoint, the result is UNATTRIBUTABLE and the prior is
+rejected regardless of how B1-F compares to plain B1.* **It does not.
+Camera-swapped flow scored HIGHER than correct flow** (paired mean
+−0.0952 for B1-F − B1-X).
+
+### The honest reading: everything here is noise
+
+Every delta flips sign across seeds, and every magnitude sits far inside
+the measured spread. The plain-B1 event-union seed spread is
+**31.7734 vs 31.4320 = 0.341 dB**, and the global spread is 0.635 dB
+(§5). Against that:
+
+```
+|B1-F − B1|    = 0.018   (5% of the union seed spread)
+|B1-X − B1|    = 0.114   (33%)
+|B1-F − B1-X|  = 0.095   (28%)
+```
+
+**No arm is distinguishable from any other.** The correct statement is
+not "wrong flow is better" — it is that **the flow-derived velocity
+initialization has no measurable effect at this protocol**, and the
+wrong-flow control demonstrates that by scoring indistinguishably.
+
+### This REPLICATES a prior project finding, and that is the durable part
+
+CSVL-VPL Stage 1 (2026-07-26) measured camera-swapped flow scoring
+**above** valid flow (0.922 vs 0.889) and treated it as a no-go. **This
+is the second independent occasion in this project on which
+camera-swapped flow has matched or beaten correct flow.** The control was
+mandatory here precisely because of that precedent, and the precedent
+held.
+
+### What this closes
+
+The BIRTH-prior role was the **last live zero-acquisition prior
+experiment** ([[prior-asset-inventory-2026-08-20]] decision 4): the
+LINEAGE-prior role is blocked behind an N3V tracks adapter, and this was
+the one prior use that needed no new acquisition. **It is now closed
+with a terminal negative rather than left open**, which is what justified
+spending the cells on a pre-registered likely null.
+
+**Forbidden by this result:** any claim that flow improves packet birth,
+and any claim that wrong flow is *better* — the arms are not separable.
+**Not established:** that flow is useless as a prior in general. What is
+refuted is flow-derived velocity initialization for relocated packets at
+the 50-frame protocol, on masks now known to score mostly static pixels
+(Appendix C), with a measured flow field small enough (p50 0.06 px) that
+a null was pre-registered as the likely outcome.
+
+## 7. What is NOT established
 
 **Everything the screen exists to decide.** No metric has been read. The
 decisive comparison is **B1-F vs B1-X**: if correct flow does not beat
