@@ -1151,10 +1151,18 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     if bool(getattr(opt, "packet_birth_flow_init", False)):
         from scene.packet_birth_flow import build_flow_assets
 
+        # `.viewpoint_stack`, NOT the CameraDataset itself: getTrainCameras
+        # returns a CameraDataset whose __getitem__ yields (image, camera)
+        # TUPLES (utils/data_utils.py:17-35), so iterating it hands the
+        # roster builder objects with no `image_name`. That produced an
+        # EMPTY roster, which fails closed for the camera-swapped control
+        # but leaves the held-out guard silently INERT for the correct arm
+        # (experiments 241/242). Iterating it would also load every image
+        # from disk as a side effect.
         _packet_flow_assets = build_flow_assets(
             scene.motion_prior_cache,
-            train_cameras=scene.getTrainCameras(),
-            holdout_cameras=scene.getTestCameras(),
+            train_cameras=scene.getTrainCameras().viewpoint_stack,
+            holdout_cameras=scene.getTestCameras().viewpoint_stack,
         )
     packet_birth_state = setup_packet_birth(opt, flow_assets=_packet_flow_assets)
     # EL-GS: same placement rationale; mutually exclusive with the

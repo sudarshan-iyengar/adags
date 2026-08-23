@@ -51,6 +51,7 @@ from scene.packet_birth import (
 )
 from scene.packet_birth_flow import (
     FLOW_OUTLIER_QUANTILE,
+    _camera_ids,
     FLOW_SOURCE_CAMERA_SWAPPED,
     FLOW_SOURCE_CORRECT,
     assert_frame_time_convention,
@@ -297,15 +298,25 @@ def _assets(entries, train=TRAIN_CAMERAS, holdout=HOLDOUT_CAMERAS):
     )
 
 
+#: The last commit BEFORE flow-derived velocity initialization landed, i.e.
+#: the implementation the flag-off claim is about. This is deliberately a
+#: FIXED sha rather than ``HEAD``: pinning to HEAD made the test
+#: self-invalidating -- the moment the flow work was committed, the
+#: "baseline" became the post-change code and the non-vacuity assertion
+#: (that the baseline REJECTS the new keyword) started failing. A bit-identity
+#: test whose reference moves with the branch cannot prove anything.
+FLAG_OFF_BASELINE_COMMIT = "f666dd7"
+
+
 def _load_head_baseline():
-    """Import ``scene/packet_birth.py`` exactly as committed at HEAD.
+    """Import ``scene/packet_birth.py`` exactly as committed at the baseline.
 
     The flag-off claim is a claim about the PREVIOUS implementation, so the
     comparison reads that implementation rather than a paraphrase of it.
     """
 
     result = subprocess.run(
-        ["git", "show", "HEAD:scene/packet_birth.py"],
+        ["git", "show", "%s:scene/packet_birth.py" % FLAG_OFF_BASELINE_COMMIT],
         cwd=str(REPO_ROOT),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -336,7 +347,7 @@ class FlagOffBitIdentityTests(unittest.TestCase):
     def test_target_rows_match_the_head_implementation_exactly(self):
         baseline = _load_head_baseline()
         if baseline is None:
-            self.skipTest("git show HEAD:scene/packet_birth.py is unavailable")
+            self.skipTest("git show %s:scene/packet_birth.py is unavailable" % FLAG_OFF_BASELINE_COMMIT)
         bank, donors, points, colors = self._target_row_inputs()
         # Non-vacuity: the baseline really is the PRE-change implementation, so
         # it cannot know the new keyword. If HEAD ever carries this change the
@@ -356,7 +367,7 @@ class FlagOffBitIdentityTests(unittest.TestCase):
     def test_a_whole_flag_off_event_matches_the_head_implementation(self):
         baseline = _load_head_baseline()
         if baseline is None:
-            self.skipTest("git show HEAD:scene/packet_birth.py is unavailable")
+            self.skipTest("git show %s:scene/packet_birth.py is unavailable" % FLAG_OFF_BASELINE_COMMIT)
         image, gt_image, depth, alpha = _event_inputs()
 
         def run(module, opt):
@@ -933,3 +944,44 @@ class EventIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RosterFailClosedTests(unittest.TestCase):
+    """The roster builder must never degrade silently to an EMPTY set.
+
+    Regression for experiments 241/242: ``Scene.getTrainCameras()`` returns a
+    ``CameraDataset`` whose ``__getitem__`` yields ``(image, camera)`` tuples
+    (utils/data_utils.py:17-35), so iterating it handed ``_camera_ids``
+    objects with no ``image_name``. The old code SKIPPED those, producing an
+    empty roster -- which fails closed for the camera-swapped control but
+    leaves ``assert_not_holdout`` INERT for the correct arm. A safety guard
+    that silently protects nothing is worse than no guard.
+    """
+
+    class _Cam(object):
+        def __init__(self, name):
+            self.image_name = name
+
+    def test_camera_objects_and_bare_strings_both_work(self):
+        self.assertEqual(
+            _camera_ids(
+                [self._Cam("cam03_0007"), self._Cam("cam11_0002")]
+            ),
+            (3, 11),
+        )
+        self.assertEqual(
+            _camera_ids(["cam00_0000", "cam05_0001"]), (0, 5)
+        )
+
+    def test_an_empty_roster_is_still_empty(self):
+        self.assertEqual(_camera_ids([]), ())
+        self.assertEqual(_camera_ids(None), ())
+
+    def test_the_production_dataset_tuple_shape_now_raises(self):
+        with self.assertRaises(ContractError) as caught:
+            _camera_ids([(object(), self._Cam("cam03_0007"))])
+        self.assertIn("viewpoint_stack", str(caught.exception))
+
+    def test_a_non_empty_roster_can_never_yield_an_empty_id_set(self):
+        with self.assertRaises(ContractError):
+            _camera_ids([object(), object()])

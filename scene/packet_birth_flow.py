@@ -161,14 +161,41 @@ def parse_camera_name(image_name: str) -> Tuple[int, int, str, str]:
 
 
 def _camera_ids(cameras: Iterable[Any]) -> Tuple[int, ...]:
-    """Sorted distinct camera ids from camera objects or bare image names."""
+    """Sorted distinct camera ids from camera objects or bare image names.
+
+    FAILS CLOSED on a non-empty roster that yields no usable name. The
+    previous revision skipped unnamed entries silently, which turned a
+    wiring mistake into an EMPTY roster rather than an error -- and an empty
+    holdout roster makes :meth:`PacketFlowAssets.assert_not_holdout` inert,
+    i.e. a safety guard that silently protects nothing. Verified in
+    production: ``Scene.getTrainCameras()`` returns a
+    :class:`utils.data_utils.CameraDataset` whose ``__getitem__`` yields
+    ``(image, camera)`` TUPLES, so every entry was skipped. Callers must
+    pass the camera objects themselves (the dataset's ``viewpoint_stack``).
+    """
 
     ids = set()
+    seen = 0
     for camera in cameras or ():
+        seen += 1
         name = camera if isinstance(camera, str) else getattr(camera, "image_name", "")
         if not name:
-            continue
+            raise ContractError(
+                "packet-birth flow init needs camera objects exposing "
+                "image_name (or bare image-name strings); entry {} of the "
+                "roster is a {} with no image_name. Scene.getTrainCameras() "
+                "returns a CameraDataset that iterates as (image, camera) "
+                "tuples -- pass its .viewpoint_stack instead.".format(
+                    seen - 1, type(camera).__name__
+                )
+            )
         ids.add(parse_camera_name(name)[0])
+    if seen and not ids:
+        raise ContractError(
+            "packet-birth flow init derived an EMPTY camera roster from {} "
+            "entries; refusing rather than leaving the held-out guard "
+            "inert".format(seen)
+        )
     return tuple(sorted(ids))
 
 
