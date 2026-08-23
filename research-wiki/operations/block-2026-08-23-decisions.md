@@ -88,6 +88,26 @@ is carried. LRV4 — an observation-starved variant with a 1-frame return —
 is being built to TEST that claim, framed as a mechanism test rather than
 a rescue.
 
+**The falsification test was BUILT, RUN, and returned an INVALID
+INSTRUMENT rather than an answer**
+([[lrv4-starved-fixture-result-2026-08-23]], experiments 247/248). LRV4 —
+LRV3 with a one-frame return, held-out return supply cut to exactly one
+third — trained a healthy substrate (28.393 dB against LRV3's 28.59), and
+its integrity check passed. But the screen found **ONE recipient row**,
+so `row_sets_sufficient` is false and every recipient-side statistic is a
+one-pair statistic. **The mechanism claim is UNTESTED — neither branch of
+the frozen rule fires.**
+
+**The near-miss is the durable part.** From that single pair the DC
+headroom ratio reads **4.995** — above the frozen 2.0 floor and higher
+than anything LRV3 produced. Read without its pair count it would have
+been reported as a spectacular confirmation of the claim the fixture
+exists to test. It was caught only by the sufficiency flag and by `pairs`
+being carried next to every ratio. **A ratio without its n is not a
+measurement.** No threshold was changed after seeing the null; the pure
+diagnostic that would separate a threshold artifact from a substantive
+finding is specified for a new frozen spec.
+
 ## 3. The development scene contains almost no usable events
 
 Verified by ground-truth-only curation of all 300 `cut_roasted_beef`

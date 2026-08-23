@@ -58,6 +58,22 @@ link and a random permutation of equal magnitude are indistinguishable
 and both destroy. **Carry as METHOD: every edit experiment needs a
 control that separates MAGNITUDE from CORRECTNESS.**
 
+**(2c) The starved-fixture falsification test RAN and returned an
+INVALID INSTRUMENT** (experiments 247/248,
+[[operations/lrv4-starved-fixture-result-2026-08-23]]). LRV4 = LRV3 with
+a ONE-FRAME return (held-out return supply exactly one third). Substrate
+healthy (28.393 vs LRV3's 28.59), integrity check passed — but the screen
+found **ONE recipient row**, so `row_sets_sufficient` is FALSE and the
+observation-supply mechanism claim is **UNTESTED**, not refuted.
+**The near-miss is the lesson: from that single pair the DC headroom
+ratio reads 4.995 — above the 2.0 floor and higher than anything LRV3
+produced — and would have been reported as a spectacular confirmation
+had the pair count not been checked. A RATIO WITHOUT ITS n IS NOT A
+MEASUREMENT.** Diagnosed cause: the derived recipient support-lower-min
+moved 9.3 → 9.6667 while a row born at the single return frame has
+support starting at 9.3333, so it is excluded by construction. No
+threshold was changed after seeing the null.
+
 **(3) THREE METHOD-LEVEL NEGATIVES from a fresh adversarial review**
 (which confirmed every number and returned STANDS WITH QUALIFICATIONS):
 a **scale-free ratio screen is insufficient** — it cannot tell "1.92× of
