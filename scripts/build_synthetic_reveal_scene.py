@@ -18,6 +18,29 @@ already consumes (``transforms_train.json`` / ``transforms_test.json`` /
 
 Determinism: no unseeded randomness. The only random draw is the initialization
 point cloud, from an explicit ``numpy.random.default_rng(seed)``.
+
+Observation supply is the fixture's one free variable
+--------------------------------------------------------------------------
+``--first-return-frame`` sets how many times the returned surface is observed.
+LRV3 (first return frame 57) gives 3 return frames x 16 training cameras = 48
+training view-frames. That supply is the subject of a PRE-IDENTIFIED
+experiment, not a rescue of a negative result: the 2026-08-23 block falsified
+two consolidation payloads (DC and opacity) on LRV3 with oracle-correct links,
+and the recorded reading of that pair of nulls is that LRV3's return is wrong
+about NOTHING -- identical pose, colour and texture, densely observed -- so no
+payload can carry anything into it. That reading is a mechanism claim and it is
+falsifiable: if headroom is a function of observation SUPPLY rather than of
+which tensor is carried, starving the return must create headroom, and if it
+does not, the claim is wrong.
+
+LRV4 is that test, and it is one variable: first return frame 59, so the return
+is a SINGLE frame and the supply drops 3x to 16 training view-frames. Cameras,
+held-out split, resolution, frame count, fps, ground extent, object centre,
+radius, colour, texture, lighting, seed and initialization cloud are all
+unchanged. Because a 1-frame return cannot clear ``FLOOR_LEN``, LRV4 is
+INADMISSIBLE for gated-presence / EL-GS work and is a PAYLOAD fixture only;
+``--allow-short-return`` is the default-off flag that permits it and stamps the
+refusal into ``event_spec.json``.
 """
 
 from __future__ import annotations
@@ -58,6 +81,47 @@ EPISODE_1_FRAMES = (0, 29)
 DEFAULT_FIRST_RETURN_FRAME = 54
 GAP_FRAMES = (30, DEFAULT_FIRST_RETURN_FRAME - 1)
 EPISODE_2_FRAMES = (DEFAULT_FIRST_RETURN_FRAME, 59)
+
+# The gated-presence admissibility bound, in seconds. Episode 2's duration is
+# TIME_DURATION[1] + 0.5 - first_return_frame/FPS and must STRICTLY exceed
+# FLOOR_LEN for the EL-GS interval representation to be able to hold it; the
+# cap of 57 is that bound solved for the first return frame. `--allow-short-
+# return` relaxes the CAP ONLY, and stamps the resulting scene INADMISSIBLE.
+FLOOR_LEN = 10.0 / 12.0                # 0.8333 s
+ADMISSIBLE_MAX_FIRST_RETURN_FRAME = 57
+#: The presence window's end, in frames: (TIME_DURATION[1] + 0.5) * FPS = 63.
+WINDOW_END_FRAMES = int(round((TIME_DURATION[1] + 0.5) * FPS))
+#: FLOOR_LEN in frames: 0.8333 s * 6 fps = 5 frames.
+FLOOR_LEN_FRAMES = int(round(FLOOR_LEN * FPS))
+
+
+def episode_2_duration(first_return_frame):
+    """Episode 2's duration in SECONDS -- for reporting only.
+
+    Do not compare this against FLOOR_LEN: see
+    :func:`gated_presence_admissible`.
+    """
+    return (TIME_DURATION[1] + 0.5) - first_return_frame / FPS
+
+
+def episode_2_duration_frames(first_return_frame):
+    """Episode 2's duration in FRAMES: an exact integer."""
+    return WINDOW_END_FRAMES - int(first_return_frame)
+
+
+def gated_presence_admissible(first_return_frame):
+    """True iff episode 2 STRICTLY clears FLOOR_LEN.
+
+    Tested in FRAMES, and it must be. At first_return_frame = 58 -- a
+    2-frame return -- episode 2 lasts EXACTLY floor_len, and the LRV3
+    spec refuses that case rather than silently accepting it. In float64
+    the same comparison is `10.5 - 58/6 > 10/12`, whose left side rounds
+    to 0.8333333333333339 against a right side of 0.8333333333333334, so
+    the float form ADMITS the boundary the spec refuses. The integer form
+    `63 - f0 > 5` is exact and agrees with the frozen cap of 57.
+    """
+    return episode_2_duration_frames(first_return_frame) > FLOOR_LEN_FRAMES
+
 
 LIGHT_DIR = np.array([0.5, 1.0, 0.4])
 AMBIENT = 0.25
@@ -277,6 +341,16 @@ def main():
                     default=DEFAULT_FIRST_RETURN_FRAME,
                     help="first frame of the return episode; smaller return = "
                          "harder event. Capped at 57 by floor_len.")
+    ap.add_argument("--allow-short-return", action="store_true",
+                    help="DEFAULT OFF. Relax the floor_len CAP so the return "
+                         "may be shorter than the EL-GS interval "
+                         "representation can hold (up to a SINGLE frame). The "
+                         "resulting scene is INADMISSIBLE for any gated-"
+                         "presence / EL-GS experiment and its event_spec.json "
+                         "says so; it is a PAYLOAD fixture only, built to vary "
+                         "OBSERVATION SUPPLY. Nothing else about the scene "
+                         "changes, and with the flag off generation is "
+                         "byte-identical to before the flag existed.")
     ap.add_argument("--ground-half-extent", type=float,
                     default=DEFAULT_GROUND_HALF_EXTENT,
                     help="ground plane half extent; MUST NOT exceed the "
@@ -287,11 +361,30 @@ def main():
     global GROUND_HALF_EXTENT, GAP_FRAMES, EPISODE_2_FRAMES
     GROUND_HALF_EXTENT = float(args.ground_half_extent)
     f0 = int(args.first_return_frame)
-    if not EPISODE_1_FRAMES[1] + 2 <= f0 <= 57:
-        raise SystemExit("first return frame %d is inadmissible: episode 2 must "
-                         "clear floor_len, which caps it at 57" % f0)
+    floor = ADMISSIBLE_MAX_FIRST_RETURN_FRAME
+    if args.allow_short_return:
+        # The cap, and ONLY the cap, is relaxed. The structural minimum
+        # (a return must start at least one frame after the gap opens) and
+        # the last-frame bound are unchanged.
+        floor = N_FRAMES - 1
+    if not EPISODE_1_FRAMES[1] + 2 <= f0 <= floor:
+        raise SystemExit(
+            "first return frame %d is out of range [%d, %d]: %s" % (
+                f0, EPISODE_1_FRAMES[1] + 2, floor,
+                "the last frame is %d" % (N_FRAMES - 1)
+                if args.allow_short_return else
+                "episode 2 must clear floor_len, which caps it at %d "
+                "(pass --allow-short-return to build an observation-STARVED "
+                "payload-only fixture)"
+                % ADMISSIBLE_MAX_FIRST_RETURN_FRAME))
     GAP_FRAMES = (EPISODE_1_FRAMES[1] + 1, f0 - 1)
     EPISODE_2_FRAMES = (f0, N_FRAMES - 1)
+    admissible = gated_presence_admissible(f0)
+    if not admissible:
+        print("WARNING: episode 2 lasts %.4f s, which does NOT clear "
+              "floor_len = %.4f s. Scene %r is INADMISSIBLE for gated-presence "
+              "/ EL-GS experiments and is a PAYLOAD fixture only."
+              % (episode_2_duration(f0), FLOOR_LEN, args.scene_id))
 
     out = Path(args.out)
     (out / "train").mkdir(parents=True, exist_ok=True)
@@ -375,6 +468,25 @@ def main():
             for c in TEST_CAMERAS for f in range(N_FRAMES)
         },
     }
+    if not admissible:
+        # Emitted ONLY for a scene the floor_len cap would have refused, so
+        # an admissible scene's event_spec.json is byte-identical to the
+        # one the generator produced before --allow-short-return existed.
+        # Any consumer that gates presence MUST read this and refuse.
+        spec["gated_presence_admissibility"] = {
+            "admissible": False,
+            "episode_2_duration_s": episode_2_duration(EPISODE_2_FRAMES[0]),
+            "floor_len_s": FLOOR_LEN,
+            "built_with": "--allow-short-return",
+            "WARNING": (
+                "INADMISSIBLE FOR GATED PRESENCE. Episode 2 is shorter than "
+                "floor_len, so the EL-GS interval representation cannot hold "
+                "it and no gated-presence / episodic-presence experiment may "
+                "use this scene. It is a PAYLOAD fixture only: it exists to "
+                "vary OBSERVATION SUPPLY at the return while holding pose, "
+                "colour, texture, cameras, lighting and initialization fixed."
+            ),
+        }
     (out / "event_spec.json").write_text(json.dumps(spec, indent=1))
 
     ret = spec["return_frames"]
@@ -387,6 +499,11 @@ def main():
     per_view = {c: sum(visible_px[(c, f)] for f in ret) for c in TEST_CAMERAS}
     print("per held-out view over return frames: {}".format(per_view))
     print("points3d.ply sha256: {}".format(sha256_file(out / "points3d.ply")))
+    if not admissible:
+        n_train = N_CAMERAS - len(test_set)
+        print("return observation supply: {} frames x {} training cameras = {} "
+              "training view-frames (gated-presence INADMISSIBLE)".format(
+                  len(ret), n_train, len(ret) * n_train))
     return 0
 
 

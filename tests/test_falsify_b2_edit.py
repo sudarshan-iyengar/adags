@@ -592,5 +592,344 @@ class PayloadGeneralizationTests(unittest.TestCase):
         self.assertEqual(values.reshape(-1).tolist(), [-2.0, 0.0, 3.0])
 
 
+# ---------------------------------------------------------------------------
+# Fixture-driven protocol: LRV3 must stay byte-identical, LRV4 must not
+# inherit LRV3's probes
+# ---------------------------------------------------------------------------
+
+#: The fields `protocol_from_event_spec` reads, as the real fixtures
+#: declare them. Cross-checked against `data/synthetic/lrv{3,4}` when
+#: those local (gitignored) directories are present.
+LRV3_SPEC = {
+    "scene_id": "LRV3",
+    "kind": "synthetic_leave_and_return",
+    "fps": 6.0,
+    "presence_frames": {"episode_1": [0, 29], "gap": [30, 56],
+                        "episode_2": [57, 59]},
+    "return_frames": [57, 58, 59],
+}
+LRV4_SPEC = {
+    "scene_id": "LRV4",
+    "kind": "synthetic_leave_and_return",
+    "fps": 6.0,
+    "presence_frames": {"episode_1": [0, 29], "gap": [30, 58],
+                        "episode_2": [59, 59]},
+    "return_frames": [59],
+}
+
+#: A row population built so that the LRV3 and LRV4 protocols DISAGREE:
+#: rows 12-13 have support [9.35, 9.70], which reaches LRV3's return
+#: window [9.5, 9.8333] but stops short of LRV4's single instant 9.8333.
+#: Without that disagreement the regression test below would be vacuous —
+#: it would pass for any protocol whatsoever.
+_PROTOCOL_SPECS = (
+    [(0.02 + 0.01 * i, 0.02 + 0.01 * i, 0.5 + 0.1 * i, 2.0 + 0.2 * i,
+      0.10 + 0.01 * i) for i in range(8)]                     # donors 0-7
+    + [(0.90, 0.03 + 0.02 * i, 9.70, 10.00, 0.80 + 0.015 * i)
+       for i in range(4)]                                     # recipients 8-11
+    + [(0.90, 0.05 + 0.02 * i, 9.35, 9.70, 0.86 + 0.015 * i)
+       for i in range(2)]                                     # LRV3-only 12-13
+    + [(1.10 + 0.2 * i, 1.10 + 0.2 * i, 0.4 + 0.1 * i, 2.5 + 0.1 * i,
+        0.30 + 0.09 * i) for i in range(6)]                   # wrong pool 14-19
+)
+
+
+def _protocol_sets(protocol):
+    pos1, posr, lo, hi, dc = _rows(_PROTOCOL_SPECS)
+    sets = fb.build_row_sets(pos1, posr, lo, hi, dc, CENTRE, RADIUS, protocol)
+    return {k: v.tolist() for k, v in sets.items()}
+
+
+class ProtocolDerivationTests(unittest.TestCase):
+    def test_lrv3_windows_and_return_frames_are_derived_exactly(self):
+        p = fb.protocol_from_event_spec(LRV3_SPEC)
+        self.assertEqual(p.return_frames, fb.RETURN_FRAMES)
+        self.assertEqual(p.window_episode1, fb.WINDOW_EPISODE1)
+        self.assertEqual(p.window_return, fb.WINDOW_RETURN)
+        self.assertEqual(p.gap_window, fb.GAP_WINDOW)
+        self.assertAlmostEqual(p.frame_dt, fb.FRAME_DT, places=15)
+
+    def test_lrv3_scalars_equal_the_frozen_module_constants(self):
+        p = fb.protocol_from_event_spec(LRV3_SPEC)
+        self.assertEqual(p.donor_probe_t, fb.DONOR_PROBE_T)
+        self.assertEqual(p.recipient_probe_t, fb.RECIPIENT_PROBE_T)
+        self.assertEqual(p.donor_support_upper_max, fb.DONOR_SUPPORT_UPPER_MAX)
+        self.assertEqual(p.recipient_support_lower_min,
+                         fb.RECIPIENT_SUPPORT_LOWER_MIN)
+        self.assertEqual(p.scalars_source, "frozen")
+
+    def test_lrv3_derivation_divergence_is_recorded(self):
+        # Two of LRV3's four scalars are NOT what the rule yields. Pinned,
+        # not corrected: experiments 213/233/236 selected their rows with
+        # 9.6 and 9.3. This states the divergence out loud so it cannot be
+        # rediscovered later as a surprise.
+        derived = fb.derive_protocol_scalars((0, 29), (30, 56), (57, 59), 6.0)
+        self.assertEqual(derived["donor_probe_t"], fb.DONOR_PROBE_T)
+        self.assertEqual(derived["donor_support_upper_max"],
+                         fb.DONOR_SUPPORT_UPPER_MAX)
+        self.assertAlmostEqual(derived["recipient_probe_t"], 58.0 / 6.0,
+                               places=12)
+        self.assertNotAlmostEqual(derived["recipient_probe_t"],
+                                  fb.RECIPIENT_PROBE_T, places=3)
+        self.assertAlmostEqual(derived["recipient_support_lower_min"],
+                               56.0 / 6.0, places=12)
+        self.assertNotAlmostEqual(derived["recipient_support_lower_min"],
+                                  fb.RECIPIENT_SUPPORT_LOWER_MIN, places=3)
+
+    def test_lrv4_protocol_is_the_single_return_instant(self):
+        p = fb.protocol_from_event_spec(LRV4_SPEC)
+        self.assertEqual(p.scene_id, "LRV4")
+        self.assertEqual(p.return_frames, (59,))
+        self.assertEqual(p.scalars_source, "derived")
+        self.assertAlmostEqual(p.window_return[0], 59.0 / 6.0, places=12)
+        self.assertAlmostEqual(p.window_return[1], 59.0 / 6.0, places=12)
+        self.assertAlmostEqual(p.recipient_probe_t, 59.0 / 6.0, places=12)
+        self.assertAlmostEqual(p.recipient_support_lower_min, 58.0 / 6.0,
+                               places=12)
+        # episode 1 is IDENTICAL to LRV3's, so the donor side must be too
+        self.assertEqual(p.window_episode1, fb.WINDOW_EPISODE1)
+        self.assertEqual(p.donor_probe_t, fb.DONOR_PROBE_T)
+        self.assertEqual(p.donor_support_upper_max, fb.DONOR_SUPPORT_UPPER_MAX)
+
+    def test_lrv3_probe_on_lrv4_windows_is_refused(self):
+        # The exact silent-failure mode the protocol exists to stop.
+        lrv4 = fb.protocol_from_event_spec(LRV4_SPEC)
+        inherited = lrv4._replace(recipient_probe_t=fb.RECIPIENT_PROBE_T)
+        self.assertLess(fb.RECIPIENT_PROBE_T, lrv4.window_return[0])
+        with self.assertRaises(ContractError) as ctx:
+            fb.validate_protocol(inherited)
+        self.assertIn("ABSENT", str(ctx.exception))
+
+    def test_validate_rejects_a_donor_probe_outside_episode_one(self):
+        p = fb.protocol_from_event_spec(LRV3_SPEC)._replace(donor_probe_t=6.0)
+        with self.assertRaises(ContractError):
+            fb.validate_protocol(p)
+
+    def test_validate_rejects_an_unreachable_recipient_support_floor(self):
+        p = fb.protocol_from_event_spec(LRV3_SPEC)._replace(
+            recipient_support_lower_min=9.9)
+        with self.assertRaises(ContractError):
+            fb.validate_protocol(p)
+
+    def test_non_leave_and_return_fixtures_are_refused(self):
+        spec = dict(LRV3_SPEC)
+        spec["kind"] = "something_else"
+        with self.assertRaises(ContractError):
+            fb.protocol_from_event_spec(spec)
+
+    def test_return_frames_must_agree_with_episode_two(self):
+        spec = dict(LRV3_SPEC)
+        spec["return_frames"] = [57, 58]
+        with self.assertRaises(ContractError):
+            fb.protocol_from_event_spec(spec)
+
+    def test_local_fixture_specs_match_the_literals_used_here(self):
+        # Cross-check against the real generated fixtures when present.
+        # `data/synthetic/` is gitignored, so this is a bonus check on a
+        # workstation that has generated the scenes, not a requirement.
+        checked = 0
+        for literal in (LRV3_SPEC, LRV4_SPEC):
+            path = (REPO_ROOT / "data" / "synthetic"
+                    / literal["scene_id"].lower() / "event_spec.json")
+            if not path.is_file():
+                continue
+            on_disk = json.loads(path.read_text())
+            for key in ("scene_id", "kind", "fps", "return_frames"):
+                self.assertEqual(on_disk[key], literal[key])
+            self.assertEqual(on_disk["presence_frames"],
+                             literal["presence_frames"])
+            self.assertEqual(fb.protocol_from_event_spec(on_disk),
+                             fb.protocol_from_event_spec(literal))
+            checked += 1
+        if checked == 0:
+            raise unittest.SkipTest("no generated fixture on this machine")
+
+
+class ProtocolRowSetRegressionTests(unittest.TestCase):
+    # The load-bearing check: routing LRV3 through the derived protocol
+    # selects exactly the rows the hardcoded constants selected.
+
+    def test_the_comparison_is_not_vacuous(self):
+        # Without this, the byte-identity test below would pass for any
+        # protocol at all and would prove nothing.
+        lrv3 = _protocol_sets(fb.protocol_from_event_spec(LRV3_SPEC))
+        lrv4 = _protocol_sets(fb.protocol_from_event_spec(LRV4_SPEC))
+        self.assertEqual(lrv3["recipient"], [8, 9, 10, 11, 12, 13])
+        self.assertEqual(lrv4["recipient"], [8, 9, 10, 11])
+        self.assertNotEqual(lrv3["recipient"], lrv4["recipient"])
+        for key in ("donor", "recipient", "wrong", "wrong_pool",
+                    "donor_a", "donor_b"):
+            self.assertTrue(lrv3[key], "row set {} is empty".format(key))
+
+    def test_lrv3_row_sets_are_byte_identical(self):
+        hardcoded = _protocol_sets(None)          # module constants
+        derived = _protocol_sets(fb.protocol_from_event_spec(LRV3_SPEC))
+        self.assertEqual(hardcoded, derived)
+
+    def test_lrv3_probe_times_are_byte_identical(self):
+        sets = {k: torch.tensor(v, dtype=torch.long)
+                for k, v in _protocol_sets(None).items()}
+        hardcoded = fb.sets_summary(sets)
+        derived = fb.sets_summary(sets, fb.protocol_from_event_spec(LRV3_SPEC))
+        self.assertEqual(hardcoded["probe_times"],
+                         [fb.DONOR_PROBE_T, fb.RECIPIENT_PROBE_T])
+        self.assertEqual(hardcoded, derived)
+
+    def test_default_protocol_is_the_module_constants(self):
+        p = fb.DEFAULT_PROTOCOL
+        self.assertEqual(p.window_episode1, fb.WINDOW_EPISODE1)
+        self.assertEqual(p.window_return, fb.WINDOW_RETURN)
+        self.assertEqual(p.return_frames, fb.RETURN_FRAMES)
+        self.assertEqual(p.donor_probe_t, fb.DONOR_PROBE_T)
+        self.assertEqual(p.recipient_probe_t, fb.RECIPIENT_PROBE_T)
+        self.assertEqual(p.donor_support_upper_max, fb.DONOR_SUPPORT_UPPER_MAX)
+        self.assertEqual(p.recipient_support_lower_min,
+                         fb.RECIPIENT_SUPPORT_LOWER_MIN)
+        self.assertEqual(fb.protocol_from_event_spec(LRV3_SPEC),
+                         fb.DEFAULT_PROTOCOL)
+
+    def test_protocol_block_is_json_ready(self):
+        block = fb.protocol_block(fb.protocol_from_event_spec(LRV4_SPEC))
+        json.dumps(block)                       # must not raise
+        self.assertEqual(block["scene_id"], "LRV4")
+        self.assertEqual(block["return_frames"], [59])
+        self.assertEqual(block["scalars_source"], "derived")
+
+
+# ---------------------------------------------------------------------------
+# L4: the within-recipient permutation control
+# ---------------------------------------------------------------------------
+
+_L4_RECIPIENTS = torch.tensor([8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                              dtype=torch.long)
+
+
+class RecipientPermutationTests(unittest.TestCase):
+    def test_deterministic_under_the_seed(self):
+        a = fb.recipient_permutation_link(_L4_RECIPIENTS, 4242)
+        b = fb.recipient_permutation_link(_L4_RECIPIENTS, 4242)
+        self.assertEqual(a[0].tolist(), b[0].tolist())
+        self.assertEqual(a[1].tolist(), b[1].tolist())
+        self.assertEqual(a[2]["permutation_sha256"],
+                         b[2]["permutation_sha256"])
+        self.assertEqual(a[2]["seed"], 4242)
+
+    def test_a_different_seed_gives_a_different_permutation(self):
+        _, d_a, meta_a = fb.recipient_permutation_link(_L4_RECIPIENTS, 1)
+        _, d_b, meta_b = fb.recipient_permutation_link(_L4_RECIPIENTS, 2)
+        self.assertNotEqual(d_a.tolist(), d_b.tolist())
+        self.assertNotEqual(meta_a["permutation_sha256"],
+                            meta_b["permutation_sha256"])
+
+    def test_no_fixed_points(self):
+        for seed in range(12):
+            r_rows, d_rows, _ = fb.recipient_permutation_link(
+                _L4_RECIPIENTS, seed)
+            self.assertEqual(int((r_rows == d_rows).sum()), 0)
+
+    def test_one_hop_invariant_holds(self):
+        r_rows, d_rows, _ = fb.recipient_permutation_link(_L4_RECIPIENTS, 9)
+        self.assertEqual(set(r_rows.tolist()) & set(d_rows.tolist()), set())
+        # link_pointer is the enforcement point and must not raise
+        pointer = fb.link_pointer(32, r_rows, d_rows)
+        self.assertEqual(pointer.shape[0], 32)
+        # and the composed pointer must survive the render-time re-check
+        redirected = pointer != torch.arange(32)
+        self.assertFalse(bool(redirected[pointer[redirected]].any()))
+
+    def test_the_partition_is_row_index_parity_and_disjoint(self):
+        r_rows, d_rows, meta = fb.recipient_permutation_link(
+            _L4_RECIPIENTS, 3)
+        self.assertTrue(all(r % 2 == 1 for r in r_rows.tolist()))
+        self.assertTrue(all(d % 2 == 0 for d in d_rows.tolist()))
+        self.assertEqual(meta["source_half_rows"], 5)
+        self.assertEqual(meta["edited_half_rows"], 5)
+
+    def test_every_source_is_a_recipient_row(self):
+        # Identity is destroyed, but the population is NOT changed: every
+        # value written comes from another row of the same recipient set,
+        # in the same temporal window.
+        r_rows, d_rows, _ = fb.recipient_permutation_link(_L4_RECIPIENTS, 11)
+        population = set(_L4_RECIPIENTS.tolist())
+        self.assertTrue(set(r_rows.tolist()) <= population)
+        self.assertTrue(set(d_rows.tolist()) <= population)
+
+    def test_the_payload_marginal_over_the_edited_set_is_the_source_half(self):
+        # A permutation of the WHOLE set onto itself would preserve the
+        # edited set's own multiset exactly; the parity partition weakens
+        # that to "the multiset written equals the source half's". This
+        # test pins the weaker property that actually holds, so the cost
+        # of preserving one-hop is on the record rather than assumed away.
+        values = torch.arange(18, dtype=torch.float64).reshape(18, 1) * 0.5
+        r_rows, d_rows, _ = fb.recipient_permutation_link(_L4_RECIPIENTS, 6)
+        source_half, _edited_half = fb.split_by_row_parity(_L4_RECIPIENTS)
+        written = sorted(values[d_rows].reshape(-1).tolist())
+        self.assertEqual(written,
+                         sorted(values[source_half].reshape(-1).tolist()))
+        # and the written values are NOT the edited rows' own values
+        self.assertNotEqual(written,
+                            sorted(values[r_rows].reshape(-1).tolist()))
+
+    def test_edit_volume_is_reported_as_half(self):
+        _, _, meta = fb.recipient_permutation_link(_L4_RECIPIENTS, 0)
+        self.assertEqual(meta["rows_edited"], 5)
+        self.assertEqual(meta["recipient_rows_total"], 10)
+        self.assertAlmostEqual(meta["edit_volume_vs_l1"], 0.5, places=12)
+        self.assertIn("half", meta["cost"])
+        self.assertIn("parity", meta["one_hop"])
+
+    def test_odd_sized_recipient_sets_truncate_to_a_bijection(self):
+        rows = torch.tensor([1, 2, 3, 4, 5], dtype=torch.long)
+        r_rows, d_rows, meta = fb.recipient_permutation_link(rows, 1)
+        self.assertEqual(int(r_rows.numel()), int(d_rows.numel()))
+        self.assertEqual(int(r_rows.numel()), 2)
+        self.assertEqual(meta["recipient_rows_total"], 5)
+
+    def test_too_few_rows_fails_closed(self):
+        with self.assertRaises(ContractError):
+            fb.recipient_permutation_link(torch.tensor([7], dtype=torch.long), 0)
+
+    def test_permutation_hash_is_content_sensitive(self):
+        a = fb.permutation_hash(torch.tensor([1, 3]), torch.tensor([2, 4]))
+        b = fb.permutation_hash(torch.tensor([1, 3]), torch.tensor([4, 2]))
+        self.assertNotEqual(a, b)
+        self.assertEqual(
+            a, fb.permutation_hash(torch.tensor([1, 3]), torch.tensor([2, 4])))
+
+
+class LinkOrderTests(unittest.TestCase):
+    def test_three_links_are_the_frozen_order(self):
+        stats = {name: {} for name in fb.LINK_ORDER}
+        self.assertEqual(fb.link_order_for(stats), fb.LINK_ORDER)
+
+    def test_l4_is_appended_last(self):
+        stats = {name: {} for name in fb.ALL_LINKS}
+        self.assertEqual(fb.link_order_for(stats), fb.ALL_LINKS)
+        self.assertEqual(fb.ALL_LINKS[-1], fb.LINK_L4)
+
+    def test_unknown_links_fail_closed(self):
+        stats = {name: {} for name in fb.LINK_ORDER}
+        stats["L9_made_up"] = {}
+        with self.assertRaises(ContractError):
+            fb.link_order_for(stats)
+
+    def test_a_four_link_report_carries_l4_and_labels_itself(self):
+        stats = _link_stats(0.4, 0.02)
+        stats[fb.LINK_L4] = _stat(0.35)
+        report = fb.falsification_flow({"donor_rows": 12}, stats, _dc_measure)
+        self.assertEqual([link["name"] for link in report["links"]],
+                         list(fb.ALL_LINKS))
+        self.assertEqual(report["anti_vacuity"]["links"], list(fb.ALL_LINKS))
+        l4 = [link for link in report["links"]
+              if link["name"] == fb.LINK_L4][0]
+        for key in ReportSchemaTests.REQUIRED_LINK_KEYS:
+            self.assertIn(key, l4)
+
+    def test_a_three_link_report_gains_no_links_key(self):
+        report = fb.falsification_flow(
+            {"donor_rows": 12}, _link_stats(0.4, 0.02), _dc_measure)
+        self.assertNotIn("links", report["anti_vacuity"])
+
+
 if __name__ == "__main__":
     unittest.main()

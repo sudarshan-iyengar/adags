@@ -69,15 +69,12 @@ if str(REPO_ROOT) not in sys.path:
 
 from depth_visibility.errors import ContractError  # noqa: E402
 from scripts.falsify_b2_edit import (  # noqa: E402
-    DONOR_PROBE_T,
+    DEFAULT_PROTOCOL,
     LINK_L1,
     LINK_L2,
     LINK_L3,
     LINK_ORDER,
-    RECIPIENT_PROBE_T,
     T_SUPPORT_SIGMA,
-    WINDOW_EPISODE1,
-    WINDOW_RETURN,
     assert_sets_disjoint,
     build_row_sets,
     effective_support,
@@ -86,11 +83,14 @@ from scripts.falsify_b2_edit import (  # noqa: E402
     nearest_dc_row_map,
     nearest_row_map,
     probe_row_state,
+    protocol_block,
+    protocol_from_event_spec,
     resolve_model_path,
     restore_model_and_scene,
     sets_are_sufficient,
     sets_summary,
     split_by_row_parity,
+    validate_protocol,
 )
 
 #: Everything the screen reuses from the DC falsification, named here so
@@ -103,6 +103,7 @@ _REUSED_FROM_FALSIFICATION = (
     assert_sets_disjoint, effective_support, probe_row_state,
     restore_model_and_scene, resolve_model_path, load_oracle_region,
     load_event_spec, sets_summary, sets_are_sufficient,
+    protocol_from_event_spec, validate_protocol, protocol_block,
 )
 
 SCHEMA = "adags-payload-headroom-v1"
@@ -366,6 +367,16 @@ def format_table(report):
     lines.append("checkpoint: {}".format(report["checkpoint"]))
     lines.append("oracle region: {}".format(
         report["oracle_region"]["source"]))
+    fixture = report.get("protocol", {}).get("fixture")
+    if fixture:
+        lines.append(
+            "fixture: {scene}  return frames {ret}  W1 {w1}  WR {wr}  "
+            "probes {probes}  scalars={src}".format(
+                scene=fixture["scene_id"], ret=fixture["return_frames"],
+                w1=["%.4f" % v for v in fixture["window_episode1"]],
+                wr=["%.4f" % v for v in fixture["window_return"]],
+                probes=["%.4f" % v for v in fixture["probe_times"]],
+                src=fixture["scalars_source"]))
     counts = report["row_sets"]
     lines.append(
         "rows={rows}  |D|={donor_rows}  |R|={recipient_rows}  "
@@ -465,18 +476,23 @@ def main(argv=None):
     Path(args.out_report).parent.mkdir(parents=True, exist_ok=True)
 
     centre, radius = load_oracle_region(args.oracle_region)
-    load_event_spec(args.source_path)          # frozen LRV3 fixture guard
+    # Windows, return frames, probes and support edges come from the
+    # FIXTURE's own event_spec.json (`validate_protocol` refuses a probe
+    # that would land outside the window it is meant to sample), so the
+    # screen reads LRV4's single-instant return correctly instead of
+    # inheriting LRV3's 9.6 probe.
+    _spec, _obj_id, _gt_dir, protocol = load_event_spec(args.source_path)
 
     gaussians, scene, dataset, opt, pipe = restore_model_and_scene(
         args, lp, op, pp)
 
-    probe = probe_row_state(gaussians)
+    probe = probe_row_state(gaussians, protocol)
     n_rows = probe["n_rows"]
     dc = probe["dc"]
     sets = build_row_sets(probe["pos_ep1"], probe["pos_ret"],
                           probe["sup_lo"], probe["sup_hi"], dc,
-                          centre, radius)
-    sets_block = sets_summary(sets)
+                          centre, radius, protocol)
+    sets_block = sets_summary(sets, protocol)
     sets_block["rows"] = n_rows
 
     disjoint = False
@@ -584,10 +600,6 @@ def main(argv=None):
                 "hashed": bool(args.hash_checkpoint)},
         },
         "protocol": {
-            "probe_times": [DONOR_PROBE_T, RECIPIENT_PROBE_T],
-            "window_episode1": list(WINDOW_EPISODE1),
-            "window_return": list(WINDOW_RETURN),
-            "support_sigma_multiple": T_SUPPORT_SIGMA,
             "links": list(LINK_ORDER),
             "maps": {
                 MAP_PRIMARY: "nearest_dc_row_map on _features_dc (frozen, "
@@ -596,6 +608,7 @@ def main(argv=None):
             },
             "row_sets_source": "scripts.falsify_b2_edit.build_row_sets "
                                "(imported, not copied)",
+            "fixture": protocol_block(protocol),
         },
         "row_sets": sets_block,
         "row_sets_disjoint": disjoint,

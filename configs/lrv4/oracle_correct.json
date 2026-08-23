@@ -1,0 +1,20 @@
+{
+ "schema_version": "elgs-oracle-episodes-v1",
+ "units": "model_time_seconds",
+ "region": {
+  "kind": "sphere",
+  "centre": [
+   0.7,
+   0.1,
+   0.35
+  ],
+  "radius": 0.2
+ },
+ "gaps": [
+  [
+   5.166666666666666,
+   9.5
+  ]
+ ],
+ "note": "LRV4 ground truth: absent over frames 30-58, returning for frame 59 ONLY. Same convention as configs/lrv3/oracle_correct.json: the gap is inset by w = 0.3333 s from the bracketing PRESENT frames (frame 29 at 4.8333 s and frame 59 at 9.8333 s), so the presence plateau is exactly 1.0 on all 31 ground-truth-present frames and both ramps fall inside the gap. The REGION is unchanged from LRV3 -- same object, same sphere -- because LRV4 changes observation supply and nothing else. INADMISSIBLE FOR GATED PRESENCE: episode 2 lasts 0.6667 s and does not clear floor_len = 0.8333 s, so no EL-GS / episodic-presence cell may use this file; it is here so the PAYLOAD row sets have the same authored region definition LRV3's do."
+}
