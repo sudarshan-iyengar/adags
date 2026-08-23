@@ -2,7 +2,7 @@
 # works, event supply is nearly absent)
 
 EXPLORATORY tier throughout. Decisions strongest-first, each
-evidence-labelled. Experiments this block: **233-243+**
+evidence-labelled. Experiments this block: **233-250**
 (`agent-control/elgs-apollo/experiment-ledger.jsonl` is the id/retry
 authority). Schedule authority:
 [[block-2026-08-23-schedule-amendment]] — 12,000-iteration absolute
@@ -31,10 +31,9 @@ Held-out cameras were never touched. Abstention reused the existing
 marginal bit-for-bit.
 
 **Limits, recorded as limits:** recall is 2 of 8 event-overlapping groups
-— a high-precision, low-recall instrument. **Nothing was retrained**, so
-the +1.05 dB localized-presence positive still rests on authored
-boundaries. LRV3's absence is genuine removal from the ray-trace, not
-occlusion, so this does not transfer to real data.
+— a high-precision, low-recall instrument. LRV3's absence is genuine
+removal from the ray-trace, not occlusion, so this does not transfer to
+real data.
 
 **Decision: phase T2 was justified, built, RUN — and it FAILED**
 ([[nonoracle-timing-t2-result-2026-08-23]], experiments 245/246/249/250).

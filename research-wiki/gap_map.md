@@ -98,8 +98,12 @@ STANDS WITH QUALIFICATIONS; three of its findings are method-level:
   no-op is a genuine placebo for appearance under a nearest-appearance
   map and a REAL edit for any other tensor. Worse, it edits donor rows
   whose support ends before the scored frames, so it cannot attribute
-  harm. The discriminating control is a within-recipient permutation,
-  which was not run.
+  harm. The discriminating control is a within-recipient permutation —
+  it WAS run and it OVERTURNED the attribution: destroying identity costs
+  −0.97 dB at the same displacement and half the edit volume, so the
+  −1.19 dB says nothing about identity. Damage tracks DISPLACEMENT, not
+  incorrectness, which strengthens the payload negative: there is no
+  regime in which redirecting opacity could help.
 
 ## Audit-Instrument Update — 2026-08-18 (block 4)
 
