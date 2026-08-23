@@ -1,5 +1,103 @@
 # Gap Map
 
+## Membership-Measurement Update — 2026-08-23 (block 2)
+
+**G13's representation limb now has BOTH necessary conditions measured,
+and they separate cleanly**
+([[operations/lrv3-membership-diagnostic-2026-08-23]], zero GPU-hours).
+
+Timing was established recoverable EXACTLY. Membership is now measured at
+the moment it binds and it is **precision 0.0446, recall 0.1786** on the
+fresh seeding cloud — 336 rows gated, 15 correct, against 84 in-sphere.
+
+**The apparent contradiction with the 96.9% substrate precision is
+resolved, and the resolution is the durable part.** Membership is
+estimated on a TRAINED cloud where densification has concentrated 10,650
+rows onto the object, then re-applied through an absolute world-space
+voxel grid to a FRESH 50,000-row cloud where the same cells are 95.5%
+background. **An instrument validated on the cloud it was estimated from
+can be an order of magnitude worse on the cloud it is applied to, and
+nothing in the pipeline notices.** That generalizes past this fixture to
+any membership transferred across a densification boundary.
+
+**The binding constraint is a HARD CAP, not a tuning problem.** Only 15
+of the fresh cloud's 84 in-sphere rows lie inside the two gated cells at
+all. The other 69 are in the six cells the estimator abstained on, so no
+geometric refinement can reach them. Measured: a 64³ occupancy grid
+sourced from the gated cells improves precision **6×** (0.0446 → 0.2679)
+and moves recall **not at all**. Every downstream repair therefore lands
+in PARTIAL membership, the regime already measured as worse than both
+alternatives (24.67 << 27.14 < 28.19).
+
+**Fixing recall makes over-gating worse**: perfect group-level recall
+caps precision at 0.0571, because the sphere occupies **6.6%** of the
+volume of the 8 cells that cover it. Under-recall and over-gating are one
+geometric defect, not two repairable limbs.
+
+**Consequence for the route:** authored membership becomes a quantified
+declared limitation rather than a pending repair
+([[operations/paper-path-decision-2026-08-23b]]). T1's boundary output is
+untouched and remains exact. **Boundary inference is solved on this
+fixture; membership inference by spatial partition is refuted.**
+
+## Measurement-Channel Update — 2026-08-23 (block 2)
+
+**A finding that bounds every comparison in the N3V ladder family, and it
+is not about any mechanism** ([[operations/b1f-flow-postmortem-2026-08-23]]).
+
+Two arms differing by two config lines execute identical numerical code
+until iteration 1000. In the pre-intervention window 501-999 they already
+separate by **0.089-0.236 relative RMS training loss** — statistically
+indistinguishable from their post-intervention separation. At
+`densify_from_iter: 500` the divergence jumps **1400×**: a threshold
+comparison flips, a clone/split decision differs, and the trajectories
+part.
+
+**So the substrate is chaotic at this protocol and densification is the
+amplifier.** The recorded 0.635 dB global / 0.341 dB event-union seed
+spread is a LOWER BOUND on the resolution floor, because same-seed
+same-code runs separate comparably. **Any 6k/50-frame comparison must
+state a same-code replicate floor, not only a seed spread.** No recorded
+number is retracted; what changes is what two runs can be said to
+resolve.
+
+This makes the same-code replicate floor the **single next measurement**
+for the whole N3V utility lane, upstream of every mechanism question.
+
+Two premises are also corrected. The camera-swapped flow control is
+magnitude-matched but only **~84% decorrelated** (13 of 14 swaps read the
+physically adjacent camera; β ≈ 0.16 of the correct velocity survives
+against 0.005-0.011 content-free) — the rejection stands, gate 3's FAIL
+is not decisive. And on `cut_roasted_beef` the birth-gating "dynamic
+mask" is a **top-15% photometric-residual quantile** for every training
+camera, because real masks exist only for held-out `cam00` — so G8's
+"flow-gated site selection is redundant here" premise is false on this
+scene.
+
+## Starvation-Fixture Update — 2026-08-23 (block 2)
+
+**G14's observation-supply question is not answered, and the instrument
+built to answer it is now known to be unable to**
+([[operations/lrv4-lo-distribution-result-2026-08-23]], experiments
+259/260, interpretation frozen in advance).
+
+The pre-identified `lo`-distribution diagnostic ran and selected reading
+(b): LRV4's one-recipient null is **not** a threshold artefact. `P2` is 8
+rows against LRV3's 3,925, and support widths are **27× larger and
+DISJOINT** from LRV3's recipients. 277 rows sit in the object region at
+the return, but with median support width **25.6 s — the whole
+sequence**.
+
+**A one-frame return does not produce under-trained localized rows; it
+produces no localized rows at all.** No floor rescues it. The
+observation-supply mechanism claim stays UNTESTED, and a future fixture
+must starve VIEWS while preserving a temporally localized return.
+
+**Method carried forward:** the diagnostic's decisive column was support
+WIDTH, frozen as load-bearing before any output. On `lo` alone the 7
+below-floor rows would have read as a threshold artefact and the fixture
+would have been re-run at a lower floor.
+
 Updated 2026-08-08 (night) after Loop 2 ([[operations/elgs-method]]).
 Earlier updates remain binding history.
 

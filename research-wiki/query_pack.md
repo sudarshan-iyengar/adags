@@ -1,5 +1,107 @@
 # Query Pack
 
+## 2026-08-23 BLOCK 2 — membership is MEASURED and refuted; LRV4 is decided; the flow null is EXPLAINED and the measurement channel is the problem
+
+Full records: [[operations/lrv3-membership-diagnostic-2026-08-23]],
+[[operations/lrv4-lo-distribution-result-2026-08-23]],
+[[operations/b1f-flow-postmortem-2026-08-23]],
+[[operations/paper-path-decision-2026-08-23b]]. Experiments 259-260 only;
+**everything else this block cost ZERO GPU.**
+
+**(1) THE MEMBERSHIP FAILURE IS MEASURED, and the T2 page's attribution
+was RIGHT.** Two clouds must be distinguished and only one acted. On the
+TRAINED substrate the two gated voxel cells are 96.9% object; on the
+FRESH seeding cloud that binds membership at `create_from_pcd` the same
+cells are **95.5% BACKGROUND** — **precision 0.0446, recall 0.1786**
+(336 gated, 15 correct, 84 in-sphere). The oracle's "~84 rows" is exactly
+the fresh cloud's sphere test, so the instruments are comparable.
+**Fixing recall makes over-gating WORSE**: all 8 overlapping cells give
+recall 1.0 at precision 0.0571, and the ceiling is geometric — the sphere
+is **6.6%** of the 8 cells' volume. At the binding moment the gate held
+**321 wrongly-gated background rows against 69 missed object rows**.
+
+**THE DECISIVE NUMBER — a HARD CAP, not a tuning problem: only 15 of the
+fresh cloud's 84 in-sphere rows lie inside the two gated cells at all
+(recall 0.1786).** The other 69 are in the six cells the estimator
+abstained on. Better geometry helps precision **6×** (a 64³ occupancy
+grid reaches 0.2679) and **cannot move recall at all**, so every
+downstream repair lands in PARTIAL membership — the regime measured at
+**24.67 against 27.14 ungated and 28.19 fully gated**. The six missed
+groups abstained at **4× camera_disagreement (all at exactly 2 of 3
+required cameras)** and 2× no_interior_gap. **NO retraining was run: no
+clear pre-output repair exists.** Relaxing the camera bar would destroy
+T1's zero-false-activation property and still leave the 6.6% ceiling.
+**T1's boundary output is untouched and remains exact** — boundary
+inference is solved on this fixture, membership inference by spatial
+partition is refuted. Membership binds ONCE at seeding and
+`_elgs_family_ids` are inherited by clone/split, so a 4.5%-precision seed
+is AMPLIFIED by densification (final gated 4,317 / 4,576 rows).
+
+**(2) LRV4 IS DECIDED — reading (b), and no threshold rescues it**
+(experiments 259/260, interpretation frozen in advance). `P2` = **8 rows**
+against LRV3's 3,925, and the load-bearing column is the one the spec
+predicted: **support width median 2.9789 s against LRV3's 0.1086 s, 27×,
+and the two distributions are DISJOINT** (LRV3 q95 0.2784 < LRV4 q05
+2.1083). LRV4 does have 277 rows in the object region at the return —
+but their median support width is **25.6 s, the whole sequence**. **A
+one-frame return does not produce under-trained localized rows; it
+produces NO localized rows.** Dropping the floor to admit all 7
+below-floor rows yields 8 recipients — the reading holds for the whole
+family of floors. **Had only `lo` been reported the 7 below-floor rows
+would have looked like a threshold artefact and the fixture would have
+been re-run at a lower floor.** The observation-supply mechanism claim
+stays **UNTESTED**; what is now known is that LRV4 can never test it, so
+a future fixture must starve VIEWS while preserving a localized return.
+
+**(3) THE FLOW NULL IS EXPLAINED, and the finding is about the
+MEASUREMENT CHANNEL.** Plain B1 and B1-F differ by two config lines and
+execute identical code until the first birth at iteration 1000 — yet
+**identical code at an identical seed separates to 0.089-0.236 relative
+RMS training loss in the pre-intervention window 501-999**, which is
+statistically indistinguishable from the post-intervention separation
+(0.061-0.315) on both seeds. At `densify_from_iter: 500` the divergence
+jumps **1400×**. **CARRY AS METHOD: at this protocol the substrate is
+chaotic and densification is the amplifier; the measured 0.635/0.341 dB
+seed spread UNDERSTATES the resolution floor, because same-seed same-code
+runs separate comparably. Every 6k/50-frame comparison must state a
+same-code replicate floor, not only a seed spread.**
+
+**(3b) TWO PREMISES ON THE RECORD ARE CORRECTED.** The camera-swap
+control is magnitude-matched (sites 39,162/39,141, valid 96.8%/97.6%) but
+only **~84% DECORRELATED**: 13 of 14 swaps read the physically adjacent
+camera (median baseline 0.44 units), delivering **β ≈ 0.16 of the correct
+velocity along the correct direction** against 0.005-0.011 for a
+content-free control. **The rejection STANDS** (un-attenuating gives
+≈ −0.11 dB, still 3× inside the seed spread) **but gate 3's FAIL is not
+decisive** and should not be cited as such. Separately, and verified
+against primary storage: `motion_priors/masks/` holds **only 300 `cam00`
+files — the HELD-OUT camera** — so with `dynamic_mask_from_residual:
+true` every TRAINING camera's "dynamic mask" is the **top-15%
+photometric-residual quantile of the current render**, not a motion mask.
+`scene/packet_birth_flow.py`'s rationale that flow-gated SITE selection
+would be "largely redundant" is therefore **false on this scene**. That
+does not resurrect it — per (3) the channel cannot resolve it either way.
+Birth sites are only mildly motion-enriched (1.910% vs 0.986% swapped,
+1.0% chance).
+
+**(4) PAPER PATH: REPRESENTATION-FIRST**
+([[operations/paper-path-decision-2026-08-23b]]). Representation +
+repaired membership is NOT AVAILABLE (the 0.1786 recall cap);
+representation + an admitted flow mechanism is NOT AVAILABLE (rejected,
+and unresolvable at this protocol). Authored membership becomes a
+**quantified declared limitation** rather than a pending repair.
+**THE SINGLE NEXT ACTION is to measure the same-code replicate floor at
+the 50-frame 6k protocol** — three identical cells at one seed, ~7.5
+slot-h — because it is upstream of every remaining lane and either
+rescues or retires the N3V utility claim. Nothing else scales until it
+returns.
+
+**(5) An execution-closure gap is REPAIRED** (commit `2a06043`). The
+entrypoint actually named now enters the closure set, so a dirty
+non-`main.py` entrypoint refuses the run instead of silently executing
+its committed twin. Only that one script enters, so an unrelated edit
+never blocks an unrelated cell.
+
 ## 2026-08-23 BLOCK — timing inference WORKS; consolidation has no payload; the dev scene has almost no events
 
 Full records: [[operations/nonoracle-episode-timing-result-2026-08-23]],
