@@ -5,7 +5,7 @@
 Full records: [[operations/nonoracle-episode-timing-result-2026-08-23]],
 [[operations/payload-headroom-result-2026-08-23]],
 [[operations/crb300-event-mask-curation-2026-08-23]],
-[[operations/block-2026-08-23-schedule-amendment]]. Experiments 233-236.
+[[operations/block-2026-08-23-schedule-amendment]]. Experiments 233-248.
 **Schedule: user-directed 12,000-iteration ABSOLUTE CEILING, 6k the
 default, 24 slot-hour block ceiling. The 18k 300-frame proposal is
 historical and NOT authorized.**
@@ -85,9 +85,8 @@ leaves the scored window; and **a placebo does not transfer across
 payloads** — the same-identity no-op is a real edit for any non-
 appearance tensor AND edits donor rows whose support ends before the
 scored frames, so it cannot attribute harm. The discriminating control
-is a within-recipient permutation; it was not run, so "the payload
-carries nothing" and "any opacity reshuffle costs ~1 dB" remain equally
-consistent.
+is a within-recipient permutation — it WAS run this block (see 2b) and it
+settled the question against the original write-up.
 
 **(4) REAL-DATA EVENT SUPPLY on the dev scene is nearly absent.** A
 ground-truth-only curation of all 300 `cut_roasted_beef` cam00 frames
