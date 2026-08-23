@@ -241,10 +241,39 @@ returned STANDS WITH QUALIFICATIONS:
   correct in principle and its stated urgency was overstated
   ([[b1f-preflight-result-2026-08-23]] §3).
 
-## 8. Cost
+## 8. Cost — MEASURED, and the accounting distinction matters
 
-Measured, not projected: experiment 233 **0.007** slot-h, 236 **0.009**,
-235 **0.188**, 234 **0.42**. The block's headline payload result cost
-**57 seconds of GPU**. The six-cell flow screen and the T2 cells are the
-block's only substantial spend; the running total is tracked against the
-24 slot-hour ceiling in the handover.
+**Total ≈ 18.9 GPU slot-hours against the 24 slot-hour ceiling. Under
+budget.**
+
+**The distinction that makes that number honest:** summing Determined's
+`endTime − startTime` across all 26 experiments gives **28.77 h**, which
+would be OVER the ceiling — but that clock starts when an experiment is
+CREATED, not when it is allocated a slot, so it charges QUEUE time as if
+it were occupancy. A queued experiment holds no GPU. The `duration` field
+that would give allocation time is `null` on this master, so slot
+occupancy was derived from the training logs' own elapsed counters:
+
+| cells | measured occupancy |
+|---|---:|
+| 6 flow training cells at 6,000 iters (237-240, 254, 255) | 2.47-2.53 h each, **14.99 h** |
+| 2 crashed B1-X arms (241/242, died at iter 1000) | 0.328 + 0.327 = **0.66 h** |
+| A-est ×2 + LRV4 substrate (245/246/247) | 0.871 + 0.872 + 0.701 = **2.44 h** |
+| flow preflight (234) | **0.41 h** |
+| 9 analysis/eval cells (233, 236, 243, 244, 248-253, 256-258) | **≈ 0.42 h** |
+
+Two operational facts worth carrying:
+
+* **Training cells cost 2.5 h, not the 1.9 h projected — a 32%
+  underestimate.** Three cells sharing one hopper node contend for
+  bandwidth; the preflight, running with less company, measured
+  1.03-1.22 s/it against the screen's ~1.5 s/it. **Project per-cell cost
+  from a contended node, not from a solo preflight.**
+* **The roster defect cost ≈ 5.6 slot-hours** — 0.66 h burnt on the two
+  crashed arms plus 4.95 h to rerun them. That is the price of a guard
+  that degraded silently rather than at wiring time, and it is the
+  concrete argument for the fail-closed repair.
+
+The block's headline results were nearly free by comparison: the payload
+screen, the opacity falsification, the permutation control and the LRV4
+screen together cost **under a minute of GPU each**.
