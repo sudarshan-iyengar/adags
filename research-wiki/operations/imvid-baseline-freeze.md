@@ -405,3 +405,164 @@ time only ([[renderer-integrity-admission-2026-08-18]] Appendix C).
   unspecified, their method code is unreleased, and a like-for-like comparison
   needs a public-baseline (STG) reproduction on the same declared segment plus
   a measured ADAGS seed spread. None of that exists.
+
+---
+
+# APPENDIX B (2026-08-24, append-only) — the loader gate audited; one record CORRECTED; the dangerous path is the one that fails OPEN
+
+Nothing above is rewritten. This appendix closes the "loader has not been
+exercised" item at the level of *what would have to be true*, corrects one
+stale statement in section A4, and records a hazard no previous page names.
+
+## B1. CORRECTION — the union rebuild HAS been run
+
+Section A4 above reads: *"The union rebuild
+(`scripts/imvid_build_initialization.py` over the three) has NOT been run;
+that is a single cheap follow-up cell."*
+
+**That is stale.** It ran as Determined experiment **164**
+(`imvid_init35_union`, r0, commit `c4ff0d4`), and the artifact was verified
+this block directly against primary Apollo storage:
+
+```
+data/imvid/init35/points3d_colmap_union.ply    911,796 bytes  2026-08-18 22:37:54
+  union_points  20,157
+  sha256        d5b10be099b05c85fe63c04336a66b42561a1b3c7bf193dace504417351fdf71
+  per-frame     0 -> 5,140 | 150 -> 7,803 | 299 -> 7,214   (sums to 20,157 exactly)
+```
+
+Claim index `r0` is consumed; the next free index for that cell is `r1`.
+
+**The useful consequence:** the decisive calibration verification needs
+**no new decode and no new triangulation**. Everything it consumes already
+exists and is sealed.
+
+## B2. The loader gap, cited — and it is not where the record points
+
+The record has treated the `OPENCV`-vs-`PINHOLE` acceptance check as *the*
+ImViD blocker. Verified in code, that check **fails closed** and is
+therefore harmless:
+
+* `scene/dataset_readers.py:676` — `assert False, "Colmap camera model not
+  handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras)
+  supported!"`
+* an earlier, stricter `assert model == "PINHOLE"` in
+  `scene/colmap_loader.py:159` fires first on the text path and rejects
+  even `SIMPLE_PINHOLE`.
+
+**The dangerous path is the Blender route, and it fails OPEN.**
+`readCamerasFromTransforms` (`scene/dataset_readers.py:367-466`) — the route
+N3V and DiVa-360 actually use, and the only one structurally compatible with
+ImViD — reads `fl_x / fl_y / cx / cy` from JSON at `:433-451` with **no
+camera-model field, no distortion field, and no check of any kind.**
+Distorted images paired with pinhole intrinsics would train **silently**,
+wrong by a median of 14.72 px and a maximum of 90.53 px.
+
+Both halves of that mistake already sit adjacent on Apollo: experiment 156
+wrote a derived PINHOLE `cameras.txt`, while the union and every decoded
+frame remain in the supplied **OPENCV** frame. Nothing in the code would
+object to combining them.
+
+## B3. The COLMAP route is structurally impossible — on counts that DIFFER between the sample and the full release
+
+Verified in code:
+
+1. **`cam10` is hard-coded as the held-out camera** (`:574-575`:
+   `train_cam_infos = [_ for _ in cam_infos if "cam10" not in _.image_name]`).
+   ImViD's frozen split holds out `cam00, cam13, cam25, cam38`. **This
+   applies to sample and full release alike and is fatal to the COLMAP route
+   for this lane.**
+2. **`uid = intr.id`** (`:662`), with the assertion at `:588` requiring the
+   test and train uid sets to be disjoint. **This applies to the Apollo
+   SAMPLE only.** The sample's `cameras.txt` declares one shared camera
+   `2 OPENCV 5312 2988 ...`, so all 39 views take `uid = 2`, and the
+   assertion compares `2` against `[2]` and fails by construction. **The
+   FULL release does NOT have this defect** — its `scene1_opera/cameras.txt`
+   was read in full this block (6,309 bytes) and carries **39 entries with
+   `CAMERA_ID` 1..39**, all with identical OPENCV parameters. That is valid
+   COLMAP, and it also resolves the "39 identical lines would be malformed
+   COLMAP" inconsistency left open in
+   [[dataset-admission-matrix-2026-08-18]]'s 2026-08-19 appendix.
+3. **`/30` timestamp division** (`:700`) — see B4.
+
+## B4. FPS — there is no `60` to fix; the hard-coded rate is `30`, and that is 2x wrong
+
+The concern on the record was 60 versus the measured `60000/1001` = 59.94, a
+0.1% error. **A repo-wide search finds no site that hard-codes 60.** What is
+hard-coded is **30**, at `scene/dataset_readers.py:200`
+(`timestamp = frame_idx / 30.0`) and `:700`, plus 73 configs carrying
+`motion_track_dt: 0.0333333333`.
+
+For ImViD that is wrong by a factor of **2.002** — three orders of magnitude
+worse than the question being asked. The correct period is
+`1001/60000 = 0.0166833...` s. **Any ImViD lane must set the frame period
+from the measured stream rate, never inherit the N3V constant.**
+
+## B5. The 2 px gate has a raster trap
+
+The recorded reprojection gate is **2 px**, and the passing values
+(1.1953 / 1.1361 / 1.1808 px) are **at native 5312x2988**. Residuals scale
+with the raster, so the same geometry evaluated on the 0.5-scale 2656x1494
+raster reads **half**.
+
+> **State the gate as `mean <= 2.0 px AT NATIVE`, i.e. `<= 1.0 px` when
+> measured on the 0.5-scale raster, and make every reported residual say
+> which raster it is in.** Comparing a 0.5-scale residual against a native
+> 2 px gate passes trivially and measures nothing.
+
+## B6. The sparse initialization is REUSABLE unchanged — and re-triangulating would be worse
+
+The 20,157-point union is valid in the undistorted PINHOLE frame with no
+modification, because undistortion replaces only the camera-to-pixel map:
+with no rectification rotation the world-to-camera transform `(R_i, t_i)` is
+unchanged, and a world-frame 3D point is invariant under a change to the
+projection model alone. The consistency requirement is that the intrinsic
+written to disk is the same `K_new` used to build the resampling map.
+
+Re-triangulating would be actively worse rather than merely wasteful:
+`scripts/imvid_sparse_init.py` pins `--SiftExtraction.max_image_size` to the
+native 5312 while an undistorted raster is 2656 wide, so features would be
+detected at full raster on half-resolution content, changing the residual
+scale — at a further ~47 min x 3 of CPU matching.
+
+**One thing does have to change: the file NAME.** The Blender reader looks
+for `points3d.ply` exactly (`:481`), the artifact is
+`points3d_colmap_union.ply`, and a mis-named point cloud is silently
+substituted by a random uniform fill **with no error raised** (`:481-491`) —
+the exact silent-initialization failure this project already paid for once
+on DiVa-360.
+
+## B7. Schedule — "6k" does not mean on ImViD what it means on N3V
+
+| protocol | frames | train cams | units | pres/unit @6k | @12k |
+|---|---:|---:|---:|---:|---:|
+| N3V 50-frame | 50 | **19** (cam04 absent from the release) | 950 | 12.632 | 25.263 |
+| ImViD Opera full | 300 | 35 | 10,500 | **1.143** | **2.286** |
+
+**An 11.05x exposure gap.** Matching N3V's per-unit exposure on the full
+Opera split would need ~66,300 iterations — 5.5x the authorized 12k ceiling.
+Even 12k lands at 2.29 presentations/unit, essentially the ~2.1 that
+[[b0c-canonical-300f-2026-08-20]] explicitly dismisses as pre-peak.
+
+**Consequence:** a meaningful sub-12k ImViD pilot must use a frozen,
+event-selected **frame tranche**, not the full 300. A 50-frame ImViD subset
+reaches N3V-equivalent exposure at **11,053 iterations**, which fits under
+the ceiling. Presentations per unit must be reported alongside iterations in
+every ImViD result.
+
+## B8. Submission readiness
+
+**No allowlist change is needed.** `scripts/imvid_pilot_prepare.py` is
+already at `scripts/submit_apollo.py:104` and already carries a `--mode`
+dispatcher, so extending it is the zero-diff route. Non-`main.py`
+entrypoints take their whole CLI from `--extra-arg` (values starting with
+`-` need the `--extra-arg=--flag` form) and receive no generated run dir.
+
+## B9. Still NOT established
+
+No ImViD number exists and no ImViD training has run. The undistortion has
+been *measured* but no undistorted image has been *written*. The
+reprojection gate of B5 has been *specified* but not *executed*. And the
+fixed-rig property remains verified only for the 300-frame sample at frames
+0/150/299 — metadata cannot certify a full take, because a moving take
+registered at frame 0 produces an identical `images.txt`.
