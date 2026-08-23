@@ -67,7 +67,7 @@ from typing import Any
 
 #: Bumped on ANY change to transfer or verification semantics. Recorded in
 #: every manifest line so a later reader can tell which code produced it.
-DOWNLOADER_VERSION = "imvid-fetch-1.0.0"
+DOWNLOADER_VERSION = "imvid-fetch-1.1.0"
 
 #: The user-supplied public folder. Not a secret; it is world-readable.
 DEFAULT_ROOT_FOLDER_ID = "1TrhrOrmFdvw-wTRPiVqlyWUWZrJJgHZe"
@@ -105,6 +105,13 @@ RECORDED_TOTAL_FILES = 325
 RECORDED_TOTAL_BYTES = 1_181_076_959_285
 
 _UA = "Mozilla/5.0 (X11; Linux x86_64) adags-imvid-fetch/1.0"
+#: A lock older than this is treated as abandoned. Generous by design: the
+#: largest file in the release is ~3.2 GB, which is ~3 minutes even at a
+#: degraded 20 MB/s, so two hours cannot be reached by a live transfer. A
+#: worker killed mid-file (SIGKILL skips the `finally`) would otherwise leave
+#: a lock that blocks that file permanently -- silently, since a locked file
+#: is skipped rather than reported as an error.
+LOCK_STALE_SECONDS = 7200
 _CHUNK = 8 * 1024 * 1024
 _ENTRY_SPLIT = re.compile(r'(?=<div class="flip-entry" id="entry-)')
 _ENTRY_ID = re.compile(r'id="entry-([A-Za-z0-9_-]+)"')
@@ -352,9 +359,26 @@ def _acquire_lock(lock_path: Path) -> bool:
     """O_EXCL per-file claim so two workers never fetch the same file."""
 
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
-    except FileExistsError:
+    for attempt in (0, 1):
+        try:
+            descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+            break
+        except FileExistsError:
+            if attempt == 1:
+                return False
+            try:
+                age = time.time() - lock_path.stat().st_mtime
+            except FileNotFoundError:
+                continue  # released between the failed create and the stat; retry
+            if age < LOCK_STALE_SECONDS:
+                return False
+            print(f"    STEALING a stale lock ({age/3600:.1f} h old): {lock_path.name} -- "
+                  "its worker died without releasing it", flush=True)
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+    else:
         return False
     with os.fdopen(descriptor, "w") as handle:
         json.dump({"pid": os.getpid(), "host": os.uname().nodename if hasattr(os, "uname") else "",
