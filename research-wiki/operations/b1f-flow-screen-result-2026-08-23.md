@@ -85,7 +85,88 @@ zero — `flow_sites_total 0`, `flow_mean_speed 0.0`,
 including arms where flow is off, which is what makes "a run whose flow
 never applied" detectable from the record alone.
 
-## 4. What is NOT yet established
+## 4. B1-X FAILED CLOSED, exposing two defects — repaired, rerun at retry 1
+
+Experiments **241** and **242** — BOTH camera-swapped arms — reached
+`STATE_ERROR` at the first birth event with
+
+```
+ContractError: the camera_swapped flow control needs a training-camera
+roster; pass train_cameras to build_flow_assets
+```
+
+**Diagnosis.** `Scene.getTrainCameras()` returns a `CameraDataset` whose
+`__getitem__` yields `(image, camera)` **TUPLES**
+(`utils/data_utils.py:17-35`), so iterating it handed the roster builder
+objects with no `image_name`. The trainer wiring passed the dataset
+rather than its `viewpoint_stack`.
+
+**The second defect is the serious one, and the crash is what exposed
+it.** `_camera_ids` SKIPPED unnamed entries silently, so the wiring
+mistake produced an **EMPTY roster** rather than an error. An empty
+roster fails closed for the camera-swapped control — which is why B1-X
+crashed — but leaves `assert_not_holdout` **INERT** for the correct arm.
+**The held-out guard this page's §1 describes as structural was, in the
+B1-F cells that already ran, silently protecting nothing.**
+
+**No leakage occurred, and that is verified rather than argued.** The
+birth record for experiment 239 lists all seven birth cameras:
+`cam13_0035, cam20_0044, cam02_0004, cam07_0001, cam10_0023, cam08_0000,
+cam16_0025` — **never `cam00`**. The trainer only ever presents training
+cameras as the birth view, so the guard was redundant, not violated.
+
+**Repairs (technical; no scientific semantics changed):** `main.py` now
+passes `.viewpoint_stack`; `_camera_ids` fails closed on an unnamed entry
+AND on any non-empty roster that yields no ids, so a guard can never
+again degrade silently to "protects nothing". Four regression tests
+added; 142 pass.
+
+**A third defect, in the test suite itself.** The flag-off bit-identity
+test pinned its baseline to `git show HEAD:scene/packet_birth.py`, so it
+**self-invalidated the moment the flow work was committed** — the
+"previous implementation" became the post-change code and the
+non-vacuity assertion (that the baseline REJECTS the new keyword) began
+failing. A bit-identity test whose reference moves with the branch cannot
+prove anything. The baseline is now the fixed pre-flow commit `f666dd7`.
+
+**Cross-commit comparability of the reruns.** B1-F (239/240) ran at
+`789595a`; the B1-X reruns (**254**/**255**, retry 1) run at `b4146d5`.
+The repair is inert for the CORRECT arm by construction: with an empty
+roster `assert_not_holdout` never raised, and with a populated roster it
+checks and passes because a training camera is not held out — same
+outcome, no state change. The removed side effect (iterating the dataset
+loaded every image) touches no RNG and mutates no camera. Recorded so the
+cross-commit comparison is explicit rather than assumed.
+
+Claims consumed and preserved: `ladder_b1x_crb_s{0,1}` r0 (241/242,
+ERROR, never reused) → r1 (254/255).
+
+## 5. The first genuinely-different-seed spread this project has measured
+
+The plain-B1 comparators are the first cells in this repository to train
+at genuinely different seeds, because `--seed` is now threaded to the
+trainer ([[seed-threading-defect-2026-08-23]]).
+
+| arm | pooled+clamped PSNR | SSIM | LPIPS |
+|---|---:|---:|---:|
+| plain B1 seed 0 (exp 237) | 33.3941 | 0.95804 | 0.08184 |
+| plain B1 seed 1 (exp 238) | 34.0294 | 0.96065 | 0.08095 |
+| B1-F seed 0 (exp 239) | 33.2568 | 0.95830 | 0.08240 |
+
+**The seed-to-seed spread is 0.635 dB** — more than double the ~0.27 dB
+run-to-run spread measured between fixed-seed replicates, and 2.3× the
+±0.28 figure the ladder era cited as its "seed spread".
+
+**This materially raises the bar for every 50-frame comparison in this
+family.** An effect smaller than ~0.64 dB is not resolvable by two seeds
+at this protocol. For reference, B1-F seed 0 sits **−0.137 dB** from
+plain B1 seed 0 — comfortably inside that band, i.e. indistinguishable
+from noise on the evidence of one seed pair.
+
+Recorded now because it is independent of the screen's outcome and
+because it bounds what any future two-seed 50-frame cell can claim.
+
+## 6. What is NOT yet established
 
 **Everything the screen exists to decide.** No metric has been read. The
 decisive comparison is **B1-F vs B1-X**: if correct flow does not beat
