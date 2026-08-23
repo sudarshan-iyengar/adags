@@ -158,7 +158,46 @@ recorded A0′ and A1-LOCAL figures**, provided it is scored with
 `scripts/eval_lrv1_event.py` and its existing regions — not with
 `main.py --val`, whose convention did move.
 
-## 7. Bookkeeping
+## 7. Phase T2 seeding — observed BEFORE any A-est result, and it inverts the expected risk
+
+From experiment 245's seeding log at iteration 0:
+
+```
+program_schema  adags-episode-program-v2   membership_mode  spatial_voxel
+families 2   gated_rows 336   rows 50000   unassigned_rows 49664
+v2_group_rows {291: 155, 292: 181}   v2_group_K {291: 2, 292: 2}
+```
+
+**The estimated program gates 336 rows in 2 families. The ORACLE gated
+~84 rows in 8 families** ([[lrv3-local-presence-corrected-cell-2026-08-20]]).
+So A-est gates roughly **four times MORE** rows than the oracle, not
+fewer.
+
+The arithmetic explains it and was predictable: the voxel grid is 8 cells
+per axis over a span of ~3.23, so each cell is a ~0.40 cube — volume
+~0.065 — and two cells give ~0.13, against the oracle sphere's
+`4/3·π·0.2³ ≈ 0.034`. **The two cells enclose ~3.8× the sphere's volume,
+matching the observed 336/84 ≈ 4× row ratio.**
+
+**This inverts the risk this page flagged in §5.** The concern recorded
+there was low recall making A-est UNDERPOWERED. The seeding shows the
+opposite: coarse voxel membership OVER-gates, capturing background and
+ground rows that sit inside the cells but are not the event object.
+Those rows will be driven to exact absence during the gap, suppressing
+content that should be present.
+
+T1 measured **zero false activations at the GROUP level**; this is the
+distinct, finer question of false membership at the ROW level within an
+accepted group, which T1 did not measure and could not.
+
+**Consequence for reading A-est, recorded in advance:** with timing
+numerically identical to the oracle's, a shortfall against A1-LOCAL is
+attributable to MEMBERSHIP — and specifically to over-gating rather than
+under-gating. A per-row membership precision figure against the authored
+sphere is the diagnostic that would quantify it, and it is not part of
+this cell.
+
+## 8. Bookkeeping
 
 Claim consumed: `lrv3_episode_estimate_t1` r0 (experiment 235). Cost
 **0.188 slot-h** measured. Grouping: 417 groups over 149,794 rows,
