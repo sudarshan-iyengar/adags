@@ -67,7 +67,7 @@ from typing import Any
 
 #: Bumped on ANY change to transfer or verification semantics. Recorded in
 #: every manifest line so a later reader can tell which code produced it.
-DOWNLOADER_VERSION = "imvid-fetch-1.1.0"
+DOWNLOADER_VERSION = "imvid-fetch-1.2.0"
 
 #: The user-supplied public folder. Not a secret; it is world-readable.
 DEFAULT_ROOT_FOLDER_ID = "1TrhrOrmFdvw-wTRPiVqlyWUWZrJJgHZe"
@@ -112,6 +112,14 @@ _UA = "Mozilla/5.0 (X11; Linux x86_64) adags-imvid-fetch/1.0"
 #: a lock that blocks that file permanently -- silently, since a locked file
 #: is skipped rather than reported as an error.
 LOCK_STALE_SECONDS = 7200
+#: Escalating waits after a Drive quota/rate refusal, in seconds. MEASURED
+#: cause: two workers pulling ~42 MB/s sustained tripped a limit after ~62 GiB
+#: in ~24 minutes, while a probe from a DIFFERENT host still served bytes for
+#: an untouched file -- so the limit is per-IP against the requesting host,
+#: not per-file and not account-wide. Escalating rather than fixed because the
+#: reset horizon is unknown and a fixed short retry would be the "hammer Drive"
+#: behaviour the acquisition rules forbid.
+QUOTA_BACKOFF_SECONDS: tuple[int, ...] = (900, 1800, 3600, 3600, 7200)
 _CHUNK = 8 * 1024 * 1024
 _ENTRY_SPLIT = re.compile(r'(?=<div class="flip-entry" id="entry-)')
 _ENTRY_ID = re.compile(r'id="entry-([A-Za-z0-9_-]+)"')
@@ -520,15 +528,28 @@ def cmd_download(args: argparse.Namespace) -> int:
         print(f"\n[{folder_name}] {len(entries)} files, "
               f"{folders[folder_name]['total_bytes']:,} bytes", flush=True)
         for entry in entries:
-            try:
-                outcome = download_one(entry, dest_root, manifest_path, locks_dir,
-                                       timeout=args.timeout)
-            except QuotaPause as exc:
-                print(f"    QUOTA/RATE PAUSE: {exc}", flush=True)
-                print("    Partials preserved. Re-run this exact command to resume.", flush=True)
-                return 3
+            attempt = 0
+            while True:
+                try:
+                    outcome = download_one(entry, dest_root, manifest_path, locks_dir,
+                                           timeout=args.timeout)
+                    break
+                except QuotaPause as exc:
+                    print(f"    QUOTA/RATE PAUSE: {exc}", flush=True)
+                    if attempt >= len(QUOTA_BACKOFF_SECONDS) or args.no_backoff:
+                        print("    Backoff exhausted. Every completed byte and partial is "
+                              "preserved; re-run this exact command to resume.", flush=True)
+                        return 3
+                    wait = QUOTA_BACKOFF_SECONDS[attempt]
+                    attempt += 1
+                    print(f"    backing off {wait}s (attempt {attempt}/"
+                          f"{len(QUOTA_BACKOFF_SECONDS)}) then resuming from the recorded "
+                          "offset -- nothing is deleted", flush=True)
+                    time.sleep(wait)
             if outcome == "done":
                 done += 1
+                if args.sleep_between_files:
+                    time.sleep(args.sleep_between_files)
             elif outcome == "skipped":
                 skipped += 1
             if args.max_files and done >= args.max_files:
@@ -606,6 +627,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     down.add_argument("--only", nargs="*", default=None, help="restrict to these source folders")
     down.add_argument("--max-files", type=int, default=0, help="stop cleanly after N new files")
     down.add_argument("--timeout", type=float, default=300.0)
+    down.add_argument("--sleep-between-files", type=float, default=0.0,
+                      help="seconds to pause after each completed file; lowers the "
+                           "sustained request rate that trips Drive's per-IP limit")
+    down.add_argument("--no-backoff", action="store_true",
+                      help="exit immediately on a quota refusal instead of backing off "
+                           "and resuming (the default is to self-heal)")
     down.set_defaults(func=cmd_download)
 
     stat_p = sub.add_parser("status", help="reconcile destination against the inventory")
