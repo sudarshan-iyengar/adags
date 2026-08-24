@@ -67,7 +67,7 @@ from typing import Any
 
 #: Bumped on ANY change to transfer or verification semantics. Recorded in
 #: every manifest line so a later reader can tell which code produced it.
-DOWNLOADER_VERSION = "imvid-fetch-1.2.0"
+DOWNLOADER_VERSION = "imvid-fetch-1.3.0"
 
 #: The user-supplied public folder. Not a secret; it is world-readable.
 DEFAULT_ROOT_FOLDER_ID = "1TrhrOrmFdvw-wTRPiVqlyWUWZrJJgHZe"
@@ -119,7 +119,15 @@ LOCK_STALE_SECONDS = 7200
 #: not per-file and not account-wide. Escalating rather than fixed because the
 #: reset horizon is unknown and a fixed short retry would be the "hammer Drive"
 #: behaviour the acquisition rules forbid.
-QUOTA_BACKOFF_SECONDS: tuple[int, ...] = (900, 1800, 3600, 3600, 7200)
+QUOTA_BACKOFF_SECONDS: tuple[int, ...] = (
+    900, 1800, 3600, 7200, 14400, 21600, 21600,
+)  # 0.25 + 0.5 + 1 + 2 + 4 + 6 + 6 h = 19.75 h of total patience.
+#: EXTENDED on measurement, not on preference. The original schedule gave
+#: 4.75 h and proved demonstrably too short: SEVEN refusals were observed
+#: spanning 23:56 to 09:21 the next morning -- 10 hours after the trip --
+#: so the cap outlives any budget of a few hours. A single launch must be
+#: able to sleep through a plausible ~24 h reset rather than exhaust before
+#: it and require a human to relaunch.
 _CHUNK = 8 * 1024 * 1024
 _ENTRY_SPLIT = re.compile(r'(?=<div class="flip-entry" id="entry-)')
 _ENTRY_ID = re.compile(r'id="entry-([A-Za-z0-9_-]+)"')
