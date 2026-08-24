@@ -280,3 +280,133 @@ fixture design cannot expose H1 to the concavity at 8³ given T1's
 selectivity — and **not** about hull completion. A future spec must then
 force a spanning accepted component by construction rather than hope for
 one.
+
+---
+
+# APPENDED (2026-08-24, late block) — lanes closed, and the block's methodological finding
+
+## 13. THE HULL LANE IS CLOSED — both orientations INVALID, complementarily
+
+Full record: [[nonconvex-hull-o1-result-2026-08-24]] and its O2 append.
+
+| | cells only from arm A | cells only from arm B | verdict |
+|---|---:|---:|---|
+| **O1** (exps 273/274/275) | **0** | 3 | INVALID (V3) |
+| **O2** (exps 276/278/285) | 3 | **0** | INVALID (V3, V4) |
+
+The mirror flipped which arm T1 latches onto and **neither accepted
+component ever spans both arms**, so H1's per-component bounding box never
+reaches the notch. Two predeclared orientations failing the same
+precondition *by opposite arms* makes this a property of the method, not a
+quirk of one geometry.
+
+**The conclusion was frozen before O2 ran** — the O1 record states
+verbatim that a second V3 failure means the fixture cannot expose H1 at 8³
+given T1's selectivity, *"a statement about the INSTRUMENT, not about hull
+completion"*.
+
+**Root cause, measured:** T1 gates **2 of 452** (O1) and **2 of 511** (O2).
+**The extreme selectivity that makes T1's boundary inference exact, with
+zero false activations, is what makes it unable to exercise a hull
+operator on a non-convex object.**
+
+**Hull completion is neither refuted nor supported.** V1 and V2 pass in
+both, so the fixture is sound and the estimator is the limiting factor.
+
+## 14. THE BLOCK'S METHODOLOGICAL FINDING — three vacuity catches, and the asymmetry between them
+
+Three separate instruments this block produced a favourable-looking result
+that could not have produced an unfavourable one:
+
+| # | instrument | how it was caught |
+|---|---|---|
+| 1 | hull falsifier O1 | **pre-declared precondition V3** |
+| 2 | hull falsifier O2 | **pre-declared precondition V3/V4** |
+| 3 | densification-amplifier probe | **an anomalous invariant I happened to notice** (`points` unchanged) |
+
+**The asymmetry is the finding.** The two hull catches were automatic: V3
+is a statement about the *accepted set*, evaluated before any score, so it
+cannot leak the outcome and it fires whether or not anyone is paying
+attention. The third was caught only because the point count looked wrong
+— and had it not, the probe's frozen rule would have delivered a clean,
+publishable-sounding null from an instrument that never engaged its own
+mechanism.
+
+**I wrote the hull spec with a precondition and the probe without one, an
+hour apart, in the same block.** The discipline did not transfer.
+
+**The rule to carry:** *freezing a reading rule is not enough. Every
+frozen rule needs a frozen precondition asserting that the mechanism it
+reads was actually exercised — stated about the setup, never about the
+score, so that checking it cannot leak the outcome.*
+
+## 15. WAVE 1 ENDPOINTS — and the pre-registered prediction reverses
+
+Wave 1 (exps 267/268/269, evals 286/287/288), n=3 of the planned 6:
+
+| endpoint | a | b | c | spread | **sd** |
+|---|---:|---:|---:|---:|---:|
+| `all_events_union` | 31.9414 | 31.6975 | 31.7708 | 0.2439 | **0.125114** |
+| `complement` | 33.1152 | 33.3974 | 33.0810 | 0.3163 | 0.173622 |
+| `whole_frame` | 33.1106 | 33.3904 | 33.0759 | 0.3145 | 0.172409 |
+| pooled+clamped PSNR | 33.4011 | 33.6731 | 33.3722 | 0.3008 | 0.166001 |
+| **`union − complement`** | −1.1738 | −1.6999 | −1.3102 | 0.5260 | **0.272992** |
+
+**The co-primary contrast endpoint's prediction REVERSES.**
+
+| | union sd | contrast sd | contrast vs union |
+|---|---:|---:|---|
+| historical n=3 (261-263) | 0.262198 | 0.174523 | **−33.4%** (better) |
+| **fresh wave 1** | 0.125114 | 0.272992 | **+118%** (2.18x WORSE) |
+
+The spec registered the contrast as *"an n=3 hypothesis... The six fresh
+runs TEST it; they do not assume it."* On the first three fresh runs it
+does not reduce variance — it more than doubles it. **Registering it as a
+prediction rather than adopting it was load-bearing**: adopting it on the
+historical three would have built the next comparison on an endpoint that
+is worse, not better.
+
+**Equally telling:** the *primary* endpoint's sd differs by **2.1x**
+between two n=3 cohorts of the identical protocol (0.262 vs 0.125). That
+is the study's premise made visible — n=3 gives a sigma CI spanning
+12.07x, so two n=3 estimates disagreeing by 2x is unremarkable and
+**neither is usable.**
+
+**No conclusion is drawn at n=3.** The spec makes n=6 primary and
+evaluates the stopping rule there. Wave 2 = exps 289/290/291.
+
+## 16. A DEVIATION FROM MY OWN SPEC, recorded BEFORE wave 2 ran
+
+Wave 2 runs at a later commit than wave 1, and `scripts/submit_apollo.py`
+— a member of the declared execution set — gained **4 allowlist strings**.
+So the six cells **span two archives and may NOT be called
+byte-identical**, contrary to the spec's §4. The numerical training path
+is verifiably empty-diff.
+
+Rejected: dropping to n=3 (leaves the study unable to answer its own
+question), and reverting the allowlist to force an archive match (*editing
+the repository so the record fits the protocol*). Recorded append-only at
+`69a7795`, before submission and before any wave-2 number existed.
+
+## 17. COST — actual, not projected
+
+**Actual is 9.88 slot-h against 16.2 projected** for the same cells — my
+projections ran ~40% conservative, which is the safe direction for a
+ceiling guard. The one that ran OVER: wave 1 training cost **7.33 actual
+vs 6.9 projected**. Eval cells are ~0.03 each, not the 0.4 projected.
+
+Block total with wave 2 and its evals: **~17.4 slot-h actual against the
+24 ceiling.** Transfers ran at **zero GPU slots** throughout.
+
+## 18. Directive items NOT completed, and why
+
+* **ImViD event census** — blocked by the Drive rate limit. Opera is 15/39
+  cameras; a census needs multi-camera support and a 15-camera subset
+  would bias which candidates reach `C_min = 3` by download order.
+* **ImViD fixed-rig test on a full take** — needs a complete take.
+  Metadata cannot substitute, per the frozen event definition §4.
+* **A meaningful ImViD pilot** — a 50-frame tranche at N3V-equivalent
+  exposure needs ~11k iterations at ~6.2x N3V's pixel count, i.e. 10-18
+  slot-h. Priced and not affordable inside this block's remainder.
+* **A paired mechanism experiment** — designed and deliberately not
+  submitted; the directive's five preconditions do not all hold.
