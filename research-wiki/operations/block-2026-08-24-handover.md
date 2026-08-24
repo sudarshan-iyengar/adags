@@ -1,0 +1,191 @@
+# HANDOVER — 2026-08-24 block
+
+Self-contained. EXPLORATORY throughout, `evidence_bearing: false` on every
+cell. **This page is written progressively during the block; sections
+marked IN FLIGHT were still running when it was last updated.**
+
+## 1. State
+
+| item | value |
+|---|---|
+| branch | `apollo/csvl-vpl-v2-exploratory` |
+| block start | `bcc7cf0` |
+| protected, untouched | `research-wiki/deep-dive-prompt.txt`, `run-deep-dive.ps1`, `agent-control/`, all `overnight-handover-*.md`, the pasted images, `sync 21-08-2026.md`, `supervisor-brief-2026-08-20.md` |
+| pools | `hopper` 3x H100, `dgx` 6x V100 |
+
+## 2. The decisive results
+
+### 2.1 ImViD calibration is ADMITTED — the reprojection gate passed on all three frozen frames
+
+Experiments **270 / 271 / 272**, `dgx`, V100 image, all `STATE_COMPLETED`.
+
+| frame | pairs | cameras | **mean px @ NATIVE** | recorded COLMAP |
+|---:|---:|---|---:|---:|
+| 0 | 20,366 | 35/35 | **1.215442** | 1.1953 |
+| 150 | 31,331 | 35/35 | **1.162289** | 1.1361 |
+| 299 | 28,986 | 35/35 | **1.213650** | 1.1808 |
+
+Gate is **2.0 px AT NATIVE**; all three pass with every training camera
+contributing. Decisive rather than merely green because the measured
+detection margins are enormous — transposed rotation **1400.52 px**,
+camera-to-world pose **7850.60 px**, mis-ordered `distCoeffs` **56.77 px**,
+dropped distortion **24.90 px**, against **3.03e-13 px** for the correct
+pipeline. And the cross-check limb reproduces COLMAP's own residual
+through an independent code path (1.198136 vs recorded 1.1953), sitting
+slightly above it exactly as the undistortion Jacobian predicts.
+
+**Consequence: the existing 20,157-point sparse union is reusable in the
+undistorted PINHOLE frame WITHOUT re-triangulation** — previously an
+argument, now a measurement.
+
+**Documented limitation, in the instrument itself so it cannot be
+mis-cited:** the gate is **exactly blind to the principal point**, because
+that term cancels between the two sides. A separate equality check against
+experiment 156's intrinsics covers it (measured delta `0.0`).
+
+### 2.2 Spacetime Gaussian Grouping DOES NOT occupy the inferred-window cell
+
+Read in full from the CC-BY journal version (the paywall was an IdP
+redirect); the 6-page EUVIP version is genuinely unreachable and is
+recorded as unread, not read. Identity is explicitly **time-independent**,
+**no suppression is implemented in any form**, and **nothing is inferred**
+— temporal parameters are free photometric parameters and labels come from
+SAM + DEVA. The string "PSNR" occurs **zero** times in the full text.
+
+**The standing forbidden-claim entry is DISCHARGED.**
+
+**One recorded premise corrected, append-only:** "none of the seven
+operates on a 4D representation with per-primitive temporal support" was
+true of those seven and false in general — this method is per-primitive
+identity on exactly our `(mu^tau, s^tau)` substrate family. Every
+consequence drawn from that section survives, and the per-primitive-metrics
+finding is *strengthened* (n+1 methods reporting only rendered-2D mIoU).
+
+**One genuinely new mechanism:** its supervision is absolute-label
+cross-entropy, not a within-frame contrastive term, so unlike the
+contrastive family it **does** have a cross-episode supervisory path —
+bounded by the authors naming disappearance-reappearance as exactly where
+their pipeline fails.
+
+**SA4D now replaces it as the highest-value remaining read.**
+
+### 2.3 The ImViD bulk transfer is rate-limited PER-IP at ~62 GiB
+
+Full record: [[imvid-acquisition-quota-2026-08-24]]. **21 files verified
+complete, 62.149 GiB (5.7%), zero partials, zero stale locks, zero corrupt
+files.** Diagnosed by a single 1-byte probe from a different host returning
+`206 / video/mp4` for an untouched file while Apollo was still refused — so
+the release is intact and the limit is tied to the requesting host.
+
+**Whether it is a RATE limit or a DAILY VOLUME cap is UNDETERMINED**, and
+it is the difference between ~1 day and ~18 host-days to finish. Read the
+resume log; do not assume.
+
+### 2.4 The full Opera take is 15,215 frames — the exposure gap is 560x, not 11x
+
+Measured from the first completed full-take file: h264 5312x2988,
+`60000/1001`, 253.84 s, **nb_frames 15,215**, SHA-256 recomputed on Apollo
+matching the manifest exactly. Full split = 532,525 training units against
+N3V-50f's 950. **The full take cannot be trained at any authorized
+schedule**; a frozen event-selected tranche is now binding, not advisable.
+
+## 3. Frozen specs written this block (all BEFORE their outputs existed)
+
+* [[n3v-variance-study-spec-2026-08-24]] — run-level variance and endpoint
+  validation. Two of the four levers were closed **by arithmetic on
+  existing data before spending anything**: pooling more pixels is
+  near-falsified (296x the pixel-times reduces the spread by **2.8%**, not
+  ~17x, so the variance is a global run-level shift and not spatial
+  sampling noise), and more replicates is unaffordable (**14/arm =
+  68.1 slot-h**, 2.8x the block ceiling). δ\* = **0.30 dB**, grounded in the
+  published N3V field span, with the uncomfortable corollary frozen
+  alongside it that the recorded B1 effect (+0.211 dB) is **below** it. A
+  within-run contrast endpoint is pre-registered as an n=3 **prediction to
+  be tested**, with its complement-harm guard frozen at the same time.
+* [[imvid-event-definition-2026-08-24]] — six conditions, a three-way
+  A/B/C classification requiring **positive** evidence for genuine absence,
+  and a synchronization rule. Amended append-only: the proxy census
+  **cannot** satisfy that rule at scouting rates (2 fps ⇒ 500.5 ms steps,
+  25x coarser than the 20 ms bound), which splits it into scouting then
+  narrow-window measurement.
+* [[nonconvex-hull-falsifier-spec-2026-08-24]] — gate frozen unweakened at
+  precision ≥ 0.80, recall ≥ 0.90, zero false activations, with the second
+  orientation predeclared so it cannot be chosen after the first result.
+
+## 4. Instruments built and self-validated
+
+| script | validation |
+|---|---|
+| `fetch_imvid_release.py` | live enumeration matches the recorded inventory **exactly** (325 files, 1,181,076,959,285 bytes), twice from different hosts |
+| `imvid_verify_pinhole.py` | 13/13 on Apollo incl. the cv2 production path; corruption margins 1400 / 7850 / 57 / 25 px |
+| `imvid_event_proxy.py` | 91/91, with byte-exact frame-index mapping verified against an independent ffmpeg decode |
+| `build_nonconvex_reveal_scene.py` | **zero** predicate disagreements over 16,740,729 samples; reproduces the preflight's pixel counts it was never fitted to |
+| `score_nonconvex_membership.py` | 55/55, pinning **both** directions (H1 fills the notch, H2 does not) |
+| `nonconvex_hull_preflight.py` | 42/42, independently re-run |
+
+## 5. Corrections to my own records, all append-only
+
+1. The `/30` frame-period factor is **1.998** (`2000/1001`), not the 2.002 I
+   wrote. Direction and conclusion unchanged.
+2. The union rebuild **HAS** been run (experiment 164, 20,157 points,
+   sha256 verified on Apollo); `imvid-baseline-freeze.md` A4 saying
+   otherwise was stale.
+3. N3V has **19** training cameras, not 20.
+4. Adding a second concurrent transfer worker bought ~13% and the two arms
+   tripped the quota four seconds apart — the acquisition rules' warning
+   was right and my judgement was the weaker one.
+
+## 6. Defects found and fixed
+
+* **Stale per-file locks** in the downloader: released in a `finally`,
+  which `SIGKILL` skips, so a killed worker would have blocked one file
+  **permanently and silently** and the transfer would have reported success
+  with a hole in it. Found by reasoning, not failure. Fixed with a 2 h
+  staleness steal, tested four ways.
+* **Non-resuming quota handling**: a refusal exited cleanly but did not
+  recover. Now backs off 15/30/60/60/120 min (**4.75 h of patience**) and
+  resumes from the recorded offset.
+
+## 7. Defects found and NOT fixed, recorded
+
+* **`_packet_ids` is absent from `capture()`** (`scene/gaussian_model.py`),
+  so a branch-from-checkpoint on a B1 arm silently loses the packet-id
+  column. **This blocks two of the three paired variance designs.** Not
+  fixed because a fix changes training-path bytes that the current cohort's
+  whole value rests on being identical to.
+* **The Blender loader route fails OPEN** on distortion: it reads
+  `fl_x/fl_y/cx/cy` with no camera-model field and no distortion field, so
+  distorted images plus pinhole intrinsics train silently wrong. The
+  `OPENCV` check everyone was watching fails *closed* and is harmless.
+* **A mis-named point cloud is silently replaced by a random uniform fill**
+  with no error raised.
+
+## 8. Cost
+
+All cells `evidence_bearing: false`. Transfers ran at **zero GPU slots**
+throughout.
+
+## 9. Exact restart commands
+
+**Resume the transfer** (it self-heals, but if the task is gone):
+```
+python <scratchpad>/det_cmd.py dgx 0 <h100-digest> <scratchpad>/cmd_resume.txt --context=<scratchpad>/ctx --detach
+```
+The command inside is idempotent: completed files are skipped by byte
+count, partials resume by `Range`, and locks are stolen after 2 h.
+
+**Transfer status at any time:**
+```
+python scripts/fetch_imvid_release.py status --inventory /apollo/users/sri/proj_adags/data/imvid/imvid_drive_inventory.json --dest-root /apollo/users/sri/proj_adags/data/imvid/raw
+```
+
+## 10. Open blockers
+
+* **The ImViD quota** blocks every full-take lane: the fixed-rig test on a
+  complete take (which the frozen event definition says metadata cannot
+  substitute for), the event census, and all ImViD training. Opera at
+  15/39 cameras is deliberately **not** used for a partial census — a
+  census needs multi-camera support and a 15-camera subset biases which
+  candidates reach `C_min = 3` by download order.
+* **N3V utility scaling remains HALTED** per the block-3 decision,
+  regardless of this block's variance result.
