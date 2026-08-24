@@ -336,6 +336,13 @@ class GaussianModel:
                 }
             routing_motion_params = {
                 "route_logit": self._route_logit,
+                # Packet ids ride HERE rather than in elgs_state, because
+                # elgs_state is None whenever elgs_enable is False -- and B1
+                # packet birth runs in exactly that configuration. Omitting
+                # them made any branch-from-checkpoint on a B1 arm silently
+                # lose the column that scripts/consolidate_packets.py and the
+                # B2 lane consume.
+                "packet_ids": self._packet_ids,
                 "motion_v": self._motion_v,
                 "motion_a": self._motion_a,
                 "motion_lora_coeff": self._motion_lora_coeff,
@@ -462,6 +469,12 @@ class GaussianModel:
             if routing_motion_params is not None:
                 self._route_logit = routing_motion_params.get(
                     "route_logit", torch.empty(0, device=self._xyz.device)
+                )
+                # Default preserves pre-repair behaviour exactly: a checkpoint
+                # written before this key existed restores to the same empty
+                # tensor __init__ creates, so old checkpoints stay loadable.
+                self._packet_ids = routing_motion_params.get(
+                    "packet_ids", torch.empty(0, dtype=torch.long)
                 )
                 self._motion_v = routing_motion_params.get(
                     "motion_v", torch.empty(0, device=self._xyz.device)
