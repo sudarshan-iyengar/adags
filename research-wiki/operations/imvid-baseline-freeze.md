@@ -794,3 +794,78 @@ take — the fixed-rig test (which the frozen event definition says metadata
 cannot substitute for), the event census, and any pilot at a scientifically
 meaningful schedule. Only 3 of the sample's 300 frames are decoded, and the
 full take is 15,215 frames.
+
+## B14 (2026-08-24) — the ImViD same-code spread is 0.0101 dB, and the CONFOUND is the finding
+
+Experiments **279 / 280 / 281** (`imvid_opera_smoke500{,_b,_c}`, r0, pool
+`dgx`, V100 image, identical config `configs/imvid/opera_smoke500.yaml`,
+seed 0, all `STATE_COMPLETED`). Directive step 3-4: two identical-config
+replicates, giving n=3 with the smoke.
+
+| run | exp | held-out PSNR | SSIM | points |
+|---|---:|---:|---:|---:|
+| a | 279 | 20.229538 | 0.751707 | 20,157 |
+| b | 280 | 20.229460 | 0.751737 | 20,157 |
+| c | 281 | 20.219417 | 0.751686 | 20,157 |
+
+```
+mean 20.226138   sd 0.005821   SPREAD 0.010122 dB
+```
+
+## Do NOT read this as "ImViD is reproducible"
+
+It is **49x smaller** than N3V's recorded 0.4945 dB same-code spread at
+6k/50 frames, and the temptation is to call that a dataset difference.
+**It is not, and the arithmetic says why.**
+
+Densification fires when `iteration > densify_from_iter` AND
+`iteration % densification_interval == 0`. This config has
+`densify_from_iter: 500`, `densification_interval: 100`, and
+**`iterations: 500`**. `500 > 500` is **False**, so **ZERO densification
+rounds fired** — and all three runs ended at **exactly 20,157 points**,
+the initialization count, which is the empirical confirmation.
+
+**These runs stopped precisely at the amplifier's threshold without
+crossing it.** The N3V post-mortem
+([[b1f-flow-postmortem-2026-08-23]]) attributes that protocol's spread to
+densification and measured the divergence jumping **1400x** at exactly
+`densify_from_iter`. A 6k N3V run passes through **54** densification
+rounds; these ImViD runs passed through none.
+
+**So the honest statement is narrow:** the ImViD *500-iteration*
+configuration is reproducible to 0.0101 dB. That figure characterizes a
+substrate that never engaged the mechanism the N3V finding is about, and
+it **must not** be cited as an ImViD protocol spread, nor as evidence that
+ImViD is better-behaved than N3V, nor as a floor for any ImViD comparison
+at a real schedule.
+
+**It is CONSISTENT with the densification-amplifier account but does not
+isolate it** — dataset, raster, scene and schedule are all confounded with
+the presence of densification.
+
+## The isolating experiment is cheap, and it is frozen and running
+
+`configs/imvid/opera_densify600.yaml` is this config with **one line
+changed**, `iterations: 500 -> 600`, verified by diff to be the only
+difference. At 600 exactly **one** densification round fires. Experiments
+**282 / 283 / 284**.
+
+The prediction and reading rule were frozen in that config's header
+**before any output existed**, both branches stated, neither preferred,
+and "orders of magnitude" pinned to **>= 10x** so it cannot move
+afterwards:
+
+* **>= 10x larger than 0.0101 dB** — the densification-amplifier account
+  is supported on a SECOND dataset, by a one-line change with everything
+  else held fixed;
+* **comparable to 0.0101 dB** — one round is not sufficient to amplify,
+  and the N3V spread needs either many rounds or an explanation that is
+  not densification alone.
+
+**Either branch measures the AMPLIFIER, not ImViD reconstruction
+quality**, and no quality claim may be drawn from either.
+
+## Also not established
+
+That 20.23 dB means anything. It is 500 iterations over 105 training
+units and remains the plumbing number of B13, not a baseline.
