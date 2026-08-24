@@ -207,3 +207,61 @@ spec:
 
 **Cost of the closed lane:** generation 0.086, substrates 1.135, T1 passes
 ~0.6 slot-h; ~1.8 slot-h total for both orientations, all scoring on CPU.
+
+---
+
+## THIRD-ORDER CORRECTION (2026-08-24, append-only) — the PASS branch was UNREACHABLE, and neither result recorded that
+
+A fresh adversarial review of a successor spec found this, and the primary
+agent verified it. **It is a correction to the two results above, not to
+the successor.**
+
+### The finding
+
+The gate is `precision >= 0.80 AND recall >= 0.90 AND zero false
+activations`. **Recall >= 0.90 was not attainable on this fixture at T1's
+selectivity, so `SURVIVES ROUND 1` was a dead branch in BOTH orientations
+before either ran.**
+
+| | base+H1 recall | floor | reachable? |
+|---|---:|---:|---|
+| O1 | **0.2995** | 0.90 | no |
+| O2 | **0.1599** | 0.90 | no |
+
+Both results are recorded as INVALID on V3, which is correct and is not
+retracted. **What neither recorded is that the attainable outcome space
+was `{REJECTED, INCONCLUSIVE, INVALID}` all along** — the run could not
+have returned a pass whatever the operator did.
+
+### Why it happened, and this is the transferable part
+
+**The gate was INHERITED from a different fixture without checking it was
+reachable on this one.** `precision >= 0.80, recall >= 0.90` comes from
+[[lrv3-membership-candidates-result-2026-08-23]], where A2+B measured
+recall **0.8088** against a structural ceiling of 0.8088 — close to the
+floor and clearly in the same regime. On LRV5-NCX, T1 gates **2 of 452**
+and **2 of 511** groups, so the accepted component covers a small fraction
+of the object and recall lands near 0.2. **The floor was transplanted; the
+regime was not.**
+
+**CARRY AS METHOD: a gate inherited from one fixture is not automatically
+attainable on another. Before building a fixture, compute the gate's
+reachable range on it — and if a branch is unreachable, either say so in
+the spec or change the gate.** This is the same family as the block's other
+two vacuity findings, and it is the third: an instrument whose favourable
+branch could not fire.
+
+### What this does and does not change
+
+**Does NOT change:** the O1 and O2 verdicts (INVALID on V3, and V4 for
+O2); the root-cause finding that T1's selectivity is the limiting factor;
+the statement that hull completion is neither refuted nor supported; or any
+measured number.
+
+**DOES change:** the reading of what those runs could have shown. They are
+not "runs that failed to reach a pass"; they are **runs whose pass branch
+did not exist.** Any future spec on this fixture must state the gate's
+reachable range before freezing, and a seeded successor must define its
+verdict rule over precision, false activations and the delta — because
+recall under a supplied seed measures the seed's own thickness, not the
+operator.
