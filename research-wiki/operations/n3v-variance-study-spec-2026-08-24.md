@@ -356,3 +356,69 @@ affordable route on the record". The correction makes the requirement more
 conservative, never less, and it was found by
 `scripts/n3v_variance_analysis.py`'s self-test failing against the
 tabulated value — which is the reason that tool exists.
+
+---
+
+## DEVIATION FROM THIS SPEC, RECORDED BEFORE WAVE 2 RUNS (2026-08-24, append-only)
+
+**Section 4 states the six cells are "byte-identical" and "differ only in
+their cell name and retry index". Wave 2 will NOT satisfy that literally,
+and the deviation is recorded here BEFORE wave 2 is submitted and before
+any wave-2 number exists.**
+
+Wave 1 (experiments 267/268/269) ran at commit `ebe9972`. HEAD has since
+moved, and `scripts/submit_apollo.py` is a member of the declared
+execution set, so wave 2's `archive_sha256` **will differ from wave 1's**.
+
+**Exactly what differs — the complete diff of the execution set between
+the two commits:**
+
+```
+scripts/submit_apollo.py | 4 ++++
++    "scripts/imvid_verify_pinhole.py",
++    "scripts/imvid_event_proxy.py",
++    "scripts/build_nonconvex_reveal_scene.py",
++    "scripts/imvid_to_blender.py",
+```
+
+Four entries appended to `ALLOWED_ENTRYPOINT_SCRIPTS`, a tuple of strings.
+
+**The numerical training path is byte-identical, verified by diff, not
+believed:**
+
+```
+git diff --stat ebe9972 HEAD -- elgs scene gaussian_renderer utils     arguments depth_visibility main.py det_exp_apollo.yaml     configs/n3v/ladder_b1_crb.yaml
+  -> EMPTY   (0 files changed)
+```
+
+`submit_apollo` is imported at runtime only for `runtime_assertions()`,
+which runs before training and performs assertions; the changed constant
+is a tuple of allowed entrypoint names and enters no computation.
+
+### Why wave 2 proceeds anyway, and the alternative that was rejected
+
+**Rejected: reporting n=3 fresh only.** The whole purpose of this study is
+that n=3 gives a 95% CI for sigma spanning a **12.07x ratio**, which is
+unusable for any cost or power calculation. n=6 brings that to **3.93x**.
+Abandoning wave 2 would leave the study unable to answer its own question.
+
+**Also rejected: reverting the allowlist to force an archive match.** That
+would be editing the repository to make the record fit the protocol, which
+is the wrong direction of accommodation.
+
+**Adopted:** run wave 2 and disclose precisely. This applies **the same
+standard this spec already set in section 4.1** for pooling with the
+historical cells — *"same training code, verified empty diff; different
+archive"* — consistently, within the cohort rather than only across
+cohorts.
+
+### Binding consequence for how the result is reported
+
+Every report of this cohort **must state that the six cells span two
+archives**, must state that the numerical diff between them is verifiably
+empty, and **must not describe the six as byte-identical**. The phrase
+"byte-identical" in section 4 applies within each wave, not across the
+two.
+
+**No threshold, endpoint, exclusion rule or stopping rule is changed by
+this deviation**, and none may be.
