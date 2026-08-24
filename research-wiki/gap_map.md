@@ -1148,3 +1148,125 @@ is authored. The method lane that inherits this datum is CCR
 reconstruction-certified post-training appearance consolidation, frozen
 after a 3-round hostile external review, with the B0/B1 ladder cells
 running on the STG-matched protocol.
+
+## G13 Membership Correction — 2026-08-24 (later): the PROJECTION ROUTE to the hull question is RETIRED
+
+Append-only correction to the G13 section above, which recorded the hull
+question as *"unanswerable BY THIS ROUTE"*. That is confirmed and now has a
+second, independent reason. The first was **T1**, which cannot supply a
+spanning component. The second is the **instrument**: even with components
+supplied by construction, the shell-supply projection cannot decide the
+operator — in absolutes or in deltas
+([[operations/nonconvex-hull-projection-limits-2026-08-24]], ZERO GPU).
+
+**Hull completion remains neither refuted nor supported.**
+
+**(1) ABSOLUTES ARE UNUSABLE, calibrated against data already on the record.**
+The proxy scores `object_shell / (object_shell + filler_shell)`, assuming every
+gated row is object or filler. O1's base rule gated **10,374 rows at precision
+0.5868** of which **1,152 are filler**, so 6,087 are object and **3,135 —
+30.2% — are NEITHER**. Fed those exact counts the proxy's accounting returns
+**0.8409** against a measured **0.5868**: **+0.2541, about 25x the ~0.01
+discretization error** two drafts quoted as their uncertainty. The denominator
+structurally cannot hold background, so **the bias is one-sided — always high.**
+O2 fails in kind: `filler_shell[occupied] == 0` exactly, assigning its base set
+literally zero false positives where the substrate measured 0.6768.
+
+**(2) DELTAS ARE UNUSABLE TOO, and this is the sharper finding.** Spec §9 reads
+the verdict only from the delta, so the delta was the obvious fallback.
+**(a)** Enumerating index bounding boxes and evaluating each at its maximal
+in-bbox mask makes `delta <= 0` a **THEOREM**: every added cell then lies
+outside the occupied set, and object shell there is **exactly zero**. The
+favourable branch is unreachable by construction. **An earlier draft reported
+156/156 negative deltas from that family and read it as a result.**
+**(b)** Without that restriction, the two available accountings — surface-area
+-weighted shell counts, and volume-weighted row counts that DO include
+background — **disagree by an order of magnitude** on how often H1 helps (O1
+size 5-7: **0.0-2.7%** shell-positive against **27.8-33.1%** row-positive).
+They do not corroborate; they diverge. **No sign statement is available**, and
+the earlier claim *"H1 never improves precision on this fixture"* is **false**
+(best +0.0350 shell, +0.1608 row). **The excluded regime was the realistic
+one** — T1 accepted 4 cells of 452 groups, so real components are small and
+sparse, exactly where the sign is contested.
+
+**(3) SCOPE the drafts omitted:** every decomposition is the **fresh 50k
+seeding grid**, and the completed runs realized a different one — experiment
+274's accepted cells sit at **`j = 5`** while the fresh grid places the object
+at `j` in {3,4}. Cell counts do not transfer to a trained substrate.
+
+**(4) CARRY AS METHOD — four notes, and they cost four drafts.**
+*A proxy needs a CALIBRATION, not a stability estimate.* The ±0.01 quoted
+through two drafts is **discretization** error and is defensible as such; it
+says nothing about whether the proxy scores the right **population**, and the
+population error was **25x larger and one-sided**. **A tight stability figure
+attached to a badly biased instrument is worse than no figure**, because it
+invites the comparison that had to be withdrawn.
+*A bias direction must be computed, not intuited* — "the missing rows are false
+positives, so counting them makes it worse" is natural, was written into a
+draft, and is **backwards**: a population common to both sides of a difference
+compresses it.
+*An enumeration can be vacuous exactly as a reading rule can.* The block's
+standing rule was **recited in §9 of the very draft whose §2 violated it**.
+Writing the rule into the same document did not prevent violating it; the
+precondition has to be **computed** — here `object_shell[~occ] == 0`, one line.
+*When several instruments agree, check whether they COULD disagree.* Two
+accountings agreeing 156/156 looked like corroboration and was one theorem
+twice; where they genuinely could disagree, they did, by an order of magnitude.
+
+## Measurement-Channel Correction — 2026-08-24 (later): the PAIRED DESIGN is retired for the mechanism comparison
+
+[[operations/n3v-paired-design-packet-2026-08-24]] left the paired design as
+the only remaining lever after independent arms were priced at 37
+replicates/arm = 181 slot-h. It is now retired for a B1-vs-B0 comparison at
+**ZERO GPU cost**
+([[operations/n3v-paired-design-retirement-2026-08-24]]).
+
+**AN INTERLOCK, WITH NO THRESHOLD CHOSEN.** Cost per pair is
+`2.4443 x (2 - k/6000)` slot-h, so seven pairs within the 24 slot-h ceiling
+requires **`k >= 3584`**. Packet birth fires at
+`{1000, 1500, 2000, 2500, 3000, 3500, 4000}`, so after `k = 3584` **only the
+4000 birth remains**. **Any branch point affordable at the ceiling leaves at
+most 1 of 7 births post-branch**, and a smaller prefix is strictly more
+expensive (k=900 costs 31.7 slot-h for seven pairs against 24.0 at k=3584).
+An earlier version argued this from two chosen bars — "≥5 of 7 births", ">50%
+prefix" — which invited the objection that the bars were picked; the cost model
+gives the same conclusion with no chosen number.
+
+**Conditional on the frozen schedule.** `packet_birth_from_iter` / `until_iter`
+/ `interval` are config fields; a schedule confined to 3500-4000 would change
+this. The retirement is of option 1 under the frozen `ladder_b1_crb.yaml`
+schedule, and any schedule change needs its own spec — including why the new
+schedule is not chosen to rescue the design.
+
+**THREE DURABLE CODE FACTS, newly verified and reusable.**
+
+* **A localized, time-windowed opacity control ALREADY EXISTS and needs no code
+  change.** `_apply_visibility_event_gate` selects rows by a **2D `crop_xyxy`
+  screen box**, restricts them to an inclusive **frame window**, and multiplies
+  **activated** opacity by a tunable `opacity_attenuation`. A **tracked**
+  manifest exists and **tracked** configs already drive it with all seven keys;
+  `ladder_b1_crb.yaml` simply does not set them.
+* **Branching at `k` silently discards iteration `k`'s densification round,
+  optimizer step, and packet birth**, because `scene.save` precedes all three
+  and resume begins at `k + 1`. **Branching at a birth iteration destroys one
+  of seven mechanism firings with no error and no log line.** Arbitrary-`k`
+  branching is otherwise available: `scene.save` writes `chkpnt<k>.pth`
+  whenever `k` is in `--save_iterations`.
+* **The 600k HARD cap provably never fired.** All five point-removing sites are
+  reachable only through `densify_and_prune`, called only inside the gate the
+  cap closes, so once it closes the count can never fall; finals of
+  599,396-599,470 are proof. `max_total_points` is not a second field — it is
+  the parameter name of the same `densify_until_num_points` knob.
+
+**CARRY AS METHOD: prefer an INTERLOCK to a THRESHOLD.** Where a conclusion can
+be derived from two quantities that are functions of the same free parameter
+pulling in opposite directions, it should be — no bar has to be defended.
+
+**AND: a negative existence claim needs a SEARCH, not checks on the first
+candidate.** An earlier draft declared a localized control impossible on three
+findings that were each **verified and true** — region A is a 2D bbox with no
+3D referent, `_opacity` is a pre-activation logit whose halving *brightens*
+most rows, and opacity is time-invariant. All three are true of `_opacity`, the
+wrong object. **Three true facts composed into a false conclusion because the
+question was scoped to one mechanism**, while the capability sat in the render
+path with tracked configs already using it.
