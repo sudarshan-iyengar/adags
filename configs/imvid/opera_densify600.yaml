@@ -1,0 +1,196 @@
+# ImViD Opera, 600 iterations -- the DENSIFICATION-AMPLIFIER PROBE.
+#
+# Identical to opera_smoke500.yaml in every field except `iterations`,
+# 500 -> 600. That one change is the whole experiment.
+#
+# WHY 600 EXACTLY. Densification fires when `iteration > densify_from_iter`
+# AND `iteration % densification_interval == 0`, with from_iter 500 and
+# interval 100. At 500 iterations `500 > 500` is False, so ZERO rounds fire
+# -- confirmed empirically by all three 500-iteration runs ending at
+# exactly 20,157 points. At 600 iterations EXACTLY ONE round fires. So this
+# pair isolates the first densification round and nothing else.
+#
+# PREDICTION AND READING RULE, FROZEN BEFORE ANY OUTPUT EXISTS.
+# The three 500-iteration replicates measured a same-code held-out PSNR
+# spread of 0.0101 dB. The N3V post-mortem attributes that protocol's
+# 0.4945 dB spread to densification, measuring a 1400x divergence jump at
+# densify_from_iter.
+#
+#   * If the 600-iteration spread is ORDERS OF MAGNITUDE larger than
+#     0.0101 dB, the densification-amplifier account is supported on a
+#     SECOND dataset, by a one-line change with everything else held fixed.
+#   * If it is COMPARABLE to 0.0101 dB, then one densification round is not
+#     sufficient to amplify, and the N3V spread needs either many rounds or
+#     an explanation that is not densification alone.
+#   * Either way this measures the AMPLIFIER, not ImViD reconstruction
+#     quality, and no quality claim may be drawn from it.
+#
+# Neither branch is a preferred outcome and the threshold is not moveable:
+# "orders of magnitude" means >= 10x, declared here, before any run.
+#
+# (original header follows)
+# ImViD Opera RUNTIME SMOKE -- 500 iterations, NOT a baseline.
+#
+# Purpose: prove the loader, the converted Blender-format inputs, the split
+# and the trainer run end to end on ImViD. It measures NOTHING scientific.
+# 500 iterations over 105 training units is 4.76 presentations/unit, which
+# is a plumbing check and not a reconstruction.
+#
+# Derived from configs/lrv3/a0.yaml (Blender route, ungated). Every changed
+# field, and why -- each justified against a code line by
+# scripts/imvid_to_blender.py's required_config block:
+#
+#   source_path       the converted, UNDISTORTED PINHOLE dataset
+#   time_duration     [0, 299/(60000/1001)] = [0, 4.988316666666667]
+#   motion_track_dt   1001/60000 exactly. The repo hard-codes 1/30 at
+#                     scene/dataset_readers.py:200 and :700, which is
+#                     2000/1001 = 1.998x wrong for ImViD.
+#   iterations        500 (smoke)
+#
+# Held FIXED from a0.yaml and load-bearing:
+#   eval: True        scene/dataset_readers.py:475-477 MERGES the test split
+#                     into training when eval is False. The frozen ImViD split
+#                     forbids that, so this must never be flipped.
+#   resolution: 1     utils/camera_utils.py:43-46 rescales cx/cy by a naive
+#                     cx/scale, NOT the frozen (c+0.5)*s-0.5. Undistorting
+#                     offline to the final raster and training at resolution 1
+#                     keeps the two conventions from ever meeting.
+#   num_pts           50,000 >= the union's 20,157; :497-513 SUBSAMPLES a
+#                     cloud larger than num_pts.
+#   elgs_enable       false -- ungated, no mechanism under test here.
+#
+# Split (frozen): 35 training cameras; cam00, cam13, cam25, cam38 held out.
+# LRV3 oracle-headroom cell A0: ADAGS temporal control
+#
+# LRV3 -- LRV2 with ONE change: the RETURN is 3 frames (57-59) instead of 6.
+# 3.0, so that every visible surface lies inside the initialization cloud.
+#
+# LRV1's A0 reached 34.23 dB on training views and 19.31 dB held out. The cause
+# was measured, not guessed: 13.94% of every LRV1 image showed ground surface
+# OUTSIDE the [-1.3, 1.3]^3 init cube. Densification clones and splits existing
+# primitives and cannot create them from nothing, so those pixels were fitted by
+# floaters that satisfy the 16 training views and are wrong from the 4 held-out
+# ones. At half extent 1.3 the uncovered fraction measures 0.00%.
+#
+# Everything else -- cameras, frames, the event object and its timing, the
+# oracle-episode files, the training budget, the capacity policy -- is
+# unchanged, and the held-out event supply is identical at 113,868 return
+# pixel-times.
+#
+# EXPLORATORY, evidence_bearing: false. Scene LRV3 is the controlled
+# leave-and-return fixture built by scripts/build_synthetic_reveal_scene.py:
+# 20-camera surround ring, 60 frames, 16 train / 4 held-out cameras, one object
+# present over frames 0-29, GENUINELY ABSENT over 30-53 (removed from the world,
+# not occluded), present again over 54-59 at the same pose.
+#
+# The three cells differ ONLY in the lines marked DIFFERS. Everything else is
+# byte-identical across A0/A1/A2 and must stay that way.
+
+gaussian_dim: 4
+time_duration: [0.0, 4.988316666666667]
+num_pts: 50_000  # >= the union's 20,157; the reader SUBSAMPLES if the cloud exceeds this
+num_pts_ratio: 1.0
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+exhaust_test: False
+
+ModelParams:
+  sh_degree: 3
+  source_path: "/apollo/users/sri/proj_adags/data/imvid/blender35_s050"
+  images: "images"
+  resolution: 1
+  white_background: False
+  data_device: "cuda"
+  eval: True
+  extension: ".png"
+  num_extra_pts: 0
+  loaded_pth: ""
+  frame_ratio: 1
+  dataloader: True
+
+PipelineParams:
+  convert_SHs_python: False
+  compute_cov3D_python: False
+  debug: False
+  env_map_res: 0
+  env_optimize_until: 5000000000
+  env_optimize_from: 0
+  eval_shfs_4d: True
+
+OptimizationParams:
+  iterations: 600
+  position_lr_init: 0.00016
+  position_t_lr_init: -1.0
+  position_lr_final: 0.0000016
+  position_lr_delay_mult: 0.01
+  position_lr_max_steps: 6_000
+  feature_lr: 0.0025
+  opacity_lr: 0.05
+  scaling_lr: 0.005
+  rotation_lr: 0.001
+  percent_dense: 0.01
+  lambda_dssim: 0.2
+  thresh_opa_prune: 0.005
+  densification_interval: 100
+  opacity_reset_interval: 30000
+  densify_from_iter: 500
+  densify_until_iter: 4_000
+  densify_grad_threshold: 0.0002
+  densify_grad_t_threshold: 0.000005
+  densify_until_num_points: 150_000
+  final_prune_from_iter: -1
+  sh_increase_interval: 1000
+  lambda_opa_mask: 0.0
+  lambda_rigid: 0.0
+  enable_hard_static_conversion: false
+  lambda_sparsity: 0.0
+  lambda_motion_gate: 0.0
+  static_conversion_threshold: 0.99
+  gate_activation_iter: 1000
+  gate_warmup_until_iter: 2000
+  enable_soft_routing: true
+  route_logit_init: 0.0
+  route_lr: -1.0
+  motion_model: "lora"
+  motion_poly_order: 2
+  motion_lr_init: -1.0
+  motion_reg_lambda: 0.0
+  motion_lora_rank: 8
+  motion_lora_anchors: 32
+  motion_lora_init_scale: 0.01
+  motion_lora_coeff_lr: -1.0
+  motion_lora_basis_lr: -1.0
+  motion_prior_root: ""
+  dynamic_mask_from_residual: true
+  dynamic_mask_residual_quantile: 0.85
+  dynamic_mask_dilate: 2
+  lambda_dynamic_roi: 0.5
+  lambda_static_exclusion: 0.02
+  lambda_track_flow: 0.0
+  lambda_scaffold_smooth: 0.0
+  lambda_scaffold_reg: 0.0
+  motion_scaffold_enable: false
+  motion_scaffold_count: 512
+  motion_scaffold_rank: 8
+  motion_scaffold_anchors: 32
+  motion_scaffold_knn: 4
+  motion_scaffold_init_scale: 0.01
+  motion_scaffold_weight_temp: 0.05
+  motion_scaffold_chunk: 65536
+  motion_scaffold_coeff_lr: -1.0
+  motion_scaffold_basis_lr: -1.0
+  motion_track_dt: 0.016683333333333335  # 1001/60000 EXACTLY, never the repo-wide 1/30
+  enable_rendered_flow: false
+  enable_motion_aware_densify: false
+  motion_aware_densify_boost: 1.0
+  blur_until_iter: 0
+  blur_start_sigma: 8.0
+  histogram_log_interval: 100
+  # ---- DIFFERS (A0) ----------------------------------------------------
+  # Temporal-Gaussian substrate: no EL-GS state at all, so presence is the
+  # ordinary temporal marginal. `elgs_reserved_parity` exists ONLY so this
+  # control drops exactly the units an EL-GS cell drops -- without it the
+  # control would train on ~33% more data than A1/A2.
+  elgs_enable: false
+  elgs_reserved_parity: true
