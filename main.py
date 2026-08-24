@@ -1133,6 +1133,16 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
     if checkpoint:
         (model_params, first_iter) = torch.load(checkpoint)
+        # Arm the fail-closed packet-id check ONLY when packet birth is on.
+        # Without this the guard in restore() defaults off and protects
+        # nothing, which is the failure mode it exists to prevent: a
+        # pre-repair checkpoint would silently restore an empty packet-id
+        # column and every pre-branch packet would become substrate. A
+        # run that does not use packet birth is unaffected and still loads
+        # old checkpoints.
+        gaussians._require_packet_ids_on_restore = bool(
+            getattr(opt, "packet_birth_enable", False)
+        )
         gaussians.restore(model_params, opt)
     configure_visibility_events_from_opt(gaussians, opt, dataset.source_path)
     validate_slice_b_capacity_configuration(opt)

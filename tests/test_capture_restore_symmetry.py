@@ -108,6 +108,67 @@ class CaptureRestoreSymmetryTests(unittest.TestCase):
             "rather than to something new",
         )
 
+    def test_pre_repair_checkpoint_fails_closed(self) -> None:
+        """A missing key must REFUSE, not silently restore an empty column.
+
+        Both consumers of `_packet_ids` are guarded by `numel() > 0`
+        (`prune_points` and the clone/split append), so an empty column is
+        skipped without complaint. That makes the backward-compatibility
+        default a silent reproduction of the original defect for any
+        packet-birth run resuming a pre-repair checkpoint. This project
+        already carries the rule as method: a guard that can degrade to
+        "protects nothing" is worse than no guard.
+        """
+
+        self.assertIn(
+            "_require_packet_ids_on_restore",
+            self.restore,
+            "restore() must fail closed when packet birth is enabled and the "
+            "checkpoint carries no packet_ids",
+        )
+        self.assertIn(
+            "checkpoint carries no `packet_ids`",
+            self.restore,
+            "the mismatch must RAISE with an actionable message, not warn",
+        )
+        self.assertIn(
+            "raise ValueError(",
+            self.restore,
+            "the fail-closed path must raise",
+        )
+        guards = self.source.count("if self._packet_ids.numel() > 0:")
+        self.assertGreaterEqual(
+            guards,
+            2,
+            "the numel guards are the reason silence is possible; if they are "
+            "removed this test's premise changed and it should be revisited",
+        )
+
+    def test_the_guard_is_actually_armed_by_a_caller(self) -> None:
+        """A guard nothing switches on is the defect it protects against.
+
+        `restore()` reads the flag via `getattr(..., False)`, so it is inert
+        unless a call site sets it. This asserts main.py arms it, and arms it
+        conditionally on packet birth so runs that do not use packet birth
+        can still load old checkpoints.
+        """
+
+        main = (REPO_ROOT / "main.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "_require_packet_ids_on_restore",
+            main,
+            "the guard is never armed, so it protects nothing",
+        )
+        self.assertIn(
+            'getattr(opt, "packet_birth_enable", False)',
+            main,
+            "the guard must be armed CONDITIONALLY on packet birth, so runs "
+            "without it keep loading pre-repair checkpoints",
+        )
+        arm = main.index("_require_packet_ids_on_restore")
+        call = main.index("gaussians.restore(model_params, opt)")
+        self.assertLess(arm, call, "the flag must be set BEFORE restore() runs")
+
 
 if __name__ == "__main__":
     unittest.main()

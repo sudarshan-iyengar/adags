@@ -476,6 +476,28 @@ class GaussianModel:
                 self._packet_ids = routing_motion_params.get(
                     "packet_ids", torch.empty(0, dtype=torch.long)
                 )
+                # FAIL CLOSED on a PRE-REPAIR checkpoint. The default above
+                # keeps old checkpoints loadable, but both consumers are
+                # guarded by `numel() > 0`, so a packet-birth run resuming
+                # from a checkpoint written before "packet_ids" existed would
+                # SILENTLY reproduce the very defect this key repairs: no
+                # exception, no log line, every pre-branch packet quietly
+                # demoted to substrate. A guard that can degrade to
+                # "protects nothing" is worse than no guard, so the caller
+                # sets this flag when packet birth is enabled and the mismatch
+                # becomes a refusal instead of a silent loss.
+                if (
+                    getattr(self, "_require_packet_ids_on_restore", False)
+                    and self._xyz.shape[0] > 0
+                    and self._packet_ids.numel() == 0
+                ):
+                    raise ValueError(
+                        "checkpoint carries no `packet_ids` but packet birth is "
+                        "enabled: this checkpoint predates the capture/restore "
+                        "repair, and resuming from it would silently drop the "
+                        "packet-id column. Re-train the prefix with post-repair "
+                        "code, or disable packet birth for this run."
+                    )
                 self._motion_v = routing_motion_params.get(
                     "motion_v", torch.empty(0, device=self._xyz.device)
                 )
