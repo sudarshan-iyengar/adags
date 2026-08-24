@@ -92,8 +92,23 @@ No cv2, no torch, ZERO GPU. PNGs are decoded by a small exact reader here
 rather than by an image library, following the same "no image library
 needed" habit as ``imvid_decode_frames._png_size``.
 
+--------------------------------------------------------------------
+THE DEFAULT SIGNALS ARE WHOLE-FRAME MEANS AND CANNOT SEE A SMALL OBJECT
+--------------------------------------------------------------------
+
+All three signals in ``frame_signals`` are means over the WHOLE frame, so a
+small object cannot move them: on the 960x540 census raster a 32x32 patch at
+25 grey levels moves the frame mean by 0.049 grey levels, 40x below the
+absolute floor. ``--tile-mode`` (OFF by default, additive, nothing existing
+changes) adds a high-recall companion pass that computes the SAME
+``template_dist`` quantity per 60 px tile and screens the MAXIMUM over tiles,
+reporting the global signal beside every candidate so the sensitivity bought
+is visible. Its frozen preconditions run offline under ``--tile-selftest``.
+NO zero-event claim from this instrument is exhaustive without that pass.
+
 Usage:
   python3 scripts/imvid_event_proxy.py --self-test
+  python3 scripts/imvid_event_proxy.py --tile-selftest
   python3 scripts/imvid_event_proxy.py --mode probe \
       --source-dir /apollo/users/sri/proj_adags/data/imvid/raw/scene1_opera \
       --out        /apollo/users/sri/proj_adags/data/imvid/derived/proxy/scene1_opera.probe.json
@@ -152,6 +167,47 @@ DEFAULT_K_MAD = 3.0
 #: screen ("a scale-free ratio screen is insufficient ... needs an
 #: absolute-magnitude floor"). Both gates must pass.
 DEFAULT_MIN_AMPLITUDE = 2.0
+
+#: TILE PASS -- OFF BY DEFAULT, additive to everything above.
+#:
+#: All three signals in ``frame_signals`` are WHOLE-FRAME MEANS, so the
+#: instrument is BLIND TO SMALL OBJECTS: a small object cannot move a
+#: whole-frame mean. Measured on the census raster, a 32x32 patch at 25 grey
+#: levels moves the 960x540 frame mean by 25*1024/518400 = 0.049 grey levels
+#: -- 40x BELOW ``DEFAULT_MIN_AMPLITUDE``, so the absolute gate rejects it and
+#: the census would report a clean zero. The tile pass computes the SAME
+#: ``template_dist`` quantity over square tiles and screens on the MAXIMUM
+#: over tiles, so a localized change is measured against its own tile area
+#: instead of against the whole raster. The same patch inside one 60 px tile
+#: reads 25*1024/3600 = 7.11 grey levels, 144x larger.
+#:
+#: 60 px on the 960x540 census raster is a 16 x 9 = 144-tile grid exactly.
+DEFAULT_TILE_SIZE = 60
+
+#: ABSOLUTE floor for the tile pass, in 8-bit grey levels, measured on a TILE
+#: mean. Same units and the same two-gate role as ``DEFAULT_MIN_AMPLITUDE``
+#: (robust relative gate AND absolute floor, both must pass); a separate
+#: constant because the two are means over different areas and must never be
+#: silently interchanged.
+DEFAULT_TILE_MIN_AMPLITUDE = 2.0
+
+#: Contributing tiles reported per candidate for the human-review overlay.
+DEFAULT_TILE_TOP_N = 8
+
+#: Wording carried in the census JSON and in the docstring of every function
+#: that produces it. The N3V curation precedent
+#: ([[operations/crb300-event-mask-curation-2026-08-23]]) is that automated
+#: spatial support is routinely mistaken for object extent; it is not.
+TILE_EXPLANATION_NOTE = (
+    "EXPLANATION OF THE DETECTOR SIGNAL, NOT AN INSTANCE MASK. These tile "
+    "values state WHERE ON THE PROXY RASTER the scalar that the detector "
+    "thresholded came from. They do not segment an object, do not bound one, "
+    "and do not assert that anything is present, absent, revealed or occluded "
+    "in any tile. A tile is high because the pixels inside it departed from "
+    "this window's own per-pixel temporal median, which a moving object, a "
+    "moving occluder, a shadow, a lighting change or compression noise all "
+    "produce equally."
+)
 
 #: ImViD's stated synchronization uncertainty, milliseconds. Reference only;
 #: nothing here measures it. See the census resolution note.
@@ -881,6 +937,177 @@ def frame_signals(stack: np.ndarray) -> dict[str, np.ndarray]:
     }
 
 
+def tile_edges(extent: int, tile_size: int) -> list[tuple[int, int]]:
+    """Half-open ``[start, stop)`` spans covering ``0..extent`` EXACTLY ONCE.
+
+    Partial edge tiles are INCLUDED and are neither padded, dropped, nor
+    merged into their neighbour: the last span is short whenever ``tile_size``
+    does not divide ``extent``. NOTHING IS WEIGHTED BY AREA -- each tile's
+    statistic is a mean over its own pixels, so a short edge tile is a mean
+    over fewer pixels and is still read in grey levels, directly comparable
+    with a full tile.
+    """
+    if int(tile_size) < 1:
+        raise ContractError(f"tile size must be >= 1, got {tile_size}")
+    if int(extent) < 1:
+        raise ContractError(f"raster extent must be >= 1, got {extent}")
+    extent, tile_size = int(extent), int(tile_size)
+    return [(s, min(s + tile_size, extent)) for s in range(0, extent, tile_size)]
+
+
+def tile_pixel_box(row: int, col: int, row_spans: list[tuple[int, int]],
+                   col_spans: list[tuple[int, int]]) -> list[int]:
+    """Pixel box ``[x0, y0, x1, y1]`` (half-open) of tile ``(row, col)``.
+
+    Coordinates are on the PROXY raster, not the source raster. A reader that
+    wants source pixels must rescale by the recorded proxy raster; nothing
+    here does that for them, because the proxy scale factor is a property of
+    how the proxy was built and is recorded in the proxy manifest.
+    """
+    y0, y1 = row_spans[int(row)]
+    x0, x1 = col_spans[int(col)]
+    return [int(x0), int(y0), int(x1), int(y1)]
+
+
+def tiled_template_signals(stack: np.ndarray,
+                           tile_size: int = DEFAULT_TILE_SIZE) -> dict:
+    """TILE-SENSITIVE companion to ``frame_signals``; changes nothing in it.
+
+    Computes the SAME quantity as ``frame_signals``' ``template_dist`` --
+    ``|I_t - median_t(I)|`` -- but averaged over each square tile instead of
+    over the whole frame, and reduces the grid to a scalar per frame with a
+    MAXIMUM over tiles. The maximum is the load-bearing choice: a mean over
+    tiles is algebraically an area-weighted whole-frame mean again (exactly
+    it, when the tiling is regular), i.e. the very blindness this pass exists
+    to remove.
+
+    Returns
+    -------
+    ``tile_template_dist``  ``(T, n_tile_y, n_tile_x)`` float64 grid.
+    ``tile_max``            ``(T,)`` float64, max over tiles -- the scalar the
+                            changepoint detector runs on in tile mode.
+    ``tile_argmax``         ``(T, 2)`` int, ``(row, col)`` of that maximum.
+    ``row_spans``/``col_spans``  the exact half-open pixel spans.
+    ``n_tile_y``/``n_tile_x``/``tile_size``/``proxy_raster``.
+
+    The grid is an EXPLANATION OF THE DETECTOR SIGNAL, NOT AN INSTANCE MASK
+    (see ``TILE_EXPLANATION_NOTE``).
+
+    MEMORY. The per-pixel temporal median is independent per pixel, so the
+    median of a spatial slice equals that slice of the whole-frame median;
+    this walks tile blocks and never materializes a second ``(T, H, W)``
+    array. Peak above the caller's ``(T, H, W)`` float32 ``stack`` is one
+    ``np.median`` partition copy plus one absolute-deviation buffer, both
+    TILE-SIZED: for T=594, 60x60 tiles that is 2 x 594*3600*4 B = 17.1 MiB,
+    plus the ``(T, 9, 16)`` float64 output grid (0.65 MiB). For the census
+    raster the ``stack`` itself is 594*540*960*4 B = 1.147 GiB and dominates.
+    A whole-frame ``(T, H, W)`` float64 deviation copy, which this avoids,
+    would have been 2.29 GiB.
+
+    MEASURED (Windows peak working set, T=120 at 540x960, stack 237.3 MiB):
+    this function adds 3.6 MiB to the process peak; ``frame_signals`` on the
+    same stack adds 707.1 MiB, because it materializes the median partition
+    copy and a whole-frame deviation array. Scaling the measurement to
+    T=594 gives ~18 MiB here against ~3.5 GiB there. The tile pass is
+    therefore NOT the memory constraint on a long window; the pre-existing
+    global path is, and it is left exactly as it was.
+    """
+    if stack.ndim != 3 or stack.shape[0] < 2:
+        raise ContractError(
+            f"need at least 2 proxy frames, got shape {tuple(stack.shape)}")
+    n_frames, height, width = (int(v) for v in stack.shape)
+    row_spans = tile_edges(height, tile_size)
+    col_spans = tile_edges(width, tile_size)
+    grid = np.zeros((n_frames, len(row_spans), len(col_spans)), dtype=np.float64)
+    for i, (y0, y1) in enumerate(row_spans):
+        for j, (x0, x1) in enumerate(col_spans):
+            block = stack[:, y0:y1, x0:x1]
+            template = np.median(block, axis=0)
+            grid[:, i, j] = np.abs(block - template[None, :, :]).mean(
+                axis=(1, 2), dtype=np.float64)
+    flat = grid.reshape(n_frames, -1)
+    arg = np.argmax(flat, axis=1)
+    tile_max = flat[np.arange(n_frames), arg].astype(np.float64)
+    tile_argmax = np.stack([arg // len(col_spans), arg % len(col_spans)],
+                           axis=1).astype(np.int64)
+    return {
+        "tile_template_dist": grid,
+        "tile_max": tile_max,
+        "tile_argmax": tile_argmax,
+        "row_spans": row_spans,
+        "col_spans": col_spans,
+        "n_tile_y": len(row_spans),
+        "n_tile_x": len(col_spans),
+        "tile_size": int(tile_size),
+        "proxy_raster": [width, height],
+    }
+
+
+def tile_candidate_explanation(tiled: dict, proxy_index: int, *,
+                               source_frame: int, top_n: int,
+                               global_template_dist: float,
+                               global_template_dist_before: float,
+                               global_min_amplitude: float,
+                               tile_min_amplitude: float) -> dict:
+    """Spatial explanation of ONE tile-mode candidate, for the review overlay.
+
+    THIS IS AN EXPLANATION OF THE DETECTOR SIGNAL, NOT AN INSTANCE MASK. It
+    carries the tile grid at the candidate frame (enough to draw a heatmap),
+    the top contributing tiles with their pixel boxes on the proxy raster,
+    and -- so the reader can see exactly how much sensitivity the tile pass
+    bought and nothing is hidden -- the GLOBAL whole-frame ``template_dist``
+    at the same frame, which is what the default census would have screened.
+    """
+    grid = tiled["tile_template_dist"]
+    j = int(proxy_index)
+    plane = np.asarray(grid[j], dtype=np.float64)
+    order = np.argsort(plane, axis=None)[::-1][:max(int(top_n), 1)]
+    top = []
+    for flat_index in order:
+        row = int(flat_index) // tiled["n_tile_x"]
+        col = int(flat_index) % tiled["n_tile_x"]
+        box = tile_pixel_box(row, col, tiled["row_spans"], tiled["col_spans"])
+        top.append({
+            "tile_row": row,
+            "tile_col": col,
+            "value": round(float(plane[row, col]), 4),
+            "pixel_box_xyxy": box,
+            "pixel_box_is_tile_extent_not_object_extent": True,
+            "n_pixels": int((box[3] - box[1]) * (box[2] - box[0])),
+        })
+    argmax = [int(v) for v in tiled["tile_argmax"][j]]
+    tile_value = float(tiled["tile_max"][j])
+    gain = (tile_value / global_template_dist
+            if global_template_dist > 0 else None)
+    return {
+        "what_this_is": TILE_EXPLANATION_NOTE,
+        "is_instance_mask": False,
+        "kind": "detector_signal_explanation",
+        "source_frame": int(source_frame),
+        "proxy_index_in_window": j,
+        "tile_size_px": int(tiled["tile_size"]),
+        "proxy_raster": list(tiled["proxy_raster"]),
+        "grid_shape": [int(tiled["n_tile_y"]), int(tiled["n_tile_x"])],
+        "tile_template_dist_grid": [[round(float(v), 4) for v in row]
+                                    for row in plane],
+        "tile_max": round(tile_value, 4),
+        "tile_argmax_row_col": argmax,
+        "tile_argmax_pixel_box_xyxy": tile_pixel_box(
+            argmax[0], argmax[1], tiled["row_spans"], tiled["col_spans"]),
+        "top_tiles": top,
+        "global_template_dist_at_candidate": round(
+            float(global_template_dist), 6),
+        "global_template_dist_before_candidate": round(
+            float(global_template_dist_before), 6),
+        "tile_max_over_global_template_dist": (round(float(gain), 3)
+                                               if gain is not None else None),
+        "global_absolute_floor_grey_levels": float(global_min_amplitude),
+        "tile_absolute_floor_grey_levels": float(tile_min_amplitude),
+        "global_pass_would_clear_its_own_floor": bool(
+            float(global_template_dist) >= float(global_min_amplitude)),
+    }
+
+
 def robust_threshold(signal: np.ndarray, k_mad: float) -> dict:
     med = float(np.median(signal))
     mad = float(np.median(np.abs(signal - med))) * 1.4826
@@ -1022,11 +1249,18 @@ def mode_census(args) -> dict:
     global_max = max(v[-1] for v in available.values())
     window_starts = list(range(global_min, global_max + 1, window))
 
+    tile_mode = bool(getattr(args, "tile_mode", False))
+    tile_size = int(getattr(args, "tile_size", DEFAULT_TILE_SIZE))
+    tile_floor = float(getattr(args, "tile_min_amplitude",
+                               DEFAULT_TILE_MIN_AMPLITUDE))
+    tile_top_n = int(getattr(args, "tile_top_n", DEFAULT_TILE_TOP_N))
+
     windows_out = []
     for w_start in window_starts:
         w_end = min(w_start + window - 1, global_max)
         per_camera_events: dict[str, list[dict]] = {}
         per_camera_signals: dict[str, dict] = {}
+        per_camera_tile_explanations: dict[str, list[dict]] = {}
         for camera in sorted(manifests):
             indices = [n for n in available[camera] if w_start <= n <= w_end]
             if len(indices) < 2:
@@ -1034,9 +1268,19 @@ def mode_census(args) -> dict:
             stack = np.stack([png_to_gray(proxy_root / camera / "frames"
                                           / f"src_{n:06d}.png") for n in indices])
             signals = frame_signals(stack)
+            #  TILE MODE screens the per-tile MAXIMUM against the tile floor;
+            #  the global signal is still computed above and is reported
+            #  side by side so the sensitivity the tile pass bought is
+            #  visible rather than asserted.
+            tiled = (tiled_template_signals(stack, tile_size)
+                     if tile_mode else None)
+            detect_on = (tiled["tile_max"] if tile_mode
+                         else signals["template_dist"])
             events = detect_changepoints(
-                signals["template_dist"], indices, k_mad=float(args.k_mad),
-                min_amplitude=float(args.min_amplitude), stride=stride)
+                detect_on, indices, k_mad=float(args.k_mad),
+                min_amplitude=(tile_floor if tile_mode
+                               else float(args.min_amplitude)),
+                stride=stride)
             per_camera_events[camera] = events
             stats = robust_threshold(signals["template_dist"], float(args.k_mad))
             per_camera_signals[camera] = {
@@ -1047,6 +1291,32 @@ def mode_census(args) -> dict:
                 "threshold": stats,
                 "n_candidates": len(events),
             }
+            if tile_mode:
+                explanations = []
+                for event in events:
+                    j = int(event["proxy_index_in_window"])
+                    explanation = tile_candidate_explanation(
+                        tiled, j, source_frame=event["source_frame"],
+                        top_n=tile_top_n,
+                        global_template_dist=float(signals["template_dist"][j]),
+                        global_template_dist_before=float(
+                            signals["template_dist"][max(j - 1, 0)]),
+                        global_min_amplitude=float(args.min_amplitude),
+                        tile_min_amplitude=tile_floor)
+                    event["tile_argmax_row_col"] = explanation[
+                        "tile_argmax_row_col"]
+                    event["global_template_dist_at_candidate"] = explanation[
+                        "global_template_dist_at_candidate"]
+                    explanations.append(explanation)
+                per_camera_tile_explanations[camera] = explanations
+                per_camera_signals[camera].update({
+                    "signal_used_for_detection": "tile_max",
+                    "tile_max": [round(float(v), 4) for v in tiled["tile_max"]],
+                    "tile_argmax_row_col": [[int(a), int(b)]
+                                            for a, b in tiled["tile_argmax"]],
+                    "tile_threshold": robust_threshold(tiled["tile_max"],
+                                                       float(args.k_mad)),
+                })
         if not per_camera_signals:
             continue
 
@@ -1058,7 +1328,23 @@ def mode_census(args) -> dict:
                 frames = sorted(e["source_frame"] for e in members.values())
                 spread = frames[-1] - frames[0]
                 amplitudes = [e["amplitude"] for e in members.values()]
+                tile_extra = {}
+                if tile_mode:
+                    #  Additive, tile-mode only: where on the raster each
+                    #  supporting camera's scalar came from, and what the
+                    #  whole-frame signal read at the same frame.
+                    tile_extra = {
+                        "signal_used_for_detection": "tile_max",
+                        "per_camera_tile_argmax_row_col": {
+                            c: e.get("tile_argmax_row_col")
+                            for c, e in sorted(members.items())},
+                        "per_camera_global_template_dist": {
+                            c: e.get("global_template_dist_at_candidate")
+                            for c, e in sorted(members.items())},
+                        "tile_explanation_note": TILE_EXPLANATION_NOTE,
+                    }
                 clusters_out.append({
+                    **tile_extra,
                     "polarity": polarity,
                     "n_cameras_supporting": len(members),
                     "cameras": sorted(members),
@@ -1078,7 +1364,7 @@ def mode_census(args) -> dict:
         clusters_out.sort(key=lambda c: (-c["n_cameras_supporting"],
                                          -c["mean_amplitude"],
                                          c["source_frame_median"]))
-        windows_out.append({
+        window_out = {
             "window_source_frames": [int(w_start), int(w_end)],
             "n_cameras": len(per_camera_signals),
             "n_candidates_total": sum(len(v) for v in per_camera_events.values()),
@@ -1088,7 +1374,13 @@ def mode_census(args) -> dict:
                 if c["n_cameras_supporting"] >= int(args.min_cameras)),
             "candidate_clusters": clusters_out,
             "per_camera_signals": (per_camera_signals if args.emit_signals else None),
-        })
+        }
+        if tile_mode:
+            #  The gallery overlay consumes this. It is an EXPLANATION OF THE
+            #  DETECTOR SIGNAL, NOT AN INSTANCE MASK.
+            window_out["tile_explanations"] = per_camera_tile_explanations
+            window_out["tile_explanations_note"] = TILE_EXPLANATION_NOTE
+        windows_out.append(window_out)
 
     resolution_note = (
         f"The instrument localizes a candidate to ONE PROXY STEP = {stride} "
@@ -1106,7 +1398,7 @@ def mode_census(args) -> dict:
     )
     sync_resolvable = proxy_step_ms <= IMVID_SYNC_UNCERTAINTY_MS[1]
 
-    return {
+    report = {
         "schema": "imvid-event-proxy-census-v1",
         "instrument_status": "SCOUTING INSTRUMENT, NOT GROUND TRUTH",
         "disclaimer": DISCLAIMER,
@@ -1137,6 +1429,31 @@ def mode_census(args) -> dict:
         "source_frame_range": [int(global_min), int(global_max)],
         "windows": windows_out,
     }
+    if tile_mode:
+        #  Additive: present ONLY when --tile-mode is on, so an ordinary
+        #  census manifest is byte-for-byte what it was before this pass
+        #  existed.
+        raster = list(next(iter(rasters)))
+        report["tile_pass"] = {
+            "enabled": True,
+            "note": TILE_EXPLANATION_NOTE,
+            "signal": ("tile_template_dist[t,i,j] = mean over tile (i,j) of "
+                       "|I_t - per-pixel temporal median|; the detector runs "
+                       "on tile_max[t] = max over (i,j)"),
+            "why": ("the default signals are WHOLE-FRAME MEANS and are blind "
+                    "to small objects; this pass is a high-recall companion, "
+                    "not a replacement, and the global signal is reported "
+                    "alongside every candidate"),
+            "tile_size_px": tile_size,
+            "tile_min_amplitude_grey_levels": tile_floor,
+            "tile_grid": [
+                -(-raster[0] // tile_size), -(-raster[1] // tile_size)],
+            "tile_grid_order": "[n_tile_x, n_tile_y]",
+            "global_min_amplitude_grey_levels": float(args.min_amplitude),
+            "top_tiles_per_candidate": tile_top_n,
+            "k_mad": float(args.k_mad),
+        }
+    return report
 
 
 def print_census(report: dict, top: int) -> None:
@@ -1151,6 +1468,16 @@ def print_census(report: dict, top: int) -> None:
           f"({report['mapping']['proxy_step_ms']:.2f} ms)", flush=True)
     for line in _wrap(report["temporal_resolution_note"], 78):
         print(f"[census] {line}", flush=True)
+    if report.get("tile_pass"):
+        tile = report["tile_pass"]
+        print(f"[census] TILE MODE: detection on tile_max over "
+              f"{tile['tile_grid'][0]}x{tile['tile_grid'][1]} tiles of "
+              f"{tile['tile_size_px']} px, absolute floor "
+              f"{tile['tile_min_amplitude_grey_levels']} grey levels. The "
+              f"global whole-frame signal is reported beside every candidate.",
+              flush=True)
+        for line in _wrap(tile["note"], 78):
+            print(f"[census] {line}", flush=True)
     for window in report["windows"]:
         lo, hi = window["window_source_frames"]
         print(f"\n[census] window {lo}-{hi}: {window['n_candidates_total']} "
@@ -1475,16 +1802,215 @@ def self_test() -> int:
 
 
 # ---------------------------------------------------------------------------
+# Mode: tile-selftest  -- the FROZEN PRECONDITIONS of the tile pass
+# ---------------------------------------------------------------------------
+
+#: Declared detection scale for P1. Stated BEFORE any score is read, and
+#: about the SETUP only: a square patch of this many proxy pixels at this
+#: grey-level contrast is what the tile pass claims to be able to see and the
+#: global pass is expected to miss.
+TILE_P1_PATCH_PX = 32
+TILE_P1_CONTRAST = 25.0
+TILE_P1_RASTER = (540, 960)          # (height, width) -- the census raster
+TILE_P1_FRAMES = 12
+TILE_P1_PLATEAU = (4, 8)             # half-open run of frames carrying the patch
+TILE_P1_TILE_ROW_COL = (2, 5)        # tile fully containing the patch
+
+
+def _tile_p1_fixture() -> tuple[np.ndarray, tuple[int, int, int, int]]:
+    """Flat window with a small patch present over a run of frames.
+
+    Deliberately built so the patch lies WHOLLY INSIDE one 60 px tile: a
+    patch straddling a tile boundary is a different (harder) question and is
+    not what P1 declares.
+    """
+    height, width = TILE_P1_RASTER
+    stack = np.full((TILE_P1_FRAMES, height, width), 40.0, dtype=np.float32)
+    row, col = TILE_P1_TILE_ROW_COL
+    y0 = row * DEFAULT_TILE_SIZE + (DEFAULT_TILE_SIZE - TILE_P1_PATCH_PX) // 2
+    x0 = col * DEFAULT_TILE_SIZE + (DEFAULT_TILE_SIZE - TILE_P1_PATCH_PX) // 2
+    y1, x1 = y0 + TILE_P1_PATCH_PX, x0 + TILE_P1_PATCH_PX
+    lo, hi = TILE_P1_PLATEAU
+    stack[lo:hi, y0:y1, x0:x1] += TILE_P1_CONTRAST
+    return stack, (y0, y1, x0, x1)
+
+
+def tile_self_test() -> int:
+    """FROZEN PRECONDITIONS for the tile pass. Every one is a statement about
+    the SETUP -- what was injected, what the tiling covers, what is finite --
+    and none of them reads a census score. The project's standing rule is
+    that freezing a READING RULE is not enough: a frozen rule needs a frozen
+    PRECONDITION asserting the mechanism it reads was actually exercised
+    ([[operations/block-2026-08-24-handover]]). This is that precondition set
+    for the tile pass, and it fails loudly.
+    """
+    print("[tile-selftest] imvid_event_proxy TILE PASS -- frozen "
+          "preconditions P1-P5. Statements about the SETUP, never about a "
+          "census score. NO media files, NO ffmpeg, NO GPU.", flush=True)
+    check = _Check()
+    source_frames = [n * 30 for n in range(TILE_P1_FRAMES)]
+
+    print("\n[P1] detection at a DECLARED SCALE: a "
+          f"{TILE_P1_PATCH_PX}x{TILE_P1_PATCH_PX} px patch at "
+          f"{TILE_P1_CONTRAST:.0f} grey levels on a "
+          f"{TILE_P1_RASTER[1]}x{TILE_P1_RASTER[0]} raster", flush=True)
+    stack, (py0, py1, px0, px1) = _tile_p1_fixture()
+    plateau_index = TILE_P1_PLATEAU[0] + 1
+    global_signals = frame_signals(stack)
+    tiled = tiled_template_signals(stack, DEFAULT_TILE_SIZE)
+    global_value = float(global_signals["template_dist"][plateau_index])
+    tile_value = float(tiled["tile_max"][plateau_index])
+    patch_area = TILE_P1_PATCH_PX ** 2
+    frame_area = TILE_P1_RASTER[0] * TILE_P1_RASTER[1]
+    tile_area = DEFAULT_TILE_SIZE ** 2
+    check.close("  GLOBAL template_dist on the patch frame (grey levels)",
+                global_value, TILE_P1_CONTRAST * patch_area / frame_area, 1e-6)
+    check.close("  TILE   tile_max     on the patch frame (grey levels)",
+                tile_value, TILE_P1_CONTRAST * patch_area / tile_area, 1e-6)
+    #  Tolerance 1e-3 on a ratio of 144: ``frame_signals`` accumulates its
+    #  whole-frame mean in float32 over 518,400 pixels, which is where the
+    #  ~1e-6 absolute departure comes from. The tile path accumulates in
+    #  float64 and lands on the closed form exactly.
+    check.close("  tile / global sensitivity ratio", tile_value / global_value,
+                frame_area / tile_area, 1e-3)
+    global_events = detect_changepoints(
+        global_signals["template_dist"], source_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=DEFAULT_MIN_AMPLITUDE, stride=30)
+    tile_events = detect_changepoints(
+        tiled["tile_max"], source_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=DEFAULT_TILE_MIN_AMPLITUDE, stride=30)
+    print(f"  ---- P1 NUMBERS: global {global_value:.4f} vs floor "
+          f"{DEFAULT_MIN_AMPLITUDE} -> {len(global_events)} candidates; "
+          f"tile {tile_value:.4f} vs floor {DEFAULT_TILE_MIN_AMPLITUDE} -> "
+          f"{len(tile_events)} candidates "
+          f"({tile_value / global_value:.1f}x more signal)", flush=True)
+    check.eq("  the GLOBAL pass MISSES it (this is the blindness on record)",
+             len(global_events), 0)
+    check.eq("  the GLOBAL value is below its own absolute floor",
+             global_value < DEFAULT_MIN_AMPLITUDE, True)
+    check.eq("  the TILE pass DETECTS it (rise and fall)", len(tile_events), 2)
+    check.eq("  rise then fall", [e["polarity"] for e in tile_events],
+             ["rise", "fall"])
+    check.eq("  tile argmax names the tile the patch was injected into",
+             [int(v) for v in tiled["tile_argmax"][plateau_index]],
+             list(TILE_P1_TILE_ROW_COL))
+    box = tile_pixel_box(TILE_P1_TILE_ROW_COL[0], TILE_P1_TILE_ROW_COL[1],
+                         tiled["row_spans"], tiled["col_spans"])
+    check.eq("  its pixel box contains the injected patch",
+             (box[0] <= px0 and box[1] <= py0
+              and box[2] >= px1 and box[3] >= py1), True)
+    check.eq("  the grid is 16x9 = 144 tiles at 960x540",
+             (tiled["n_tile_x"], tiled["n_tile_y"],
+              tiled["n_tile_x"] * tiled["n_tile_y"]), (16, 9, 144))
+
+    print("\n[P2] flat control: nothing injected must yield NO candidates",
+          flush=True)
+    flat = np.full((TILE_P1_FRAMES, 120, 180), 40.0, dtype=np.float32)
+    flat_tiled = tiled_template_signals(flat, DEFAULT_TILE_SIZE)
+    flat_events = detect_changepoints(
+        flat_tiled["tile_max"], source_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=DEFAULT_TILE_MIN_AMPLITUDE, stride=30)
+    check.close("  a constant window has zero tile deviation everywhere",
+                float(np.max(flat_tiled["tile_template_dist"])), 0.0, 1e-12)
+    check.eq("  constant window -> ZERO accepted candidates",
+             len(flat_events), 0)
+    rng = np.random.default_rng(20260825)
+    noisy = (np.full((TILE_P1_FRAMES, 120, 180), 40.0, dtype=np.float32)
+             + rng.uniform(-0.5, 0.5,
+                           size=(TILE_P1_FRAMES, 120, 180)).astype(np.float32))
+    noisy_tiled = tiled_template_signals(noisy, DEFAULT_TILE_SIZE)
+    noisy_events = detect_changepoints(
+        noisy_tiled["tile_max"], source_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=DEFAULT_TILE_MIN_AMPLITUDE, stride=30)
+    check.eq("  sub-floor noise stays below the ABSOLUTE floor",
+             float(np.max(noisy_tiled["tile_max"])) < DEFAULT_TILE_MIN_AMPLITUDE,
+             True)
+    check.eq("  sub-floor noise -> ZERO accepted candidates",
+             len(noisy_events), 0)
+
+    print("\n[P3] every tile statistic is FINITE, and non-constant where "
+          "change exists", flush=True)
+    check.eq("  P1 grid all finite",
+             bool(np.all(np.isfinite(tiled["tile_template_dist"]))), True)
+    check.eq("  noise grid all finite",
+             bool(np.all(np.isfinite(noisy_tiled["tile_template_dist"]))), True)
+    check.eq("  P1 tile_max is NOT constant (the mechanism was exercised)",
+             float(np.std(tiled["tile_max"])) > 0.0, True)
+    check.eq("  P1 tile_max is zero on frames with no patch",
+             float(tiled["tile_max"][0]), 0.0)
+    check.eq("  argmax is a valid grid coordinate on every frame",
+             bool(np.all(tiled["tile_argmax"][:, 0] < tiled["n_tile_y"])
+                  and np.all(tiled["tile_argmax"][:, 1] < tiled["n_tile_x"])),
+             True)
+
+    print("\n[P4] the tiling covers every pixel EXACTLY ONCE, edge tiles "
+          "included", flush=True)
+    for height, width in ((540, 960), (100, 130), (61, 59), (60, 60), (1, 1)):
+        rows = tile_edges(height, DEFAULT_TILE_SIZE)
+        cols = tile_edges(width, DEFAULT_TILE_SIZE)
+        cover = np.zeros((height, width), dtype=np.int32)
+        for y0, y1 in rows:
+            for x0, x1 in cols:
+                cover[y0:y1, x0:x1] += 1
+        check.eq(f"  {width}x{height}: {len(cols)}x{len(rows)} tiles, every "
+                 "pixel covered exactly once",
+                 (int(cover.min()), int(cover.max()),
+                  sum(y1 - y0 for y0, y1 in rows),
+                  sum(x1 - x0 for x0, x1 in cols)),
+                 (1, 1, height, width))
+    check.eq("  960 divides into 16 whole tiles",
+             tile_edges(960, DEFAULT_TILE_SIZE)[-1], (900, 960))
+    check.eq("  130 leaves a PARTIAL edge tile of 10 px, not dropped",
+             tile_edges(130, DEFAULT_TILE_SIZE)[-1], (120, 130))
+    check.raises("  tile size 0 refused", lambda: tile_edges(100, 0))
+    check.raises("  empty raster refused", lambda: tile_edges(0, 60))
+
+    print("\n[P5] NEUTER CHECK: the tile MAXIMUM is load-bearing", flush=True)
+    grid = tiled["tile_template_dist"]
+    neutered = grid.mean(axis=(1, 2))
+    neutered_events = detect_changepoints(
+        neutered, source_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=DEFAULT_TILE_MIN_AMPLITUDE, stride=30)
+    check.eq("  tile_max IS the max over tiles, exactly",
+             bool(np.array_equal(tiled["tile_max"], grid.max(axis=(1, 2)))),
+             True)
+    check.eq("  tile_max is NOT the mean over tiles",
+             bool(np.allclose(tiled["tile_max"], neutered)), False)
+    check.close("  a tile MEAN is the whole-frame mean again (the blindness)",
+                float(neutered[plateau_index]), global_value, 1e-9)
+    check.eq("  replacing max by mean DESTROYS the P1 detection",
+             len(neutered_events), 0)
+    check.eq("  ... while the real reduction keeps it", len(tile_events), 2)
+
+    print("\n" + "=" * 78, flush=True)
+    if check.failures:
+        print(f"[tile-selftest] FAILED: {len(check.failures)} of "
+              f"{check.passed + len(check.failures)} preconditions", flush=True)
+        for failure in check.failures:
+            print(f"  - {failure}", flush=True)
+        return 1
+    print(f"[tile-selftest] PASSED: {check.passed}/{check.passed} "
+          "preconditions", flush=True)
+    for line in _wrap(TILE_EXPLANATION_NOTE, 78):
+        print(f"[tile-selftest] {line}", flush=True)
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--mode", choices=("probe", "proxy", "census", "self-test"),
+    parser.add_argument("--mode", choices=("probe", "proxy", "census", "self-test",
+                                           "tile-selftest"),
                         default=None)
     parser.add_argument("--self-test", action="store_true",
                         help="run the offline arithmetic/mapping/reader checks "
                              "and exit; needs no media, no ffmpeg, no GPU")
+    parser.add_argument("--tile-selftest", action="store_true",
+                        help="run the TILE PASS frozen preconditions P1-P5 and "
+                             "exit; needs no media, no ffmpeg, no GPU")
     # probe / proxy
     parser.add_argument("--source-dir", default=None,
                         help="scene folder of cam*.mp4 (READ ONLY)")
@@ -1531,6 +2057,32 @@ def main(argv=None) -> int:
     parser.add_argument("--min-cameras", type=int, default=2,
                         help="cameras needed before a cluster is counted as "
                              "multi-camera in the summary (does not filter output)")
+    # census: tile pass (OFF by default; the census is unchanged without it)
+    parser.add_argument("--tile-mode", action="store_true",
+                        help="census: run changepoint detection on the per-tile "
+                             "MAXIMUM of template_dist instead of the "
+                             "whole-frame mean. The default signals are "
+                             "whole-frame means and cannot see a small object; "
+                             "this is the high-recall companion pass. The "
+                             "global signal is still reported beside every "
+                             "candidate. Adds spatial explanation data to the "
+                             "manifest -- an EXPLANATION OF THE DETECTOR "
+                             "SIGNAL, NOT an instance mask")
+    parser.add_argument("--tile-size", type=int, default=DEFAULT_TILE_SIZE,
+                        help="census: square tile edge in PROXY pixels "
+                             f"(default {DEFAULT_TILE_SIZE}; 16x9 = 144 tiles "
+                             "at the 960x540 census raster). Partial edge "
+                             "tiles are included and never area-weighted")
+    parser.add_argument("--tile-min-amplitude", type=float,
+                        default=DEFAULT_TILE_MIN_AMPLITUDE,
+                        help="census: ABSOLUTE floor in 8-bit grey levels for "
+                             "the tile pass, measured on a TILE mean "
+                             f"(default {DEFAULT_TILE_MIN_AMPLITUDE}). Same "
+                             "two-gate structure as --min-amplitude: the "
+                             "robust relative gate AND this floor must pass")
+    parser.add_argument("--tile-top-n", type=int, default=DEFAULT_TILE_TOP_N,
+                        help="census: contributing tiles recorded per candidate "
+                             "for the review overlay")
     parser.add_argument("--emit-signals", action="store_true",
                         help="census: include the per-camera per-frame signals "
                              "in the manifest (large)")
@@ -1539,11 +2091,16 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     mode = "self-test" if args.self_test else args.mode
+    if args.tile_selftest and not args.self_test:
+        mode = "tile-selftest"
     if mode is None:
-        parser.error("one of --mode {probe,proxy,census,self-test} or --self-test")
+        parser.error("one of --mode {probe,proxy,census,self-test,tile-selftest} "
+                     "or --self-test or --tile-selftest")
 
     if mode == "self-test":
         return self_test()
+    if mode == "tile-selftest":
+        return tile_self_test()
 
     if mode == "probe":
         if not args.source_dir:

@@ -298,3 +298,31 @@ while the same measurement over one selected ~50-frame window is cheap.
 §3 or §5.** It records what the available instrument can and cannot
 measure, so that a candidate list is read as what it is: a scouting
 output for human/ground-truth curation.
+
+---
+
+## SUPERSESSION POINTER (2026-08-25, append-only)
+
+**§4's fixed-rig prerequisite is SUPERSEDED** by
+[[imvid-rig-classification-supersession-2026-08-25]]. §4 above is
+preserved verbatim and is NOT rewritten; read it together with that page.
+
+In one line: the supplier's release email and Drive layout separate the
+seven calibrated `scene*` folders from a distinct `moving_rig` folder, so
+the take-scale fixed-pose triangulation residual is replaced by bounded
+input-integrity checks (calibration parses; every camera represented
+exactly once; dimensions and stream metadata agree; sampled frames
+decode; camera IDs map consistently across MP4s / `cameras.txt` /
+`images.txt`), plus a standing stop condition on any later pose or
+calibration contradiction.
+
+**The evidence boundary narrowed and the supersession says so:** fixed-rig
+status is now **supplier-declared, not independently measured**. Opera has
+partial corroboration over frames 0-299 only (**1.97%** of its 15,215-frame
+take); **Puppy has none**. `moving_rig` is absent from Apollo and out of
+scope.
+
+**Nothing else in this spec changes.** §2, §2.1, §3, §5, §6, §7, §8 and the
+2026-08-24 amendment remain binding, including `C_min=3`, `W_pre=15`,
+`W_gap=20`, `W_post=15`, the POSITIVE class-A evidence requirement, and
+the zero-class-A stop rule.
