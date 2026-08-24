@@ -189,3 +189,94 @@ python scripts/fetch_imvid_release.py status --inventory /apollo/users/sri/proj_
   candidates reach `C_min = 3` by download order.
 * **N3V utility scaling remains HALTED** per the block-3 decision,
   regardless of this block's variance result.
+
+---
+
+# APPENDED (2026-08-24, later in the block)
+
+## 11. The ImViD loader gap is CLOSED — converted, verified, and training
+
+`scripts/imvid_to_blender.py` (experiment **277**, `dgx`, COMPLETED) turned
+the COLMAP/OPENCV Opera sample into the Blender-convention layout this
+trainer reads. **Its cv2 production path finally executed on Apollo — 16/16
+self-test checks with no skip**, where the workstation could only manage
+15/16.
+
+Verified from the emitted manifest, not asserted:
+
+| check | value |
+|---|---|
+| derived PINHOLE vs frozen experiment 156 | `matches = true`, **max abs delta 0.0** |
+| `new_camera_matrix` | `"scaled_k"` — stated explicitly, never implicit |
+| invalid border | `invalid_fraction 0.0`, 0 fully-outside pixels |
+| frame rate | `60000/1001`, period `1001/60000`, ratio to the repo's hard-coded 30 fps **1.998001998** |
+| point cloud | source sha256 == destination sha256 == `d5b10be0…`, 20,157 points, basename **exactly** `points3d.ply` |
+| reader replay | train 105 frames / test 12 frames, **both take `per_frame_intrinsics(:433)`**, every referenced image exists, `max_abs_time_delta 0.0` |
+| split | verified against the **WRITTEN json bytes**, 35 train / 4 held out |
+
+**A correction found by measuring rather than inherited.** The working
+audit reasoned that barrel distortion (`k1 < 0`) "pushes the periphery
+outward" and so creates an invalid border. That describes the **forward**
+map, not the inverse map `initUndistortRectifyMap` builds: an output pixel
+at normalized radius `r` is fetched from `r(1 + k1 r²)`, which for `k1 < 0`
+is **inward**. So the expected invalid fraction on Opera is ~0 — measured
+`0.0` — and the real cost is the opposite one, that peripheral source
+content is **discarded**. The converter reports both quantities and assumes
+neither. **That reasoning never reached a durable record**, so there is
+nothing to retract.
+
+### 11.1 The smoke — the first ImViD training in this repository
+
+Experiment **279**, `configs/imvid/opera_smoke500.yaml`, 500 iterations,
+`dgx`. **The loader accepted the converted data and the trainer ran.**
+
+**The load-bearing detail is `points = 20157`.** The Blender reader
+silently substitutes a random uniform fill for a mis-named point cloud
+(`scene/dataset_readers.py:481-491`) — and that fill would have read
+**50,000** (the config's `num_pts`). It read 20,157, so the union cloud was
+genuinely loaded. The silent-initialization failure this project already
+paid for once on DiVa-360 did **not** recur.
+
+`Reading Training Transforms` and `Reading Test Transforms` are logged
+separately, so the split path is exercised rather than merged.
+
+**This is a PLUMBING result and nothing more.** 500 iterations over 105
+training units is 4.76 presentations/unit. No ImViD number from this cell
+may be compared with anything.
+
+Two config fields are held fixed and load-bearing, each justified against a
+code line: **`eval: True`**, because `:475-477` MERGES the test split into
+training when it is False — flipping it would silently violate the frozen
+split; and **`resolution: 1`**, because `utils/camera_utils.py:43-46`
+rescales the principal point by a naive divide rather than the frozen
+`(c+0.5)*s-0.5`, so undistorting offline to the final raster keeps the two
+conventions from ever meeting.
+
+## 12. The hull falsifier: O1 is INVALID; O2 is running
+
+Full record: [[nonconvex-hull-o1-result-2026-08-24]].
+
+**O1 returned INVALID on precondition V3 — no verdict on hull completion
+may be read from it.** T1's accepted component lay entirely along arm B (3
+cells only-arm-B, **0** only-arm-A), so H1's per-component bounding box
+never reached the notch and the operator could not fail.
+
+**Read without V3 the table says hull completion SURVIVED** — precision
++0.0449, recall +0.1199, zero false activations, zero zero-object cells
+filled. That near-miss is the finding, and it is LRV4's "a ratio without
+its n is not a measurement" in a new costume: **an operator's pass is
+meaningless until you check it was exposed to the case that would refute
+it.**
+
+Orientation **O2** was predeclared in the frozen spec before any fixture
+existed, so running it is not selection of a favourable arm — but the
+disclosure that O1 ran first and was invalid must travel with any O2
+reading. Fixture generated (**276**); substrate training (**278**), under a
+**distinct `config_canonical_hash`** so the two orientations can never be
+confused in the ledger.
+
+**If O2 also fails V3**, the conclusion is about the INSTRUMENT — that this
+fixture design cannot expose H1 to the concavity at 8³ given T1's
+selectivity — and **not** about hull completion. A future spec must then
+force a spanning accepted component by construction rather than hope for
+one.
