@@ -127,3 +127,51 @@ even for a partial census — a census needs multi-camera support by
 construction, and a 15-camera subset would bias which candidates can reach
 the `C_min = 3` bar in a way that depends on which cameras happened to
 download first.
+
+---
+
+## THE BACKOFF ANSWERED §6'S QUESTION (2026-08-24, append-only)
+
+Section 6 left one question open and named the evidence that would settle
+it: *"if it is a rate limit, the paced single worker should stay under it
+... if it is a daily volume cap near the observed ~62 GiB, then no pacing
+helps."* It said to read the resume log rather than assume.
+
+**The log now reads, and it is not a short rate limit.**
+
+| attempt | time (UTC) | outcome | next backoff |
+|---:|---|---|---:|
+| resume | 23:56 | refused (HTML) | 900 s |
+| 1/5 | 00:11 | refused | 1800 s |
+| 2/5 | 00:41 | refused | 3600 s |
+| 3/5 | 01:41 | refused | 3600 s |
+| 4/5 | 02:41 | refused | 7200 s |
+| 5/5 | ~04:41 | *pending at handover* | — |
+
+**Five refusals across 3 h 20 min of elapsed time since the 23:21 trip**,
+with a single paced worker at ~26 MB/s and inter-file pauses. A burst-rate
+limit would have cleared inside the first 15-minute wait; none of five
+escalating waits cleared it.
+
+**The supported reading: a long-horizon cap, most plausibly ~24 h, on the
+order of the ~62 GiB already taken.** Stated as the supported reading, not
+as a measured constant — this design can distinguish *short rate limit*
+from *not a short rate limit*, and it cannot measure the cap's exact size
+or reset period.
+
+**What follows for cost, and it is the §6 branch that now applies:** no
+pacing helps within a day, the ceiling is on the order of **~62 GiB per
+host per day**, and the remaining ~1.04 TiB implies roughly **17 further
+host-days** on a single host — or a different acquisition route.
+
+**Every completed byte is preserved and the transfer remains correctly
+resumable.** 21 files verified, zero partials, zero stale locks. The
+downloader skips completed files by byte count, resumes partials by
+`Range`, and steals locks older than 2 h, so a later relaunch of the exact
+same command continues without any manual reconciliation.
+
+**Not established, and not to be inferred from this:** the cap's exact
+size, its reset period, whether it is per-IP or per-subnet, and whether a
+different host would fare better. The only cross-host evidence is a single
+1-byte probe, which shows the *release* is readable elsewhere — it does
+not show that another host could sustain a bulk transfer.
