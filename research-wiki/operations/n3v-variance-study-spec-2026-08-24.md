@@ -331,3 +331,28 @@ rather than repaired because a fix would change training-path bytes and
 this cohort's whole value rests on being byte-identical to the code that
 produced the 0.4945 floor. **Any future paired design must repair this
 first, and must not be submitted on a B1 arm until it is.**
+
+---
+
+## AMENDMENT (2026-08-24, append-only) — the contrast endpoint needs 8 replicates/arm, not 7
+
+Section 9's table gives **7** replicates per arm for the contrast endpoint
+at delta* = 0.30. **That is one too few**, and it is corrected here rather
+than left to propagate.
+
+The raw power figure is `2 (z_a/2 + z_b)^2 (sigma/delta)^2 = 5.3125`. A
+**sample size must round UP** — `round(5.3125) = 5` would plan for fewer
+replicates than the calculation requires — so with the same +2 small-sample
+correction the answer is `ceil(5.3125) + 2 = 8`. The union endpoint is
+unaffected: `ceil(11.9910) + 2 = round(11.9910) + 2 = 14`, which is why the
+error showed up in only one row.
+
+Corrected cost for a two-arm comparison on the contrast endpoint:
+**~39 slot-h**, not 34.1.
+
+**No decision changes.** Both figures sit far below the union endpoint's
+68.1 slot-h, and both readings of the contrast lane were already "the only
+affordable route on the record". The correction makes the requirement more
+conservative, never less, and it was found by
+`scripts/n3v_variance_analysis.py`'s self-test failing against the
+tabulated value — which is the reason that tool exists.
