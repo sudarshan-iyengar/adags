@@ -605,3 +605,124 @@ No measured value changes. Every endpoint number, every empty-diff claim,
 the pixel accounting, the chi-square constants and the pre-registration
 timestamps were independently verified and hold. What changes is what may
 be **concluded** from them.
+
+---
+
+## RESULT (2026-08-24, append-only) — the co-primary is REFUTED; sigma is finally estimable; and under §6's own rule there is still no affordable route
+
+All six fresh cells and all six evaluations `STATE_COMPLETED`
+(267/268/269 + 286/287/288; 289/290/291 + 292/293/294). Analysis by
+`scripts/n3v_variance_analysis.py`, whose self-test reproduces the
+recorded historical values.
+
+### Reading 1 — PRIMARY: the frozen protocol, applied mechanically
+
+Per §7 rule 2 and the review response above, wave 2 disagrees with wave 1
+on `commit` and `archive_sha256`, both explicitly named exclusion fields.
+**Applied as frozen, rule 2 excludes wave 2, fewer than 5 of 6 survive,
+and this study is INCONCLUSIVE AT n=6 by its own rule.**
+
+The surviving fresh cohort is **n = 3** (wave 1):
+
+```
+all_events_union   sd 0.125114        union - complement   sd 0.272992
+```
+
+**At n=3 the 95% CI for sigma spans 12.07x and is not a usable estimate**
+— which is precisely the deficiency this study was created to remove, and
+under the strict reading it is not removed.
+
+### Reading 2 — SECONDARY, EXPLICITLY LABELLED: rule 2 relaxed to "training-path diff verifiably empty"
+
+**Every number below carries that label and is NOT the frozen protocol's
+result.** The training-path diff between the two commits is verifiably
+empty; the archives differ by four strings in a tuple.
+
+| endpoint | mean | **sd (n=6)** | spread | 95% CI for sigma | ratio |
+|---|---:|---:|---:|---|---:|
+| **`all_events_union`** (primary) | 31.67045 | **0.184681** | 0.4913 | [0.1153, 0.4530] | 3.93x |
+| `complement` | 33.10017 | 0.158518 | 0.4682 | [0.0989, 0.3888] | 3.93x |
+| `whole_frame` | 33.09444 | 0.158097 | 0.4670 | [0.0987, 0.3878] | 3.93x |
+| pooled+clamped PSNR | 33.39009 | 0.149021 | 0.4331 | [0.0930, 0.3655] | 3.93x |
+| **`union − complement`** (co-primary) | −1.42972 | **0.191296** | 0.5260 | [0.1194, 0.4692] | 3.93x |
+
+**r(union, complement) over the six = +0.3867.**
+
+### THE CO-PRIMARY IS REFUTED, at n=6 and not only at n=3
+
+**sd(contrast) = 0.191296 > sd(union) = 0.184681.** The pre-registered
+prediction was that the contrast REDUCES variance. It does not, at either
+sample size — 2.18x worse at n=3, and still worse at n=6.
+
+**The mechanism is now fully explained and it is the correlation.** The
+contrast beats the union iff `rho > s_c / (2 s_u)`; here that threshold is
+`0.158518 / (2 x 0.184681) = 0.4292`, and the measured **rho = 0.3867
+falls below it.** The endpoint fails for exactly the reason the spec never
+checked: it assumed a common run-level shift (which would give rho near 1)
+and never computed rho.
+
+**Registering it as a prediction rather than adopting it remains the
+single best decision in this study.** Adopting it on the historical three
+would have moved every future N3V comparison onto an endpoint that is
+worse at both sample sizes.
+
+### WHAT THE STUDY DID ACHIEVE — sigma is estimable
+
+Question 1 of §0 was *"what IS the run-level standard deviation?"*, since
+n=3 gives a 12.07x CI. **At n=6 the CI ratio is 3.93x**, and the union
+endpoint's sigma is **0.1847 dB, 95% CI [0.1153, 0.4530]**.
+
+**An independent convergence worth recording:** the n=6 union spread is
+**0.4913 dB** against the historical replicate floor of **0.4945 dB** —
+two disjoint cohorts, different commits, different archives, agreeing to
+**0.7%**. The 0.4945 floor is corroborated rather than merely repeated.
+
+### AND YET — under §6's own binding rule there is STILL no affordable route
+
+§6 states that *"every downstream power and cost calculation uses the
+UPPER confidence limit for sigma, not the point estimate."* Applying that
+to the n=6 result, at delta\* = 0.30 dB and the corrected Guenther
+correction, with the measured 2.444 slot-h per training cell:
+
+| endpoint | point sigma | /arm | cost | **upper-limit sigma** | **/arm** | **cost** |
+|---|---:|---:|---:|---:|---:|---:|
+| `all_events_union` | 0.1847 | 7 | 34.2 slot-h | 0.4530 | **37** | **180.9 slot-h** |
+| `union − complement` | 0.1913 | 8 | 39.1 slot-h | 0.4692 | **40** | **195.5 slot-h** |
+
+**The point estimate makes a two-arm comparison look affordable at ~34
+slot-h; §6's binding mitigation makes it 181 slot-h, 7.5x the block
+ceiling.** The adversarial review flagged this contradiction before the
+data existed, and the data confirms it. **The honest statement is that
+this study has estimated sigma well enough to show that a two-arm N3V
+comparison at delta\* = 0.30 is not affordable under the spec's own
+uncertainty rule.**
+
+### The stopping rule fires, its rationale is void, and n=9 is NOT run
+
+The contrast CI [0.1194, 0.4692] straddles `sigma_dec = 0.1672`, so §6's
+rule says **extend to n=9**. Three things are true at once and all are
+disclosed:
+
+* the rule is honoured as frozen — it says extend;
+* **its rationale is void**, because it keys continuation to the contrast
+  endpoint, which is now refuted at both sample sizes;
+* **n=9 is not run.** Three more cells cost ~7.3 slot-h against a block
+  already at ~19 of 24, and — decisively — extending would buy a better
+  estimate of a **refuted** endpoint. Not running it is recorded as a
+  deliberate departure from the frozen rule, with the reason, rather than
+  as an oversight.
+
+### Permitted and forbidden
+
+**Permitted.** Under the strict frozen reading the study is inconclusive
+at n=6 and the fresh cohort is n=3. Under the labelled relaxed reading,
+sigma(union) = 0.1847 dB with a 3.93x CI, the co-primary contrast is
+refuted at n=6, rho = +0.3867 explains why, the n=6 spread corroborates
+the 0.4945 floor to 0.7%, and no two-arm comparison at delta\* = 0.30 is
+affordable under §6's upper-limit rule.
+
+**Forbidden.** Describing the n=6 numbers as the frozen protocol's result.
+Calling the six cells byte-identical. Attaching a p-value to anything here
+(§5.1). Treating delta\* = 0.30 as externally grounded — the review
+established it is a bare judgment. And concluding anything about
+mechanisms: **N3V utility scaling remains HALTED.**
