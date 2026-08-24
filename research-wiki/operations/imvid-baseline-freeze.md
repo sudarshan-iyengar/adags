@@ -869,3 +869,92 @@ quality**, and no quality claim may be drawn from either.
 
 That 20.23 dB means anything. It is 500 iterations over 105 training
 units and remains the plumbing number of B13, not a baseline.
+
+## B15 (2026-08-24) — the densification-amplifier probe is an INVALID INSTRUMENT, and I did not freeze the precondition that would have caught it
+
+Experiments **282 / 283 / 284** (`imvid_densify600_{a,b,c}`, r0, commit
+`88e8b96`, pool `dgx`, identical config, seed 0, all `STATE_COMPLETED`).
+
+| iterations | densification rounds | psnr a | psnr b | psnr c | **spread** | points |
+|---:|---:|---:|---:|---:|---:|---:|
+| 500 | 0 (gate: `500 > 500` is False) | 20.229538 | 20.229460 | 20.219417 | **0.010122** | 20,157 |
+| 600 | 1 **called** | 20.550169 | 20.554603 | 20.557733 | **0.007564** | **20,157** |
+
+```
+ratio of spreads (600 vs 500) = 0.75x
+frozen threshold              = >= 10x, declared before any run
+```
+
+### The frozen rule's second branch nominally fires — and it may NOT be read
+
+The rule said: *comparable to 0.0101 dB ⇒ one densification round is not
+sufficient to amplify.* The ratio is 0.75x, so that branch nominally fires.
+
+**It must not be read, because the rule's unstated precondition failed.**
+
+The gate conditions all hold at iteration 600 — `600 < densify_until_iter
+(4000)`, `20,157 < densify_until_num_points (150,000)`, `600 >
+densify_from_iter (500)`, `600 % densification_interval (100) == 0` — so
+`densify_and_prune` **was called**. But **the point count is identical at
+20,157 across both arms and all six runs**, equal to the initialization.
+**The call executed and produced no net structural change**: nothing was
+cloned, nothing was split, nothing was pruned.
+
+So the two arms had **identical topology**, and the mechanism the probe
+exists to engage — topology divergence between arms — **was never
+engaged**. A null from an instrument that could not have produced a
+positive is not evidence for the null.
+
+**Residual ambiguity, stated rather than smoothed:** an exactly-cancelling
+N cloned and N pruned would also leave 20,157. That is improbable across
+six runs but is not excluded by the point count alone, and no per-round
+structural log exists to settle it.
+
+### The self-critical part, which is the finding
+
+**I froze a reading rule for this probe but did NOT freeze a validity
+precondition** — and the hull falsifier, written earlier the same block,
+*did* have one (V3, "the operator is not vacuous"), and V3 caught exactly
+this failure mode on LRV5-NCX O1 hours earlier.
+
+So this is the **second vacuity catch of the block**, and the second one
+was caught by noticing an anomalous invariant (`points` unchanged) rather
+than by a pre-declared check. **The hull spec was the better-engineered
+instrument and I did not carry its discipline across to the probe.**
+
+The general rule this project should carry: **freezing a reading rule is
+not enough. Every frozen rule needs a frozen precondition asserting that
+the mechanism it reads was actually exercised** — and the precondition
+must be a statement about the setup, never about the score, so that
+checking it cannot leak the outcome.
+
+### What a VALID version requires
+
+A precondition, frozen before any run, of the form:
+
+> The intervention arm's realized point count must differ from the
+> initialization count, and the two arms' realized topologies must differ.
+> If either fails, the run is INVALID and no reading of the spread is
+> licensed.
+
+Operationally that means running far enough past `densify_from_iter` that
+densification demonstrably acts — verified from the realized artifact, not
+assumed from the schedule.
+
+### What IS established
+
+* The ImViD 500-iteration configuration is reproducible to **0.0101 dB**
+  and the 600-iteration configuration to **0.0076 dB**, both on a
+  substrate whose topology never changed from initialization.
+* 100 additional optimization iterations move held-out PSNR by
+  **+0.32 dB** (20.2295 → 20.5537 mean), which is ordinary early-training
+  improvement and not a densification effect.
+* **Nothing about the densification-amplifier account.** It is neither
+  supported nor weakened by this probe. The N3V post-mortem's 1400x
+  divergence measurement stands untouched, and so does B14's statement
+  that the ImViD/N3V spread difference is confounded.
+
+### Cost
+
+3 cells, ~0.9 slot-h projected. Cheap, and the methodological finding is
+worth more than the measurement would have been.
