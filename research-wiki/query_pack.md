@@ -1,5 +1,173 @@
 # Query Pack
 
+## 2026-08-24 BLOCK — three vacuity catches and the asymmetry between them; ImViD is ADMITTED and TRAINS; the hull question is unanswerable by this route
+
+Full records: [[operations/block-2026-08-24-handover]],
+[[operations/nonconvex-hull-o1-result-2026-08-24]],
+[[operations/imvid-acquisition-quota-2026-08-24]],
+[[operations/spacetime-gaussian-grouping-read-2026-08-24]],
+[[operations/n3v-variance-study-spec-2026-08-24]]. Experiments 267-294.
+**Actual cost ~17 slot-h of a 24 ceiling; both bulk transfers ran at ZERO
+GPU slots.**
+
+**(1) THE METHOD FINDING, and it outranks every number this block
+produced. THREE separate instruments returned a favourable-looking result
+that COULD NOT have returned an unfavourable one**, and the asymmetry in
+how they were caught is the lesson. The two hull orientations were caught
+**automatically** by a pre-declared precondition (V3, "the operator is not
+vacuous") — a statement about the ACCEPTED SET, evaluated before any
+score, so it cannot leak the outcome and it fires whether or not anyone is
+watching. The densification-amplifier probe was caught **only because an
+invariant looked wrong** (`points` unchanged at 20,157): its frozen
+reading rule would otherwise have delivered a clean null from an
+instrument that never engaged its own mechanism. **The hull spec and the
+probe were written an hour apart in the same block, one with a
+precondition and one without; the discipline did not transfer.**
+**CARRY AS METHOD: freezing a READING RULE is not enough. Every frozen
+rule needs a frozen PRECONDITION asserting the mechanism it reads was
+actually exercised — stated about the setup, never about the score.**
+This is LRV4's "a ratio without its n is not a measurement" in a third
+costume.
+
+**(2) THE HULL QUESTION IS UNANSWERABLE BY THIS ROUTE, and the cause is
+T1 itself.** LRV5-NCX — an L of two boxes with a persistent cross of thin
+walls standing in the notch — was built, generated, trained and scored in
+BOTH predeclared orientations. Both are **INVALID on V3, complementarily**:
+O1's accepted component lies entirely in arm B (3 cells arm-B-only, **0**
+arm-A-only), O2's entirely in arm A (**0** / 3). The mirror flipped which
+arm T1 latches onto and **neither ever spans**, so H1's per-component
+bounding box never reaches the notch — in O2 it adds **zero** cells.
+**Root cause measured: T1 gates 2 of 452 (O1) and 2 of 511 (O2). The
+extreme selectivity that makes T1's boundary inference EXACT with zero
+false activations is exactly what makes it unable to exercise a hull
+operator on a non-convex object.** V1 and V2 pass in both, so the fixture
+is sound and the ESTIMATOR is the limiting factor. **Hull completion is
+neither refuted nor supported** and stands where
+[[operations/lrv3-membership-candidates-result-2026-08-23]] §7 left it.
+The near-miss on O1 is the part to remember: read without V3 the table
+says hull completion SURVIVED (+0.0449 precision, +0.1199 recall, zero
+false activations).
+
+**(3) ImViD IS ADMITTED AND TRAINS — the loader gap is closed end to
+end.** The reprojection gate passed on all three frozen frames
+(**1.215 / 1.162 / 1.214 px at NATIVE** against a 2.0 px NATIVE gate,
+35/35 cameras), and it is decisive rather than merely green because the
+measured corruption margins are enormous — transposed rotation 1400 px,
+camera-to-world pose 7850 px, mis-ordered `distCoeffs` 57 px, dropped
+distortion 25 px, against 3e-13 px correct — while a cross-check limb
+reproduces COLMAP's own residual through an independent code path
+(1.198 vs recorded 1.195). **The 20,157-point sparse union is confirmed
+reusable WITHOUT re-triangulation.** A converter then produced the
+Blender-format inputs and **ImViD trained for the first time in this
+repository** (held-out PSNR at 500 iterations). The load-bearing check is
+`points = 20157`: the reader silently substitutes a random uniform fill
+for a mis-named cloud and that fill would read 50,000 — so the DiVa-360
+silent-initialization failure did not recur. **THE DANGEROUS LOADER PATH
+IS THE ONE THAT FAILS OPEN**: the `OPENCV` check everyone watched fails
+closed and is harmless, while the Blender route reads intrinsics with no
+camera-model and no distortion field. **Two config fields are silently
+wrong if flipped: `eval: True` (the reader MERGES test into training when
+False) and `resolution: 1` (camera_utils rescales the principal point by
+a naive divide, not the frozen convention).**
+
+**(4) ImViD ACQUISITION IS RATE-LIMITED PER-IP at ~62 GiB (5.7%).** 21
+files verified complete, **zero partials, zero stale locks, zero corrupt
+files** — an HTML body on a bulk endpoint is treated as a refusal and
+never as data. Diagnosed by a single 1-byte probe from a DIFFERENT host
+returning 206/`video/mp4` for an untouched file while Apollo was still
+refused, so the release is intact and the limit follows the requesting
+host. Five escalating backoff attempts across ~4.75 h all refused, which
+indicates a long-horizon cap rather than a short rate limit. **A second
+concurrent worker bought ~13% throughput and the two arms tripped the
+limit four seconds apart — the acquisition rules' warning was right.**
+**MEASURED AND BINDING: the full Opera take is 15,215 frames, not 300, so
+the exposure gap against N3V-50f is 560x, not 11x — the full take cannot
+be trained at any authorized schedule and a frozen event-selected tranche
+is now mandatory.**
+
+**(5) SPACETIME GAUSSIAN GROUPING DOES NOT OCCUPY the inferred-window
+cell**, read in full from the CC-BY journal version (the paywall was an
+IdP redirect; the EUVIP version is genuinely unreachable and recorded as
+unread). Identity is **time-independent**, **no suppression is implemented
+in any form**, and **nothing is inferred**. "PSNR" occurs **zero** times
+in the full text. **The standing forbidden-claim entry is DISCHARGED.**
+One recorded premise is corrected append-only: "none of the seven operates
+on a 4D representation with per-primitive temporal support" was true of
+those seven and FALSE in general — SGG is per-primitive identity on
+exactly our `(mu^tau, s^tau)` substrate family. Every consequence
+survives and the per-primitive-metrics finding is STRENGTHENED. **One
+genuinely new mechanism: its supervision is absolute-label cross-entropy,
+not within-frame contrastive, so unlike that family it DOES have a
+cross-episode supervisory path** — bounded by the authors naming
+disappearance-reappearance as where their pipeline fails. **SA4D is now
+the highest-value remaining read.**
+
+**(6) THE N3V VARIANCE STUDY RAN, AND A FRESH ADVERSARIAL REVIEW RETURNED
+MATERIAL DEFECT WHICH WAS ACCEPTED.** Six fresh cells + six evaluations.
+**Two readings; the STRICT one is primary.** Applied mechanically, the
+spec's own §7 rule 2 excludes wave 2 (it names `commit` and
+`archive_sha256`, which differ between waves), so **the study is
+INCONCLUSIVE AT n=6 BY ITS OWN RULE** and the fresh cohort is n=3. Under a
+**labelled relaxation** to "training-path diff verifiably empty":
+**sd(union) = 0.1847 dB, 95% CI [0.1153, 0.4530], ratio 3.93x** against
+n=3's 12.07x — so sigma is finally estimable. **THE PRE-REGISTERED
+CO-PRIMARY CONTRAST IS REFUTED at BOTH sample sizes** (sd 0.1913 > union
+0.1847 at n=6; 2.18x worse at n=3), and the mechanism is the correlation
+the spec never computed: the contrast wins iff `rho > s_c/(2 s_u)` =
+0.4292, and measured **rho = +0.3867**. **Registering it as a prediction
+rather than adopting it is the single best decision in the study.**
+**INDEPENDENT CORROBORATION: the n=6 union spread is 0.4913 against the
+2026-08-23 replicate floor of 0.4945 — disjoint cohorts, different
+commits, agreeing to 0.7%.** **AND THE DECISIVE COST FACT: under §6's own
+binding rule that cost uses the UPPER confidence limit, a two-arm
+comparison needs 37 replicates/arm = 181 slot-h, 7.5x the block ceiling
+(the point estimate flatters it at 34). The study estimated sigma well
+enough to show the comparison it was built to enable is UNAFFORDABLE.**
+The stopping rule fires and **n=9 was deliberately NOT run** — it would
+buy a better estimate of a refuted endpoint. Two of the four levers were
+closed earlier by arithmetic on existing data. **N3V utility scaling
+remains HALTED.**
+
+**(6b) THE REVIEW'S OTHER ACCEPTED FINDINGS, all verified before
+acceptance.** **My own "correction" was wrong**: `ceil+2` is not the
+customary small-sample correction; Guenther's `+z^2/4` gives **13 and 7**,
+confirmed by exact noncentral-t power — so the ORIGINAL 7 was right and my
+amendment broke it while crediting the tool with catching an error it had
+introduced. **The archive deviation was a FALSE DILEMMA**: `--repo-root`
+plus `git worktree add <tmp> <commit>` would have given a byte-identical
+archive with no repo edit and no deviation — use that route from the
+start. **delta\* = 0.30's "external grounding" is a CATEGORY ERROR**: the
+event union is 0.3377% of pixel-times, so even infinite union PSNR moves
+whole-frame by 0.0202 dB, 19x less than the 0.38 dB span it was anchored
+to; it is a bare judgment, not circular but ungrounded. Also accepted: the
+complement-harm guard admits arms 0.287 dB worse whole-frame; §6 and §9
+contradict each other on point vs upper-limit sigma; `sigma_dec` is
+unaudited; the stopping rule is perverse; and lever 3 was overclaimed
+(the 296x test holds camera and frames fixed, and `whole_frame` is a
+superset of `complement` at r = 0.999996, so the table is two points not
+three).
+
+**(7) CORRECTIONS TO THE RECORD, all append-only.** The `/30` frame-period
+factor is **1.998** (`2000/1001`), not 2.002. The 35-camera union rebuild
+**HAS** been run (experiment 164, 20,157 points, sha256 verified on
+Apollo). N3V has **19** training cameras, not 20. The contrast endpoint
+needs **8** replicates/arm, not 7 — a sample size must round UP, caught by
+the analysis tool's own self-test failing against my tabulated value. And
+the six variance cells **span two archives and may NOT be called
+byte-identical** — `submit_apollo.py` gained 4 allowlist strings between
+waves; the numerical path is verifiably empty-diff, and the deviation was
+recorded BEFORE wave 2 ran.
+
+**(8) A DEFECT FOUND AND FIXED BEFORE IT COULD BITE, and one found and
+NOT fixed.** The downloader's per-file lock is released in a `finally`,
+which `SIGKILL` skips — a killed worker would have blocked one file
+**permanently and silently** and the transfer would have reported success
+with a hole in it; now stolen after 2 h, tested four ways. NOT fixed:
+**`_packet_ids` is absent from `capture()`**, so a branch-from-checkpoint
+on a B1 arm silently loses the packet-id column — **this blocks two of the
+three paired variance designs**, and a fix would change training-path
+bytes the current cohort depends on being identical to.
+
 ## 2026-08-23 BLOCK 2 — membership is MEASURED and refuted; LRV4 is decided; the flow null is EXPLAINED and the measurement channel is the problem
 
 Full records: [[operations/lrv3-membership-diagnostic-2026-08-23]],

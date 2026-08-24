@@ -1,5 +1,194 @@
 # Gap Map
 
+## Instrument-Validity Update — 2026-08-24
+
+**This block's most transferable result is not about a gap. It is about
+how this project's instruments fail**
+([[operations/block-2026-08-24-handover]] §14).
+
+Three separate instruments returned a favourable-looking result that
+**could not have returned an unfavourable one**. Two were caught
+automatically by a pre-declared precondition; one was caught only because
+an invariant looked wrong.
+
+**The precondition that worked is worth stating exactly, because its form
+is what made it work.** V3 — *"the accepted component holds at least one
+cell whose object volume comes ONLY from each named arm"* — is a statement
+about the **accepted set**, evaluated **before any score**. It therefore
+cannot leak the outcome, and it fires whether or not anyone is paying
+attention. The instrument that lacked such a clause produced a clean null
+that would have been reported as a finding.
+
+**Added to the standing method rules:** *freezing a reading rule is not
+enough. Every frozen rule needs a frozen precondition asserting that the
+mechanism it reads was actually exercised.* This joins LRV4's *"a ratio
+without its n is not a measurement"* and the 2026-08-20 rule that *"every
+edit experiment needs a control that separates MAGNITUDE from
+CORRECTNESS"* — three instances of the same underlying failure, caught
+three different ways, and only the pre-declared ones were caught cheaply.
+
+## G13 Membership Update — 2026-08-24: the hull question is unanswerable BY THIS ROUTE, and T1 is the reason
+
+[[operations/lrv3-membership-candidates-result-2026-08-23]] §7 recorded
+axis-aligned **hull completion** as reaching recall 1.0 at precision 0.94,
+refused as post-hoc, with the stated weakness that it assumes the object is
+**cell-convex**. LRV5-NCX was built to test exactly that weakness: an
+L-shaped object whose axis-aligned voxel hull contains a deliberately empty
+cell, with a **persistent, always-visible cross of thin walls standing in
+the notch** so that filling the concavity would demonstrably suppress a
+visible object for 27 frames.
+
+**Both predeclared orientations are INVALID, complementarily**
+([[operations/nonconvex-hull-o1-result-2026-08-24]]):
+
+| | cells only from arm A | cells only from arm B |
+|---|---:|---:|
+| O1 | **0** | 3 |
+| O2 | 3 | **0** |
+
+**The accepted component never spans both arms in either orientation**, so
+the hull operator's per-component bounding box never reaches the notch.
+
+**The cause is T1's selectivity, and it is a genuine tension in the
+method.** T1 gates **2 of 452** and **2 of 511** groups. The same extreme
+selectivity that made its boundary inference **exact, with zero false
+activations** — the property that made T1 the block-2 positive — produces
+an accepted component far too small to span an object whose arms are
+separated by a notch. **A high-precision, low-recall estimator cannot
+exercise an operator that acts on the SHAPE of the accepted set.**
+
+**Consequence for G13:** hull completion is neither refuted nor supported,
+and remains a recorded-but-unadopted candidate. What is newly known is that
+**testing it requires forcing a spanning accepted component by
+construction**, not hoping T1 produces one — and every route to that
+either changes the grid the LRV3 result was measured on, or trades away
+T1's zero-false-activation property. Three routes are costed on the result
+page; none is adopted.
+
+**Not changed:** the structural recall cap of 0.8088 measured on LRV3, and
+the finding that precision is a cloud-binding problem while recall is an
+estimator-sensitivity problem.
+
+## Measurement-Channel Update — 2026-08-24: the pre-registered low-variance endpoint FAILS on fresh data
+
+The 2026-08-23 replicate-floor result made the same-code floor the binding
+constraint on every N3V comparison. This block's variance study
+([[operations/n3v-variance-study-spec-2026-08-24]]) pre-registered a
+within-run contrast (`union − complement`) as a **prediction to be
+tested**, on the reasoning that a run-level shift common to both regions
+should cancel in their difference.
+
+**The prediction is REFUTED at both sample sizes.** Historical n=3:
+contrast sd 0.1745 against union 0.2622, a 33.4% reduction. Fresh n=3:
+0.2730 against 0.1251, **2.18x worse**. Fresh **n=6**: **0.1913 against
+0.1847 — still worse**.
+
+**The mechanism is the correlation the spec never computed.** The contrast
+beats the union iff `rho > s_c / (2 s_u)`. Measured:
+
+| cohort | rho(union, complement) | threshold | outcome |
+|---|---:|---:|---|
+| historical n=3 | **+0.7732** | 0.4876 | contrast wins |
+| fresh n=3 | **−0.6610** | 0.6938 | contrast loses |
+| **fresh n=6** | **+0.3867** | 0.4292 | **contrast loses** |
+
+The spec's stated mechanism — *"a shift common to union and complement
+cancels in their difference"* — predicts rho near +1. It was never
+computed, and **at n=3 the Fisher-z standard error for a correlation is
+1/sqrt(n−3) = 1/0, undefined**: the co-primary was selected on a quantity
+estimated where it has zero degrees of freedom.
+
+**Registering it as a prediction rather than adopting it is what saved
+this.** Adopting on the historical three would have moved every future N3V
+comparison onto an endpoint worse at both sample sizes.
+
+**What the study DID achieve, and the cost fact that closes the lane.**
+sigma(union) is now **0.1847 dB, 95% CI [0.1153, 0.4530], ratio 3.93x**
+against n=3's 12.07x — estimable at last. And the n=6 spread of **0.4913**
+corroborates the 2026-08-23 replicate floor of **0.4945** to **0.7%**
+across disjoint cohorts at different commits. **But under the spec's own
+binding rule that cost uses the UPPER confidence limit, a two-arm
+comparison at delta\* = 0.30 needs 37 replicates/arm = 181 slot-h, 7.5x
+the block ceiling.** The study estimated sigma well enough to show the
+comparison it was built to enable is **unaffordable**.
+
+**A fresh adversarial review returned MATERIAL DEFECT and it was
+accepted** — including that the spec's own exclusion rule, applied
+mechanically, makes the study **inconclusive at n=6**; that delta\*'s
+"external grounding" is a category error (the event union is 0.3377% of
+pixel-times, so even infinite union PSNR moves whole-frame by 0.0202 dB
+against a 0.38 dB anchor); and that a `git worktree` submission would have
+avoided the archive deviation entirely.
+
+**Two of the four variance levers were closed by arithmetic on data
+already recorded, before any new cell ran:** pooling more pixels is
+near-falsified (296x the pixel-times reduces the spread **2.8%**, not the
+~17x sampling noise would give, so the variance is a **global run-level
+shift**), and more replicates is unaffordable (**13/arm = 63.5 slot-h** at
+δ* = 0.30 dB under the corrected Guenther small-sample correction —
+the 14/arm figure first recorded used a `ceil+2` correction that an
+adversarial review showed overshoots).
+
+**A second-order observation that bounds how much any n=3 result should be
+trusted:** the PRIMARY endpoint's sd differs **2.1x** between two n=3
+cohorts of the identical protocol. That is not an anomaly — it is what a
+sigma CI spanning 12.07x predicts, and it is the study's own premise made
+visible.
+
+## Dataset Update — 2026-08-24: ImViD is ADMITTED for reconstruction and TRAINS; event supply is unchanged
+
+[[operations/dataset-admission-matrix-2026-08-18]]'s **NOT ADMITTED for
+event supply** verdict is **unchanged** — ImViD still ships no masks and no
+identity ground truth, so there is no tracker-independent instrument.
+
+What changed is everything upstream of that. The calibration passed a
+reprojection gate at **1.215 / 1.162 / 1.214 px at native** against a 2 px
+native gate with 35/35 cameras, the sparse union is confirmed reusable
+without re-triangulation, a converter closed the loader gap, and **ImViD
+trained end to end for the first time** with a held-out evaluation.
+
+**A hazard worth carrying to any new dataset:** the loader route that
+**fails closed** on an unsupported camera model is harmless; the Blender
+route reads intrinsics with **no camera-model field and no distortion
+field** and would train distorted images silently, wrong by a median of
+14.7 px. The check everyone was watching was the safe one.
+
+**A binding scale fact:** the full Opera take is **15,215 frames**, so the
+full split is 532,525 training units against N3V-50f's 950 — a **560x**
+exposure gap. No authorized schedule can train it; a frozen event-selected
+tranche is mandatory, not preferable.
+
+**Acquisition is rate-limited per-IP at ~62 GiB**
+([[operations/imvid-acquisition-quota-2026-08-24]]), diagnosed by a probe
+from a different host still being served. Five escalating backoff attempts
+across 4.75 h were all refused, indicating a long-horizon cap.
+
+## Novelty Update — 2026-08-24: Spacetime Gaussian Grouping does NOT occupy, and one premise is corrected
+
+[[operations/spacetime-gaussian-grouping-read-2026-08-24]]. Read in full
+from the CC-BY journal version. Identity is **time-independent**, no
+suppression is implemented in any form, and nothing is inferred. **The
+standing forbidden-claim entry is DISCHARGED.**
+
+**One premise corrected append-only:** "none of the seven operates on a 4D
+representation with per-primitive temporal support" was true of those seven
+and false in general. SGG is per-primitive identity on exactly the
+`(mu^tau, s^tau)` substrate family. Every downstream consequence survives,
+and the per-primitive-metrics finding is **strengthened** — the one method
+sharing our substrate also reports only rendered-2D mIoU, with "PSNR"
+occurring zero times in its full text.
+
+**One genuinely new mechanism, and it matters for G13:** SGG's supervision
+is **absolute-label cross-entropy**, not a within-frame contrastive term.
+So unlike the contrastive family it **does** have a cross-episode
+supervisory path — the thing §3 of the occupancy check identified as
+structurally absent. It is bounded by the authors naming
+disappearance-reappearance as exactly where their pipeline fails.
+
+**SA4D now replaces SGG as the highest-value remaining read**, because it
+advertises a *time-varying* identity field, which is nearer the
+time-windowed cell than SGG is.
+
 ## Membership-Measurement Update — 2026-08-23 (block 2)
 
 **G13's representation limb now has BOTH necessary conditions measured,
