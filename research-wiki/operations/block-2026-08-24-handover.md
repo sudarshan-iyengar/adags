@@ -438,8 +438,18 @@ and every diagnostic probe ran at **zero GPU slots**.
 0 partial files | 0 stale locks | 0 corrupt files
 ```
 
-The task remains in its final backoff. **Do not cancel it.** To resume
-after it exits, relaunch the identical command — completed files are
+**CORRECTION, appended after the section above was written:** the task's
+final attempt fired at 04:41:36 and the backoff exhausted. It logged
+*"Every completed byte and partial is preserved; re-run this exact command
+to resume"*, exited 3, and **has ENDED cleanly** — it was not cancelled.
+Re-verified after exit: **62.149 GiB, 21 manifest-verified files, 0
+partials, 0 locks** — byte-identical to the state before it exited.
+
+**Do not relaunch immediately.** Six refusals span 23:56 to 04:41; the
+diagnosed long-horizon cap most plausibly resets ~24 h after the 23:21
+trip. Relaunching now would burn the whole 4.75 h backoff budget before
+the reset and end in the same exhausted state. **Time a resume after
+~23:21 UTC**, then relaunch the identical command — completed files are
 skipped by byte count, partials resume by `Range`, and locks older than
 2 h are stolen:
 

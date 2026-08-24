@@ -146,7 +146,13 @@ helps."* It said to read the resume log rather than assume.
 | 2/5 | 00:41 | refused | 3600 s |
 | 3/5 | 01:41 | refused | 3600 s |
 | 4/5 | 02:41 | refused | 7200 s |
-| 5/5 | ~04:41 | *pending at handover* | — |
+| 5/5 | 04:41 | **refused; backoff exhausted, exit 3** | — |
+
+**RESOLVED:** the final attempt fired at 04:41:36 and was refused like the
+other five. The worker exited 3 with every byte preserved and has ended
+cleanly. **Six refusals across 5 h 20 min** — the long-horizon-cap reading
+above is confirmed rather than merely supported, and no pacing within a
+day changes it.
 
 **Five refusals across 3 h 20 min of elapsed time since the 23:21 trip**,
 with a single paced worker at ~26 MB/s and inter-file pauses. A burst-rate
