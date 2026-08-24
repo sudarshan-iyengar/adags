@@ -724,3 +724,73 @@ from the 300-frame SAMPLE, not from the 15,215-frame full take. Per the
 frozen event definition's rig condition, the full take still requires its
 own fixed-pose residual at frames 0 / mid / end before it may enter the
 event census — and per B10 metadata cannot substitute for that test.
+
+## B13 (2026-08-24) — ImViD TRAINS. The loader gap is closed end to end
+
+Experiment **279** (`imvid_opera_smoke500`, r0, commit `ac6ab12`, pool
+`dgx`, V100 image, `STATE_COMPLETED`), 500 iterations on the converted
+Opera sample. **This is the first ImViD training run in this repository.**
+
+```
+best_val_iter        500
+best_test_psnr       20.229538281758625     (HELD-OUT cameras)
+best_val/ssim        0.7517073998848597
+points total         20,157   (unchanged; densify_from_iter is 500)
+input.ply            911,796 bytes  == the union PLY exactly
+chkpnt500.pth        written
+```
+
+### What makes this a real end-to-end result rather than "it did not crash"
+
+**The load-bearing detail is `points = 20,157`.** The Blender reader
+silently substitutes a random uniform fill for a mis-named point cloud
+(`scene/dataset_readers.py:481-491`) — and that fill would have read
+**50,000**, the config's `num_pts`. It read 20,157, and `input.ply` is
+911,796 bytes, the union PLY's exact size. Two independent confirmations
+that the triangulated cloud was genuinely ingested. **The silent-
+initialization failure this project already paid for once on DiVa-360 did
+not recur.**
+
+`Reading Training Transforms` and `Reading Test Transforms` are logged
+separately, so the split path is exercised rather than merged, and a
+held-out PSNR was produced — which requires the test split to have been
+kept out of training.
+
+### THIS IS A PLUMBING RESULT AND NOTHING MORE
+
+**500 iterations over 105 training units (3 decoded frames x 35 cameras).**
+No quality claim of any kind may be drawn from 20.23 dB, and in
+particular:
+
+* it may **not** be compared with ImViD's published ~30.98 dB (a different
+  method, unreleased code, 30 epochs, flow + depth + bilateral grid +
+  per-camera temporal offsets, and a deliberately peripheral held-out
+  camera);
+* it may **not** be compared with any N3V number — different dataset,
+  different raster, different split, wildly different exposure;
+* it is **not** a baseline, and it establishes no seed spread.
+
+### The two config fields that are load-bearing and must never be flipped
+
+Each is justified against a code line rather than convention:
+
+* **`eval: True`** — `scene/dataset_readers.py:475-477` **MERGES the test
+  split into training** when `eval` is False. Flipping it would silently
+  violate the frozen ImViD split while still producing a plausible number.
+* **`resolution: 1`** — `utils/camera_utils.py:43-46` rescales the
+  principal point by a naive `cx / scale`, **not** the frozen
+  `(c + 0.5) * s - 0.5`. Undistorting offline to the final raster and
+  training at resolution 1 keeps the two conventions from ever meeting.
+
+### What is now unblocked, and what is still blocked
+
+**Unblocked:** the ImViD loader, calibration, split, initialization and
+training path are all admitted. A frozen-tranche pilot is now an
+engineering question rather than a plumbing one.
+
+**Still blocked by the Drive rate limit**
+([[imvid-acquisition-quota-2026-08-24]]): everything needing a COMPLETE
+take — the fixed-rig test (which the frozen event definition says metadata
+cannot substitute for), the event census, and any pilot at a scientifically
+meaningful schedule. Only 3 of the sample's 300 frames are decoded, and the
+full take is 15,215 frames.
