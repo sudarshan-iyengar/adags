@@ -410,3 +410,78 @@ Block total with wave 2 and its evals: **~17.4 slot-h actual against the
   slot-h. Priced and not affordable inside this block's remainder.
 * **A paired mechanism experiment** — designed and deliberately not
   submitted; the directive's five preconditions do not all hold.
+
+---
+
+# FINAL STATE (2026-08-24, block close)
+
+## 19. Every cell terminal, zero failures
+
+**28 experiments, 267-294, ALL `STATE_COMPLETED`. Zero infra failures,
+zero scientific failures, zero cancellations.**
+
+**17.85 slot-hours ACTUAL against the 24 ceiling.** Both bulk transfers
+and every diagnostic probe ran at **zero GPU slots**.
+
+| lane | cells | actual slot-h |
+|---|---:|---:|
+| N3V variance, 6 training + 6 eval | 12 | 14.99 |
+| LRV5-NCX hull, both orientations | 6 | 1.81 |
+| ImViD calibration + conversion | 4 | 0.03 |
+| ImViD smoke + replicates | 3 | 0.46 |
+| ImViD amplifier probe | 3 | 0.57 |
+
+## 20. Transfer: paused, intact, resumable
+
+```
+62.149 GiB landed | 21 files verified in the manifest
+0 partial files | 0 stale locks | 0 corrupt files
+```
+
+The task remains in its final backoff. **Do not cancel it.** To resume
+after it exits, relaunch the identical command — completed files are
+skipped by byte count, partials resume by `Range`, and locks older than
+2 h are stolen:
+
+```
+python <scratchpad>/det_cmd.py dgx 0 <h100-digest> <scratchpad>/cmd_resume.txt     --context=<scratchpad>/ctx --detach
+```
+
+Status at any time, from PowerShell:
+
+```
+python scripts/fetch_imvid_release.py status   --inventory /apollo/users/sri/proj_adags/data/imvid/imvid_drive_inventory.json   --dest-root /apollo/users/sri/proj_adags/data/imvid/raw
+```
+
+## 21. Git
+
+`e2374e1`, local == origin, **0/0 divergence, 33 commits.** Verified that
+**no protected path appears in any commit**: `deep-dive-prompt.txt`,
+`run-deep-dive.ps1`, `agent-control/`, and every `overnight-handover-*.md`
+are absent from all 33. The four files untracked at session start remain
+untracked and untouched.
+
+**Zero test regressions:** 56 failed / 540 passed / 62 skipped / 70 errors,
+matching the pre-change baseline exactly. The 70 errors are `torch`,
+`cv2` and `omegaconf` import failures on the workstation, all pre-existing.
+
+## 22. The single recommended next action
+
+**Read SA4D in full.** It is the one remaining paper that could occupy the
+time-windowed-suppression cell — it advertises a *time-varying* identity
+field, which is nearer that cell than Spacetime Gaussian Grouping turned
+out to be. It costs zero GPU, and until it is read the novelty boundary
+has an open edge.
+
+**Ranked runners-up, with the reason each is second:**
+
+1. **Repair `_packet_ids` in `capture()`/`restore()`**, then run paired
+   design option 2. It is the only variance lever left, needs no new
+   machinery beyond that repair, and the repair is currently blocking two
+   of the three designs.
+2. **Re-acquire ImViD from a second host or on a later day.** The cap is
+   per-host and the science is otherwise unblocked — everything upstream
+   of a complete take now passes.
+3. **NOT the N3V ladder.** Utility scaling remains HALTED, and this block
+   established that a two-arm comparison at delta\* = 0.30 needs 181
+   slot-h under the spec's own uncertainty rule.
