@@ -422,3 +422,186 @@ two.
 
 **No threshold, endpoint, exclusion rule or stopping rule is changed by
 this deviation**, and none may be.
+
+---
+
+## ADVERSARIAL REVIEW RESPONSE (2026-08-24, append-only) — verdict MATERIAL DEFECT, accepted
+
+A fresh-context adversarial review of this spec returned **MATERIAL
+DEFECT**. The primary agent independently verified every load-bearing
+finding below before accepting it. **This response is written while wave 2
+is still TRAINING and before any wave-2 endpoint exists.**
+
+The review's own summary of what it checked and found sound is on the
+record too: the empty-diff claims, the pixel accounting, the chi-square
+constants and the pre-registration timestamps all verified exactly, and it
+credits the decision to *register* the contrast rather than adopt it as
+the reason this study caught its own error. The defects are in the
+reasoning around the measurement, not in the measurement.
+
+### 1. BLOCKING — §7, applied as frozen, EXCLUDES wave 2. The deviation amendment's claim that no exclusion rule changed is FALSE.
+
+**Verified.** §7 rule 2 excludes a run if *"any provenance field disagrees
+with the cohort"* and explicitly names **`commit`** and
+**`archive_sha256`**. §4 defines the cohort as the six cells. Wave 1 ran at
+`ebe9972`, wave 2 at `69a7795`; archives `8aac8b96…` and `cef8a008…`. Rule
+2 fires. §7 then states that if fewer than 5 of 6 survive, *"the study is
+reported as **inconclusive at n=6**."*
+
+The DEVIATION amendment above says *"No threshold, endpoint, exclusion rule
+or stopping rule is changed by this deviation, and none may be."*
+**That is false, and it is corrected here.** The rule was changed — by not
+being applied. §7's entire design premise is mechanical application
+("frozen, exhaustive", "if and ONLY if"), and its own warning is about not
+excluding on outlier grounds; this is the mirror image, a rule that *would*
+exclude quietly not firing.
+
+**Disposition — BOTH readings are reported, and the STRICT one is
+primary:**
+
+* **PRIMARY, the frozen protocol applied mechanically:** wave 2 is
+  excluded by rule 2. The fresh cohort is **n=3**, and **this study is
+  INCONCLUSIVE AT n=6 by its own frozen rule.**
+* **SECONDARY, explicitly labelled:** relaxing rule 2's `commit` and
+  `archive_sha256` clauses to *"training-path diff verifiably empty"*
+  admits all six. Any n=6 number reported under this reading **must carry
+  that label**, and must not be described as the frozen protocol's result.
+
+This is deliberately more conservative than the review's suggested fix,
+which was to amend §7 and proceed. Amending an exclusion rule so that it
+admits data is the direction of concern this project guards against, so
+the frozen reading keeps primacy and the relaxation is offered beside it
+rather than in place of it.
+
+### 2. MY OWN "CORRECTION" WAS WRONG — 7 replicates/arm is right, 8 is not
+
+The amendment above states *"the contrast endpoint needs 8 replicates/arm,
+not 7"* and credits `n3v_variance_analysis.py`'s self-test with catching
+an error.
+
+**The tool caught an error it introduced.** `ceil(n) + 2` is not the
+customary small-sample correction; the customary one (Guenther) is
+`+ z²_{α/2}/4 ≈ 0.960`. Verified:
+
+| endpoint | raw | `ceil+2` (published) | **`ceil(raw + z²/4)`** |
+|---|---:|---:|---:|
+| union | 11.9910 | 14 | **13** |
+| contrast | 5.3125 | 8 | **7** |
+
+The review confirmed by exact noncentral-t power simulation that 13 gives
+0.7997 and 7 gives 0.8403, while 14 and 8 overshoot. **So the original 7
+was right, reached by a wrong route (`round`), and my amendment fixed the
+route and broke the answer.**
+
+**Corrected figures**, at the measured 2.444 slot-h per training cell:
+
+| endpoint | replicates/arm | two-arm training cost |
+|---|---:|---:|
+| `all_events_union` | **13** | **63.5 slot-h** |
+| `union − complement` | **7** | **34.2 slot-h** |
+
+All movement is in the conservative direction and **no decision flips**:
+the union endpoint remains unaffordable at 2.6x the block ceiling.
+
+§9's prose figures (109/arm, 475/arm) use yet a third convention
+(`ceil+1`), which happens to be correct. **Three conventions appeared in
+one section; only `ceil+1`/Guenther is right.**
+
+### 3. THE CORRELATION — never computed, and it is the quantity the whole co-primary rests on
+
+**Verified and now recorded:**
+
+| cohort | sd(union) | sd(complement) | **r(union, complement)** | sd(contrast) | break-even r |
+|---|---:|---:|---:|---:|---:|
+| historical | 0.262198 | 0.255700 | **+0.7732** | 0.174523 | 0.4876 |
+| fresh wave 1 | 0.125143 | 0.173645 | **−0.6610** | 0.273024 | 0.6938 |
+
+The contrast beats the union **iff ρ > s_c/(2·s_u)**. The reversal is
+**entirely** the correlation changing sign. Two consequences:
+
+**(a) §2.2's stated mechanism is quantitatively wrong on its own data.**
+*"A shift common to union and complement cancels in their difference"*
+predicts ρ ≈ +1 and sd(contrast) ≈ 0. The measured 0.1745 implies
+ρ = 0.773 — only ~60% of the variance common. The spec reported that
+number without noting what it implied about the premise that produced it.
+
+**(b) The argument conflated equal magnitude with common source.** Three
+nearly-equal sds are equally consistent with ρ = 0. **Only the correlation
+separates them, and it was never computed.**
+
+**And the estimate could never have supported the weight placed on it:
+the Fisher-z standard error for a correlation at n = 3 is 1/√(n−3) =
+1/0 — UNDEFINED.** The co-primary endpoint was selected on a quantity
+estimated at exactly the sample size where it has zero degrees of freedom.
+
+**The fresh ρ = −0.661 is itself the most informative thing wave 1
+produced, and §15 did not interpret it:** runs better on events are worse
+elsewhere. That is a **capacity trade-off**, not a global shift — a
+different mechanism with different consequences.
+
+### 4. THE ARCHIVE DEVIATION WAS A FALSE DILEMMA — option (iv) exists
+
+The deviation section presents an exhaustive-looking option set (drop to
+n=3, revert the allowlist, disclose) that is **not exhaustive**.
+
+**Verified:** `scripts/submit_apollo.py:1196` exposes `--repo-root`, and
+`:972` derives the commit from it. So
+
+```
+git worktree add <tmp> ebe9972
+python scripts/submit_apollo.py submit --repo-root <tmp> ...
+```
+
+would have produced a clean tree at exactly `ebe9972`, a **byte-identical
+`git archive`**, and n=6 — with **no repository edit and no protocol
+deviation at all**. It is neither of the two things the section rejected.
+
+**This is the finding I most regret.** The stated principle (do not edit
+the repository so the record fits the protocol) is correct; it simply did
+not force the dilemma I built on it. **Not re-run**, because a second wave
+2 costs ~7.33 slot-h and the block is at ~19 of a 24 ceiling — recorded so
+a future block uses the worktree route from the start.
+
+### 5. OTHER MATERIAL FINDINGS, accepted and recorded
+
+* **δ\*'s "external grounding" is a category error.** The event union is
+  **0.3377%** of pixel-times, so even an INFINITE union PSNR moves
+  whole-frame PSNR by only **0.0202 dB** — 19x less than the 0.38 dB
+  "field span" the anchor is measured in. The anchor cannot be transported
+  to this endpoint in either direction. **§3 should be relabelled a bare
+  judgment**; the "uncomfortable corollary" does not follow, and flips at
+  δ* = 0.20. Credited: δ* was *not* reverse-engineered from the ladder
+  deltas — it is ungrounded, not circular.
+* **The complement-harm guard admits catastrophic arms.** Reusing δ* as a
+  maximum tolerable harm on a different endpoint permits an arm at
+  union +0.30 / complement −0.29 that passes both gates while being
+  **0.287 dB worse whole-frame**. The guard must be set in the
+  complement's own units.
+* **§6 and §9 contradict each other.** §6 binds every cost calculation to
+  the UPPER confidence limit for σ; §9's "only affordable route" uses
+  point estimates. Under §6's own rule there is **no affordable route at
+  all** (212/arm on the contrast at the n=3 upper limit).
+* **σ_dec = 0.1672 is unaudited** and could not be reconstructed from the
+  spec or the tool; it is the one frozen constant the self-test does not
+  check.
+* **The stopping rule is perverse and was not flagged.** A *large*
+  contrast sd terminates the study — so the worse the co-primary performs,
+  the less data is collected about the primary endpoint. Wave 1's contrast
+  sd (0.2730) already sits 1.9% outside the continuation band. The rule
+  stands as frozen; **its rationale is void** and that is disclosed here.
+* **Lever 3 was overclaimed.** The 296x argument holds camera and frames
+  fixed and enlarges only spatial support, while lever 3 as written names
+  *"more held-out views or more frames"*. What is falsified is "pool more
+  pixels inside the same 50 frames of the same camera". Also:
+  `whole_frame` is a superset of `complement` (r = 0.999996), so the
+  three-row table is two data points. The directional conclusion survives
+  (paired, 0.9721 vs the 0.0581 √296 predicts); the label does not.
+* **§2.5's delta-method "check" is a tautology** — a first-order Taylor
+  identity that cannot fail. The conclusion stands on other grounds.
+
+### 6. What is NOT retracted
+
+No measured value changes. Every endpoint number, every empty-diff claim,
+the pixel accounting, the chi-square constants and the pre-registration
+timestamps were independently verified and hold. What changes is what may
+be **concluded** from them.

@@ -91,7 +91,13 @@ def replicates_per_arm(sigma: float, delta: float) -> int:
     if delta <= 0:
         raise ValueError("delta must be positive")
     n = 2.0 * (Z_ALPHA_2 + Z_BETA) ** 2 * (sigma / delta) ** 2
-    return int(math.ceil(n)) + 2
+    # Guenther's small-sample correction, +z^2_{a/2}/4 ~= 0.960 -- NOT the
+    # `+2` this file originally used. An adversarial review verified by exact
+    # noncentral-t power simulation that +2 OVERSHOOTS: for the union endpoint
+    # 13 gives 0.7997 power and 14 gives 0.8304; for the contrast 7 gives
+    # 0.8403 and 8 gives 0.8910. The spec's original 7 was right, reached by a
+    # wrong route, and this file's earlier "correction" to 8 broke it.
+    return int(math.ceil(n + Z_ALPHA_2 ** 2 / 4.0))
 
 
 def describe(name: str, values: list[float]) -> dict:
@@ -210,15 +216,15 @@ def cmd_self_test(_args: argparse.Namespace) -> int:
         checks.append((f"n={n} CI ratio is {want_ratio}x", abs(hi_f / lo_f - want_ratio) < 0.01,
                        f"{hi_f/lo_f:.2f}x"))
 
-    checks.append(("union endpoint needs 14 replicates/arm at delta*=0.30",
-                   replicates_per_arm(s_u, DELTA_STAR_DB) == 14,
+    checks.append(("union endpoint needs 13 replicates/arm at delta*=0.30 (was 14 under +2)",
+                   replicates_per_arm(s_u, DELTA_STAR_DB) == 13,
                    str(replicates_per_arm(s_u, DELTA_STAR_DB))))
     # 8, not the 7 the spec first tabulated. The raw figure is 5.3127; a
     # SAMPLE SIZE must round UP, and round(5.3127) = 5 would plan for fewer
     # replicates than the power calculation requires. Corrected append-only
     # in the spec rather than matched here.
-    checks.append(("contrast endpoint needs 8 replicates/arm at delta*=0.30 (spec said 7)",
-                   replicates_per_arm(s_c, DELTA_STAR_DB) == 8,
+    checks.append(("contrast endpoint needs 7 replicates/arm at delta*=0.30 (the ORIGINAL 7 was right)",
+                   replicates_per_arm(s_c, DELTA_STAR_DB) == 7,
                    str(replicates_per_arm(s_c, DELTA_STAR_DB))))
 
     # The 2.8%-for-296x observation that near-falsifies the pool-more-pixels lever.
