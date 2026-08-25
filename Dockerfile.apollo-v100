@@ -120,7 +120,16 @@ RUN git clone --filter=blob:none https://github.com/princeton-vl/SEA-RAFT.git ${
 # TORCH_HOME=$ADAGS_TORCH_HOME for its own process.
 COPY scripts/imvid_searaft_seed.py /opt/adags/imvid_searaft_seed.py
 RUN mkdir -p ${ADAGS_TORCH_HOME} \
-    && TORCH_HOME=${ADAGS_TORCH_HOME} python /opt/adags/imvid_searaft_seed.py --seed-only
+    && TORCH_HOME=${ADAGS_TORCH_HOME} python /opt/adags/imvid_searaft_seed.py --seed-only \
+    && chmod -R a+rX /opt/adags
+
+# The chmod above is load-bearing, not hygiene. The build runs as root and
+# torch.hub writes the cached weights root-readable, but a Determined task
+# runs as a different user -- so without it the seeded file is present,
+# TORCH_HOME points at it, and the task dies on a PermissionError opening it.
+# That failure looks nothing like a permissions problem from the traceback: it
+# surfaces inside torchvision's resnet34 loader, several frames below anything
+# this project wrote.
 
 # Build-time proof that the flow stack imports and CONSTRUCTS with no
 # network. A successful `pip install` is not evidence that RAFT can be
