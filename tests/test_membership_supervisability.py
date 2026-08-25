@@ -1219,3 +1219,744 @@ def test_torch_sphere_expression_matches_the_pure_python_twin():
     torch_flags = ((xyz - centre_t).norm(dim=1) <= float(radius)).tolist()
     pure_flags = ms.in_sphere_flags(xyz.tolist(), centre, radius)
     assert torch_flags == pure_flags
+
+
+# ---------------------------------------------------------------------------
+# v4 -- the erosion / dilation kernels
+#
+# `research-wiki/operations/lrv3-mask-noise-and-shuffle-v4-2026-08-25.md` §3.
+# Written with 4-connectivity numpy shifts and no scipy dependency, so `k`
+# iterations erode by an L1 ball of radius `k`.
+# ---------------------------------------------------------------------------
+
+
+def _box(shape, top, left, height, width):
+    mask = np.zeros(shape, dtype=bool)
+    mask[top:top + height, left:left + width] = True
+    return mask
+
+
+def test_erosion_of_a_3x3_square_leaves_only_its_centre():
+    """Hand computed: with a plus-shaped structuring element the only pixel of
+    a 3x3 square whose four neighbours are all inside is the centre."""
+    square = _box((9, 9), 3, 3, 3, 3)
+    eroded = ms.erode_mask(square, 1)
+    assert int(eroded.sum()) == 1
+    assert bool(eroded[4, 4])
+    assert int(ms.erode_mask(square, 2).sum()) == 0
+
+
+def test_erosion_of_a_rectangle_removes_one_ring_per_iteration():
+    """Hand computed: a W x H rectangle eroded k times is (W-2k) x (H-2k),
+    because the L1 ball of radius k reaches exactly k pixels along each axis."""
+    rect = _box((40, 40), 10, 10, 11, 9)          # 11 rows x 9 columns
+    assert int(rect.sum()) == 99
+    assert int(ms.erode_mask(rect, 1).sum()) == 9 * 7
+    assert int(ms.erode_mask(rect, 2).sum()) == 7 * 5
+    assert int(ms.erode_mask(rect, 4).sum()) == 3 * 1
+    assert int(ms.erode_mask(rect, 5).sum()) == 0
+
+
+def test_dilation_of_one_pixel_is_the_l1_ball():
+    """Hand computed: |L1 ball of radius r| = 2r^2 + 2r + 1."""
+    dot = np.zeros((25, 25), dtype=bool)
+    dot[12, 12] = True
+    for radius in (1, 2, 4, 8):
+        assert (int(ms.dilate_mask(dot, radius).sum())
+                == 2 * radius ** 2 + 2 * radius + 1)
+
+
+def test_dilation_of_a_rectangle_adds_one_ring_per_iteration():
+    rect = _box((40, 40), 10, 10, 5, 5)
+    grown = ms.dilate_mask(rect, 1)
+    assert int(grown.sum()) == 25 + 4 * 5          # the four edge strips
+    assert bool(grown[9, 12]) and bool(grown[14, 12])
+    assert not bool(grown[9, 9])                   # the corner is L1 distance 2
+
+
+def test_the_kernels_are_the_identity_at_k_zero():
+    mask = _box((12, 12), 3, 3, 4, 4)
+    assert ms.erode_mask(mask, 0).tolist() == mask.tolist()
+    assert ms.dilate_mask(mask, 0).tolist() == mask.tolist()
+
+
+@pytest.mark.parametrize("kernel", ["erode_mask", "dilate_mask"])
+def test_a_negative_k_is_refused(kernel):
+    with pytest.raises(ms.ContractError):
+        getattr(ms, kernel)(_box((8, 8), 2, 2, 3, 3), -1)
+
+
+@pytest.mark.parametrize("kernel", ["erode_mask", "dilate_mask"])
+def test_a_non_2d_mask_is_refused(kernel):
+    with pytest.raises(ms.ContractError):
+        getattr(ms, kernel)(np.zeros((4, 4, 4), dtype=bool), 1)
+
+
+def test_off_image_is_background_so_erosion_eats_a_border_touching_mask():
+    """The declared convention. Stated as a test rather than a comment because
+    the alternative (pad with the border value) is equally common and would
+    change every reported area on a mask that touches an edge."""
+    touching = np.zeros((10, 10), dtype=bool)
+    touching[0:2, 0:5] = True
+    # Under the padded convention the three interior top-row pixels survive;
+    # under this one every pixel loses a neighbour and the mask is annihilated.
+    assert int(ms.erode_mask(touching, 1).sum()) == 0
+    interior = np.zeros((10, 10), dtype=bool)
+    interior[4:6, 2:7] = True
+    assert int(ms.erode_mask(interior, 1).sum()) == 0
+
+
+# ---------------------------------------------------------------------------
+# v4 -- THE TWO ANNIHILATION POINTS the spec declares in advance (§1, §4 N2)
+# ---------------------------------------------------------------------------
+
+
+def test_erosion_k1_annihilates_a_16_pixel_mask():
+    """`cam14` supplies 16 px and the spec declares it destroyed at k=1. A
+    16-px mask at that scale is one pixel wide somewhere, and a 1-px-wide
+    structure cannot survive a single 4-connectivity erosion."""
+    thin = np.zeros((40, 40), dtype=bool)
+    thin[10, 10:26] = True
+    assert int(thin.sum()) == 16
+    assert int(ms.erode_mask(thin, 1).sum()) == 0
+
+
+def test_erosion_k8_annihilates_a_316_pixel_mask_that_survives_k4():
+    """`cam13` supplies 316 px and the spec declares it destroyed at k=8 and
+    NOT at k=1. The k=4 limb is the load-bearing half: a mask that died early
+    would make the declared k=8 count right for the wrong reason."""
+    slab = _box((60, 60), 10, 10, 21, 15)          # 21 x 15 = 315
+    slab[31, 10] = True                            # one more, for 316
+    assert int(slab.sum()) == 316
+    assert int(ms.erode_mask(slab, 1).sum()) > 0
+    assert int(ms.erode_mask(slab, 4).sum()) > 0
+    assert int(ms.erode_mask(slab, 7).sum()) > 0
+    assert int(ms.erode_mask(slab, 8).sum()) == 0
+
+
+def test_the_spec_declares_one_annihilation_at_k1_and_two_at_k8():
+    assert ms.EROSION_ANNIHILATION_EXPECTED == {1: 1, 8: 2}
+
+
+def test_the_real_fixture_reproduces_the_declared_annihilation_counts():
+    """N2 on the REAL masks. The counts are what the spec's §1 input table
+    recorded; a different erosion convention would move them."""
+    _require_fixture()
+    identity_dir = ms.resolve_identity_dir(LRV3_DIR, "")
+    emptied = {1: [], 2: [], 4: [], 8: []}
+    for camera in LRV3_SPEC["train_cameras"]:
+        buffer = np.load(str(identity_dir / ("cam%02d_f000.npy" % camera)))
+        obj = buffer == 100
+        assert obj.any()
+        for k in (1, 2, 4, 8):
+            if not ms.erode_mask(obj, k).any():
+                emptied[k].append(camera)
+    assert emptied[1] == [14]
+    assert emptied[8] == [13, 14]
+    assert ms.annihilation_block(1, emptied[1])["passed"] is True
+    assert ms.annihilation_block(8, emptied[8])["passed"] is True
+
+
+def test_the_real_fixture_reproduces_the_measured_per_camera_areas():
+    """The three cameras the spec's §1 table is anchored on. These numbers are
+    what the sweep's N1 block reports, so pinning them here means a kernel
+    change cannot silently move the reported sensitivity curve."""
+    _require_fixture()
+    identity_dir = ms.resolve_identity_dir(LRV3_DIR, "")
+    expected = {
+        0: (8005, 7721, 7441, 6893, 5851),
+        13: (316, 226, 147, 35, 0),
+        14: (16, 0, 0, 0, 0),
+    }
+    for camera, wanted in expected.items():
+        obj = np.load(str(identity_dir / ("cam%02d_f000.npy" % camera))) == 100
+        measured = (int(obj.sum()),) + tuple(
+            int(ms.erode_mask(obj, k).sum()) for k in (1, 2, 4, 8))
+        assert measured == wanted, "cam%02d measured %r" % (camera, measured)
+
+
+# ---------------------------------------------------------------------------
+# v4 -- the nearest-non-object relabelling, which keeps every perturbed buffer
+# a PARTITION (which is what P10 reads)
+# ---------------------------------------------------------------------------
+
+
+def test_an_enclosed_object_pixel_takes_its_neighbours_class():
+    surrounded = np.array([[7, 7, 7], [7, 9, 7], [7, 7, 7]], dtype=np.int16)
+    assert ms.nearest_non_object_labels(surrounded, 9).tolist() == [[7] * 3] * 3
+
+
+def test_a_tie_resolves_in_the_declared_neighbour_order():
+    """Three of the four neighbours say 1 and one says 2; the declared order
+    puts 'up' first, so the answer is 1 and it is not numpy's to choose."""
+    split = np.array([[1, 1, 2], [1, 9, 2], [1, 1, 2]], dtype=np.int16)
+    assert int(ms.nearest_non_object_labels(split, 9)[1, 1]) == 1
+    assert ms.NEIGHBOUR_ORDER[0] == (-1, 0)
+
+
+def test_a_deep_object_interior_is_still_reached_by_the_wavefront():
+    scene = np.zeros((21, 21), dtype=np.int16)
+    scene[4:17, 4:17] = 100
+    filled = ms.nearest_non_object_labels(scene, 100)
+    assert int((filled == 100).sum()) == 0
+    assert set(np.unique(filled).tolist()) == {0}
+
+
+def test_a_buffer_with_no_object_is_returned_unchanged():
+    scene = np.array([[1, 2], [3, 4]], dtype=np.int16)
+    assert ms.nearest_non_object_labels(scene, 100).tolist() == scene.tolist()
+
+
+def test_an_all_object_buffer_is_refused_rather_than_invented():
+    with pytest.raises(ms.ContractError):
+        ms.nearest_non_object_labels(np.full((4, 4), 100, dtype=np.int16), 100)
+
+
+# ---------------------------------------------------------------------------
+# v4 -- the four families
+# ---------------------------------------------------------------------------
+
+
+def _scene():
+    scene = np.zeros((21, 21), dtype=np.int16)
+    scene[:, :10] = 1
+    scene[8:14, 8:14] = 100
+    return scene
+
+
+def test_erosion_shrinks_the_object_and_leaves_a_partition():
+    scene = _scene()
+    fallback = ms.nearest_non_object_labels(scene, 100)
+    eroded = ms.apply_erosion(scene, 1, 100, fallback)
+    assert int((eroded == 100).sum()) == int(ms.erode_mask(scene == 100, 1).sum())
+    assert int((eroded == 100).sum()) < int((scene == 100).sum())
+    assert set(np.unique(eroded).tolist()) <= set(np.unique(scene).tolist())
+    assert eroded.size == scene.size
+
+
+def test_dilation_grows_the_object_and_leaves_a_partition():
+    scene = _scene()
+    dilated = ms.apply_dilation(scene, 2, 100)
+    assert int((dilated == 100).sum()) == int(ms.dilate_mask(scene == 100, 2).sum())
+    assert int((dilated == 100).sum()) > int((scene == 100).sum())
+    assert dilated.size == scene.size
+
+
+def test_a_missing_camera_loses_the_object_entirely():
+    scene = _scene()
+    fallback = ms.nearest_non_object_labels(scene, 100)
+    gone = ms.apply_missing_camera(scene, 100, fallback)
+    assert int((gone == 100).sum()) == 0
+    assert set(np.unique(gone).tolist()) <= {0, 1}
+    assert gone.size == scene.size
+
+
+def test_identity_switch_preserves_the_total_pixel_count():
+    """It RELABELS; it does not delete. The buffer keeps its size, every pixel
+    keeps a class that existed in the clean buffer, and whatever the object
+    loses the other classes gain -- which is what keeps P10's partition
+    identity true at every swept point."""
+    scene = _scene()
+    fallback = ms.nearest_non_object_labels(scene, 100)
+    uniform = ms.switch_uniform(scene, 100, ms.NOISE_SEED_DECLARED, "a" * 64)
+    clean_object = int((scene == 100).sum())
+    clean_other = int((scene != 100).sum())
+    for fraction in ms.NOISE_MAGNITUDES["identity-switch"]:
+        switched = ms.apply_identity_switch(scene, fraction, 100, fallback, uniform)
+        assert switched.size == scene.size
+        assert set(np.unique(switched).tolist()) <= set(np.unique(scene).tolist())
+        lost = clean_object - int((switched == 100).sum())
+        gained = int((switched != 100).sum()) - clean_other
+        assert lost == gained
+        assert (int((switched == 100).sum()) + int((switched != 100).sum())
+                == scene.size)
+
+
+def test_identity_switch_draws_are_nested_across_the_magnitudes():
+    """5% is a subset of 10% is a subset of 25% is a subset of 50%, so the
+    curve reads as one worsening mask rather than four unrelated draws."""
+    scene = _scene()
+    fallback = ms.nearest_non_object_labels(scene, 100)
+    uniform = ms.switch_uniform(scene, 100, ms.NOISE_SEED_DECLARED, "a" * 64)
+    kept = [set(map(tuple, np.argwhere(
+        ms.apply_identity_switch(scene, f, 100, fallback, uniform) == 100)))
+        for f in ms.NOISE_MAGNITUDES["identity-switch"]]
+    for smaller, larger in zip(kept, kept[1:]):
+        assert larger <= smaller
+
+
+def test_identity_switch_never_selects_a_non_object_pixel():
+    scene = _scene()
+    uniform = ms.switch_uniform(scene, 100, ms.NOISE_SEED_DECLARED, "b" * 64)
+    assert bool((uniform[scene != 100] == 1.0).all())
+
+
+@pytest.mark.parametrize("fraction", [-0.01, 1.01])
+def test_an_out_of_range_switch_fraction_is_refused(fraction):
+    scene = _scene()
+    fallback = ms.nearest_non_object_labels(scene, 100)
+    uniform = ms.switch_uniform(scene, 100, 0, "c" * 64)
+    with pytest.raises(ms.ContractError):
+        ms.apply_identity_switch(scene, fraction, 100, fallback, uniform)
+
+
+# ---------------------------------------------------------------------------
+# v4 -- missing CAMERAS (never missing frames: §3's recorded warning)
+# ---------------------------------------------------------------------------
+
+
+def test_missing_cameras_drops_exactly_the_declared_count():
+    roster = LRV3_SPEC["train_cameras"]
+    for n in ms.NOISE_MAGNITUDES["missing-cameras"]:
+        dropped = ms.missing_camera_selection(roster, n)
+        assert len(dropped) == n
+        assert len(set(dropped)) == n
+        assert set(dropped) <= set(roster)
+
+
+def test_the_missing_camera_drop_sets_are_nested_and_deterministic():
+    roster = LRV3_SPEC["train_cameras"]
+    drops = {n: ms.missing_camera_selection(roster, n) for n in (1, 2, 4, 8)}
+    assert set(drops[1]) <= set(drops[2]) <= set(drops[4]) <= set(drops[8])
+    assert ms.missing_camera_selection(roster, 4) == drops[4]
+
+
+def test_dropping_zero_cameras_drops_nobody():
+    assert ms.missing_camera_selection(LRV3_SPEC["train_cameras"], 0) == []
+
+
+def test_dropping_more_cameras_than_exist_is_refused():
+    with pytest.raises(ms.ContractError):
+        ms.missing_camera_selection(LRV3_SPEC["train_cameras"], 17)
+
+
+def test_a_negative_drop_count_is_refused():
+    with pytest.raises(ms.ContractError):
+        ms.missing_camera_selection(LRV3_SPEC["train_cameras"], -1)
+
+
+# ---------------------------------------------------------------------------
+# v4 N3 -- the derangement
+# ---------------------------------------------------------------------------
+
+
+def test_the_shuffle_is_a_derangement_of_the_training_roster():
+    roster = LRV3_SPEC["train_cameras"]
+    mapping = ms.camera_shuffle_permutation(roster, ms.SHUFFLE_SEED_DECLARED)
+    assert sorted(mapping) == sorted(roster)
+    assert sorted(mapping.values()) == sorted(roster)
+    assert all(int(k) != int(v) for k, v in mapping.items())
+    assert ms.assert_derangement(mapping) is True
+
+
+def test_the_shuffle_is_deterministic_in_its_seed():
+    roster = LRV3_SPEC["train_cameras"]
+    first = ms.camera_shuffle_permutation(roster, 0)
+    assert ms.camera_shuffle_permutation(roster, 0) == first
+
+
+def test_a_fixed_point_fails_the_derangement_assertion():
+    """NEUTER: this is the whole content of N3. A shuffle that let one camera
+    keep its own mask would leak real supervision into the control."""
+    with pytest.raises(ms.PreconditionError):
+        ms.assert_derangement({0: 0, 1: 3, 3: 1})
+
+
+def test_a_non_permutation_fails_the_derangement_assertion():
+    with pytest.raises(ms.PreconditionError):
+        ms.assert_derangement({0: 1, 1: 5})
+
+
+def test_a_single_camera_cannot_be_deranged_and_is_refused():
+    with pytest.raises(ms.ContractError):
+        ms.camera_shuffle_permutation([4], 0)
+
+
+def test_the_declared_shuffle_seed_and_precision_bar_are_the_specs():
+    assert ms.SHUFFLE_SEED_DECLARED == 0
+    assert ms.SHUFFLE_PRECISION_BAR == 0.30
+    assert ms.CHANCE_PRECISION == 0.071
+
+
+# ---------------------------------------------------------------------------
+# v4 N1 -- the noise must actually BITE
+# ---------------------------------------------------------------------------
+
+
+def test_N1_passes_when_the_noise_changed_pixels_and_reports_the_area_change():
+    block = ms.noise_bite_block("erosion:1", {0: 8005, 14: 16},
+                                {0: 7721, 14: 0}, 105666, 528 * 120000)
+    assert block["passed"] is True
+    assert block["n_pixel_labels_changed"] == 105666
+    per_camera = block["per_camera_object_area"]
+    assert per_camera["0"]["delta_px"] == -284
+    assert per_camera["0"]["retained_fraction"] == pytest.approx(7721 / 8005.0)
+    assert per_camera["14"]["emptied"] is True
+    assert per_camera["0"]["emptied"] is False
+    assert block["n_cameras_with_area_change"] == 2
+
+
+def test_N1_FIRES_when_a_noise_level_is_a_no_op():
+    """NEUTER: without this the instrument would return the CLEAN score under
+    a noise label, which is the vacuity failure this project keeps catching."""
+    block = ms.noise_bite_block("erosion:1", {0: 8005}, {0: 8005}, 0, 63360000)
+    assert block["passed"] is False
+    assert block["n_pixel_labels_changed"] == 0
+    assert block["n_cameras_with_area_change"] == 0
+    assert block["per_camera_object_area"]["0"]["delta_px"] == 0
+
+
+def test_N1_fires_on_an_unchanged_area_that_nonetheless_moved_labels():
+    """The check is on the LABELS, not on the area: an erosion and a dilation
+    of equal size would leave the count alone while changing the mask."""
+    block = ms.noise_bite_block("identity-switch:0.05", {0: 8005}, {0: 8005},
+                                17, 63360000)
+    assert block["passed"] is True
+    assert block["per_camera_object_area"]["0"]["delta_px"] == 0
+
+
+def test_N1_reports_an_undefined_retained_fraction_rather_than_dividing_by_zero():
+    block = ms.noise_bite_block("erosion:8", {14: 0}, {14: 0}, 5, 10)
+    assert block["per_camera_object_area"]["14"]["retained_fraction"] is None
+    assert block["per_camera_object_area"]["14"]["emptied"] is False
+
+
+# ---------------------------------------------------------------------------
+# v4 N2 -- annihilation is reported, and checked where the spec declared it
+# ---------------------------------------------------------------------------
+
+
+def test_N2_passes_at_the_declared_counts_and_fails_otherwise():
+    assert ms.annihilation_block(1, [14])["passed"] is True
+    assert ms.annihilation_block(1, [])["passed"] is False
+    assert ms.annihilation_block(1, [13, 14])["passed"] is False
+    assert ms.annihilation_block(8, [13, 14])["passed"] is True
+    assert ms.annihilation_block(8, [14])["passed"] is False
+
+
+def test_N2_is_report_only_where_the_spec_declared_no_count():
+    for k in (2, 4):
+        block = ms.annihilation_block(k, [14])
+        assert block["expected_by_spec"] is None
+        assert block["passed"] is True
+
+
+def test_N2_names_the_emptied_cameras_rather_than_only_counting_them():
+    block = ms.annihilation_block(8, [14, 13])
+    assert block["cameras_emptied"] == [13, 14]
+    assert block["n_cameras_emptied"] == 2
+
+
+# ---------------------------------------------------------------------------
+# v4 -- the degradation point
+# ---------------------------------------------------------------------------
+
+
+CROSSING_CURVE = [
+    {"magnitude": 1, "precision": 0.99, "recall": 0.98},
+    {"magnitude": 2, "precision": 0.95, "recall": 0.95},
+    {"magnitude": 4, "precision": 0.70, "recall": 0.93},
+    {"magnitude": 8, "precision": 0.40, "recall": 0.50},
+]
+
+
+def test_the_degradation_point_is_the_smallest_failing_magnitude():
+    assert ms.degradation_point(CROSSING_CURVE) == 4.0
+
+
+def test_the_degradation_point_sorts_by_magnitude_rather_than_input_order():
+    assert ms.degradation_point(list(reversed(CROSSING_CURVE))) == 4.0
+
+
+def test_a_family_that_never_crosses_reports_the_literal_string():
+    """§3: report it plainly and do NOT extend the range to find one. The
+    string is reproduced verbatim, never paraphrased."""
+    holds = [{"magnitude": m, "precision": 0.95, "recall": 0.95}
+             for m in (1, 2, 4, 8)]
+    assert ms.degradation_point(holds) == "no crossing within the swept range"
+    assert ms.NO_CROSSING_TEXT == "no crossing within the swept range"
+
+
+def test_recall_alone_can_trip_the_degradation_point():
+    assert ms.degradation_point(
+        [{"magnitude": 1, "precision": 1.0, "recall": 0.89}]) == 1.0
+
+
+def test_precision_alone_can_trip_the_degradation_point():
+    assert ms.degradation_point(
+        [{"magnitude": 1, "precision": 0.79, "recall": 1.0}]) == 1.0
+
+
+def test_an_undefined_metric_does_not_hold_the_gate():
+    """An EMPTY selection has not met a 0.80 precision bar; it has failed to
+    produce a number. Reading None as a pass would be vacuous."""
+    assert ms.gate_holds({"precision": None, "recall": None}) is False
+    assert ms.degradation_point(
+        [{"magnitude": 1, "precision": None, "recall": None}]) == 1.0
+
+
+def test_the_gate_the_degradation_point_reads_is_v3s_standing_pair():
+    assert ms.VOTE_REFERENCE == {"precision": 0.80, "recall": 0.90}
+    assert ms.gate_holds({"precision": 0.80, "recall": 0.90}) is True
+    assert ms.gate_holds({"precision": 0.7999, "recall": 1.0}) is False
+
+
+def test_an_empty_curve_has_no_degradation_point():
+    with pytest.raises(ms.ContractError):
+        ms.degradation_point([])
+
+
+# ---------------------------------------------------------------------------
+# v4 -- the frozen point grid, its naming, and the default being EXACTLY v3
+# ---------------------------------------------------------------------------
+
+
+def test_the_frozen_magnitudes_are_the_specs():
+    assert ms.NOISE_MAGNITUDES == {
+        "erosion": (1, 2, 4, 8),
+        "dilation": (1, 2, 4, 8),
+        "missing-cameras": (1, 2, 4, 8),
+        "identity-switch": (0.05, 0.10, 0.25, 0.50),
+    }
+
+
+def test_the_sweep_is_the_clean_reference_plus_sixteen_points():
+    points = ms.noise_point_keys()
+    assert points[0] == ms.CLEAN_POINT
+    assert len(points) == 17
+    assert len(set(points)) == 17
+
+
+def test_point_keys_name_their_family_and_magnitude():
+    assert ms.point_key_text("erosion", 1) == "erosion:1"
+    assert ms.point_key_text("identity-switch", 0.05) == "identity-switch:0.05"
+    assert ms.point_key_text("clean", None) == "clean"
+
+
+def test_the_default_request_is_exactly_v3():
+    """ADDITIVITY: with none of the v4 flags given the measured point list is
+    the clean reference alone, which is the v3 measurement."""
+    assert ms.requested_points() == [ms.CLEAN_POINT]
+
+
+def test_the_sweep_and_shuffle_flags_compose():
+    assert len(ms.requested_points(sweep=True)) == 17
+    assert len(ms.requested_points(sweep=True, shuffle_seed=0)) == 18
+    assert ms.requested_points(shuffle_seed=0)[-1] == (ms.SHUFFLE_FAMILY, 0)
+    assert ms.requested_points(family="dilation", magnitude=4) == [
+        ms.CLEAN_POINT, ("dilation", 4)]
+
+
+def test_a_single_family_point_is_not_duplicated_inside_a_sweep():
+    points = ms.requested_points(sweep=True, family="erosion", magnitude=2)
+    assert len(points) == 17
+    assert len(set(points)) == 17
+
+
+@pytest.mark.parametrize("magnitude", [3, 16, 0.2, 0.0])
+def test_an_off_grid_magnitude_is_refused(magnitude):
+    """§5 forbids extending a sweep range to find a crossing, so an off-grid
+    magnitude is a contract error rather than a new point."""
+    with pytest.raises(ms.ContractError):
+        ms.canonical_magnitude("erosion", magnitude)
+
+
+def test_a_frozen_magnitude_is_canonicalized_off_the_float_cli_value():
+    assert ms.canonical_magnitude("erosion", 1.0) == 1
+    assert ms.canonical_magnitude("identity-switch", 0.05) == 0.05
+
+
+def test_a_family_without_a_magnitude_is_refused():
+    with pytest.raises(ms.ContractError):
+        ms.canonical_magnitude("erosion", None)
+
+
+def test_a_magnitude_without_a_family_is_refused():
+    with pytest.raises(ms.ContractError):
+        ms.requested_points(magnitude=4)
+
+
+def test_an_unknown_family_is_refused():
+    with pytest.raises(ms.ContractError):
+        ms.canonical_magnitude("blur", 1)
+
+
+# ---------------------------------------------------------------------------
+# v4 -- the P10/P11 tolerance RE-DECLARATION must be auditable in the output
+# ---------------------------------------------------------------------------
+
+
+def test_the_tolerance_redeclaration_records_both_the_old_and_the_new_value():
+    """§4's final bullet: the ORIGINAL values and the reason are recorded so
+    the relaxation is auditable and is never mistaken for a response to an
+    unfavourable score."""
+    block = ms.TOLERANCE_REDECLARATION
+    p10 = block["P10_mask_partition_consistent"]
+    p11 = block["P11_backward_repeatable"]
+    assert p10["old_tolerance"] == 1e-6 == ms.P10_TOLERANCE_V3
+    assert p10["new_tolerance"] == 1e-5 == ms.P10_TOLERANCE
+    assert p11["old_rule"] == "bitwise identity" == ms.P11_RULE_V3
+    assert p11["new_tolerance_absolute"] == 1e-4 == ms.P11_TOLERANCE
+
+
+def test_the_tolerance_redeclaration_records_the_v3_measurements_and_grounds():
+    block = ms.TOLERANCE_REDECLARATION
+    assert block["P10_mask_partition_consistent"][
+        "v3_measured_relative_deviation"] == pytest.approx(1.0692913292587036e-06)
+    assert block["P11_backward_repeatable"][
+        "v3_measured_max_abs_difference"] == 2.0 ** -16
+    assert block["P10_mask_partition_consistent"]["v3_outcome"] == "FAILED"
+    assert block["P11_backward_repeatable"]["v3_outcome"] == "FAILED"
+    assert "PLATFORM" in block["grounds"]
+    assert "atomicAdd" in block["reason"]
+    assert block["declared_in"].startswith(ms.V4_SPEC_PAGE)
+
+
+def test_the_redeclared_tolerances_admit_the_v3_measurements_and_were_needed():
+    """Both halves matter: the relaxation must be large enough to admit what
+    v3 measured, and the ORIGINAL must have been small enough to reject it --
+    otherwise the re-declaration would be cosmetic."""
+    assert 1.0692913292587036e-06 <= ms.P10_TOLERANCE
+    assert 1.0692913292587036e-06 > ms.P10_TOLERANCE_V3
+    assert 2.0 ** -16 <= ms.P11_TOLERANCE
+
+
+def test_the_tolerance_block_is_json_serialisable_for_the_report():
+    """It travels in every report; a non-serialisable value would lose the
+    audit trail at write time rather than at review time."""
+    round_tripped = json.loads(json.dumps(ms.TOLERANCE_REDECLARATION,
+                                          sort_keys=True))
+    assert round_tripped == ms.TOLERANCE_REDECLARATION
+
+
+# ---------------------------------------------------------------------------
+# v4 -- the perturbation table, on the REAL fixture
+# ---------------------------------------------------------------------------
+
+
+def _real_table(sweep=True, shuffle_seed=0):
+    identity_dir = ms.resolve_identity_dir(LRV3_DIR, "")
+    spec = json.loads((LRV3_DIR / "event_spec.json").read_text(encoding="utf-8"))
+    frames = ms.default_frame_set(spec)
+    views = [(c, f) for c in spec["train_cameras"] for f in frames]
+    census, by_view, by_digest = ms.identity_census(identity_dir, views,
+                                                    min(frames), 100)
+    points = ms.requested_points(sweep=sweep, shuffle_seed=shuffle_seed)
+    table = ms.PerturbationTable(points, by_view, by_digest, 100,
+                                 spec["train_cameras"], noise_seed=0,
+                                 shuffle_seed=shuffle_seed)
+    return table, points, views, census
+
+
+def test_the_table_reproduces_the_clean_buffers_untouched():
+    _require_fixture()
+    table, _, views, _ = _real_table()
+    for camera, frame in views[:40]:
+        key = table.buffer_key(ms.CLEAN_POINT, camera, frame)
+        assert key == table.clean_digest(camera, frame)
+    changed, compared = table.label_change_count(ms.CLEAN_POINT, views)
+    assert changed == 0
+    assert compared == len(views) * 300 * 400
+
+
+def test_every_perturbed_point_measurably_bites_on_the_real_fixture():
+    """N1 on the real masks, at every one of the sixteen frozen points."""
+    _require_fixture()
+    table, points, views, _ = _real_table()
+    for point in points:
+        if point == ms.CLEAN_POINT:
+            continue
+        changed, _ = table.label_change_count(point, views)
+        assert changed > 0, "%s changed nothing" % (ms.point_key_text(*point),)
+
+
+def test_the_perturbed_buffers_stay_partitions_of_the_clean_class_set():
+    """P10 reads the partition, so a perturbation that invented a class or
+    left a pixel unlabelled would be reported as a mechanism failure."""
+    _require_fixture()
+    table, points, _, census = _real_table()
+    clean_classes = set(census["class_ids_present"])
+    for point in points:
+        buffer = table.buffer(table.buffer_key(point, 0, 0))
+        assert tuple(buffer.shape) == tuple(census["shape"])
+        assert set(np.unique(buffer).tolist()) <= clean_classes
+
+
+def test_the_shuffled_buffer_is_another_cameras_clean_buffer():
+    _require_fixture()
+    table, _, _, _ = _real_table()
+    point = (ms.SHUFFLE_FAMILY, 0)
+    for camera in table.camera_ids:
+        donor = table.shuffle_map[camera]
+        assert donor != camera
+        assert table.buffer_key(point, camera, 0) == table.clean_digest(donor, 0)
+
+
+def test_the_real_erosion_areas_fall_monotonically_with_k():
+    _require_fixture()
+    table, _, _, _ = _real_table()
+    areas = [table.per_camera_areas(("erosion", k), 0)
+             for k in ms.NOISE_MAGNITUDES["erosion"]]
+    for camera in table.camera_ids:
+        series = [a[camera] for a in areas]
+        assert all(b <= a for a, b in zip(series, series[1:]))
+
+
+def test_the_real_dilation_areas_rise_monotonically_with_k():
+    _require_fixture()
+    table, _, _, _ = _real_table()
+    areas = [table.per_camera_areas(("dilation", k), 0)
+             for k in ms.NOISE_MAGNITUDES["dilation"]]
+    for camera in table.camera_ids:
+        series = [a[camera] for a in areas]
+        assert all(b >= a for a, b in zip(series, series[1:]))
+
+
+def test_a_dropped_camera_supplies_no_object_and_the_others_are_untouched():
+    _require_fixture()
+    table, _, _, _ = _real_table()
+    clean = table.per_camera_areas(ms.CLEAN_POINT, 0)
+    for n in ms.NOISE_MAGNITUDES["missing-cameras"]:
+        dropped = table.dropped_cameras[n]
+        assert len(dropped) == n
+        areas = table.per_camera_areas(("missing-cameras", n), 0)
+        for camera in table.camera_ids:
+            if camera in dropped:
+                assert areas[camera] == 0
+            else:
+                assert areas[camera] == clean[camera]
+
+
+def test_the_table_refuses_a_point_list_without_the_clean_reference():
+    _require_fixture()
+    identity_dir = ms.resolve_identity_dir(LRV3_DIR, "")
+    spec = json.loads((LRV3_DIR / "event_spec.json").read_text(encoding="utf-8"))
+    frames = ms.default_frame_set(spec)
+    views = [(c, f) for c in spec["train_cameras"] for f in frames]
+    _, by_view, by_digest = ms.identity_census(identity_dir, views,
+                                               min(frames), 100)
+    with pytest.raises(ms.ContractError):
+        ms.PerturbationTable([("erosion", 1)], by_view, by_digest, 100,
+                             spec["train_cameras"])
+
+
+def test_the_table_refuses_a_shuffle_lookup_with_no_seed():
+    _require_fixture()
+    table, _, _, _ = _real_table(sweep=False, shuffle_seed=None)
+    assert table.shuffle_map is None
+    with pytest.raises(ms.ContractError):
+        table.buffer_key((ms.SHUFFLE_FAMILY, 0), 0, 0)
+
+
+def test_the_class_mask_dedupe_is_by_content_so_equal_masks_share_a_digest():
+    """The saving that makes a seventeen-point sweep cost one render pass: two
+    points whose buffers agree on a class must resolve to the same digest, and
+    two that disagree must not."""
+    _require_fixture()
+    table, _, _, _ = _real_table()
+    clean_key = table.buffer_key(ms.CLEAN_POINT, 0, 0)
+    missing_key = table.buffer_key(("missing-cameras", 1), 0, 0)
+    eroded_key = table.buffer_key(("erosion", 1), 0, 0)
+    assert missing_key == clean_key          # cam00 is not among the dropped
+    assert table.mask_digest(clean_key, 100) == table.mask_digest(missing_key, 100)
+    assert table.mask_digest(clean_key, 100) != table.mask_digest(eroded_key, 100)

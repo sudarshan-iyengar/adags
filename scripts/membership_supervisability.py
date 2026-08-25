@@ -109,6 +109,44 @@ WHAT THIS SCRIPT DOES NOT SETTLE
   flow weight.
 
 
+THE v4 EXTENSION: C-SHUFFLE AND THE MASK-NOISE SWEEP
+----------------------------------------------------
+``research-wiki/operations/lrv3-mask-noise-and-shuffle-v4-2026-08-25.md``
+authorizes two further measurements on this same instrument. Both are
+ADDITIVE: with none of the v4 flags given this script performs exactly the v3
+measurement, at exactly the v3 operating point, over exactly the v3
+accumulation domain.
+
+* ``--shuffle-cameras SEED`` -- C-SHUFFLE, the ATTRIBUTION control. Camera *i*
+  is handed camera ``perm(i)``'s buffer for the same frame under a declared
+  seed; the permutation must be a DERANGEMENT and is asserted (N3). Precision
+  must fall below 0.30 against a chance precision of 0.071, and an EMPTY
+  shuffled selection is declared a PASS.
+* ``--mask-noise FAMILY --mask-noise-magnitude M``, or ``--sweep`` for the
+  whole frozen grid -- four families (erosion, dilation, missing CAMERAS,
+  identity switch) at four magnitudes each, chosen from the object's measured
+  per-camera pixel scale so the annihilation points are known in advance
+  rather than discovered as a surprise.
+
+Two structural facts make the whole sweep cost ONE render pass. ``w_total``
+comes from ``g = 1`` and is mask-independent, and the perturbations move the
+supervision buffer only -- never the geometry -- so every point shares the same
+forward pass, the same ``w_total`` and the same SH gradients. Backward passes
+are then deduplicated by class-mask CONTENT digest, so two points whose
+buffers agree on a class pay for it once.
+
+Every perturbation returns a COMPLETE identity buffer, never a bare boolean
+mask, because P10 asserts that the class weights re-sum to ``w_total``: a
+perturbation that left a pixel unlabelled would break that identity and be
+read as a mechanism failure rather than as the noise it is.
+
+The v4 preconditions N1-N4 sit beside P1-P15 and fail just as loudly: the
+noise must measurably bite (a no-op level FAILS rather than silently
+returning the clean score), annihilation is reported and checked against the
+count the spec declared in advance, the derangement is asserted, and the whole
+v3 precondition block is re-evaluated at every point.
+
+
 FROZEN PRECONDITIONS
 --------------------
 Every precondition is a statement about the SETUP or about whether the
@@ -256,6 +294,97 @@ NAMED_CELL_KEYS = (420, 429)
 #: Cells per axis of the recorded grid (`scripts/estimate_episodes.py`
 #: VOXEL_CELLS_PER_AXIS). Overridden by a supplied episode program.
 DEFAULT_CELLS_PER_AXIS = 8
+
+# ---------------------------------------------------------------------------
+# v4 EXTENSION -- C-SHUFFLE and the mask-noise sweep. Frozen in
+# research-wiki/operations/lrv3-mask-noise-and-shuffle-v4-2026-08-25.md.
+# Everything below is ADDITIVE: with none of the v4 flags given, this script
+# performs exactly the v3 measurement.
+# ---------------------------------------------------------------------------
+
+#: The frozen spec this extension implements, recorded in every report.
+V4_SPEC_PAGE = ("research-wiki/operations/"
+                "lrv3-mask-noise-and-shuffle-v4-2026-08-25.md")
+
+#: The clean v3 reference the sweep is read against (v4 §3, "Frozen reading
+#: rule"). RECORDED, never recomputed: it is the number the curves are
+#: compared to, and the clean point measured in this run is reported beside it.
+V3_RECORDED_REFERENCE = {"precision": 0.9659, "recall": 0.9839}
+
+#: v4 §3, the four families and their FROZEN magnitudes. No magnitude is
+#: tuned, and §5 forbids extending a range to find a crossing.
+NOISE_MAGNITUDES = {
+    "erosion": (1, 2, 4, 8),
+    "dilation": (1, 2, 4, 8),
+    "missing-cameras": (1, 2, 4, 8),
+    "identity-switch": (0.05, 0.10, 0.25, 0.50),
+}
+NOISE_FAMILIES = tuple(sorted(NOISE_MAGNITUDES))
+
+#: v4 §4 N2: the annihilation counts are KNOWN IN ADVANCE from the spec's §1
+#: input table, so a disagreement means the erosion this code implements is not
+#: the erosion those inputs were measured with. Only the two levels the spec
+#: actually declares carry an expectation; k = 2 and k = 4 are reported.
+EROSION_ANNIHILATION_EXPECTED = {1: 1, 8: 2}
+
+#: The literal string v4 §3 requires when a family never crosses the standing
+#: gate inside its swept range. Reproduced verbatim, never paraphrased.
+NO_CROSSING_TEXT = "no crossing within the swept range"
+
+#: v4 §2: C-SHUFFLE's declared seed, and the reading rule's precision bar.
+SHUFFLE_SEED_DECLARED = 0
+SHUFFLE_PRECISION_BAR = 0.30
+CHANCE_PRECISION = 0.071
+
+#: Declared seed for the two families that need one (missing-cameras and
+#: identity-switch). Declared here ahead of the run, exactly as §2's shuffle
+#: seed is, and reported with the realized selection.
+NOISE_SEED_DECLARED = 0
+
+#: The order a wavefront takes a label from an already-resolved neighbour.
+#: DECLARED so "the nearest non-object class" is a deterministic function of
+#: the buffer and not of numpy's iteration order.
+NEIGHBOUR_ORDER = ((-1, 0), (1, 0), (0, -1), (0, 1))
+
+#: v4 §4, final bullet -- the P10/P11 TOLERANCE RE-DECLARATION.
+#:
+#: v3's run measured P10 at 1.0693e-06 against a 1e-06 tolerance and P11 at
+#: 1.5259e-05 = 2^-16 against a BITWISE requirement, and failed both. Both are
+#: float32 artifacts of CUDA ``atomicAdd`` order non-determinism -- ~2e-7
+#: relative to the median ``w_total`` of 67.26 -- not mechanism failures. The
+#: spec re-declares them on PLATFORM grounds, NOT on outcome grounds. The
+#: original values and the reason travel in every report so the relaxation is
+#: auditable and can never be mistaken for a response to a bad score.
+P10_TOLERANCE_V3 = 1e-6
+P10_TOLERANCE = 1e-5
+P11_RULE_V3 = "bitwise identity"
+P11_TOLERANCE = 1e-4
+
+TOLERANCE_REDECLARATION = {
+    "declared_in": V4_SPEC_PAGE + " §4, final bullet",
+    "grounds": "PLATFORM, not outcome",
+    "reason": (
+        "float32 artifacts of CUDA atomicAdd order non-determinism, not "
+        "mechanism failures; the discrepancy is ~2e-7 relative to the median "
+        "w_total of 67.26"),
+    "P10_mask_partition_consistent": {
+        "old_tolerance": P10_TOLERANCE_V3,
+        "new_tolerance": P10_TOLERANCE,
+        "v3_measured_relative_deviation": 1.0692913292587036e-06,
+        "v3_outcome": "FAILED",
+    },
+    "P11_backward_repeatable": {
+        "old_rule": P11_RULE_V3,
+        "new_tolerance_absolute": P11_TOLERANCE,
+        "v3_measured_max_abs_difference": 1.52587890625e-05,
+        "v3_measured_max_abs_difference_note": "2^-16",
+        "v3_outcome": "FAILED",
+    },
+    "audit_note": (
+        "BOTH the original values and the replacements are recorded here. "
+        "The relaxation was declared in a spec frozen before either v4 "
+        "measurement ran and before any degraded score was read."),
+}
 
 #: Sentinel for "this row had no positive evidence for any class".
 ABSTAIN_CLASS = -9999
@@ -1003,6 +1132,573 @@ def cameras_below_supply_floor(per_camera_counts, min_camera_mask_px):
 
 
 # ---------------------------------------------------------------------------
+# v4 -- THE MASK PERTURBATIONS. numpy only, so every kernel below is exercised
+# by --self-test and by the pytest suite on a workstation with no torch.
+#
+# Every perturbation returns a COMPLETE identity buffer, not a bare boolean
+# mask, because the instrument reads a PARTITION: P10 asserts that the class
+# weights re-sum to the independently measured w_total, and a perturbation that
+# left a pixel unlabelled (or doubly labelled) would break that identity and be
+# read as a mechanism failure rather than as the noise it is. Pixels the object
+# loses are therefore relabelled to the NEAREST NON-OBJECT CLASS -- the same
+# rule v4 §3 states for identity-switch -- and pixels the object gains simply
+# take the object id.
+# ---------------------------------------------------------------------------
+
+
+def _neighbour(array, dy, dx, fill):
+    """The value of the neighbour at offset ``(dy, dx)``, ``fill`` off-image.
+
+    Pure shifting, so erosion and dilation are 4-connectivity operations
+    written with numpy slices and no scipy dependency.
+    """
+    out = np.full_like(array, fill)
+    ys_dst = slice(max(0, -dy), array.shape[0] - max(0, dy))
+    ys_src = slice(max(0, dy), array.shape[0] - max(0, -dy))
+    xs_dst = slice(max(0, -dx), array.shape[1] - max(0, dx))
+    xs_src = slice(max(0, dx), array.shape[1] - max(0, -dx))
+    out[ys_dst, xs_dst] = array[ys_src, xs_src]
+    return out
+
+
+def erode_mask(mask, k):
+    """``k`` iterations of 4-connectivity binary erosion.
+
+    Iterating the plus-shaped structuring element ``k`` times erodes by its
+    ``k``-fold Minkowski sum, i.e. by an L1 ball of radius ``k`` -- which is
+    what "erosion k px" means here. Off-image is BACKGROUND, the standard
+    convention; on this fixture the object never touches an image border, so
+    the alternative convention is verified to change nothing.
+    """
+    k = int(k)
+    if k < 0:
+        raise ContractError("erosion k must be >= 0; got %r" % k)
+    out = np.asarray(mask, dtype=bool)
+    if out.ndim != 2:
+        raise ContractError("a mask must be 2-D; got %r" % (out.shape,))
+    out = out.copy()
+    for _ in range(k):
+        keep = out.copy()
+        for dy, dx in NEIGHBOUR_ORDER:
+            keep &= _neighbour(out, dy, dx, False)
+        out = keep
+    return out
+
+
+def dilate_mask(mask, k):
+    """``k`` iterations of 4-connectivity binary dilation -- erosion's twin."""
+    k = int(k)
+    if k < 0:
+        raise ContractError("dilation k must be >= 0; got %r" % k)
+    out = np.asarray(mask, dtype=bool)
+    if out.ndim != 2:
+        raise ContractError("a mask must be 2-D; got %r" % (out.shape,))
+    out = out.copy()
+    for _ in range(k):
+        grown = out.copy()
+        for dy, dx in NEIGHBOUR_ORDER:
+            grown |= _neighbour(out, dy, dx, False)
+        out = grown
+    return out
+
+
+def nearest_non_object_labels(identity, object_id):
+    """For every object pixel, the class of its NEAREST non-object pixel.
+
+    A layered 4-connectivity wavefront, so "nearest" is Manhattan distance and
+    ties resolve in the DECLARED ``NEIGHBOUR_ORDER``. Non-object pixels keep
+    their own label, so the result is a total relabelling map: handing any
+    subset of object pixels to it yields a buffer that is still a partition.
+
+    An all-object buffer has no non-object class to fall back to and is
+    REFUSED rather than silently relabelled to a fabricated id.
+    """
+    identity = np.asarray(identity)
+    if identity.ndim != 2:
+        raise ContractError("an identity buffer must be 2-D; got %r"
+                            % (identity.shape,))
+    obj = identity == int(object_id)
+    out = identity.copy()
+    if not obj.any():
+        return out
+    if obj.all():
+        raise ContractError(
+            "the identity buffer is entirely the object; there is no nearest "
+            "non-object class to relabel to")
+    resolved = ~obj
+    unresolved = obj.copy()
+    while unresolved.any():
+        newly = np.zeros_like(unresolved)
+        values = np.zeros_like(out)
+        for dy, dx in NEIGHBOUR_ORDER:
+            has = _neighbour(resolved, dy, dx, False)
+            take = unresolved & has & ~newly
+            if not take.any():
+                continue
+            source = _neighbour(out, dy, dx, identity.dtype.type(0))
+            values[take] = source[take]
+            newly |= take
+        if not newly.any():
+            raise ContractError(
+                "an object component is disconnected from every non-object "
+                "pixel; the wavefront cannot reach it")
+        out[newly] = values[newly]
+        unresolved &= ~newly
+        resolved |= newly
+    return out
+
+
+def switch_uniform(identity, object_id, seed, digest):
+    """A deterministic uniform in [0, 1) per pixel, for identity-switch.
+
+    Keyed by the DECLARED seed and by the buffer's own content digest, so the
+    selection is reproducible, is a property of the buffer rather than of the
+    order buffers happen to be visited in, and is NESTED across magnitudes:
+    the 5% pixels are a subset of the 10% pixels are a subset of the 50%.
+    """
+    rng = np.random.default_rng([int(seed), int(str(digest)[:16], 16)])
+    values = rng.random(np.asarray(identity).shape)
+    values[np.asarray(identity) != int(object_id)] = 1.0
+    return values
+
+
+def apply_erosion(identity, k, object_id, fallback):
+    """Erode the object; its lost pixels take the nearest non-object class."""
+    identity = np.asarray(identity)
+    obj = identity == int(object_id)
+    lost = obj & ~erode_mask(obj, k)
+    out = identity.copy()
+    out[lost] = np.asarray(fallback)[lost]
+    return out
+
+
+def apply_dilation(identity, k, object_id):
+    """Dilate the object; its gained pixels take the object id."""
+    identity = np.asarray(identity)
+    grown = dilate_mask(identity == int(object_id), k)
+    out = identity.copy()
+    out[grown] = identity.dtype.type(int(object_id))
+    return out
+
+
+def apply_missing_camera(identity, object_id, fallback):
+    """This camera's segmenter returned NO object at all.
+
+    Implemented at the MASK level, not by dropping the view: v4 §3 applies
+    every family "to the training-view masks only, with the instrument
+    otherwise unchanged", and a dropped view would also change ``w_total`` and
+    make the point incomparable to the clean reference it is read against.
+    """
+    identity = np.asarray(identity)
+    obj = identity == int(object_id)
+    out = identity.copy()
+    out[obj] = np.asarray(fallback)[obj]
+    return out
+
+
+def apply_identity_switch(identity, fraction, object_id, fallback, uniform):
+    """Relabel ``fraction`` of the object's pixels to the nearest non-object
+    class. The buffer stays a partition, so the total pixel count is
+    unchanged; only the histogram over classes moves."""
+    fraction = float(fraction)
+    if not 0.0 <= fraction <= 1.0:
+        raise ContractError("identity-switch fraction %r outside [0, 1]" % fraction)
+    identity = np.asarray(identity)
+    obj = identity == int(object_id)
+    pick = obj & (np.asarray(uniform) < fraction)
+    out = identity.copy()
+    out[pick] = np.asarray(fallback)[pick]
+    return out
+
+
+def missing_camera_selection(camera_ids, n_drop, seed=NOISE_SEED_DECLARED):
+    """Which cameras the missing-cameras family drops, under a DECLARED seed.
+
+    A single seeded permutation truncated at ``n_drop``, so the four
+    magnitudes are NESTED -- drop 1 is a subset of drop 2 is a subset of drop
+    4 is a subset of drop 8 -- and the curve therefore reads as a
+    monotonically worsening supply rather than as four unrelated draws.
+    """
+    cameras = sorted(int(c) for c in camera_ids)
+    n_drop = int(n_drop)
+    if n_drop < 0:
+        raise ContractError("missing-cameras magnitude must be >= 0")
+    if n_drop > len(cameras):
+        raise ContractError(
+            "cannot drop %d of %d cameras" % (n_drop, len(cameras)))
+    rng = np.random.default_rng([int(seed), 0xD0D])
+    order = [cameras[int(i)] for i in rng.permutation(len(cameras))]
+    return sorted(int(c) for c in order[:n_drop])
+
+
+def assert_derangement(mapping):
+    """v4 §4 N3. No camera may keep its own mask, and the map must be a
+    permutation of the roster it was built over."""
+    keys = sorted(int(k) for k in mapping)
+    values = sorted(int(v) for v in mapping.values())
+    if keys != values:
+        raise PreconditionError(
+            "N3 FAILED: the camera shuffle is not a permutation of the "
+            "roster (%r -> %r)" % (keys, values))
+    fixed = sorted(int(k) for k, v in mapping.items() if int(k) == int(v))
+    if fixed:
+        raise PreconditionError(
+            "N3 FAILED: cameras %r kept their own mask, so the shuffle is not "
+            "a derangement and the control does not control anything" % (fixed,))
+    return True
+
+
+def camera_shuffle_permutation(camera_ids, seed=SHUFFLE_SEED_DECLARED,
+                               max_attempts=1000):
+    """v4 §2. Camera *i* receives camera ``perm(i)``'s mask, same frame.
+
+    Rejection-samples until the draw is a derangement, then ASSERTS it -- the
+    assertion is not redundant with the sampling loop, because the loop is the
+    thing that could be edited away.
+    """
+    cameras = sorted(int(c) for c in camera_ids)
+    if len(cameras) < 2:
+        raise ContractError(
+            "a derangement needs at least two cameras; got %r" % (cameras,))
+    rng = np.random.default_rng(int(seed))
+    for _ in range(int(max_attempts)):
+        perm = rng.permutation(len(cameras))
+        mapping = {cameras[i]: cameras[int(perm[i])] for i in range(len(cameras))}
+        if any(int(k) == int(v) for k, v in mapping.items()):
+            continue
+        assert_derangement(mapping)
+        return mapping
+    raise ContractError(
+        "no derangement of %d cameras found in %d attempts at seed %r"
+        % (len(cameras), int(max_attempts), seed))
+
+
+def canonical_magnitude(family, magnitude):
+    """Map a CLI magnitude onto the family's FROZEN one, or REFUSE.
+
+    v4 §5 forbids extending a sweep range, so an off-grid magnitude is a
+    contract error rather than a new point.
+    """
+    if family not in NOISE_MAGNITUDES:
+        raise ContractError("unknown noise family %r" % (family,))
+    if magnitude is None:
+        raise ContractError(
+            "--mask-noise %s needs --mask-noise-magnitude" % family)
+    for declared in NOISE_MAGNITUDES[family]:
+        if abs(float(declared) - float(magnitude)) <= 1e-12:
+            return declared
+    raise ContractError(
+        "%r is not a FROZEN magnitude of family %s; the declared set is %r "
+        "and v4 §5 forbids extending it to find a crossing"
+        % (magnitude, family, list(NOISE_MAGNITUDES[family])))
+
+
+def noise_point_keys(families=NOISE_FAMILIES, magnitudes=None):
+    """The FROZEN sweep: every family at every declared magnitude.
+
+    Returned in a deterministic order with the clean reference first, so a
+    report's point list is the same list every time it is produced.
+    """
+    magnitudes = magnitudes or NOISE_MAGNITUDES
+    points = [("clean", None)]
+    for family in families:
+        if family not in magnitudes:
+            raise ContractError("unknown noise family %r" % (family,))
+        for magnitude in magnitudes[family]:
+            points.append((family, magnitude))
+    return points
+
+
+def point_key_text(family, magnitude):
+    """``("erosion", 1)`` -> ``"erosion:1"``. One naming rule, used everywhere."""
+    if magnitude is None:
+        return str(family)
+    if isinstance(magnitude, float):
+        return "%s:%g" % (family, magnitude)
+    return "%s:%d" % (family, int(magnitude))
+
+
+def gate_holds(metrics, reference=VOTE_REFERENCE):
+    """The STANDING gate of v3 §5 limbs 1 and 2, applied to one point.
+
+    An undefined precision or recall does NOT hold: a point that predicted no
+    object row has not met a 0.80 precision bar, it has failed to produce a
+    number, and reading that as a pass would be the vacuity failure this
+    project keeps catching.
+    """
+    precision = metrics.get("precision")
+    recall = metrics.get("recall")
+    if precision is None or recall is None:
+        return False
+    return bool(precision >= float(reference["precision"])
+                and recall >= float(reference["recall"]))
+
+
+def degradation_point(curve, reference=VOTE_REFERENCE):
+    """v4 §3: the SMALLEST magnitude at which the standing gate stops holding.
+
+    ``curve`` is an iterable of ``{"magnitude", "precision", "recall"}``. When
+    no magnitude in the swept range crosses, the literal ``NO_CROSSING_TEXT``
+    is returned -- §5 forbids extending the range to find one, so this function
+    has no way to be handed a wider range by its caller.
+    """
+    entries = sorted(curve, key=lambda e: float(e["magnitude"]))
+    if not entries:
+        raise ContractError("a degradation point needs at least one magnitude")
+    for entry in entries:
+        if not gate_holds(entry, reference):
+            return float(entry["magnitude"])
+    return NO_CROSSING_TEXT
+
+
+def object_area_by_camera(buffers_by_camera, object_id):
+    """``{camera: object pixel count}`` for one buffer per camera."""
+    return {int(c): int((np.asarray(a) == int(object_id)).sum())
+            for c, a in buffers_by_camera.items()}
+
+
+def noise_bite_block(point_key, clean_areas, perturbed_areas,
+                     n_labels_changed, n_pixels_compared):
+    """v4 §4 N1 -- "the noise actually bit", with the realized area change.
+
+    A level that changed nothing must FAIL rather than silently return the
+    clean score, so the block carries a ``passed`` flag the caller raises on.
+    The per-camera areas are reported whether it passed or not.
+    """
+    cameras = sorted(set(int(c) for c in clean_areas)
+                     | set(int(c) for c in perturbed_areas))
+    per_camera = {}
+    for camera in cameras:
+        clean = int(clean_areas.get(camera, 0))
+        dirty = int(perturbed_areas.get(camera, 0))
+        per_camera[str(camera)] = {
+            "clean_object_px": clean,
+            "perturbed_object_px": dirty,
+            "delta_px": dirty - clean,
+            "retained_fraction": (dirty / float(clean) if clean else None),
+            "emptied": bool(clean > 0 and dirty == 0),
+        }
+    changed = int(n_labels_changed)
+    return {
+        "check": "N1_noise_bit",
+        "rule": ("the perturbed mask set must differ measurably from the "
+                 "clean one; a no-op level FAILS rather than returning the "
+                 "clean score"),
+        "point": str(point_key),
+        "n_pixel_labels_changed": changed,
+        "n_pixel_labels_compared": int(n_pixels_compared),
+        "fraction_of_labels_changed": (
+            changed / float(n_pixels_compared) if int(n_pixels_compared) else None),
+        "n_cameras_with_area_change": sum(
+            1 for v in per_camera.values() if v["delta_px"] != 0),
+        "per_camera_object_area": per_camera,
+        "passed": bool(changed > 0),
+    }
+
+
+def annihilation_block(k, emptied_cameras, expected=EROSION_ANNIHILATION_EXPECTED):
+    """v4 §4 N2 -- annihilation is REPORTED, not hidden.
+
+    The spec declares the count in advance at k = 1 and k = 8 from its own §1
+    input table. A disagreement there means this erosion is not the erosion
+    those inputs were measured with, which is a mechanism fault and fails.
+    k = 2 and k = 4 carry no declared count and are reported only.
+    """
+    emptied = sorted(int(c) for c in emptied_cameras)
+    declared = expected.get(int(k))
+    return {
+        "check": "N2_annihilation_reported",
+        "erosion_k": int(k),
+        "n_cameras_emptied": len(emptied),
+        "cameras_emptied": emptied,
+        "expected_by_spec": declared,
+        "expectation_source": (
+            V4_SPEC_PAGE + " §4 N2 (from its §1 measured-input table)"
+            if declared is not None else "none declared at this magnitude"),
+        "passed": bool(declared is None or len(emptied) == int(declared)),
+    }
+
+
+CLEAN_POINT = ("clean", None)
+SHUFFLE_FAMILY = "C-SHUFFLE"
+
+
+def requested_points(sweep=False, family="", magnitude=None, shuffle_seed=None):
+    """The measured point list. The CLEAN reference is ALWAYS first.
+
+    Every perturbed point is measured beside the clean one in the same
+    process, on the same render pass, against the same ``w_total`` -- so a
+    degraded number is compared to a reference produced by the same cloud and
+    the same 528 forwards, not to a figure recalled from another run.
+    """
+    points = [CLEAN_POINT]
+    if sweep:
+        points.extend(p for p in noise_point_keys() if p != CLEAN_POINT)
+    if str(family or "").strip():
+        point = (family, canonical_magnitude(family, magnitude))
+        if point not in points:
+            points.append(point)
+    elif magnitude is not None:
+        raise ContractError(
+            "--mask-noise-magnitude was given without --mask-noise")
+    if shuffle_seed is not None:
+        points.append((SHUFFLE_FAMILY, int(shuffle_seed)))
+    return points
+
+
+class PerturbationTable:
+    """Every measured point's identity buffer for every view, deduplicated.
+
+    The fixture's 960 buffers carry only 32 distinct images by content, so a
+    perturbation is a function of a DIGEST, not of a view: the whole sweep
+    materializes a few hundred small arrays rather than 528 x 18 of them.
+
+    The dedupe is not merely an optimization. ``measure`` runs one backward
+    pass per DISTINCT class mask per view, and two points whose buffers agree
+    on a class share that pass exactly -- which is why the missing-cameras
+    family costs almost nothing on the fifteen cameras it does not drop, and
+    why C-SHUFFLE costs nothing at all beyond the clean masks it permutes.
+    """
+
+    def __init__(self, points, digest_by_view, array_by_digest, object_id,
+                 camera_ids, noise_seed=NOISE_SEED_DECLARED, shuffle_seed=None):
+        self.points = list(points)
+        if CLEAN_POINT not in self.points:
+            raise ContractError(
+                "the clean reference point must be measured alongside every "
+                "perturbed point; it is what the curves are read against")
+        self._digest_by_view = {(int(c), int(f)): d
+                                for (c, f), d in digest_by_view.items()}
+        self._clean = dict(array_by_digest)
+        self.object_id = int(object_id)
+        self.camera_ids = sorted(int(c) for c in camera_ids)
+        self.noise_seed = int(noise_seed)
+        self.shuffle_seed = (None if shuffle_seed is None else int(shuffle_seed))
+        self.shuffle_map = (None if shuffle_seed is None else
+                            camera_shuffle_permutation(self.camera_ids,
+                                                       int(shuffle_seed)))
+        self.dropped_cameras = {
+            int(n): missing_camera_selection(self.camera_ids, int(n), self.noise_seed)
+            for n in NOISE_MAGNITUDES["missing-cameras"]}
+        self._buffers = dict(array_by_digest)
+        self._fallback = {}
+        self._uniform = {}
+        self._mask_digest = {}
+
+    # -- the per-digest helpers, each built at most once -------------------
+
+    def fallback(self, digest):
+        cached = self._fallback.get(digest)
+        if cached is None:
+            cached = nearest_non_object_labels(self._clean[digest], self.object_id)
+            self._fallback[digest] = cached
+        return cached
+
+    def uniform(self, digest):
+        cached = self._uniform.get(digest)
+        if cached is None:
+            cached = switch_uniform(self._clean[digest], self.object_id,
+                                    self.noise_seed, digest)
+            self._uniform[digest] = cached
+        return cached
+
+    # -- the view -> buffer map -------------------------------------------
+
+    def clean_digest(self, camera, frame):
+        key = (int(camera), int(frame))
+        if key not in self._digest_by_view:
+            raise ContractError("no identity buffer for cam%02d f%03d" % key)
+        return self._digest_by_view[key]
+
+    def buffer_key(self, point, camera, frame):
+        """The dedupe key of ``point``'s buffer for one view."""
+        family, magnitude = point
+        if family == "clean":
+            return self.clean_digest(camera, frame)
+        if family == SHUFFLE_FAMILY:
+            if self.shuffle_map is None:
+                raise ContractError("C-SHUFFLE was requested with no seed")
+            return self.clean_digest(self.shuffle_map[int(camera)], frame)
+        digest = self.clean_digest(camera, frame)
+        if family == "missing-cameras":
+            if int(camera) not in self.dropped_cameras[int(magnitude)]:
+                return digest
+            return "missing|%s" % digest
+        if family == "erosion":
+            return "erosion:%d|%s" % (int(magnitude), digest)
+        if family == "dilation":
+            return "dilation:%d|%s" % (int(magnitude), digest)
+        if family == "identity-switch":
+            return "identity-switch:%g|%s" % (float(magnitude), digest)
+        raise ContractError("unknown noise family %r" % (family,))
+
+    def buffer(self, key):
+        """The identity buffer behind a dedupe key, built on first request."""
+        cached = self._buffers.get(key)
+        if cached is not None:
+            return cached
+        head, _, digest = str(key).partition("|")
+        if not digest:
+            raise ContractError("unknown buffer key %r" % (key,))
+        clean = self._clean[digest]
+        family, _, magnitude = head.partition(":")
+        if family == "missing":
+            built = apply_missing_camera(clean, self.object_id,
+                                         self.fallback(digest))
+        elif family == "erosion":
+            built = apply_erosion(clean, int(magnitude), self.object_id,
+                                  self.fallback(digest))
+        elif family == "dilation":
+            built = apply_dilation(clean, int(magnitude), self.object_id)
+        elif family == "identity-switch":
+            built = apply_identity_switch(clean, float(magnitude), self.object_id,
+                                          self.fallback(digest),
+                                          self.uniform(digest))
+        else:
+            raise ContractError("unknown buffer key %r" % (key,))
+        self._buffers[key] = built
+        return built
+
+    def mask_digest(self, key, class_id):
+        """A content digest of one class's boolean mask, so ``measure`` runs
+        one backward per DISTINCT mask rather than per (point, class)."""
+        cache_key = (str(key), int(class_id))
+        cached = self._mask_digest.get(cache_key)
+        if cached is None:
+            mask = np.ascontiguousarray(self.buffer(key) == int(class_id))
+            cached = sha256_bytes(mask.tobytes())
+            self._mask_digest[cache_key] = cached
+        return cached
+
+    # -- the N1/N2 observations, all read off the buffers ------------------
+
+    def per_camera_areas(self, point, frame):
+        """``{camera: object pixel count}`` at one frame, for one point."""
+        return {camera: int((self.buffer(self.buffer_key(point, camera, frame))
+                             == self.object_id).sum())
+                for camera in self.camera_ids}
+
+    def label_change_count(self, point, views):
+        """How many pixel LABELS the point moved, over the measured views.
+
+        Counted per view but computed once per distinct (clean, perturbed)
+        buffer pair, which on this fixture is a handful of comparisons rather
+        than 528.
+        """
+        cache, changed, compared = {}, 0, 0
+        for camera, frame in views:
+            clean_key = self.clean_digest(camera, frame)
+            dirty_key = self.buffer_key(point, camera, frame)
+            pair = (clean_key, dirty_key)
+            if pair not in cache:
+                cache[pair] = int((self.buffer(clean_key)
+                                   != self.buffer(dirty_key)).sum())
+            changed += cache[pair]
+            compared += int(self.buffer(clean_key).size)
+        return changed, compared
+
+
+# ---------------------------------------------------------------------------
 # FIXTURE GEOMETRY -- read from the fixture and from the generator's own
 # constants. Nothing here is a guessed literal.
 # ---------------------------------------------------------------------------
@@ -1195,6 +1891,38 @@ def build_parser():
     parser.add_argument(
         "--expect-fingerprint", dest="expect_fingerprint", default="",
         help="refuse unless the loaded cloud's fingerprint equals this value.")
+    # -- v4 (lrv3-mask-noise-and-shuffle-v4-2026-08-25). All ADDITIVE: with
+    # none of these given the run is exactly the v3 measurement.
+    parser.add_argument(
+        "--shuffle-cameras", dest="shuffle_cameras", type=int, default=None,
+        metavar="SEED",
+        help="v4 §2 C-SHUFFLE: permute the mask assignment across the 16 "
+             "training cameras under this seed, frame index held fixed. The "
+             "permutation must be a DERANGEMENT and is asserted (N3). The "
+             "declared seed is %d. Measured ALONGSIDE the clean reference, "
+             "never instead of it." % SHUFFLE_SEED_DECLARED)
+    parser.add_argument(
+        "--mask-noise", dest="mask_noise", default="",
+        choices=("",) + NOISE_FAMILIES,
+        help="v4 §3: measure ONE noise family at ONE magnitude beside the "
+             "clean reference. Use --sweep for the whole frozen grid.")
+    parser.add_argument(
+        "--mask-noise-magnitude", dest="mask_noise_magnitude", type=float,
+        default=None,
+        help="the magnitude for --mask-noise. Must be one of the FROZEN "
+             "magnitudes of that family: %s" % json.dumps(
+                 {k: list(v) for k, v in sorted(NOISE_MAGNITUDES.items())}))
+    parser.add_argument(
+        "--sweep", action="store_true",
+        help="v4 §3: measure every family at every frozen magnitude in ONE "
+             "process, sharing the render pass and w_total with the clean "
+             "reference. Combine with --shuffle-cameras to add C-SHUFFLE.")
+    parser.add_argument(
+        "--noise-seed", dest="noise_seed", type=int,
+        default=NOISE_SEED_DECLARED,
+        help="the DECLARED seed for the two families that need one "
+             "(missing-cameras and identity-switch). Default %d; the realized "
+             "selection is reported either way." % NOISE_SEED_DECLARED)
     parser.add_argument("--hash_checkpoint", action="store_true")
     parser.add_argument("--gaussian_dim", type=int, default=4)
     parser.add_argument("--time_duration", nargs=2, type=float, default=[0.0, 10.0])
@@ -1424,12 +2152,20 @@ def bind_render_leaves(flow_leaf, sh_leaf, sh_static_leaf, n_rows, record):
         gr.GaussianRasterizer = real
 
 
-def measure(gaussians, views, pipe, background, class_ids, mask_source,
+def measure(gaussians, views, pipe, background, class_ids, table, points,
             check_repeat_at, verbose=False):
     """One forward per view; several backward passes per forward.
 
     Returns per-row accumulators plus the observations the mechanism
     preconditions read.
+
+    ``points`` is the list of measured mask sets -- the clean reference plus
+    whatever v4 perturbations were requested -- and ``table`` resolves each of
+    them to an identity buffer per view. Every point shares the SAME forward
+    pass and the SAME ``w_total``: ``w_total`` comes from ``g = 1`` and is
+    mask-independent, and the perturbations move only the supervision buffer,
+    never the geometry. That is what makes a seventeen-point sweep cost one
+    render pass rather than seventeen.
     """
     import torch
     from gaussian_renderer import render
@@ -1449,8 +2185,18 @@ def measure(gaussians, views, pipe, background, class_ids, mask_source,
     sh_static_leaf = features.clone().requires_grad_(True)
 
     n_classes = len(class_ids)
+    points = [tuple(point) for point in points]
+    if not points or points[0] != CLEAN_POINT:
+        raise ContractError(
+            "the CLEAN reference must be the first measured point; every v4 "
+            "curve is read against it and the shape check reads its buffer")
+    point_keys = [point_key_text(*point) for point in points]
+    if len(set(point_keys)) != len(point_keys):
+        raise ContractError("duplicate measured point in %r" % (point_keys,))
     w_total = torch.zeros(n_rows, dtype=torch.float64, device=device)
-    w_in_mask = torch.zeros((n_rows, n_classes), dtype=torch.float64, device=device)
+    w_in_mask_by_point = {
+        key: torch.zeros((n_rows, n_classes), dtype=torch.float64, device=device)
+        for key in point_keys}
     w_sh_dynamic = torch.zeros(n_rows, dtype=torch.float64, device=device)
     w_sh_static = torch.zeros(n_rows, dtype=torch.float64, device=device)
     w_sh_dynamic_dc = torch.zeros(n_rows, dtype=torch.float64, device=device)
@@ -1458,12 +2204,17 @@ def measure(gaussians, views, pipe, background, class_ids, mask_source,
     per_view = []
     n_views_nonzero_image = 0
     max_partition_rel_dev = 0.0
+    max_partition_rel_dev_by_point = {key: 0.0 for key in point_keys}
+    n_backward_passes = 0
+    n_distinct_masks = 0
     repeat_checks = []
     record = {"calls": 0, "shares_features": True}
 
     with bind_render_leaves(flow_leaf, sh_leaf, sh_static_leaf, n_rows, record):
         for index, (cam_id, frame, camera) in enumerate(views):
-            identity = mask_source(cam_id, frame)          # int16 (H, W) on device
+            buffer_keys = [table.buffer_key(point, cam_id, frame)
+                           for point in points]
+            identity = table.buffer(buffer_keys[0])        # int16 (H, W) numpy
             camera_on_device = camera.cuda() if torch.cuda.is_available() else camera
             out = render(camera_on_device, gaussians, pipe, background)
             flow_image = out["flow"]
@@ -1500,20 +2251,47 @@ def measure(gaussians, views, pipe, background, class_ids, mask_source,
             ones_hw = torch.ones(flow_image.shape[-2:], dtype=flow_image.dtype,
                                  device=flow_image.device)
             view_total = flow_grad(ones_hw)
+            n_backward_passes += 1
 
-            view_class = []
-            for class_id in class_ids:
-                mask = (identity == int(class_id)).to(flow_image.dtype)
-                view_class.append(flow_grad(mask))
-            stacked = torch.stack(view_class, dim=1)
+            # ONE backward per DISTINCT class mask, shared by every point that
+            # asks for that mask. The digests are precomputed on the CPU from
+            # the perturbation table, so two points whose buffers agree on a
+            # class never pay for it twice.
+            grad_by_mask = {}
+            stacked_by_point = {}
+            for point_key, buffer_key in zip(point_keys, buffer_keys):
+                columns = []
+                for class_id in class_ids:
+                    digest = table.mask_digest(buffer_key, class_id)
+                    grad = grad_by_mask.get(digest)
+                    if grad is None:
+                        mask_np = np.ascontiguousarray(
+                            table.buffer(buffer_key) == int(class_id),
+                            dtype=np.float32)
+                        mask = torch.from_numpy(mask_np).to(
+                            device=flow_image.device, dtype=flow_image.dtype)
+                        grad = flow_grad(mask)
+                        grad_by_mask[digest] = grad
+                        n_backward_passes += 1
+                        n_distinct_masks += 1
+                    columns.append(grad)
+                stacked_by_point[point_key] = torch.stack(columns, dim=1)
+            stacked = stacked_by_point[point_keys[0]]
 
             # P10: the identity buffer partitions the image, so the class
             # weights must re-sum to the independently measured total. A
             # failure means a mask, the class list or an upstream gradient is
-            # wrong -- it cannot be read as a result.
-            summed = stacked.sum(dim=1)
+            # wrong -- it cannot be read as a result. Evaluated for EVERY
+            # point, because every point carries its own partition (v4 §4 N4).
             denominator = view_total.abs().clamp_min(1e-30)
-            rel_dev = float(((summed - view_total).abs() / denominator).max())
+            view_dev = {}
+            for point_key, block in stacked_by_point.items():
+                view_dev[point_key] = float(
+                    ((block.sum(dim=1) - view_total).abs() / denominator).max())
+                max_partition_rel_dev_by_point[point_key] = max(
+                    max_partition_rel_dev_by_point[point_key],
+                    view_dev[point_key])
+            rel_dev = view_dev[point_keys[0]]
             max_partition_rel_dev = max(max_partition_rel_dev, rel_dev)
 
             if index in check_repeat_at:
@@ -1536,7 +2314,8 @@ def measure(gaussians, views, pipe, background, class_ids, mask_source,
                 retain_graph=True, allow_unused=False)
 
             w_total += view_total.detach().to(torch.float64)
-            w_in_mask += stacked.detach().to(torch.float64)
+            for point_key, block in stacked_by_point.items():
+                w_in_mask_by_point[point_key] += block.detach().to(torch.float64)
             w_sh_dynamic += grad_dyn.detach().abs().reshape(n_rows, -1).sum(
                 dim=1).to(torch.float64)
             w_sh_static += grad_stat.detach().abs().reshape(n_rows, -1).sum(
@@ -1555,18 +2334,24 @@ def measure(gaussians, views, pipe, background, class_ids, mask_source,
                       % (index + 1, len(views), cam_id, frame,
                          per_view[-1]["rows_with_nonzero_weight"]))
 
-            del out, flow_image, image, view_total, stacked, view_class
+            del (out, flow_image, image, view_total, stacked, stacked_by_point,
+                 grad_by_mask)
 
     return {
         "n_rows": n_rows,
         "w_total": w_total,
-        "w_in_mask": w_in_mask,
+        "w_in_mask": w_in_mask_by_point[point_keys[0]],
+        "w_in_mask_by_point": w_in_mask_by_point,
+        "point_keys": point_keys,
         "w_sh_dynamic": w_sh_dynamic,
         "w_sh_static": w_sh_static,
         "w_sh_dynamic_dc": w_sh_dynamic_dc,
         "per_view": per_view,
         "n_views_nonzero_image": n_views_nonzero_image,
         "max_partition_rel_deviation": max_partition_rel_dev,
+        "max_partition_rel_deviation_by_point": max_partition_rel_dev_by_point,
+        "n_backward_passes": int(n_backward_passes),
+        "n_distinct_class_masks": int(n_distinct_masks),
         "repeat_checks": repeat_checks,
         "n_rasterizer_calls": int(record["calls"]),
         "static_branch_shares_features": bool(record["shares_features"]),
@@ -2170,6 +2955,307 @@ def self_test():
     check("preconditions: read the SETUP only, never a score",
           names & forbidden == set())
 
+    # -- v4: the mask-noise kernels ---------------------------------------
+    square = np.zeros((9, 9), dtype=bool)
+    square[3:6, 3:6] = True
+    check("erosion: a 3x3 square loses everything but its centre at k=1",
+          int(erode_mask(square, 1).sum()) == 1)
+    check("erosion: the surviving pixel IS the centre",
+          bool(erode_mask(square, 1)[4, 4]))
+    check("erosion: the 3x3 square is annihilated at k=2",
+          int(erode_mask(square, 2).sum()) == 0)
+    check("erosion: k=0 is the identity",
+          erode_mask(square, 0).tolist() == square.tolist())
+    dot = np.zeros((9, 9), dtype=bool)
+    dot[4, 4] = True
+    check("dilation: one pixel becomes the 5-pixel plus at k=1",
+          int(dilate_mask(dot, 1).sum()) == 5)
+    check("dilation: ... and the 13-pixel L1 ball at k=2 (2k^2+2k+1)",
+          int(dilate_mask(dot, 2).sum()) == 13)
+    check("dilation: k=0 is the identity",
+          dilate_mask(dot, 0).tolist() == dot.tolist())
+    check("dilation: erosion of a dilation returns the seed here",
+          int(erode_mask(dilate_mask(dot, 2), 2).sum()) == 1)
+    for bad in (-1, -8):
+        for kernel in (erode_mask, dilate_mask):
+            try:
+                kernel(square, bad)
+                check("kernels: %s refuses k=%d" % (kernel.__name__, bad), False)
+            except ContractError:
+                check("kernels: %s refuses k=%d" % (kernel.__name__, bad), True)
+
+    # THE TWO ANNIHILATION POINTS the spec's §1 table declares in advance. A
+    # 16-px mask must die at k=1 and a 316-px one at k=8 -- the same counts
+    # `cam14` and `cam13` carry on the fixture.
+    line = np.zeros((40, 40), dtype=bool)
+    line[10, 10:26] = True
+    check("erosion: the 16-px mask is 16 px", int(line.sum()) == 16)
+    check("erosion: a 16-px mask is ANNIHILATED at k=1 (cam14's case)",
+          int(erode_mask(line, 1).sum()) == 0)
+    slab = np.zeros((60, 60), dtype=bool)
+    slab[10:31, 10:25] = True          # 21 rows x 15 columns = 315
+    slab[31, 10] = True                # one more, for 316
+    check("erosion: the 316-px mask is 316 px", int(slab.sum()) == 316)
+    check("erosion: a 316-px mask SURVIVES k=4 (cam13 still has rows)",
+          int(erode_mask(slab, 4).sum()) > 0)
+    check("erosion: ... survives k=7",
+          int(erode_mask(slab, 7).sum()) > 0)
+    check("erosion: ... and is ANNIHILATED at k=8 (cam13's case)",
+          int(erode_mask(slab, 8).sum()) == 0)
+
+    # -- v4: the nearest-non-object relabelling ---------------------------
+    surrounded = np.array([[7, 7, 7], [7, 9, 7], [7, 7, 7]], dtype=np.int16)
+    filled = nearest_non_object_labels(surrounded, 9)
+    check("relabel: an enclosed object pixel takes its neighbour's class",
+          filled.tolist() == [[7, 7, 7], [7, 7, 7], [7, 7, 7]])
+    split = np.array([[1, 1, 2], [1, 9, 2], [1, 1, 2]], dtype=np.int16)
+    check("relabel: ties resolve in the DECLARED neighbour order (up first)",
+          int(nearest_non_object_labels(split, 9)[1, 1]) == 1)
+    check("relabel: a buffer with no object pixel is returned unchanged",
+          nearest_non_object_labels(split, 100).tolist() == split.tolist())
+    try:
+        nearest_non_object_labels(np.full((3, 3), 9, dtype=np.int16), 9)
+        check("relabel: an ALL-object buffer is refused", False)
+    except ContractError:
+        check("relabel: an ALL-object buffer is refused", True)
+
+    # -- v4: the four families, each on a buffer that stays a PARTITION ----
+    scene = np.full((21, 21), 0, dtype=np.int16)
+    scene[:, :10] = 1
+    scene[8:14, 8:14] = 100
+    fallback = nearest_non_object_labels(scene, 100)
+    eroded = apply_erosion(scene, 1, 100, fallback)
+    check("erosion point: the object shrinks",
+          int((eroded == 100).sum()) < int((scene == 100).sum()))
+    check("erosion point: the buffer is still a partition of the same pixels",
+          eroded.size == scene.size and not bool((eroded == 100).sum() == 0))
+    check("erosion point: every lost pixel took an EXISTING class",
+          set(np.unique(eroded).tolist()) <= set(np.unique(scene).tolist()))
+    dilated = apply_dilation(scene, 1, 100)
+    check("dilation point: the object grows",
+          int((dilated == 100).sum()) > int((scene == 100).sum()))
+    check("dilation point: it grows by the plus-shaped border exactly",
+          int((dilated == 100).sum())
+          == int(dilate_mask(scene == 100, 1).sum()))
+    gone = apply_missing_camera(scene, 100, fallback)
+    check("missing-cameras point: the object is GONE from this buffer",
+          int((gone == 100).sum()) == 0)
+    check("missing-cameras point: no pixel was left unlabelled",
+          set(np.unique(gone).tolist()) <= {0, 1})
+    uniform = switch_uniform(scene, 100, NOISE_SEED_DECLARED, "0" * 64)
+    check("identity-switch: non-object pixels can never be selected",
+          bool((uniform[scene != 100] == 1.0).all()))
+    switched = {f: apply_identity_switch(scene, f, 100, fallback, uniform)
+                for f in NOISE_MAGNITUDES["identity-switch"]}
+    check("identity-switch: the TOTAL pixel count is preserved at every level",
+          all(int(b.size) == int(scene.size) for b in switched.values()))
+    check("identity-switch: ... and every pixel still carries a class that "
+          "existed in the clean buffer",
+          all(set(np.unique(b).tolist()) <= set(np.unique(scene).tolist())
+              for b in switched.values()))
+    switched_areas = [int((switched[f] == 100).sum())
+                      for f in NOISE_MAGNITUDES["identity-switch"]]
+    check("identity-switch: the object area falls monotonically with the "
+          "fraction, because the draws are NESTED",
+          all(b <= a for a, b in zip(switched_areas, switched_areas[1:])))
+    check("identity-switch: it relabels rather than deleting -- the classes "
+          "it feeds gain exactly what the object loses",
+          all(int((switched[f] != 100).sum()) - int((scene != 100).sum())
+              == int((scene == 100).sum()) - int((switched[f] == 100).sum())
+              for f in NOISE_MAGNITUDES["identity-switch"]))
+    for bad in (-0.1, 1.1):
+        try:
+            apply_identity_switch(scene, bad, 100, fallback, uniform)
+            check("identity-switch: refuses fraction %r" % bad, False)
+        except ContractError:
+            check("identity-switch: refuses fraction %r" % bad, True)
+
+    # -- v4: the missing-camera selection ---------------------------------
+    roster = [0, 1, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 18, 19]
+    drops = {n: missing_camera_selection(roster, n) for n in (1, 2, 4, 8)}
+    check("missing-cameras: exactly n cameras are dropped at every magnitude",
+          [len(drops[n]) for n in (1, 2, 4, 8)] == [1, 2, 4, 8])
+    check("missing-cameras: the drop sets are NESTED",
+          set(drops[1]) <= set(drops[2]) <= set(drops[4]) <= set(drops[8]))
+    check("missing-cameras: every dropped camera is on the roster",
+          set(drops[8]) <= set(roster))
+    check("missing-cameras: the selection is deterministic in the seed",
+          missing_camera_selection(roster, 4) == drops[4])
+    check("missing-cameras: a different seed selects differently",
+          missing_camera_selection(roster, 4, seed=1) != drops[4]
+          or missing_camera_selection(roster, 8, seed=1) != drops[8])
+    check("missing-cameras: dropping zero drops nobody",
+          missing_camera_selection(roster, 0) == [])
+    try:
+        missing_camera_selection(roster, 17)
+        check("missing-cameras: refuses dropping more cameras than exist", False)
+    except ContractError:
+        check("missing-cameras: refuses dropping more cameras than exist", True)
+
+    # -- v4 N3: the derangement -------------------------------------------
+    mapping = camera_shuffle_permutation(roster, SHUFFLE_SEED_DECLARED)
+    check("N3: the shuffle covers every camera exactly once",
+          sorted(mapping) == roster and sorted(mapping.values()) == roster)
+    check("N3: NO camera keeps its own mask",
+          all(int(k) != int(v) for k, v in mapping.items()))
+    check("N3: the assertion admits a derangement",
+          assert_derangement(mapping) is True)
+    check("N3: the shuffle is deterministic in its seed",
+          camera_shuffle_permutation(roster, SHUFFLE_SEED_DECLARED) == mapping)
+    try:
+        assert_derangement({0: 0, 1: 3, 3: 1})
+        check("N3: a fixed point is REFUSED", False)
+    except PreconditionError:
+        check("N3: a fixed point is REFUSED", True)
+    try:
+        assert_derangement({0: 1, 1: 5})
+        check("N3: a non-permutation is REFUSED", False)
+    except PreconditionError:
+        check("N3: a non-permutation is REFUSED", True)
+    try:
+        camera_shuffle_permutation([4], SHUFFLE_SEED_DECLARED)
+        check("N3: a single camera cannot be deranged and is refused", False)
+    except ContractError:
+        check("N3: a single camera cannot be deranged and is refused", True)
+
+    # -- v4 N1: the noise must BITE ---------------------------------------
+    bit = noise_bite_block("erosion:1", {0: 8005, 14: 16}, {0: 7721, 14: 0},
+                           105666, 528 * 120000)
+    check("N1: a level that changed pixels passes", bit["passed"] is True)
+    check("N1: the realized per-camera area change is reported",
+          bit["per_camera_object_area"]["0"]["delta_px"] == -284
+          and abs(bit["per_camera_object_area"]["0"]["retained_fraction"]
+                  - 7721 / 8005.0) < 1e-12)
+    check("N1: an emptied camera is flagged as emptied",
+          bit["per_camera_object_area"]["14"]["emptied"] is True)
+    no_op = noise_bite_block("erosion:1", {0: 8005}, {0: 8005}, 0, 528 * 120000)
+    check("N1: a NO-OP noise level FAILS rather than returning the clean score",
+          no_op["passed"] is False)
+    check("N1: ... and says so with a zero change count",
+          no_op["n_pixel_labels_changed"] == 0
+          and no_op["n_cameras_with_area_change"] == 0)
+
+    # -- v4 N2: annihilation is reported, and checked where declared -------
+    check("N2: k=1 with one emptied camera matches the spec's declared count",
+          annihilation_block(1, [14])["passed"] is True)
+    check("N2: k=1 with the WRONG count fails",
+          annihilation_block(1, [])["passed"] is False)
+    check("N2: k=8 expects two emptied cameras",
+          annihilation_block(8, [13, 14])["passed"] is True
+          and annihilation_block(8, [14])["passed"] is False)
+    check("N2: k=2 and k=4 carry no declared count and are report-only",
+          annihilation_block(2, [14])["expected_by_spec"] is None
+          and annihilation_block(4, [])["passed"] is True)
+    check("N2: the emptied cameras are named, not just counted",
+          annihilation_block(8, [13, 14])["cameras_emptied"] == [13, 14])
+
+    # -- v4: the degradation point ----------------------------------------
+    crossing = [{"magnitude": 1, "precision": 0.99, "recall": 0.98},
+                {"magnitude": 2, "precision": 0.95, "recall": 0.95},
+                {"magnitude": 4, "precision": 0.70, "recall": 0.93},
+                {"magnitude": 8, "precision": 0.40, "recall": 0.50}]
+    check("degradation: the SMALLEST failing magnitude is reported",
+          degradation_point(crossing) == 4.0)
+    holds = [{"magnitude": m, "precision": 0.95, "recall": 0.95}
+             for m in (1, 2, 4, 8)]
+    check("degradation: a family that never crosses reports the LITERAL string",
+          degradation_point(holds) == NO_CROSSING_TEXT)
+    check("degradation: the literal string is the spec's, verbatim",
+          NO_CROSSING_TEXT == "no crossing within the swept range")
+    check("degradation: an UNDEFINED precision does not hold the gate",
+          degradation_point(
+              [{"magnitude": 1, "precision": None, "recall": None}]) == 1.0)
+    check("degradation: input order does not matter -- it sorts by magnitude",
+          degradation_point(list(reversed(crossing))) == 4.0)
+    check("degradation: recall alone can trip it",
+          degradation_point(
+              [{"magnitude": 1, "precision": 1.0, "recall": 0.89}]) == 1.0)
+    try:
+        degradation_point([])
+        check("degradation: refuses an empty curve", False)
+    except ContractError:
+        check("degradation: refuses an empty curve", True)
+    check("gate: the standing gate is v3's 0.80 / 0.90 pair",
+          VOTE_REFERENCE == {"precision": 0.80, "recall": 0.90})
+
+    # -- v4: the frozen point grid and its naming --------------------------
+    grid_points = noise_point_keys()
+    check("sweep: the clean reference comes FIRST",
+          grid_points[0] == CLEAN_POINT)
+    check("sweep: seventeen points -- clean plus four families of four",
+          len(grid_points) == 17)
+    check("sweep: the frozen magnitudes are the spec's",
+          {f: list(NOISE_MAGNITUDES[f]) for f in NOISE_FAMILIES}
+          == {"erosion": [1, 2, 4, 8], "dilation": [1, 2, 4, 8],
+              "missing-cameras": [1, 2, 4, 8],
+              "identity-switch": [0.05, 0.10, 0.25, 0.50]})
+    check("sweep: the family names are the spec's four",
+          set(NOISE_FAMILIES) == {"erosion", "dilation", "missing-cameras",
+                                  "identity-switch"})
+    check("naming: a point key names its family and magnitude",
+          point_key_text("erosion", 1) == "erosion:1"
+          and point_key_text("identity-switch", 0.05) == "identity-switch:0.05"
+          and point_key_text("clean", None) == "clean")
+    check("magnitudes: a frozen magnitude is admitted and canonicalized",
+          canonical_magnitude("erosion", 1.0) == 1)
+    for bad in (3, 16, 0.2):
+        try:
+            canonical_magnitude("erosion", bad)
+            check("magnitudes: an OFF-GRID magnitude %r is refused" % bad, False)
+        except ContractError:
+            check("magnitudes: an OFF-GRID magnitude %r is refused" % bad, True)
+    try:
+        canonical_magnitude("erosion", None)
+        check("magnitudes: a missing magnitude is refused", False)
+    except ContractError:
+        check("magnitudes: a missing magnitude is refused", True)
+    check("points: the default request is EXACTLY v3 -- the clean point alone",
+          requested_points() == [CLEAN_POINT])
+    check("points: --sweep adds the sixteen perturbed points",
+          len(requested_points(sweep=True)) == 17)
+    check("points: --shuffle-cameras adds C-SHUFFLE beside the clean point",
+          requested_points(shuffle_seed=0)
+          == [CLEAN_POINT, (SHUFFLE_FAMILY, 0)])
+    check("points: a single family point is measured beside the clean one",
+          requested_points(family="dilation", magnitude=4)
+          == [CLEAN_POINT, ("dilation", 4)])
+    try:
+        requested_points(magnitude=4)
+        check("points: a magnitude without a family is refused", False)
+    except ContractError:
+        check("points: a magnitude without a family is refused", True)
+
+    # -- v4: the P10/P11 tolerance RE-DECLARATION is auditable -------------
+    check("tolerances: P10 is relaxed from 1e-06 to 1e-05",
+          P10_TOLERANCE_V3 == 1e-6 and P10_TOLERANCE == 1e-5)
+    check("tolerances: P11 moves from BITWISE to 1e-04 absolute",
+          P11_RULE_V3 == "bitwise identity" and P11_TOLERANCE == 1e-4)
+    check("tolerances: BOTH the old value and the new one are recorded",
+          TOLERANCE_REDECLARATION["P10_mask_partition_consistent"][
+              "old_tolerance"] == P10_TOLERANCE_V3
+          and TOLERANCE_REDECLARATION["P10_mask_partition_consistent"][
+              "new_tolerance"] == P10_TOLERANCE
+          and TOLERANCE_REDECLARATION["P11_backward_repeatable"][
+              "old_rule"] == P11_RULE_V3
+          and TOLERANCE_REDECLARATION["P11_backward_repeatable"][
+              "new_tolerance_absolute"] == P11_TOLERANCE)
+    check("tolerances: the v3 MEASUREMENTS that motivated it are recorded",
+          abs(TOLERANCE_REDECLARATION["P10_mask_partition_consistent"][
+              "v3_measured_relative_deviation"] - 1.0692913292587036e-06) < 1e-20
+          and TOLERANCE_REDECLARATION["P11_backward_repeatable"][
+              "v3_measured_max_abs_difference"] == 2.0 ** -16)
+    check("tolerances: the grounds are PLATFORM, stated as such",
+          "PLATFORM" in TOLERANCE_REDECLARATION["grounds"])
+    check("tolerances: both relaxations actually admit the v3 measurements",
+          1.0692913292587036e-06 <= P10_TOLERANCE
+          and 2.0 ** -16 <= P11_TOLERANCE)
+    check("tolerances: and the relaxation is not vacuous -- v3 FAILED both",
+          1.0692913292587036e-06 > P10_TOLERANCE_V3
+          and TOLERANCE_REDECLARATION["P10_mask_partition_consistent"][
+              "v3_outcome"] == "FAILED"
+          and TOLERANCE_REDECLARATION["P11_backward_repeatable"][
+              "v3_outcome"] == "FAILED")
+
     failed = [label for label, ok in checks if not ok]
     for label, ok in checks:
         print("  %s %s" % ("PASS" if ok else "FAIL", label))
@@ -2299,22 +3385,24 @@ def main(argv=None):
         [1, 1, 1] if dataset.white_background else [0, 0, 0],
         dtype=torch.float32, device="cuda" if torch.cuda.is_available() else "cpu")
 
-    device = gaussians._xyz.device
-    mask_cache = {}
+    for digest, array in array_by_digest.items():
+        if tuple(array.shape) != render_shape:
+            raise ContractError(
+                "identity buffer %s has shape %r, not %r"
+                % (digest[:12], tuple(array.shape), render_shape))
 
-    def mask_source(cam_id, frame):
-        digest = digest_by_view[(int(cam_id), int(frame))]
-        cached = mask_cache.get(digest)
-        if cached is None:
-            array = array_by_digest[digest]
-            if tuple(array.shape) != render_shape:
-                raise ContractError(
-                    "identity buffer for cam%02d f%03d has shape %r, not %r"
-                    % (cam_id, frame, tuple(array.shape), render_shape))
-            cached = torch.from_numpy(np.ascontiguousarray(array, dtype=np.int32)
-                                      ).to(device)
-            mask_cache[digest] = cached
-        return cached
+    # -- v4: the measured point list, and the perturbation table behind it --
+    points = requested_points(
+        sweep=bool(args.sweep), family=str(args.mask_noise or "").strip(),
+        magnitude=args.mask_noise_magnitude,
+        shuffle_seed=args.shuffle_cameras)
+    table = PerturbationTable(
+        points, digest_by_view, array_by_digest,
+        constants["event_object_id"], camera_ids,
+        noise_seed=int(args.noise_seed), shuffle_seed=args.shuffle_cameras)
+    point_keys = [point_key_text(*point) for point in points]
+    reference_frame = int(min(frames))
+    measured_views = [(int(c), int(f)) for c, f, _ in views]
 
     print("cloud %s | rows %d | cameras %s | frames %d | views %d | classes %s"
           % (fingerprint[:16], n_rows_loaded, camera_ids, len(frames),
@@ -2322,9 +3410,15 @@ def main(argv=None):
     print("identity %s | %d files | %d distinct buffers by content"
           % (census["dir"], census["n_files"],
              census["n_distinct_buffers_by_content"]))
+    print("v4 points (%d): %s" % (len(point_keys), ", ".join(point_keys)))
+    if table.shuffle_map is not None:
+        print("v4 C-SHUFFLE seed %d derangement: %s"
+              % (int(args.shuffle_cameras),
+                 json.dumps({str(k): int(v)
+                             for k, v in sorted(table.shuffle_map.items())})))
 
     measured = measure(
-        gaussians, views, pipe, background, class_ids, mask_source,
+        gaussians, views, pipe, background, class_ids, table, points,
         check_repeat_at={0, len(views) - 1}, verbose=bool(args.verbose))
 
     w_total = measured["w_total"].to("cpu").numpy()
@@ -2351,9 +3445,16 @@ def main(argv=None):
     predicted_event = assigned == int(constants["event_object_id"])
     predicted_static = assigned == int(static_target["id"])
 
+    # P10/P11 are read at the tolerances RE-DECLARED in v4 §4's final bullet,
+    # on PLATFORM grounds. The v3 values, the v3 measurements and the reason
+    # travel in the report's tolerance_redeclaration block so the relaxation is
+    # auditable and is never mistaken for a response to an unfavourable score.
     repeat_ok = bool(measured["repeat_checks"]) and all(
+        float(r["max_abs_difference"]) <= P11_TOLERANCE
+        for r in measured["repeat_checks"])
+    repeat_bitwise = bool(measured["repeat_checks"]) and all(
         r["bitwise_identical"] for r in measured["repeat_checks"])
-    partition_ok = bool(measured["max_partition_rel_deviation"] <= 1e-6)
+    partition_ok = bool(measured["max_partition_rel_deviation"] <= P10_TOLERANCE)
 
     preconditions, failures = evaluate_preconditions(
         n_rows_nonzero_w_total=int((w_total > 0.0).sum()),
@@ -2428,6 +3529,255 @@ def main(argv=None):
 
     event_vote = precision_recall(predicted_event, in_event)
     static_vote = precision_recall(predicted_static, in_static)
+
+    # ---- v4: C-SHUFFLE and the mask-noise sweep -------------------------
+    # Every point is scored by the SAME frozen vote at the SAME frozen
+    # operating point against the SAME w_total. Nothing here moves v3's
+    # operating point, gate or accumulation domain; only the supervision
+    # buffer changes, which is exactly what v4 §3 authorizes.
+    def point_preconditions(point_key, areas):
+        below = cameras_below_supply_floor(areas, args.min_camera_mask_px)
+        deviation = float(
+            measured["max_partition_rel_deviation_by_point"][point_key])
+        block, broken = evaluate_preconditions(
+            n_rows_nonzero_w_total=int((w_total > 0.0).sum()),
+            n_rows_in_event_target=int(in_event.sum()),
+            n_rows_in_static_target=int(in_static.sum()),
+            frame_set_ok=frame_set_ok,
+            offending_frames=offending_frames,
+            n_views_nonzero_image=measured["n_views_nonzero_image"],
+            n_views=len(views),
+            camera_ids_used=camera_ids,
+            test_camera_ids=spec.get("test_cameras", []),
+            cameras_are_train_objects=cameras_are_train_objects,
+            n_rows_loaded=n_rows_loaded,
+            n_rows_checkpoint=n_rows_checkpoint,
+            n_rows_after_pass=n_rows_after_pass,
+            n_rasterizer_calls=measured["n_rasterizer_calls"],
+            n_expected_rasterizer_calls=len(views),
+            mask_partition_ok=bool(deviation <= P10_TOLERANCE),
+            backward_repeat_bitwise_identical=repeat_ok,
+            static_branch_shares_features=measured["static_branch_shares_features"],
+            identity_masks_complete=identity_masks_complete,
+            cameras_below_mask_floor=below,
+            min_camera_mask_px=args.min_camera_mask_px,
+            fingerprint_expected=(str(args.expect_fingerprint).strip() or None),
+            fingerprint_measured=fingerprint,
+        )
+        block["detail"]["mask_partition_max_rel_deviation_at_this_point"] = deviation
+        return {"block": block, "failures": broken, "passed": not broken}
+
+    clean_areas = table.per_camera_areas(CLEAN_POINT, reference_frame)
+    v4_points = []
+    v4_failures = []
+    for point, point_key in zip(points, point_keys):
+        family, magnitude = point
+        is_clean = point == CLEAN_POINT
+        if is_clean:
+            stats_point, metrics_point = vote_stats, event_vote
+        else:
+            assigned_point, stats_point = argmax_vote(
+                class_ids,
+                measured["w_in_mask_by_point"][point_key].to("cpu").numpy(),
+                w_total, tau=VOTE_TAU)
+            metrics_point = precision_recall(
+                assigned_point == int(constants["event_object_id"]), in_event)
+        areas = table.per_camera_areas(point, reference_frame)
+        n_changed, n_compared = table.label_change_count(point, measured_views)
+
+        entry = {
+            "point": point_key,
+            "family": str(family),
+            "magnitude": (None if (magnitude is None or family == SHUFFLE_FAMILY)
+                          else float(magnitude)),
+            "is_clean_reference": bool(is_clean),
+            "vote": metrics_point,
+            "selection_empty": bool(metrics_point["n_predicted_positive"] == 0),
+            "clears_standing_gate": bool(gate_holds(metrics_point)),
+            "standing_gate": dict(VOTE_REFERENCE),
+            "stats": stats_point,
+            "mask_partition_max_rel_deviation": float(
+                measured["max_partition_rel_deviation_by_point"][point_key]),
+            "N4_v3_preconditions": point_preconditions(point_key, areas),
+        }
+        if is_clean:
+            entry["N1_noise_bit"] = {
+                "check": "N1_noise_bit",
+                "applies": False,
+                "reason": "this IS the clean reference; there is no noise to bite",
+                "n_pixel_labels_changed": int(n_changed),
+                "per_camera_object_area": {
+                    str(c): {"clean_object_px": int(v)}
+                    for c, v in sorted(clean_areas.items())},
+                "passed": True,
+            }
+        else:
+            entry["N1_noise_bit"] = noise_bite_block(
+                point_key, clean_areas, areas, n_changed, n_compared)
+        if family == "erosion":
+            entry["N2_annihilation"] = annihilation_block(
+                magnitude,
+                [c for c, v in sorted(areas.items())
+                 if int(v) == 0 and int(clean_areas.get(c, 0)) > 0])
+        if family == "missing-cameras":
+            entry["cameras_dropped"] = list(table.dropped_cameras[int(magnitude)])
+            entry["n_cameras_dropped"] = len(table.dropped_cameras[int(magnitude)])
+            entry["drop_rule"] = (
+                "one seeded permutation truncated at n, so the four "
+                "magnitudes are NESTED; seed %d" % int(args.noise_seed))
+        if family == SHUFFLE_FAMILY:
+            entry["shuffle_seed"] = int(magnitude)
+            entry["permutation"] = {str(k): int(v)
+                                    for k, v in sorted(table.shuffle_map.items())}
+            entry["reading_rule"] = (
+                "v4 §2: precision must fall BELOW %.2f; chance precision on "
+                "this cloud is %.3f. An EMPTY shuffled selection is a PASS."
+                % (SHUFFLE_PRECISION_BAR, CHANCE_PRECISION))
+            entry["outcome"] = (
+                "EMPTY_SELECTION_PASS" if entry["selection_empty"]
+                else ("PASS" if (metrics_point["precision"] is not None
+                                 and metrics_point["precision"]
+                                 < SHUFFLE_PRECISION_BAR)
+                      else "FAIL"))
+            entry["outcome_if_fail_means"] = (
+                "v3's 0.9659 was NOT produced by reading mask content and "
+                "must be withdrawn pending a mechanism explanation")
+        for check_key in ("N1_noise_bit", "N2_annihilation"):
+            block = entry.get(check_key)
+            if block is not None and not block.get("passed", True):
+                v4_failures.append("%s:%s" % (point_key, check_key))
+        if not entry["N4_v3_preconditions"]["passed"]:
+            v4_failures.append(
+                "%s:N4(%s)" % (point_key,
+                               ",".join(entry["N4_v3_preconditions"]["failures"])))
+        v4_points.append(entry)
+
+    by_point = {entry["point"]: entry for entry in v4_points}
+    families_block = {}
+    for family in NOISE_FAMILIES:
+        curve = [by_point[point_key_text(family, m)]
+                 for m in NOISE_MAGNITUDES[family]
+                 if point_key_text(family, m) in by_point]
+        if not curve:
+            continue
+        complete = bool(len(curve) == len(NOISE_MAGNITUDES[family]))
+        crossing = degradation_point(
+            [{"magnitude": e["magnitude"],
+              "precision": e["vote"]["precision"],
+              "recall": e["vote"]["recall"]} for e in curve])
+        if crossing == NO_CROSSING_TEXT and not complete:
+            # A partial run has not swept the range, so it cannot say the
+            # range contains no crossing. Reporting the literal string here
+            # would be a claim the measurement does not support.
+            crossing = ("incomplete sweep: only %d of %d frozen magnitudes "
+                        "measured" % (len(curve), len(NOISE_MAGNITUDES[family])))
+        families_block[family] = {
+            "magnitudes_frozen": list(NOISE_MAGNITUDES[family]),
+            "magnitudes_measured": [e["magnitude"] for e in curve],
+            "curve": [{"magnitude": e["magnitude"],
+                       "precision": e["vote"]["precision"],
+                       "recall": e["vote"]["recall"],
+                       "tp": e["vote"]["tp"], "fp": e["vote"]["fp"],
+                       "fn": e["vote"]["fn"],
+                       "selection_empty": e["selection_empty"],
+                       "clears_standing_gate": e["clears_standing_gate"]}
+                      for e in curve],
+            "degradation_point": crossing,
+            "degradation_point_rule": (
+                "the SMALLEST magnitude at which (P >= %.2f AND R >= %.2f) no "
+                "longer holds; %r when the family never crosses inside its "
+                "frozen range, which v4 §5 forbids extending"
+                % (VOTE_REFERENCE["precision"], VOTE_REFERENCE["recall"],
+                   NO_CROSSING_TEXT)),
+            "complete": complete,
+        }
+
+    shuffle_key = (None if args.shuffle_cameras is None
+                   else point_key_text(SHUFFLE_FAMILY, int(args.shuffle_cameras)))
+    v4_block = {
+        "spec": V4_SPEC_PAGE,
+        "evidence_bearing": False,
+        "extends": "membership-supervisability-v2 (the v3 measurement)",
+        "labelling": (
+            "every point still uses ORACLE ray-traced masks, degraded "
+            "SYNTHETICALLY. v4 §5 forbids describing any of it as performance "
+            "under real masks, and forbids claiming it transfers off LRV3."),
+        "tolerance_redeclaration": TOLERANCE_REDECLARATION,
+        "declared_seeds": {
+            "shuffle_seed_declared_in_spec": SHUFFLE_SEED_DECLARED,
+            "shuffle_seed_used": args.shuffle_cameras,
+            "noise_seed_declared": NOISE_SEED_DECLARED,
+            "noise_seed_used": int(args.noise_seed),
+        },
+        "measured_points": list(point_keys),
+        "n_measured_points": len(point_keys),
+        "clean_reference_measured_here": {
+            "precision": event_vote["precision"],
+            "recall": event_vote["recall"],
+            "tp": event_vote["tp"], "fp": event_vote["fp"],
+            "fn": event_vote["fn"],
+            "n_truth_positive": event_vote["n_truth_positive"],
+        },
+        "v3_recorded_reference": V3_RECORDED_REFERENCE,
+        "shuffle": (None if shuffle_key is None else by_point[shuffle_key]),
+        "N3_derangement": (
+            {"check": "N3_derangement", "applies": False,
+             "reason": "C-SHUFFLE was not requested", "passed": True}
+            if table.shuffle_map is None else
+            {"check": "N3_derangement",
+             "applies": True,
+             "seed": int(args.shuffle_cameras),
+             "permutation": {str(k): int(v)
+                             for k, v in sorted(table.shuffle_map.items())},
+             "n_cameras": len(table.shuffle_map),
+             "n_fixed_points": sum(1 for k, v in table.shuffle_map.items()
+                                   if int(k) == int(v)),
+             "asserted": bool(assert_derangement(table.shuffle_map)),
+             "passed": True}),
+        "noise_sweep": {
+            "reading": ("a SENSITIVITY CURVE, not a gate: v4 §3 attaches no "
+                        "pass/fail threshold to any single point"),
+            "families": families_block,
+            "degradation_points": {
+                family: block["degradation_point"]
+                for family, block in sorted(families_block.items())},
+            "missing_cameras_axis_note": (
+                "the axis is missing CAMERAS, never missing frames: the 960 "
+                "buffers carry only 32 distinct images (2 per camera), so "
+                "dropping frames within a camera drops duplicates and a "
+                "missing-frame robustness claim from this fixture would be "
+                "vacuous (v4 §3)"),
+            "missing_cameras_implementation": (
+                "applied at the MASK level -- the dropped camera's segmenter "
+                "returned no object, and its object pixels take the nearest "
+                "non-object class. The view is NOT removed, so w_total and "
+                "the render pass stay identical to the clean reference and "
+                "the two points remain comparable."),
+            "erosion_dilation_implementation": (
+                "k iterations of 4-connectivity binary erosion/dilation, i.e. "
+                "an L1 ball of radius k. Off-image is background; on this "
+                "fixture the object touches no image border, so the "
+                "alternative convention changes nothing."),
+        },
+        "cost": {
+            "n_forward_passes": len(views),
+            "n_backward_passes_flow": measured["n_backward_passes"],
+            "n_distinct_class_masks_backpropagated":
+                measured["n_distinct_class_masks"],
+            "n_backward_passes_if_not_deduplicated":
+                len(views) * (1 + len(point_keys) * len(class_ids)),
+            "reuse_note": (
+                "one render pass and ONE w_total serve every point: the "
+                "perturbations move the supervision buffer only, never the "
+                "geometry, and w_total comes from g = 1 and is "
+                "mask-independent. Backward passes are further deduplicated "
+                "by class-mask content digest."),
+        },
+        "failures": v4_failures,
+        "points": v4_points,
+    }
+
+    report_v4_key = "v4_mask_noise_and_shuffle"
 
     report = {
         "schema": SCHEMA,
@@ -2599,7 +3949,19 @@ def main(argv=None):
         },
         "consistency": {
             "mask_partition_max_rel_deviation": measured["max_partition_rel_deviation"],
-            "mask_partition_tolerance": 1e-6,
+            "mask_partition_tolerance": P10_TOLERANCE,
+            "mask_partition_tolerance_v3": P10_TOLERANCE_V3,
+            "backward_repeat_tolerance_absolute": P11_TOLERANCE,
+            "backward_repeat_rule_v3": P11_RULE_V3,
+            "backward_repeat_bitwise_identical": repeat_bitwise,
+            "P11_evaluated_as": (
+                "max_abs_difference <= %g absolute (v4 §4). The precondition "
+                "block's field is still NAMED "
+                "backward_repeat_bitwise_identical for schema stability and "
+                "now carries the TOLERANCE result; the true bitwise outcome "
+                "is the backward_repeat_bitwise_identical key here and the "
+                "per-view bitwise_identical flags below." % P11_TOLERANCE),
+            "tolerance_redeclaration": TOLERANCE_REDECLARATION,
             "backward_repeat_checks": measured["repeat_checks"],
             "dc_vs_flow_consistency": {
                 "expression": "|grad_sh_dynamic[:, 0, :]|.sum() / (3 * SH_C0 * w_total)",
@@ -2610,6 +3972,7 @@ def main(argv=None):
             },
             "clamp_exposure": clamp_exposure_block(gaussians),
         },
+        report_v4_key: v4_block,
         "views": {"n_views": len(views), "per_view": measured["per_view"]},
         "notes": {
             "bounds": ("answer 1 bounds RECALL only; answer 2 measures the "
@@ -2622,10 +3985,26 @@ def main(argv=None):
     with open(args.out_report, "w", encoding="utf-8") as handle:
         json.dump(report, handle, indent=1, sort_keys=True)
 
-    if failures:
+    if failures or v4_failures:
         raise PreconditionError(
             "FROZEN PRECONDITIONS FAILED: %s. No answer is reported. Detail "
-            "written to %s" % (", ".join(failures), args.out_report))
+            "written to %s"
+            % (", ".join(list(failures) + list(v4_failures)), args.out_report))
+
+    for entry in v4_points:
+        if entry["is_clean_reference"]:
+            continue
+        print("v4 %-22s P %s R %s %s"
+              % (entry["point"],
+                 ("None " if entry["vote"]["precision"] is None
+                  else "%.4f" % entry["vote"]["precision"]),
+                 ("None " if entry["vote"]["recall"] is None
+                  else "%.4f" % entry["vote"]["recall"]),
+                 "EMPTY SELECTION" if entry["selection_empty"] else ""))
+    if families_block:
+        print("v4 degradation points: %s" % json.dumps(
+            {f: b["degradation_point"] for f, b in sorted(families_block.items())},
+            sort_keys=True))
 
     print(json.dumps({
         "cloud_fingerprint": fingerprint,
@@ -2649,6 +4028,17 @@ def main(argv=None):
         "named_cells_420_429_ceiling": named_union_block["ceiling"][
             "strict_positive"]["achievable_recall_ceiling"],
         "grid_source": grid_provenance["grid_source"],
+        "v4_measured_points": list(point_keys),
+        "v4_degradation_points": {
+            family: block["degradation_point"]
+            for family, block in sorted(families_block.items())},
+        "v4_shuffle_outcome": (None if shuffle_key is None
+                               else by_point[shuffle_key]["outcome"]),
+        "v4_shuffle_precision": (None if shuffle_key is None
+                                 else by_point[shuffle_key]["vote"]["precision"]),
+        "v4_shuffle_selection_empty": (
+            None if shuffle_key is None
+            else by_point[shuffle_key]["selection_empty"]),
         "out_report": str(args.out_report),
     }, indent=1, sort_keys=True))
     return 0
