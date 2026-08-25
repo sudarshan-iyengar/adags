@@ -192,3 +192,102 @@ re-impose co-location, polarity ordering, or the shared-camera intersection.
 To describe the two ground-truth events as an exhaustive event list — they
 were found by eye by one auditor over a partial sweep, and **more events
 almost certainly exist**, particularly in the unexamined span f900-f4800.
+
+---
+
+## IMPLEMENTATION CRITIQUE (2026-08-25, append-only) — six defects in THIS spec, found while implementing it
+
+The implementer was instructed to implement the spec as frozen and to report
+disagreements rather than act on them. It did. All six are accepted by the
+primary; none was acted on during implementation.
+
+### C1 (MATERIAL) — the §3 absolute floor is very nearly redundant, for the reason §3 gave as its justification
+
+`detect_changepoints` accepts when `max(amplitude, excess) >= floor`, and the
+relative gate already requires `excess > k_mad * 1.4826 * MAD_thistile`.
+Setting **`F = k_mad = 3.0`** therefore makes the floor bind **only** on tiles
+whose own MAD is *below* the pooled median — i.e. **on exactly the quiet tiles
+this redesign exists to hear.**
+
+Measured on the implementer's end-to-end fixture: floor **0.0093** grey levels
+while every accepted candidate sat at **6.7**. The floor did no work.
+
+**This is v1's inert-floor defect in a new costume**, and §3's own sentence —
+*"so the two gates express the same strictness in different denominators"* —
+is precisely **why the second gate cannot add independent information.**
+
+It fails **OPEN** (toward more candidates), and §4's spatial-coherence gate
+carries the false-positive load, so it is not unsafe. **But it may not be
+described as a second independent screen, and §3's justification is
+withdrawn.**
+
+### C2 (MATERIAL) — the F sweep is NOT a sensitivity ladder, because candidate count is not monotone in F
+
+Raising `F` thins the firing set, which can move a proxy sample from
+*rejected* (>= 48 tiles firing, §4's cap) to *accepted*. **A higher floor can
+therefore yield MORE candidates.** §3 presents the sweep as if it were
+monotone. It is not, and any reading of it must not assume ordering.
+
+### C3 (MATERIAL) — §3's pooled median has no guard against degenerate windows
+
+A window holding only **2 proxy samples** gives every tile a MAD of
+**identically zero** — with `T = 2` the per-pixel median is the mean, so
+`|I_t - median|` is equal at both samples. Those zeros enter the pooled median
+and **drag the floor down**.
+
+Measured: on a 12-frame fixture, **12 of 24 tile series were exactly zero for
+this reason.**
+
+It does **not** bite `scene6_puppy` (594 proxy samples, ~20 windows of ~30),
+but **the rule as frozen would silently produce a near-zero floor on a
+differently-sized take.** Now visible rather than silent: the manifest carries
+`n_zero_scale_tile_series` and `floor_is_degenerate_zero`.
+
+### C4 (MINOR) — §7's P1-REL is unsatisfiable as literally worded
+
+It specifies *"one quiet injected target"*, while §4 requires a **>= 3-tile
+face-adjacent component**. A single-tile target can therefore never produce an
+accepted candidate. The implemented fixture spans three adjacent tiles.
+**The spec's own precondition contradicted the spec's own acceptance rule.**
+
+### C5 (MINOR) — polarity is undefined for a mixed-polarity component
+
+§4 and §5 do not say what polarity a component carries when its tiles
+disagree, while `cluster_candidates` still clusters per polarity. Implemented
+as the **majority with a deterministic tie-break toward `rise`**, emitting
+`n_tiles_rise`, `n_tiles_fall` and `polarity_is_tied` so nothing is hidden.
+
+### C6 (MINOR) — §8 says "rank by mean amplitude" without defining a per-camera amplitude
+
+Implemented as the **mean over the component's own tiles**, also emitting
+`max_tile_amplitude`. **Consequence to note:** if the audit's 28.455 / 15.786
+came from a different per-camera reduction, the new ranks will not reproduce
+those numbers exactly, and the two must not be tabled against each other
+without saying so.
+
+### AND ONE DEFECT OUTSIDE THIS SPEC, found in passing
+
+`scripts/imvid_build_gallery.py` ranks by `n_cameras_supporting` and reads
+`window["tile_explanations"]`, neither of which exists in a per-tile census.
+Because it uses `.get()` throughout, **nothing crashes — it degrades
+silently**, producing exactly the ordering §8 forbids with no spatial overlay.
+**Silent degradation is the defect; a crash would have been safer.** Repaired
+separately, with schema mismatch made to fail loudly.
+
+### STATUS OF P2-RECALL — THE LOAD-BEARING PRECONDITION IS NOT YET SATISFIED
+
+§7's **P2-RECALL was NOT RUN** and is recorded as not run, not omitted. The
+implementer had no proxy frames and no cluster access, so **it is not yet
+confirmed that the per-tile detector recovers Event A or Event B at the
+audited frames, nor that it is silent through the absences.**
+
+P1-REL is a **synthetic reconstruction** of the cam12 failure mode, not the
+real footage. It shows the max-reduction threshold **29.8134** exceeding its
+own signal maximum **21.5227** (0 candidates) while the per-tile target tile
+sits at threshold **0.7601** against a plateau of **7.5449** (detected), with
+the distractor tile's gate at **36.1910 — 47.6x** the target's. That is the
+audited signature reproduced, and it is *evidence about the mechanism*, not
+evidence about the take.
+
+**No per-tile census result may be read as a recall claim until P2-RECALL is
+evaluated against the two ground-truth events by the primary.**
