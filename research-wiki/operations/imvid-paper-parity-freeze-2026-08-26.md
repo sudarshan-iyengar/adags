@@ -440,3 +440,38 @@ extraction now takes ~10 min per scene). **PNG is lossless at every level, so
 the decoded pixels are bit-identical** — only encode time and file size
 moved. Under §8 this is search/preprocessing machinery and was free to
 change.
+
+## AMENDMENT 2 (append-only, 2026-08-26, BEFORE any triangulation timing is known)
+
+### A2.1 The framewise-coverage fallback, declared before it is needed
+
+The preferred initializer is **all 300 frames** triangulated at the
+undistorted 2656x1494 raster, as §6 states. Per-frame COLMAP cost on this
+raster has NOT been measured (the probe was killed while contending with two
+extractions), so the rule for what happens if 300 does not fit is written
+here, before any timing exists, rather than chosen afterwards:
+
+1. **Preferred:** every frame, `0..299`, `max_image_size 2656`.
+2. **If that cannot complete within the block:** a uniform stride over the
+   same window, `frames = range(0, 300, s)` with `s` the SMALLEST integer that
+   fits. Not a hand-picked subset, and not the frames that happen to
+   triangulate fastest.
+3. The stride is **identical for both scenes and for both arms**, so it is a
+   shared property of the candidate geometry and cannot move NF relative to
+   FG. What it weakens is the absolute description of the initializer
+   ("300 framewise" becomes "N framewise"), which is then reported as N.
+4. Whichever branch is taken is recorded with the measured per-frame cost that
+   selected it.
+
+Model performance plays no part in this choice and cannot: the geometry is
+built before any arm trains.
+
+### A2.2 Preprocessing throughput changes, recorded, not claim-bearing
+
+The undistortion pass measured **0.35 images/s** single-threaded on the real
+data — 9.3 h for one 11,700-image window, over eighteen for the two scenes.
+It was parallelised with threads to a measured **2.12 images/s (~92 min per
+window)**. Each image is independent, reads read-only maps and writes a unique
+destination, so **the bytes produced do not depend on the worker count** —
+only the wall clock does. Under §8 this is preprocessing machinery and was
+free to change; it is recorded because the measurement is worth keeping.
