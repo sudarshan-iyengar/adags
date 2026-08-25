@@ -119,6 +119,7 @@ ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
     "scripts/consolidate_packets.py",
     "scripts/falsify_b2_edit.py",
     "scripts/payload_headroom.py",
+    "scripts/membership_supervisability.py",
 )
 
 #: The one shared, mutable, historical worktree path. No evidence-bearing
