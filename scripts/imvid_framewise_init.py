@@ -159,7 +159,13 @@ def run_one_frame(job: dict) -> dict:
     ply = _collect_points(work / "out", frame, job["time_of_frame"], Path(job["out_root"]))
     record.update(ply)
     if job.get("cleanup", True):
-        shutil.rmtree(images_dir, ignore_errors=True)
+        # The WHOLE per-frame workdir goes, not just the staged images. Each
+        # frame leaves ~76 MB of copied images plus a COLMAP database and two
+        # models; across 300 frames that is tens of GB in a container's /tmp,
+        # and the run would die of a full filesystem somewhere in the middle
+        # with every completed frame still valid but the job failed. The
+        # points have already been written to shared storage above.
+        shutil.rmtree(work, ignore_errors=True)
     return record
 
 
