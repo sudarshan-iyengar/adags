@@ -958,3 +958,41 @@ assumed from the schedule.
 
 3 cells, ~0.9 slot-h projected. Cheap, and the methodological finding is
 worth more than the measurement would have been.
+
+---
+
+## OPEN CONTRADICTION RECORDED (2026-08-25, append-only) — the hardware reservation and actual practice disagree
+
+This section records a CONFLICT. It does not resolve it, and it changes
+no frozen rule.
+
+The "Hardware" section of this page freezes:
+
+> DGX/V100 is NOT used for this lane. Hopper/H100 is reserved for it, and
+> the whole ImViD comparison stays on one hardware class.
+
+**Every ImViD cell actually executed has run on `dgx` with the V100 image:**
+experiments 155, 156, 158-160, 164 (sparse init and union rebuild),
+270/271/272 (the reprojection gate), 277 (Blender conversion), 279-281
+(the 500-iteration smoke and its replicates) and 282-284 (the 600-iteration
+probe). Verified live 2026-08-25 against `det e list`, where all of these
+read `dgx`.
+
+The 2026-08-25 block directive independently assigns **`dgx` V100 to ImViD**
+reconstruction and training comparisons, and `hopper` H100 to membership
+diagnostic cells.
+
+**So the freeze is contradicted by both practice and the current directive,
+and it has never been amended.** Recorded now, before any ImViD training
+cell of this block is submitted, so that the choice is made deliberately
+rather than inherited by accident.
+
+**What is NOT in dispute, and remains binding either way:** the second half
+of the frozen sentence — *the whole ImViD comparison stays on one hardware
+class*. An authored-control ceiling pair whose two arms straddle `hopper`
+and `dgx` is invalid regardless of which pool is chosen, because the
+comparison would confound the mechanism with the hardware. Any resolution
+must preserve that.
+
+**Not resolved here** because no ImViD training cell is authorized at the
+time of writing. It must be resolved, and recorded, before one is.

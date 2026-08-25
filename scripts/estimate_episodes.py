@@ -211,6 +211,12 @@ def is_forbidden_path(path):
     low = _normalise(path)
     if "gt_identity" in low:
         return True
+    #  `train_identity/` holds ORACLE ray-traced front-most identity buffers for
+    #  the TRAINING cameras (scripts/emit_training_identity.py). It is oracle
+    #  content exactly like `gt_identity/`, differing only in which cameras it
+    #  covers, so an oracle-blind estimator must never open it either.
+    if "train_identity" in low:
+        return True
     if low.endswith("event_spec.json"):
         return True
     if re.search(r"(^|/)oracle_[^/]*\.json$", low):
