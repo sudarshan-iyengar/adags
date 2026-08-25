@@ -1106,7 +1106,17 @@ class GaussianModel:
 
         if self.gaussian_dim == 4:
             # dist_t = torch.clamp_min(distCUDA2(fused_times.repeat(1,3)), 1e-10)[...,None]
-            dist_t = torch.zeros_like(fused_times, device="cuda") + (self.time_duration[1] - self.time_duration[0]) / 5
+            if getattr(pcd, "t_extent", None) is None:
+                dist_t = torch.zeros_like(fused_times, device="cuda") + (self.time_duration[1] - self.time_duration[0]) / 5
+            else:
+                # pcd.t_extent is a per-point temporal STANDARD DEVIATION in
+                # seconds. get_scaling_t = exp(_scaling_t) = sqrt(dist_t), and
+                # get_cov_t consumes that as a VARIANCE (:946-958), so the
+                # standard deviation is dist_t ** 0.25 and the inverse is
+                # dist_t = std ** 4. Getting this wrong is silent: a wrong
+                # exponent still trains, just with the wrong support width.
+                dist_t = torch.from_numpy(np.asarray(pcd.t_extent)).cuda().float().pow(4)
+                dist_t = torch.clamp_min(dist_t, 1e-10).reshape(fused_times.shape)
             scales_t = torch.log(torch.sqrt(dist_t))
             if self.rot_4d:
                 rots_r = torch.zeros((fused_point_cloud.shape[0], 4), device="cuda")

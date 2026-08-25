@@ -19,6 +19,10 @@ class BasicPointCloud(NamedTuple):
     colors : np.array
     normals : np.array
     time : np.array = None
+    # Optional per-point temporal STANDARD DEVIATION, in seconds. Defaults to
+    # None, in which case create_from_pcd keeps its uniform initialization, so
+    # every existing caller and every existing cloud is unaffected.
+    t_extent : np.array = None
 
 def geom_transform_points(points, transf_matrix):
     P, _ = points.shape

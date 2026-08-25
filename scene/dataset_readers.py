@@ -138,7 +138,15 @@ def fetchPly(path):
         timestamp = vertices['time'][:, None]
     else:
         timestamp = None
-    return BasicPointCloud(points=positions, colors=colors, normals=normals, time=timestamp)
+    # Optional per-point temporal standard deviation, in seconds. Absent from
+    # every cloud written before the ImViD paper-parity lane, so the None
+    # branch is the historical behaviour.
+    if 't_extent' in vertices:
+        t_extent = vertices['t_extent'][:, None]
+    else:
+        t_extent = None
+    return BasicPointCloud(points=positions, colors=colors, normals=normals, time=timestamp,
+                           t_extent=t_extent)
 
 def storePly(path, xyz, rgb):
     # Define the dtype for the structured array
