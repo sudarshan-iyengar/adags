@@ -61,6 +61,67 @@ RUN python -m pip install --no-cache-dir --no-build-isolation /opt/adags/extensi
 
 RUN python -m pip install --no-cache-dir "determined==0.38.0"
 
+# --- ImViD paper-parity lane: SEA-RAFT optical flow ----------------------
+# Added for the ImViD Opera/Puppy flow-guided initialization arm (FG).
+# Three things are required and none of them are optional:
+#
+#  1. h5py and huggingface_hub. SEA-RAFT's requirements.txt omits BOTH of
+#     its hard imports: core/raft.py does `from huggingface_hub import
+#     PyTorchModelHubMixin` at module top level (RAFT inherits from it), so
+#     the import fails before any checkpoint is touched, local or not.
+#     h5py is imported by core/datasets.py and core/utils/frame_utils.py.
+#     einops/matplotlib/tensorboard ARE in its requirements.txt and are
+#     imported nowhere -- they are deliberately not installed.
+#
+#  2. The SEA-RAFT source, pinned by COMMIT. The shared checkout at
+#     /apollo/users/sri/proj_adags/repo/SEA-RAFT is a mutable path that
+#     carries untracked user files; evidence-bearing preprocessing may not
+#     execute from it. This clone is the execution source, and it becomes
+#     immutable once the image digest is resolved.
+#
+#  3. A pre-seeded torchvision ResNet-34. RAFT.__init__ -> ResNetFPN
+#     _init_weights calls resnet34(weights=IMAGENET1K_V1) UNCONDITIONALLY,
+#     at construction, BEFORE the flow checkpoint is loaded. Left alone it
+#     reaches the network on every task start; those weights are then
+#     overwritten by the checkpoint, so the download changes nothing about
+#     the result and is pure runtime fragility.
+#
+# The flow CHECKPOINT is deliberately NOT baked: it stays on /apollo and is
+# verified by sha256 at runtime, so the bits in use are recorded per run
+# rather than hidden inside a layer.
+ARG SEARAFT_COMMIT=886fb094fe21d4fa5ff675da18362b27b023ccc3
+ENV ADAGS_SEARAFT_ROOT=/opt/adags/searaft \
+    ADAGS_TORCH_HOME=/opt/adags/torchhub
+
+RUN python -m pip install --no-cache-dir \
+      "h5py==3.11.0" \
+      "huggingface-hub==0.24.6"
+
+RUN git clone --filter=blob:none https://github.com/princeton-vl/SEA-RAFT.git ${ADAGS_SEARAFT_ROOT} \
+    && git -C ${ADAGS_SEARAFT_ROOT} checkout --detach ${SEARAFT_COMMIT} \
+    && test "$(git -C ${ADAGS_SEARAFT_ROOT} rev-parse HEAD)" = "${SEARAFT_COMMIT}" \
+    && rm -rf ${ADAGS_SEARAFT_ROOT}/.git
+
+# Seed ResNet-34 into a DEDICATED hub root. TORCH_HOME is deliberately NOT
+# exported as a container-wide ENV: utils/mesh_utils.py sets TORCH_HOME to
+# <model_path>/.torchhub when it is unset, and hijacking that would move
+# where the LPIPS/AlexNet weights land for every training and evaluation
+# run in the repository. Only the flow entrypoint opts in, by exporting
+# TORCH_HOME=$ADAGS_TORCH_HOME for its own process.
+COPY scripts/imvid_searaft_seed.py /opt/adags/imvid_searaft_seed.py
+RUN mkdir -p ${ADAGS_TORCH_HOME} \
+    && TORCH_HOME=${ADAGS_TORCH_HOME} python /opt/adags/imvid_searaft_seed.py --seed-only
+
+# Build-time proof that the flow stack imports and CONSTRUCTS with no
+# network. A successful `pip install` is not evidence that RAFT can be
+# instantiated -- the ResNet download above is exactly the step that would
+# fail first, so it is exercised here behind a poisoned proxy.
+RUN TORCH_HOME=${ADAGS_TORCH_HOME} \
+      http_proxy=http://127.0.0.1:9 https_proxy=http://127.0.0.1:9 \
+      HF_HUB_OFFLINE=1 \
+      python /opt/adags/imvid_searaft_seed.py --build-check
+
+
 COPY scripts/validate_apollo_runtime.py /opt/adags/validate_apollo_runtime.py
 RUN python /opt/adags/validate_apollo_runtime.py --build-check
 
