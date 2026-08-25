@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Turn an ImViD event CENSUS into a self-contained HTML REVIEW GALLERY.
 
-The census produced by ``scripts/imvid_event_proxy.py --mode census
---tile-mode`` is a JSON manifest. A human cannot curate events by reading
+The census produced by ``scripts/imvid_event_proxy.py --mode census`` is a
+JSON manifest, in one of THREE detection schemas -- ``--per-tile-mode``
+(v2, the current one), ``--tile-mode`` (v1, max-over-tiles, superseded) and
+plain whole-frame. This script DETECTS which one it was handed and RENDERS
+THAT ONE; it refuses anything it does not recognize rather than falling back
+(see ``detect_census_mode``). A human cannot curate events by reading
 JSON: the N3V precedent on this project
 ([[operations/crb300-event-mask-curation-2026-08-23]]) is that automated
 candidates were accepted or rejected only at FRAME-BY-FRAME VISUAL
@@ -38,6 +42,25 @@ bound one, and does not assert that anything is present, absent, revealed or
 occluded in any tile. The census's own ``TILE_EXPLANATION_NOTE`` is carried
 verbatim onto the page next to the picture, because a spatial overlay is
 exactly the artefact a reader mistakes for an instance mask.
+
+In PER-TILE mode the overlay is drawn from the FIRING CONNECTED COMPONENT --
+every face-adjacent tile whose own two-gate detector crossed at that proxy
+sample -- and never from a single argmax tile, because in that schema no
+argmax exists: the detector ran independently on each tile and the component
+IS the candidate.
+
+--------------------------------------------------------------------
+RANKING: MEAN AMPLITUDE, NEVER CAMERA SUPPORT (per-tile mode)
+--------------------------------------------------------------------
+
+[[operations/imvid-tile-scout-v2-per-tile-2026-08-25]] §8 measured the
+inversion: ranked by amplitude the two audited real events sit at 3/76 and
+17/76; ranked by ``n_cameras_supporting`` the two promoted clusters were
+54/76 and 60/76 -- the two WEAKEST-amplitude clusters in the set. Only
+~15 of 39 cameras see the subject at all, so camera count measures how
+GLOBAL a change is, which is the opposite of the target property. ``C_min``
+is a corroboration floor, never a sort key. The camera count is still shown
+on every card because it is informative; it orders nothing.
 
 --------------------------------------------------------------------
 TIMESTAMPS COME FROM THE RATIONAL RATE, NEVER FROM AN ASSUMED FPS
@@ -140,7 +163,104 @@ OVERLAY_CAVEAT = (
     "identifies an object."
 )
 
+PER_TILE_OVERLAY_HEADING = (
+    "SPATIAL EXPLANATION OF THE DETECTOR SIGNAL — THE FIRING COMPONENT, "
+    "NOT AN INSTANCE MASK, NOT PROOF OF IDENTITY"
+)
+
+PER_TILE_OVERLAY_CAVEAT = (
+    "This overlay is not an instance mask. It shows the FACE-ADJACENT "
+    "CONNECTED COMPONENT of tiles whose OWN per-tile detector crossed its OWN "
+    "median + k_mad*MAD threshold at this proxy sample, which is what the "
+    "per-tile census screened. The boxes are TILE EXTENTS, not object "
+    "extents, and the component bounding box bounds TILES, not an object. A "
+    "tile fired because its pixels departed from this window's own per-pixel "
+    "temporal median, which a moving object, a moving occluder, a shadow, a "
+    "lighting change and compression noise all produce equally. Nothing in "
+    "this picture identifies an object."
+)
+
+#: Census detection schemas this gallery understands. Anything else is
+#: REFUSED: a gallery that silently rendered an unrecognized schema would
+#: produce a ranking and an overlay that no spec authorizes.
+MODE_PER_TILE = "per_tile"
+MODE_TILE = "tile"
+MODE_WHOLE_FRAME = "whole_frame"
+
+#: ``signal_used_for_detection`` -> mode. The census WRITES this string on
+#: every cluster it emits from a tile-derived reduction, so it is the
+#: cheapest available cross-check that the pass block and the clusters agree.
+SIGNAL_TO_MODE = {
+    "per_tile_template_dist": MODE_PER_TILE,
+    "tile_max": MODE_TILE,
+}
+
+#: The per-cluster fields a PER-TILE census emits. Every one is load-bearing
+#: for the overlay or for the card, and every one is read WITHOUT a default.
+PER_TILE_CLUSTER_FIELDS = (
+    "per_camera_component_size_tiles",
+    "per_camera_n_tiles_firing_at_sample",
+    "per_camera_component_tiles_row_col",
+    "per_camera_firing_tiles_row_col",
+    "per_camera_per_tile_amplitude",
+    "per_camera_tile_pixel_boxes_xyxy",
+    "per_camera_component_pixel_bbox_xyxy",
+)
+
+#: The ``per_tile_pass`` sub-fields the index page reports as provenance.
+PER_TILE_FLOOR_FIELDS = (
+    "F",
+    "floor_grey_levels",
+    "noise_scale_median_grey_levels",
+    "n_tile_series",
+    "n_zero_scale_tile_series",
+    "floor_is_degenerate_zero",
+)
+
 CLASS_CHOICES = ("A", "B", "C", "reject")
+
+#: THE FROZEN CLASS DEFINITIONS. These are NOT "the reviewer's own tiers":
+#: they are fixed by [[operations/imvid-event-definition-2026-08-24]] §3, and
+#: only class A is an event.
+CLASS_DEFINITIONS = (
+    ("A", "genuine scene ABSENCE — the object has LEFT THE REPRESENTED "
+          "VOLUME. Requires POSITIVE multi-view evidence that the volume the "
+          "object occupied is observed FREE for the duration of the gap. "
+          "FAILURE TO FIND AN OCCLUDER IS NOT EVIDENCE — that residual "
+          "inference is exactly what produced 0-of-597 on DiVa-360."),
+    ("B", "ordinary OCCLUSION — the object is still present but hidden from "
+          "the applicable cameras. A class-B candidate is not worthless; it "
+          "is recorded AS class B and may not be reported under a heading "
+          "that implies absence."),
+    ("C", "RIG- or CAMERA-INDUCED — the object left the frustum, the camera "
+          "moved, exposure / white balance changed, or the applicable camera "
+          "set itself changed."),
+    ("reject", "not a real scene change."),
+)
+
+CLASS_FRAME_NOTE = (
+    "A ball thrown out of ONE camera's frame is C for that camera; it is A "
+    "only if it left the volume observed by the APPLICABLE CAMERA SET. "
+    "Frozen in imvid-event-definition-2026-08-24 §3 — these definitions are "
+    "not this tool's, and this tool neither ranks nor acts on them."
+)
+
+CLASS_LEGEND_TITLE = "THE A / B / C CLASSES ARE FROZEN, NOT THIS TOOL'S"
+
+RANKING_NOTE_PER_TILE = (
+    "RANKED BY MEAN AMPLITUDE, DESCENDING. Camera count is RETIRED as the "
+    "primary order by imvid-tile-scout-v2-per-tile-2026-08-25 §8 and is shown "
+    "on every card for information only: C_min is a corroboration floor, "
+    "never a sort key. Ranked by camera support the two audited real events "
+    "sat at 54/76 and 60/76 — the two WEAKEST-amplitude clusters in the set."
+)
+
+RANKING_NOTE_LEGACY = (
+    "Ranked by supporting-camera count, then amplitude, then time — the "
+    "order this census schema itself printed. This is the SUPERSEDED v1 "
+    "ordering and it is used here only because this manifest is a v1 "
+    "manifest."
+)
 
 #: Column offsets, in PROXY STEPS, sampled around the cluster anchor frame.
 DEFAULT_CONTEXT_STEPS = 3
@@ -265,6 +385,159 @@ def load_census(path: Path) -> dict:
     return report
 
 
+def _refuse(found: str, expected: str) -> ContractError:
+    """One refusal shape: what was FOUND, and what was EXPECTED instead.
+
+    Every load-bearing schema field in this module is read through a refusal
+    like this rather than through ``.get(..., default)``. The gallery's
+    original per-tile defect was not a crash: it read ``n_cameras_supporting``
+    and ``tile_explanations`` off a per-tile manifest with ``.get()``, found
+    neither, and DEGRADED SILENTLY into exactly the ranking §8 forbids with no
+    overlay at all. A crash would have been better, so this is the crash.
+    """
+    return ContractError(
+        f"REFUSED. FOUND: {found}. EXPECTED: {expected}. This gallery renders "
+        "the schema it was handed and refuses the rest; it does not fall back, "
+        "because a silent fallback is how a forbidden ranking gets published.")
+
+
+def _declared_cluster_modes(census: dict) -> set:
+    """The detection mode every cluster in the census DECLARES for itself."""
+    modes = set()
+    for window in census.get("windows") or []:
+        for cluster in window.get("candidate_clusters") or []:
+            if "signal_used_for_detection" not in cluster:
+                modes.add(MODE_WHOLE_FRAME)
+                continue
+            signal = cluster["signal_used_for_detection"]
+            if signal not in SIGNAL_TO_MODE:
+                raise _refuse(
+                    f"a cluster whose signal_used_for_detection is "
+                    f"{signal!r}, which this gallery has never seen",
+                    f"one of {sorted(SIGNAL_TO_MODE)} or the field to be "
+                    f"absent (whole-frame census)")
+            modes.add(SIGNAL_TO_MODE[signal])
+    return modes
+
+
+def detect_census_mode(census: dict) -> str:
+    """Which detection schema this manifest is, or a REFUSAL.
+
+    Three schemas exist and they are not interchangeable:
+
+    ``per_tile``
+        ``--per-tile-mode``. ``per_tile_pass`` is present; each window carries
+        ``per_tile_candidates``; each cluster carries the firing COMPONENT per
+        supporting camera. Ranked by MEAN AMPLITUDE
+        ([[operations/imvid-tile-scout-v2-per-tile-2026-08-25]] §8).
+    ``tile``
+        ``--tile-mode``, the SUPERSEDED max-over-tiles reduction.
+        ``tile_pass`` is present and each window carries ``tile_explanations``.
+    ``whole_frame``
+        neither pass ran; detection was on whole-frame means and there is no
+        spatial explanation to draw.
+
+    The declared pass block and the clusters' own
+    ``signal_used_for_detection`` must AGREE. A manifest where they disagree
+    is refused, not reconciled.
+    """
+    if not isinstance(census, dict):
+        raise _refuse(f"a {type(census).__name__}", "a census manifest object")
+    has_tile = bool((census.get("tile_pass") or {}).get("enabled"))
+    has_per_tile = bool((census.get("per_tile_pass") or {}).get("enabled"))
+    if has_tile and has_per_tile:
+        raise _refuse(
+            "BOTH tile_pass.enabled and per_tile_pass.enabled",
+            "exactly one of them — they are two DIFFERENT reductions of the "
+            "same per-tile grid and the census itself refuses to combine them")
+
+    declared = _declared_cluster_modes(census)
+    if has_per_tile:
+        mode = MODE_PER_TILE
+    elif has_tile:
+        mode = MODE_TILE
+    elif "tile_pass" in census or "per_tile_pass" in census:
+        raise _refuse(
+            "a tile_pass / per_tile_pass block that is present but not "
+            "enabled",
+            "either an enabled pass block or no pass block at all")
+    else:
+        mode = MODE_WHOLE_FRAME
+
+    wrong = declared - {mode}
+    if wrong:
+        raise _refuse(
+            f"a {mode!r} manifest whose clusters declare "
+            f"signal_used_for_detection for mode(s) {sorted(wrong)}",
+            f"every cluster to declare the {mode!r} signal, or a manifest "
+            f"whose pass block matches its clusters")
+
+    if mode == MODE_PER_TILE:
+        _validate_per_tile(census)
+    elif mode == MODE_TILE:
+        _validate_tile(census)
+    return mode
+
+
+def _validate_per_tile(census: dict) -> None:
+    """Every field the per-tile view reads, checked BEFORE anything renders."""
+    block = census["per_tile_pass"]
+    for key in ("absolute_floor", "sensitivity_sweep", "spatial_coherence",
+                "ranking", "tile_size_px", "tile_grid", "k_mad",
+                "primary_reading_F"):
+        if key not in block:
+            raise _refuse(
+                f"a per_tile_pass block without {key!r} "
+                f"(it holds {sorted(block)})",
+                f"a per_tile_pass block carrying {key!r}, as "
+                f"imvid_event_proxy.py --per-tile-mode emits it")
+    floor = block["absolute_floor"]
+    for key in PER_TILE_FLOOR_FIELDS:
+        if key not in floor:
+            raise _refuse(
+                f"a per_tile_pass.absolute_floor without {key!r} "
+                f"(it holds {sorted(floor)})",
+                f"the measured floor record, carrying {key!r} — the floor "
+                f"provenance is reported on the index page and may not be "
+                f"guessed")
+    for window in census.get("windows") or []:
+        if "per_tile_candidates" not in window:
+            raise _refuse(
+                f"a per-tile census window {window.get('window_source_frames')} "
+                f"without 'per_tile_candidates'",
+                "each window to carry its per-camera per-tile candidate lists")
+        for cluster in window.get("candidate_clusters") or []:
+            for key in PER_TILE_CLUSTER_FIELDS:
+                if key not in cluster:
+                    raise _refuse(
+                        f"a per-tile cluster at source frame "
+                        f"{cluster.get('source_frame_median')} without {key!r}",
+                        f"every per-tile cluster to carry {key!r}; without it "
+                        f"the firing component cannot be drawn and the "
+                        f"overlay would silently vanish")
+            if "mean_amplitude" not in cluster:
+                raise _refuse(
+                    f"a per-tile cluster at source frame "
+                    f"{cluster.get('source_frame_median')} without "
+                    f"'mean_amplitude'",
+                    "mean_amplitude on every cluster — it is the FROZEN SORT "
+                    "KEY and the gallery will not substitute another")
+
+
+def _validate_tile(census: dict) -> None:
+    """The superseded v1 view still refuses a manifest it cannot render."""
+    for window in census.get("windows") or []:
+        if not (window.get("candidate_clusters") or []):
+            continue
+        if "tile_explanations" not in window:
+            raise _refuse(
+                f"a tile-mode census window "
+                f"{window.get('window_source_frames')} with clusters but "
+                f"without 'tile_explanations'",
+                "each tile-mode window to carry its per-camera tile "
+                "explanations, as --tile-mode emits them")
+
+
 def load_proxy_tree(proxy_root: Path) -> dict:
     """Per-camera manifests plus the available source-frame lattice."""
     if not proxy_root.is_dir():
@@ -306,15 +579,56 @@ def scene_manifest_sha256(proxy_root: Path) -> tuple[str | None, str | None]:
 # Candidate flattening and ranking
 # ---------------------------------------------------------------------------
 
-def flatten_candidates(census: dict) -> list[dict]:
+def _per_tile_rank_key(row: dict) -> tuple:
+    """THE FROZEN PER-TILE ORDER: mean amplitude DESCENDING, then time.
+
+    ``n_cameras_supporting`` DOES NOT APPEAR HERE and may not be added.
+    [[operations/imvid-tile-scout-v2-per-tile-2026-08-25]] §8 measured the
+    inversion that retired it: only ~15 of 39 cameras see the subject at all,
+    so camera count measures how GLOBAL a change is, which is the opposite of
+    the target property. ``mean_amplitude`` is read WITHOUT a default: a
+    cluster that lacks it was already refused by ``_validate_per_tile``, and
+    a ``.get(..., 0.0)`` here would silently sort every such cluster last.
+    """
+    cluster = row["cluster"]
+    return (-float(cluster["mean_amplitude"]),
+            int(cluster.get("source_frame_median", 0)),
+            (row["window_source_frames"] or [0])[0])
+
+
+def _legacy_rank_key(row: dict) -> tuple:
+    """The v1 / whole-frame order: support, then amplitude, then time.
+
+    This repeats what those census schemas printed top-down. It is NOT
+    reachable from a per-tile manifest.
+    """
+    cluster = row["cluster"]
+    return (-int(cluster.get("n_cameras_supporting", 0)),
+            -float(cluster.get("mean_amplitude", 0.0)),
+            int(cluster.get("source_frame_median", 0)),
+            (row["window_source_frames"] or [0])[0])
+
+
+RANK_KEY_BY_MODE = {
+    MODE_PER_TILE: _per_tile_rank_key,
+    MODE_TILE: _legacy_rank_key,
+    MODE_WHOLE_FRAME: _legacy_rank_key,
+}
+
+
+def flatten_candidates(census: dict, mode: str | None = None) -> list[dict]:
     """All clusters from all windows, ranked, tagged with their window.
 
-    Ranking repeats the census's own order (support, then amplitude, then
-    time) so a reviewer reading the gallery top-down sees what the census
-    printed top-down. No threshold is applied here and nothing is filtered:
-    ranking decides ORDER, the caps decide how much fits, and both are
-    reported.
+    Ranking is decided by the DETECTED SCHEMA: a per-tile census ranks by
+    MEAN AMPLITUDE (frozen, §8), every other schema repeats its own printed
+    order. No threshold is applied here and nothing is filtered: ranking
+    decides ORDER, the caps decide how much fits, and both are reported.
     """
+    if mode is None:
+        mode = detect_census_mode(census)
+    if mode not in RANK_KEY_BY_MODE:
+        raise _refuse(f"detection mode {mode!r}",
+                      f"one of {sorted(RANK_KEY_BY_MODE)}")
     rows = []
     for window in census.get("windows", []):
         window_frames = window.get("window_source_frames")
@@ -324,10 +638,7 @@ def flatten_candidates(census: dict) -> list[dict]:
                 "window_source_frames": window_frames,
                 "window": window,
             })
-    rows.sort(key=lambda r: (-int(r["cluster"].get("n_cameras_supporting", 0)),
-                             -float(r["cluster"].get("mean_amplitude", 0.0)),
-                             int(r["cluster"].get("source_frame_median", 0)),
-                             (r["window_source_frames"] or [0])[0]))
+    rows.sort(key=RANK_KEY_BY_MODE[mode])
     for i, row in enumerate(rows, start=1):
         row["candidate_id"] = f"c{i:04d}"
     return rows
@@ -349,23 +660,102 @@ def tile_explanation_for(window: dict, camera: str,
     return None
 
 
-def choose_reference_camera(cluster: dict, window: dict) -> tuple[str, dict | None]:
+def per_tile_explanation_for(window: dict, cluster: dict,
+                             camera: str) -> dict | None:
+    """The FIRING COMPONENT that carried ``camera``'s crossing in this cluster.
+
+    Assembled from the cluster's own per-camera columns -- which the census
+    emits precisely so the component survives clustering -- and enriched, when
+    an exact match exists, with the full per-camera candidate record in
+    ``window["per_tile_candidates"]``. The match is on BOTH the source frame
+    and the component tile set, because a camera can emit several
+    non-adjacent components at the same proxy sample and a frame-only match
+    would silently pick the wrong one.
+
+    Returns ``None`` only when this camera does not support the cluster.
+    Every field it does read is read WITHOUT a default.
+    """
+    frames = cluster["per_camera_source_frame"]
+    if camera not in frames:
+        return None
+    source_frame = int(frames[camera])
+    component = [[int(r), int(c)]
+                 for r, c in cluster["per_camera_component_tiles_row_col"][camera]]
+    boxes = [[int(v) for v in box]
+             for box in cluster["per_camera_tile_pixel_boxes_xyxy"][camera]]
+    if len(boxes) != len(component):
+        raise _refuse(
+            f"{camera} src {source_frame}: {len(boxes)} tile pixel boxes for "
+            f"{len(component)} component tiles",
+            "one pixel box per component tile, in the same order")
+    amplitudes = [float(v)
+                  for v in cluster["per_camera_per_tile_amplitude"][camera]]
+    firing = [[int(r), int(c)]
+              for r, c in cluster["per_camera_firing_tiles_row_col"][camera]]
+    explanation = {
+        "kind": "per_tile_component_explanation",
+        "is_instance_mask": False,
+        "what_this_is": cluster.get("tile_explanation_note",
+                                    proxy.TILE_EXPLANATION_NOTE),
+        "camera": camera,
+        "source_frame": source_frame,
+        "component_tiles_row_col": component,
+        "tile_pixel_boxes_xyxy": boxes,
+        "component_pixel_bbox_xyxy": [
+            int(v) for v in cluster["per_camera_component_pixel_bbox_xyxy"][camera]],
+        "per_tile_amplitude": amplitudes,
+        "firing_tiles_row_col": firing,
+        "component_size_tiles": int(
+            cluster["per_camera_component_size_tiles"][camera]),
+        "n_tiles_firing_at_sample": int(
+            cluster["per_camera_n_tiles_firing_at_sample"][camera]),
+    }
+    wanted = sorted(tuple(rc) for rc in component)
+    for entry in (window["per_tile_candidates"] or {}).get(camera, []) or []:
+        if int(entry.get("source_frame", -1)) != source_frame:
+            continue
+        got = sorted(tuple(int(v) for v in rc)
+                     for rc in entry.get("component_tiles_row_col", []))
+        if got != wanted:
+            continue
+        explanation["detail"] = entry
+        for key in ("n_tiles_in_grid", "n_tiles_rise", "n_tiles_fall",
+                    "polarity_is_tied", "max_tile_amplitude",
+                    "excess_over_median", "per_tile_threshold",
+                    "per_tile_median", "per_tile_mad_scaled",
+                    "per_tile_signal_before", "per_tile_signal_after",
+                    "bracket_source_frames", "proxy_index_in_window"):
+            if key in entry:
+                explanation[key] = entry[key]
+        break
+    return explanation
+
+
+def choose_reference_camera(cluster: dict, window: dict,
+                            mode: str = MODE_TILE) -> tuple[str, dict | None]:
     """The camera whose sheet is rendered at legible resolution.
 
-    Chosen by the LARGEST tile signal among the supporting cameras, because
-    that is the camera on which the detector actually had something to look
-    at; ties break to the camera closest to the cluster's median frame and
-    then alphabetically, so the choice is deterministic and re-derivable.
-    This is a presentation choice, not a scientific one: nothing downstream
-    depends on which camera was picked.
+    Chosen by the LARGEST detector signal among the supporting cameras --
+    the mean over that camera's firing component in per-tile mode, the
+    ``tile_max`` in tile mode -- because that is the camera on which the
+    detector actually had something to look at; ties break to the camera
+    closest to the cluster's median frame and then alphabetically, so the
+    choice is deterministic and re-derivable. This is a presentation choice,
+    not a scientific one: nothing downstream depends on which camera was
+    picked, and in particular it is not a ranking.
     """
     per_camera = cluster.get("per_camera_source_frame", {})
     median = int(cluster.get("source_frame_median", 0))
     best, best_key, best_expl = None, None, None
     for camera in sorted(cluster.get("cameras", sorted(per_camera))):
         frame = int(per_camera.get(camera, median))
-        expl = tile_explanation_for(window, camera, frame)
-        strength = float(expl.get("tile_max", 0.0)) if expl else -1.0
+        if mode == MODE_PER_TILE:
+            expl = per_tile_explanation_for(window, cluster, camera)
+            amplitudes = expl["per_tile_amplitude"] if expl else []
+            strength = (float(np.mean(amplitudes)) if amplitudes else -1.0)
+        else:
+            expl = tile_explanation_for(window, camera, frame)
+            strength = float(expl.get("tile_max", 0.0)) if expl else -1.0
         key = (-strength, abs(frame - median), camera)
         if best_key is None or key < best_key:
             best, best_key, best_expl = camera, key, expl
@@ -681,6 +1071,172 @@ def build_overlay(entry: dict, camera: str, explanation: dict,
     return sheet, meta
 
 
+def build_per_tile_overlay(entry: dict, camera: str, explanation: dict,
+                           source_rate: Fraction, *, width: int,
+                           tile_size: int, raster: tuple[int, int],
+                           header_lines: list[tuple[str, tuple[int, int, int]]],
+                           ) -> tuple[Image.Image, dict]:
+    """The FIRING CONNECTED COMPONENT drawn over the candidate frame.
+
+    EXPLANATION OF THE DETECTOR SIGNAL, NOT AN INSTANCE MASK. There is no
+    argmax to draw in this schema: the detector ran independently on every
+    tile and a candidate IS a face-adjacent component of tiles that each
+    crossed their OWN threshold. Drawing one tile of it would misrepresent
+    the instrument, so the whole component is drawn, its size is stated, and
+    the other tiles firing at the same sample -- the ones the coherence gate
+    did NOT join to it -- are drawn dimmer so the reader can see how global
+    the change was.
+
+    Every pixel box is re-derived from the census's own ``tile_size_px`` and
+    proxy raster and CHECKED against the box the census recorded. A mismatch
+    is refused rather than drawn: putting the explanation over the wrong
+    pixels is the one failure this picture must not have.
+    """
+    source_frame = int(explanation["source_frame"])
+    raster_w, raster_h = (int(v) for v in raster)
+    base = _load_frame(entry, source_frame)
+    if base is None:
+        base = Image.new("RGB", (raster_w, raster_h), (40, 40, 44))
+    base = base.resize((raster_w, raster_h), Image.BILINEAR)
+
+    rows = proxy.tile_edges(raster_h, int(tile_size))
+    cols = proxy.tile_edges(raster_w, int(tile_size))
+    declared_tiles = explanation.get("n_tiles_in_grid")
+    if declared_tiles is not None and int(declared_tiles) != len(rows) * len(cols):
+        raise _refuse(
+            f"{camera} src {source_frame}: the census recorded "
+            f"{int(declared_tiles)} tiles in the grid, but a {tile_size} px "
+            f"tiling of {raster_w}x{raster_h} has {len(rows)}x{len(cols)} = "
+            f"{len(rows) * len(cols)}",
+            "the recorded tile count to match the recorded tile size and "
+            "proxy raster")
+
+    component = [(int(r), int(c))
+                 for r, c in explanation["component_tiles_row_col"]]
+    boxes = [[int(v) for v in box]
+             for box in explanation["tile_pixel_boxes_xyxy"]]
+    amplitudes = [float(v) for v in explanation["per_tile_amplitude"]]
+    if not component:
+        raise _refuse(f"{camera} src {source_frame}: an EMPTY firing component",
+                      "at least one component tile — the coherence gate never "
+                      "emits an empty component")
+    if len(amplitudes) != len(component):
+        raise _refuse(
+            f"{camera} src {source_frame}: {len(amplitudes)} per-tile "
+            f"amplitudes for {len(component)} component tiles",
+            "one amplitude per component tile, in the same order")
+    for (row, col), box in zip(component, boxes):
+        if not (0 <= row < len(rows) and 0 <= col < len(cols)):
+            raise _refuse(
+                f"{camera} src {source_frame}: component tile ({row}, {col}) "
+                f"outside a {len(rows)}x{len(cols)} grid",
+                f"every component tile inside the {tile_size} px tiling of "
+                f"{raster_w}x{raster_h}")
+        expected = proxy.tile_pixel_box(row, col, rows, cols)
+        if list(box) != expected:
+            raise _refuse(
+                f"{camera} src {source_frame}: the census recorded pixel box "
+                f"{box} for tile ({row}, {col}), which a {tile_size} px "
+                f"tiling of {raster_w}x{raster_h} puts at {expected}",
+                "the recorded boxes to match the recorded tiling — drawing "
+                "them anyway would put the explanation over the wrong pixels")
+
+    lo, hi = float(min(amplitudes)), float(max(amplitudes))
+    span = hi - lo
+    canvas = np.asarray(base.convert("L").convert("RGB"),
+                        dtype=np.float64).copy()
+    component_set = {(int(r), int(c))
+                     for r, c in explanation["component_tiles_row_col"]}
+    #  Tiles that fired at this sample but were NOT joined to the component.
+    #  They are part of what the coherence gate saw and are never hidden.
+    other_firing = []
+    for row, col in explanation["firing_tiles_row_col"]:
+        row, col = int(row), int(col)
+        if (row, col) in component_set:
+            continue
+        if 0 <= row < len(rows) and 0 <= col < len(cols):
+            other_firing.append((row, col))
+    for row, col in other_firing:
+        x0, y0, x1, y1 = proxy.tile_pixel_box(row, col, rows, cols)
+        patch = canvas[y0:y1, x0:x1]
+        canvas[y0:y1, x0:x1] = 0.72 * patch + 0.28 * np.array(
+            (46, 92, 150), dtype=np.float64)
+    for index, (row, col) in enumerate(component):
+        x0, y0, x1, y1 = boxes[index]
+        #  Ramp over [0.30, 1.0], not [0, 1]: the ramp's own zero is nearly
+        #  black, and the WEAKEST tile of a firing component is still a tile
+        #  that crossed its threshold. Rendering it as black would read as
+        #  "nothing here", which is the opposite of what it means.
+        norm = (amplitudes[index] - lo) / span if span > 0 else 1.0
+        colour = np.asarray(heat_rgb(np.array([0.30 + 0.70 * norm]))[0],
+                            dtype=np.float64)
+        patch = canvas[y0:y1, x0:x1]
+        canvas[y0:y1, x0:x1] = 0.45 * patch + 0.55 * colour
+
+    blended = Image.fromarray(
+        np.clip(canvas, 0, 255).astype(np.uint8), mode="RGB")
+    draw = ImageDraw.Draw(blended)
+    for y0, _y1 in rows:
+        draw.line([(0, y0), (raster_w, y0)], fill=(60, 60, 70), width=1)
+    for x0, _x1 in cols:
+        draw.line([(x0, 0), (x0, raster_h)], fill=(60, 60, 70), width=1)
+    for row, col in other_firing:
+        x0, y0, x1, y1 = proxy.tile_pixel_box(row, col, rows, cols)
+        draw.rectangle([x0, y0, x1 - 1, y1 - 1], outline=(110, 150, 200),
+                       width=1)
+    for box in boxes:
+        x0, y0, x1, y1 = box
+        draw.rectangle([x0, y0, x1 - 1, y1 - 1], outline=(120, 220, 255),
+                       width=2)
+    bx0, by0, bx1, by1 = explanation["component_pixel_bbox_xyxy"]
+    draw.rectangle([int(bx0), int(by0), int(bx1) - 1, int(by1) - 1],
+                   outline=(255, 90, 90), width=3)
+
+    scale = width / raster_w
+    scaled = blended.resize((width, max(1, int(round(raster_h * scale)))),
+                            Image.BILINEAR)
+    font = _font(16)
+    small = _font(14)
+    header = _sheet_header(width, header_lines, font)
+    n_component = int(explanation["component_size_tiles"])
+    n_firing = int(explanation["n_tiles_firing_at_sample"])
+    n_grid = int(declared_tiles) if declared_tiles is not None else len(rows) * len(cols)
+    caption_lines = [
+        (PER_TILE_OVERLAY_HEADING, (255, 190, 190)),
+        ("Boxes are TILE EXTENTS, not object extents. Red = the FIRING "
+         "COMPONENT's bounding box (it bounds TILES, not an object), cyan = "
+         "the component's own tiles, dim blue = other tiles firing at this "
+         "sample that the coherence gate did NOT join to it.",
+         (215, 215, 225)),
+        (f"firing component {n_component} face-adjacent tiles; "
+         f"{n_firing} of {n_grid} tiles firing anywhere in the grid at this "
+         f"sample; component tile amplitudes {lo:.4f} .. {hi:.4f} grey levels "
+         f"(per-tile mean |I_t - temporal median|), mean "
+         f"{float(np.mean(amplitudes)):.4f}", (185, 190, 205)),
+    ]
+    caption = _sheet_header(width, caption_lines, small)
+    sheet = Image.new("RGB", (width, header.height + scaled.height
+                              + caption.height), (14, 14, 16))
+    sheet.paste(header, (0, 0))
+    sheet.paste(scaled, (0, header.height))
+    sheet.paste(caption, (0, header.height + scaled.height))
+    meta = {
+        "camera": camera,
+        "source_frame": source_frame,
+        "component_size_tiles": n_component,
+        "n_tiles_firing_at_sample": n_firing,
+        "n_tiles_in_grid": n_grid,
+        "amplitude_min_grey_levels": round(lo, 4),
+        "amplitude_max_grey_levels": round(hi, 4),
+        "amplitude_mean_grey_levels": round(float(np.mean(amplitudes)), 4),
+        "tile_size_px": int(tile_size),
+        "grid_shape": [len(rows), len(cols)],
+        "drawn_from": "firing_connected_component",
+        "is_instance_mask": False,
+    }
+    return sheet, meta
+
+
 def _save_jpeg(image: Image.Image, path: Path, quality: int) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path, "JPEG", quality=int(quality), optimize=True,
@@ -754,6 +1310,8 @@ pre.raw { background: #16161a; color: #e6e6ea; padding: .7rem; overflow: auto;
   Consolas, "Courier New", monospace; margin-top: .5rem; }
 code { background: #ececef; padding: .05rem .25rem; border-radius: 3px; }
 .small { font-size: 13px; color: #55555f; }
+ul.classdef { margin: .4rem 0 .4rem 0; padding-left: 1.2rem; }
+ul.classdef li { margin-bottom: .25rem; }
 """
 
 
@@ -877,10 +1435,13 @@ def _controls_html(candidate_id: str) -> str:
         f'data-cand="{candidate_id}" data-field="cls" value="{choice}"> '
         f'{_esc(choice)}</label>'
         for choice in CLASS_CHOICES)
+    definitions = "".join(
+        f"<li><strong>{_esc(name)}</strong> — {_esc(text)}</li>"
+        for name, text in CLASS_DEFINITIONS)
     return f"""<div class="controls">
 <fieldset><legend>Provisional class for {_esc(candidate_id)}</legend>{radios}
-<div class="small">A / B / C are the reviewer's own tiers. This tool does not
-define them, does not rank them, and does not act on them.</div></fieldset>
+<ul class="classdef small">{definitions}</ul>
+<div class="small">{_esc(CLASS_FRAME_NOTE)}</div></fieldset>
 <div class="field"><span>Object of interest (free text)</span>
 <input type="text" data-cand="{candidate_id}" data-field="obj"
  placeholder="e.g. the tray the cook lifts"></div>
@@ -913,6 +1474,8 @@ def build_gallery(*, census_path: Path, proxy_root: Path, out_dir: Path,
                   max_bytes: int = DEFAULT_MAX_BYTES,
                   clean: bool = False) -> dict:
     census = load_census(census_path)
+    #  WHICH SCHEMA IS THIS? Decided once, loudly, before anything renders.
+    mode = detect_census_mode(census)
     cameras_on_disk = load_proxy_tree(proxy_root)
     scene_manifest_path, scene_manifest_hash = scene_manifest_sha256(proxy_root)
 
@@ -920,13 +1483,15 @@ def build_gallery(*, census_path: Path, proxy_root: Path, out_dir: Path,
     source_rate = proxy.parse_rational(mapping["source_rate_exact"])
     stride = int(mapping["stride_frames"])
     raster = tuple(int(v) for v in mapping.get("proxy_raster", [960, 540]))
+    per_tile_tile_size = (int(census["per_tile_pass"]["tile_size_px"])
+                          if mode == MODE_PER_TILE else None)
 
     if out_dir.exists() and clean:
         shutil.rmtree(out_dir)
     assets = out_dir / "assets"
     assets.mkdir(parents=True, exist_ok=True)
 
-    ranked = flatten_candidates(census)
+    ranked = flatten_candidates(census, mode)
     n_total = len(ranked)
     kept = ranked[:max(int(max_candidates), 0)]
     dropped_by_count = n_total - len(kept)
@@ -1004,6 +1569,11 @@ def build_gallery(*, census_path: Path, proxy_root: Path, out_dir: Path,
             ("CANDIDATE, NOT AN EVENT. Polarity is a signal direction, not a "
              "semantic.", (255, 175, 175)),
         ]
+        if mode == MODE_PER_TILE:
+            head_common.insert(2, (
+                f"mean amplitude {float(cluster['mean_amplitude']):.4f} grey "
+                f"levels — RANKED BY THIS. The camera count above orders "
+                f"nothing.", (200, 205, 220)))
 
         montage_files = []
         for page_index, page_cameras in enumerate(pages, start=1):
@@ -1024,12 +1594,16 @@ def build_gallery(*, census_path: Path, proxy_root: Path, out_dir: Path,
                                   "cameras": page_cameras, "bytes": size,
                                   "legend": legend})
 
-        reference_camera, explanation = choose_reference_camera(cluster, window)
+        reference_camera, explanation = choose_reference_camera(
+            cluster, window, mode)
         if reference_camera not in cameras_on_disk:
             reference_camera = anchor_camera
-            explanation = tile_explanation_for(
-                window, reference_camera,
-                per_camera_frame.get(reference_camera, median))
+            explanation = (
+                per_tile_explanation_for(window, cluster, reference_camera)
+                if mode == MODE_PER_TILE else
+                tile_explanation_for(
+                    window, reference_camera,
+                    per_camera_frame.get(reference_camera, median)))
         focus_frame = int(per_camera_frame.get(reference_camera, median))
         focus_head = list(head_common)
         focus_head.insert(2, (f"reference camera {reference_camera} "
@@ -1046,17 +1620,26 @@ def build_gallery(*, census_path: Path, proxy_root: Path, out_dir: Path,
 
         overlay_name, overlay_meta = None, None
         if explanation is not None:
+            heading = (PER_TILE_OVERLAY_HEADING if mode == MODE_PER_TILE
+                       else OVERLAY_HEADING)
             overlay_head = [
                 (f"{candidate_id}  |  {reference_camera}  |  src "
                  f"{explanation['source_frame']}  t="
                  f"{format_seconds(frame_time_exact(int(explanation['source_frame']), source_rate))} s",
                  (240, 240, 245)),
-                (OVERLAY_HEADING, (255, 175, 175)),
+                (heading, (255, 175, 175)),
             ]
-            overlay_sheet, overlay_meta = build_overlay(
-                cameras_on_disk[reference_camera], reference_camera,
-                explanation, source_rate, width=overlay_width,
-                header_lines=overlay_head)
+            if mode == MODE_PER_TILE:
+                overlay_sheet, overlay_meta = build_per_tile_overlay(
+                    cameras_on_disk[reference_camera], reference_camera,
+                    explanation, source_rate, width=overlay_width,
+                    tile_size=per_tile_tile_size, raster=raster,
+                    header_lines=overlay_head)
+            else:
+                overlay_sheet, overlay_meta = build_overlay(
+                    cameras_on_disk[reference_camera], reference_camera,
+                    explanation, source_rate, width=overlay_width,
+                    header_lines=overlay_head)
             overlay_name = f"{candidate_id}_overlay.jpg"
             size = _save_jpeg(overlay_sheet, assets / overlay_name, jpeg_quality)
             total_bytes += size
@@ -1091,7 +1674,7 @@ def build_gallery(*, census_path: Path, proxy_root: Path, out_dir: Path,
             break
 
     manifest = _write_outputs(
-        out_dir=out_dir, census=census, census_path=census_path,
+        out_dir=out_dir, census=census, census_path=census_path, mode=mode,
         census_hash=census_hash, proxy_root=proxy_root,
         scene_manifest_path=scene_manifest_path,
         scene_manifest_hash=scene_manifest_hash, scene=scene,
@@ -1113,7 +1696,8 @@ def build_gallery(*, census_path: Path, proxy_root: Path, out_dir: Path,
     return manifest
 
 
-def _declared_scale_rows(census: dict, raster: tuple[int, int]) -> list[tuple[str, str]]:
+def _declared_scale_rows(census: dict, raster: tuple[int, int],
+                         mode: str = MODE_TILE) -> list[tuple[str, str]]:
     """What the census could and could not have seen. Recorded numbers only."""
     params = census.get("parameters", {})
     tile = census.get("tile_pass") or {}
@@ -1127,6 +1711,57 @@ def _declared_scale_rows(census: dict, raster: tuple[int, int]) -> list[tuple[st
          f"{_esc(params.get('match_tol_frames'))} frames "
          f"({float(params.get('match_tol_ms') or 0.0):.2f} ms)"),
     ]
+    if mode == MODE_PER_TILE:
+        block = census["per_tile_pass"]
+        floor = block["absolute_floor"]
+        coherence = block["spatial_coherence"]
+        grid = block["tile_grid"]
+        rows.append((
+            "detection reduction",
+            _esc(f"PER-TILE (v2). The SAME two-gate detector runs "
+                 f"INDEPENDENTLY on each of {grid[0]}x{grid[1]} per-tile "
+                 f"signals of {block['tile_size_px']} proxy px. This "
+                 f"SUPERSEDES the max-over-tiles (tile_max) reduction: a "
+                 f"maximum over tiles is monopolised by the loudest region, "
+                 f"which sets both its median and its MAD, so a quiet tile "
+                 f"can never move a maximum it does not win.")))
+        rows.append((
+            "relative gate (per tile)",
+            _esc(f"median_t(S_ij) + {block['k_mad']} * 1.4826 * MAD_t(S_ij), "
+                 f"from THAT TILE'S OWN temporal series")))
+        rows.append((
+            "per-tile absolute floor (MEASURED)",
+            _esc(f"{floor['floor_grey_levels']} grey levels on a TILE mean = "
+                 f"F={floor['F']} x the take's own median per-tile noise "
+                 f"scale {floor['noise_scale_median_grey_levels']}")))
+        rows.append((
+            "spatial coherence",
+            _esc(f"a face-adjacent connected component of >= "
+                 f"{coherence['min_component_tiles']} tiles (4-connectivity; "
+                 f"DIAGONAL tiles are NOT adjacent) AND strictly fewer than "
+                 f"{coherence['max_firing_tiles_exclusive']} tiles firing "
+                 f"anywhere in the grid at that sample. Both bounds are "
+                 f"DECLARED JUDGMENTS derived from observation of a "
+                 f"known-positive and a known-negative, and that dependence "
+                 f"is disclosed.")))
+        rows.append((
+            "declared detection scale",
+            _esc(f"a change confined to fewer than "
+                 f"{coherence['min_component_tiles']} face-adjacent "
+                 f"{block['tile_size_px']}x{block['tile_size_px']} px tiles, "
+                 f"or one that moves no tile mean by "
+                 f"{floor['floor_grey_levels']} grey levels above that "
+                 f"tile's own median+MAD threshold, is INVISIBLE to this "
+                 f"census by construction, and its absence from this gallery "
+                 f"says nothing about the scene.")))
+        rows.append((
+            "ranking",
+            _esc(f"{block['ranking']['order']}. "
+                 f"camera_count_is_retired_as_the_primary_order="
+                 f"{block['ranking']['camera_count_is_retired_as_the_primary_order']}, "
+                 f"c_min_is_a_corroboration_floor_never_a_sort_key="
+                 f"{block['ranking']['c_min_is_a_corroboration_floor_never_a_sort_key']}")))
+        return rows
     if tile.get("enabled"):
         tile_px = int(tile.get("tile_size_px", 0))
         floor = float(tile.get("tile_min_amplitude_grey_levels", 0.0))
@@ -1151,8 +1786,17 @@ def _declared_scale_rows(census: dict, raster: tuple[int, int]) -> list[tuple[st
     return rows
 
 
+def _ranking_order_string(mode: str) -> str:
+    if mode == MODE_PER_TILE:
+        return ("mean_amplitude DESCENDING, then source_frame_median "
+                "ascending. n_cameras_supporting IS NOT A SORT KEY.")
+    return ("n_cameras_supporting DESCENDING, then mean_amplitude "
+            "descending, then source_frame_median ascending (the v1 / "
+            "whole-frame census's own printed order)")
+
+
 def _write_outputs(*, out_dir: Path, census: dict, census_path: Path,
-                   census_hash: str, proxy_root: Path,
+                   mode: str, census_hash: str, proxy_root: Path,
                    scene_manifest_path: str | None,
                    scene_manifest_hash: str | None, scene: str | None,
                    gallery_id: str, rendered: list[dict], drops: dict,
@@ -1174,6 +1818,12 @@ def _write_outputs(*, out_dir: Path, census: dict, census_path: Path,
         "n_candidates_in_census": int(n_total_candidates),
         "n_decided": 0,
         "class_choices": list(CLASS_CHOICES),
+        "class_definitions": {name: text for name, text in CLASS_DEFINITIONS},
+        "class_definitions_source": (
+            "research-wiki/operations/imvid-event-definition-2026-08-24.md §3"),
+        "class_frame_note": CLASS_FRAME_NOTE,
+        "census_detection_mode": mode,
+        "ranked_by": _ranking_order_string(mode),
         "reading_rule": (
             "class / object_of_interest / boundary_notes are a HUMAN "
             "provisional judgement recorded against a CANDIDATE. They are not "
@@ -1193,6 +1843,13 @@ def _write_outputs(*, out_dir: Path, census: dict, census_path: Path,
                 "cameras": list(item["cluster"].get("cameras", [])),
                 "reference_camera": item["focus"]["camera"],
                 "mean_amplitude": item["cluster"].get("mean_amplitude"),
+                "component_size_tiles": (
+                    (item["overlay"]["meta"] or {}).get("component_size_tiles")
+                    if item["overlay"] else None),
+                "n_tiles_firing_at_sample": (
+                    (item["overlay"]["meta"] or {}).get(
+                        "n_tiles_firing_at_sample")
+                    if item["overlay"] else None),
                 "class": None,
                 "object_of_interest": "",
                 "boundary_notes": "",
@@ -1202,7 +1859,8 @@ def _write_outputs(*, out_dir: Path, census: dict, census_path: Path,
     }
 
     html_text = _render_html(
-        census=census, census_path=census_path, census_hash=census_hash,
+        census=census, census_path=census_path, mode=mode,
+        census_hash=census_hash,
         proxy_root=proxy_root, scene_manifest_path=scene_manifest_path,
         scene_manifest_hash=scene_manifest_hash, scene_name=scene_name,
         gallery_id=gallery_id, rendered=rendered, drops=drops,
@@ -1217,6 +1875,17 @@ def _write_outputs(*, out_dir: Path, census: dict, census_path: Path,
         "schema": GALLERY_SCHEMA,
         "gallery_id": gallery_id,
         "scene": scene_name,
+        "census_detection_mode": mode,
+        "ranking": {
+            "order": _ranking_order_string(mode),
+            "camera_count_is_a_sort_key": mode != MODE_PER_TILE,
+            "note": (RANKING_NOTE_PER_TILE if mode == MODE_PER_TILE
+                     else RANKING_NOTE_LEGACY),
+        },
+        "per_tile_floor_provenance": (
+            census["per_tile_pass"]["absolute_floor"]
+            if mode == MODE_PER_TILE else None),
+        "class_definitions": {name: text for name, text in CLASS_DEFINITIONS},
         "built_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(
             timespec="seconds"),
         "census_path": str(census_path),
@@ -1245,7 +1914,111 @@ def _write_outputs(*, out_dir: Path, census: dict, census_path: Path,
     return manifest
 
 
-def _drop_banners(drops: dict, n_total: int, n_rendered: int) -> str:
+def _class_legend_html() -> str:
+    """The FROZEN A / B / C definitions. Not the reviewer's own tiers."""
+    items = "".join(
+        f"<li><strong>{_esc(name)}</strong> — {_esc(text)}</li>"
+        for name, text in CLASS_DEFINITIONS)
+    return (f'<div class="banner info"><strong>{_esc(CLASS_LEGEND_TITLE)}'
+            f"</strong>These four classes are fixed by "
+            f"<code>imvid-event-definition-2026-08-24</code> §3 and only "
+            f"class A is an event. This tool does not define them, does not "
+            f"rank them, and does not act on them."
+            f'<ul class="classdef">{items}</ul>'
+            f"<div>{_esc(CLASS_FRAME_NOTE)}</div></div>")
+
+
+def _per_tile_floor_html(census: dict) -> str:
+    """The MEASURED floor, F=3.0 marked PRIMARY, and the sweep as probes."""
+    block = census["per_tile_pass"]
+    floor = block["absolute_floor"]
+    parts: list[str] = []
+    if floor["floor_is_degenerate_zero"]:
+        parts.append(_banner(
+            "", "THE MEASURED PER-TILE NOISE SCALE MEDIAN IS ZERO — THE "
+                "ABSOLUTE GATE IS INERT",
+            f"The v2 absolute floor is F x the take's OWN median per-tile "
+            f"noise scale, and that median measured 0.0 over "
+            f"{floor['n_tile_series']} (camera, window, tile) series "
+            f"({floor['n_zero_scale_tile_series']} of them are themselves "
+            f"exactly zero). The floor is therefore "
+            f"{floor['floor_grey_levels']} and the absolute gate SCREENS "
+            f"NOTHING: every candidate below was decided by the relative gate "
+            f"and the spatial-coherence gate alone. This is the vacuity "
+            f"failure the v2 spec was written to catch — read no candidate "
+            f"here as having cleared an absolute floor."))
+    if not block.get("is_primary_reading", True):
+        parts.append(_banner(
+            "", "THIS CENSUS WAS RUN AT A SENSITIVITY PROBE, NOT AT THE "
+                "PRIMARY READING",
+            f"The frozen primary reading is F = "
+            f"{block['primary_reading_F']} ONLY. This manifest was produced "
+            f"at F = {floor['F']}, which the spec labels a sensitivity probe "
+            f"and forbids reporting as the census."))
+    primary = "PRIMARY READING" if block.get("is_primary_reading") else "PROBE"
+    parts.append("<h2>Per-tile absolute floor — provenance</h2>")
+    parts.append('<p class="small">The floor is <code>F * median over all '
+                 '(camera, window, tile) of 1.4826 * MAD_t(S_ij)</code>, '
+                 'measured on the take&#39;s own noise BEFORE any candidate '
+                 'was read. <strong>F is a DECLARED JUDGMENT, not a quantity '
+                 'derived from data</strong>; it is fixed at 3.0 to match the '
+                 'relative gate&#39;s k_mad = 3.0 so the two gates express '
+                 'the same strictness in different denominators.</p>')
+    parts.append(_kv_table([
+        ("measured noise scale median",
+         f"{_esc(floor['noise_scale_median_grey_levels'])} grey levels, over "
+         f"{_esc(floor['n_tile_series'])} (camera, window, tile) series "
+         f"from {_esc(floor.get('n_camera_window_grids', 'n/a'))} grids"),
+        ("F (declared judgment)",
+         f"<strong>{_esc(floor['F'])}</strong> — {_esc(primary)}"
+         f" (the frozen primary reading is F = "
+         f"{_esc(block['primary_reading_F'])})"),
+        ("floor_grey_levels (MEASURED)",
+         f"<strong>{_esc(floor['floor_grey_levels'])}</strong> grey levels on "
+         f"a TILE mean"),
+        ("noise scale range",
+         f"{_esc(floor.get('noise_scale_min_grey_levels'))} .. "
+         f"{_esc(floor.get('noise_scale_max_grey_levels'))} grey levels"),
+        ("tile series with EXACTLY ZERO noise scale",
+         _esc(floor["n_zero_scale_tile_series"])),
+        ("floor_is_degenerate_zero",
+         f"<strong>{_esc(floor['floor_is_degenerate_zero'])}</strong>"),
+        ("rule", f"<code>{_esc(floor.get('rule', ''))}</code>"),
+    ]))
+    sweep = block["sensitivity_sweep"]
+    head = ("<tr><th>F</th><th>floor (grey levels)</th>"
+            "<th>per-camera candidates</th><th>rejected by coherence</th>"
+            "<th>clusters</th><th>clusters at C_min</th><th>reading</th></tr>")
+    rows = []
+    for row in sweep:
+        label = ("PRIMARY READING — this row IS the census"
+                 if row.get("is_primary_reading")
+                 else "SENSITIVITY PROBE — NOT the census")
+        strong = "<strong>%s</strong>" if row.get("is_primary_reading") else "%s"
+        rows.append(
+            "<tr>"
+            f"<td>{strong % _esc(row['F'])}</td>"
+            f"<td>{_esc('%.6f' % float(row['floor_grey_levels']))}</td>"
+            f"<td>{_esc(row.get('n_per_camera_candidates'))}</td>"
+            f"<td>{_esc(row.get('n_rejected_by_spatial_coherence'))}</td>"
+            f"<td>{_esc(row.get('n_clusters'))}</td>"
+            f"<td>{_esc(row.get('n_clusters_at_min_cameras'))}</td>"
+            f"<td>{strong % _esc(label)}</td></tr>")
+    parts.append("<h3>Sensitivity sweep over F — SUPPLEMENTARY</h3>")
+    parts.append(f'<div class="caveat">'
+                 f'{_esc(block.get("sensitivity_sweep_is_supplementary", ""))}'
+                 f"</div>")
+    parts.append(f'<table class="idx">{head}{"".join(rows)}</table>')
+    defect = block.get("windowing_defect_not_repaired_here")
+    if defect:
+        parts.append(_banner(
+            "warn", "A LIVE WINDOWING DEFECT STANDS — NO CLAIM OF EXHAUSTIVE "
+                    "RECALL MAY BE MADE", defect))
+    return "".join(parts)
+
+
+def _drop_banners(drops: dict, n_total: int, n_rendered: int,
+                  mode: str = MODE_TILE) -> str:
     """No silent caps: anything dropped is stated at the top of the page."""
     parts = []
     by_count = int(drops["candidates_dropped_by_max_candidates"])
@@ -1279,12 +2052,23 @@ def _drop_banners(drops: dict, n_total: int, n_rendered: int) -> str:
             f"proxy root, or the proxy set is incomplete."))
     missing_expl = [c for c in drops["candidates_without_tile_explanation"]]
     if missing_expl:
+        cause = {
+            MODE_PER_TILE: ("Every per-tile candidate carries its firing "
+                            "component, so this is NOT the ordinary "
+                            "no-tile-pass case: the supporting cameras are "
+                            "absent from this --proxy-root."),
+            MODE_TILE: ("The census names cameras this --proxy-root does not "
+                        "contain, or the tile explanation is missing for "
+                        "them."),
+            MODE_WHOLE_FRAME: ("The census was run WITHOUT --per-tile-mode "
+                               "and without --tile-mode, so no spatial "
+                               "explanation exists to draw."),
+        }[mode]
         parts.append(_banner(
             "info", "NO SPATIAL EXPLANATION FOR SOME CANDIDATES",
             f"{len(missing_expl)} candidate(s) carry no tile explanation "
-            f"({', '.join(missing_expl[:20])}). The census was probably run "
-            f"without --tile-mode; the montage and focus sheets are still "
-            f"complete."))
+            f"({', '.join(missing_expl[:20])}). {cause} The montage and focus "
+            f"sheets are still complete."))
     if not parts:
         parts.append(_banner(
             "info", "NOTHING WAS DROPPED",
@@ -1293,7 +2077,8 @@ def _drop_banners(drops: dict, n_total: int, n_rendered: int) -> str:
     return "".join(parts)
 
 
-def _render_html(*, census: dict, census_path: Path, census_hash: str,
+def _render_html(*, census: dict, census_path: Path, mode: str,
+                 census_hash: str,
                  proxy_root: Path, scene_manifest_path: str | None,
                  scene_manifest_hash: str | None, scene_name: str,
                  gallery_id: str, rendered: list[dict], drops: dict,
@@ -1318,23 +2103,34 @@ def _render_html(*, census: dict, census_path: Path, census_hash: str,
                  f'{len(rendered)} of {n_total_candidates} candidate clusters '
                  f'· source rate {_esc(proxy.rational_str(source_rate))} fps '
                  f'· proxy step {stride} frames ({proxy_step_ms:.2f} ms) '
-                 f'· proxy raster {raster[0]}x{raster[1]}</div>')
+                 f'· proxy raster {raster[0]}x{raster[1]} '
+                 f'· census schema <code>{_esc(mode)}</code></div>')
     parts.append("</header><main>")
 
     parts.append(_banner("", "THESE ARE CANDIDATES, NOT EVENTS", NOT_AN_EVENT))
+    parts.append(_banner(
+        "info",
+        ("HOW THIS GALLERY IS ORDERED — BY MEAN AMPLITUDE"
+         if mode == MODE_PER_TILE
+         else "HOW THIS GALLERY IS ORDERED"),
+        (RANKING_NOTE_PER_TILE if mode == MODE_PER_TILE
+         else RANKING_NOTE_LEGACY)))
+    parts.append(_class_legend_html())
     parts.append(_banner(
         "info", "HOW TO READ THE TIMESTAMPS",
         f"Every timestamp on every picture is t = source_frame * "
         f"{source_rate.denominator} / {source_rate.numerator} seconds, from "
         f"the exact rational rate recorded in the proxy manifests. No frame "
         f"rate is assumed anywhere in this bundle."))
-    parts.append(_drop_banners(drops, n_total_candidates, len(rendered)))
+    parts.append(_drop_banners(drops, n_total_candidates, len(rendered), mode))
 
     parts.append("<h2>Census settings and declared detection scale</h2>")
-    parts.append(_kv_table(_declared_scale_rows(census, raster)))
+    parts.append(_kv_table(_declared_scale_rows(census, raster, mode)))
     note = census.get("temporal_resolution_note")
     if note:
         parts.append(f'<div class="caveat">{_esc(note)}</div>')
+    if mode == MODE_PER_TILE:
+        parts.append(_per_tile_floor_html(census))
     parts.append(_kv_table([
         ("census file", f"<code>{_esc(census_path)}</code>"),
         ("census sha256", f"<code>{_esc(census_hash)}</code>"),
@@ -1370,27 +2166,41 @@ def _render_html(*, census: dict, census_path: Path, census_hash: str,
                      "classify here, so no decision form is rendered.</p>")
     else:
         parts.append("<h2>Index</h2>")
-        head = ("<tr><th>candidate</th><th>polarity</th><th>cameras</th>"
-                "<th>median src frame</th><th>t (s)</th><th>spread</th>"
-                "<th>mean amplitude</th></tr>")
+        parts.append(f'<p class="small">{_esc(_ranking_order_string(mode))}'
+                     f"</p>")
+        extra_head = ("<th>component tiles</th><th>tiles firing</th>"
+                      if mode == MODE_PER_TILE else "")
+        head = ("<tr><th>candidate</th>"
+                "<th>mean amplitude (SORT KEY)</th>"
+                if mode == MODE_PER_TILE else
+                "<tr><th>candidate</th><th>mean amplitude</th>")
+        head += ("<th>polarity</th><th>cameras "
+                 + ("(NOT a sort key)" if mode == MODE_PER_TILE else "")
+                 + "</th><th>median src frame</th><th>t (s)</th>"
+                 "<th>spread</th>" + extra_head + "</tr>")
         rows = []
         for item in rendered:
             cluster = item["cluster"]
+            meta = (item["overlay"]["meta"] or {}) if item["overlay"] else {}
+            extra = ("" if mode != MODE_PER_TILE else
+                     f'<td>{_esc(meta.get("component_size_tiles"))}</td>'
+                     f'<td>{_esc(meta.get("n_tiles_firing_at_sample"))}</td>')
             rows.append(
                 f'<tr><td><a href="#{_esc(item["candidate_id"])}">'
                 f'{_esc(item["candidate_id"])}</a></td>'
+                f'<td>{_esc(round(float(cluster.get("mean_amplitude", 0.0)), 4))}'
+                f'</td>'
                 f'<td>{_esc(item["polarity"])}</td>'
                 f'<td>{_esc(cluster.get("n_cameras_supporting"))}</td>'
                 f'<td>{_esc(item["median"])}</td>'
                 f'<td>{_esc(format_seconds(item["t_median"]))}</td>'
                 f'<td>{_esc(cluster.get("spread_frames"))} f / '
                 f'{float(cluster.get("spread_ms", 0.0)):.1f} ms</td>'
-                f'<td>{_esc(round(float(cluster.get("mean_amplitude", 0.0)), 4))}'
-                f'</td></tr>')
+                f'{extra}</tr>')
         parts.append(f'<table class="idx">{head}{"".join(rows)}</table>')
         for item in rendered:
             parts.append(_render_candidate(item, source_rate, stride,
-                                           proxy_step_ms))
+                                           proxy_step_ms, mode))
 
     parts.append("</main>")
     parts.append(_json_script(decisions_template, "decisions-template"))
@@ -1413,15 +2223,23 @@ def _render_html(*, census: dict, census_path: Path, census_hash: str,
 
 
 def _render_candidate(item: dict, source_rate: Fraction, stride: int,
-                      proxy_step_ms: float) -> str:
+                      proxy_step_ms: float, mode: str = MODE_TILE) -> str:
     cluster = item["cluster"]
     cid = item["candidate_id"]
     per_camera = cluster.get("per_camera_source_frame", {})
     global_by_camera = cluster.get("per_camera_global_template_dist", {}) or {}
     parts = [f'<section class="cand" id="{_esc(cid)}">']
-    parts.append(f"<h2>{_esc(cid)} — polarity {_esc(item['polarity'])} "
-                 f"— {_esc(cluster.get('n_cameras_supporting'))} supporting "
-                 f"cameras</h2>")
+    if mode == MODE_PER_TILE:
+        parts.append(
+            f"<h2>{_esc(cid)} — mean amplitude "
+            f"{_esc(round(float(cluster['mean_amplitude']), 4))} grey levels "
+            f"— polarity {_esc(item['polarity'])} — "
+            f"{_esc(cluster.get('n_cameras_supporting'))} supporting cameras"
+            f"</h2>")
+    else:
+        parts.append(f"<h2>{_esc(cid)} — polarity {_esc(item['polarity'])} "
+                     f"— {_esc(cluster.get('n_cameras_supporting'))} "
+                     f"supporting cameras</h2>")
     parts.append('<div class="caveat">CANDIDATE, NOT AN EVENT. This is a '
                  'proposal for human / ground-truth classification. '
                  '&quot;rise&quot; / &quot;fall&quot; is the direction of the '
@@ -1431,10 +2249,13 @@ def _render_candidate(item: dict, source_rate: Fraction, stride: int,
     global_values = [v for v in global_by_camera.values() if v is not None]
     tile_signal = (item["overlay"]["explanation"].get("tile_max")
                    if item["overlay"] else None)
+    support_note = (" — CORROBORATION FLOOR ONLY, this count orders nothing"
+                    if mode == MODE_PER_TILE else "")
     signal_rows = [
         ("multi-camera support",
          f"{_esc(cluster.get('n_cameras_supporting'))} distinct cameras "
-         f"({_esc(', '.join(cluster.get('cameras', [])))})"),
+         f"({_esc(', '.join(cluster.get('cameras', [])))})"
+         f"{_esc(support_note)}"),
         ("amplitude / score",
          f"mean {_esc(round(float(cluster.get('mean_amplitude', 0.0)), 4))} grey "
          f"levels, max {_esc(round(float(cluster.get('max_amplitude', 0.0)), 4))}"),
@@ -1455,17 +2276,36 @@ def _render_candidate(item: dict, source_rate: Fraction, stride: int,
          f"<strong>{_esc(SPREAD_CAVEAT)}</strong>. One proxy step is "
          f"{stride} source frames ({proxy_step_ms:.2f} ms), so a spread at or "
          f"below one step is the sampling grid, not a measured disagreement."),
-        ("global vs tile signal",
-         f"tile signal at the candidate frame = {_esc(tile_signal)}; "
-         f"whole-frame template_dist per camera = "
-         f"{_esc(json.dumps(global_by_camera, sort_keys=True))}"
-         + (f" (whole-frame values span "
-            f"{_esc(round(min(global_values), 4))} .. "
-            f"{_esc(round(max(global_values), 4))} grey levels)"
-            if global_values else "")),
-        ("per-camera candidate frames",
-         _esc(json.dumps({k: per_camera[k] for k in sorted(per_camera)}))),
     ]
+    if mode == MODE_PER_TILE:
+        signal_rows.append((
+            "firing component per camera",
+            f"component size (face-adjacent tiles) = "
+            f"{_esc(json.dumps(cluster['per_camera_component_size_tiles'], sort_keys=True))}"
+            f"; tiles firing anywhere in the grid at that sample = "
+            f"{_esc(json.dumps(cluster['per_camera_n_tiles_firing_at_sample'], sort_keys=True))}"
+            f". These are TILE counts, not object measurements."))
+        signal_rows.append((
+            "component tiles (row, col) per camera",
+            f"{_esc(json.dumps(cluster['per_camera_component_tiles_row_col'], sort_keys=True))}"
+            f" — TILE INDICES, not an object"))
+        signal_rows.append((
+            "per-tile amplitudes within the component",
+            _esc(json.dumps(cluster["per_camera_per_tile_amplitude"],
+                            sort_keys=True))))
+    else:
+        signal_rows.append((
+            "global vs tile signal",
+            f"tile signal at the candidate frame = {_esc(tile_signal)}; "
+            f"whole-frame template_dist per camera = "
+            f"{_esc(json.dumps(global_by_camera, sort_keys=True))}"
+            + (f" (whole-frame values span "
+               f"{_esc(round(min(global_values), 4))} .. "
+               f"{_esc(round(max(global_values), 4))} grey levels)"
+               if global_values else "")))
+    signal_rows.append((
+        "per-camera candidate frames",
+        _esc(json.dumps({k: per_camera[k] for k in sorted(per_camera)}))))
     parts.append(_kv_table(signal_rows))
 
     parts.append("<h3>Multi-camera montage</h3>")
@@ -1500,31 +2340,71 @@ def _render_candidate(item: dict, source_rate: Fraction, stride: int,
                  f'{_esc(item["focus"]["camera"])}">')
     parts.append(_legend_table(item["focus"]["legend"]))
 
+    heading = (PER_TILE_OVERLAY_HEADING if mode == MODE_PER_TILE
+               else OVERLAY_HEADING)
     if item["overlay"]:
-        parts.append(f"<h3>{_esc(OVERLAY_HEADING)}</h3>")
+        parts.append(f"<h3>{_esc(heading)}</h3>")
         parts.append(f'<div class="caveat">{_esc(OVERLAY_CAVEAT)}</div>')
         explanation = item["overlay"]["explanation"]
+        meta = item["overlay"]["meta"] or {}
+        if mode == MODE_PER_TILE:
+            parts.append(f'<div class="caveat">'
+                         f"{_esc(PER_TILE_OVERLAY_CAVEAT)}</div>")
         parts.append(f'<img class="sheet" loading="lazy" '
                      f'src="assets/{_esc(item["overlay"]["file"])}" '
                      f'alt="{_esc(cid)} detector-signal explanation heatmap '
                      f'(not an instance mask)">')
         parts.append(f'<p class="small">{_esc(explanation.get("what_this_is", ""))}'
                      f'</p>')
-        parts.append(_kv_table([
-            ("argmax tile (row, col)",
-             _esc(explanation.get("tile_argmax_row_col"))),
-            ("argmax tile pixel box (proxy raster)",
-             _esc(explanation.get("tile_argmax_pixel_box_xyxy"))
-             + " &mdash; a TILE extent, not an object extent"),
-            ("tile_max / whole-frame template_dist",
-             _esc(explanation.get("tile_max_over_global_template_dist"))),
-            ("would the whole-frame pass have cleared its own floor?",
-             _esc(explanation.get("global_pass_would_clear_its_own_floor"))),
-            ("is_instance_mask", _esc(explanation.get("is_instance_mask"))),
-            ("kind", _esc(explanation.get("kind"))),
-        ]))
+        if mode == MODE_PER_TILE:
+            parts.append(_kv_table([
+                ("drawn from",
+                 f"{_esc(meta.get('drawn_from'))} &mdash; the FACE-ADJACENT "
+                 f"CONNECTED COMPONENT of tiles that each crossed their OWN "
+                 f"threshold, never a single argmax tile"),
+                ("component size (face-adjacent tiles)",
+                 f"<strong>{_esc(explanation.get('component_size_tiles'))}"
+                 f"</strong> of "
+                 f"{_esc(meta.get('n_tiles_in_grid'))} tiles in the grid"),
+                ("tiles firing anywhere at this sample",
+                 f"<strong>"
+                 f"{_esc(explanation.get('n_tiles_firing_at_sample'))}"
+                 f"</strong> &mdash; the coherence gate rejects a sample at "
+                 f"or above its upper bound as a global change"),
+                ("component tiles (row, col)",
+                 _esc(explanation.get("component_tiles_row_col"))
+                 + " &mdash; TILE indices, not an object"),
+                ("component pixel bbox (proxy raster)",
+                 _esc(explanation.get("component_pixel_bbox_xyxy"))
+                 + " &mdash; it bounds TILES, not an object extent"),
+                ("per-tile amplitudes in the component",
+                 f"{_esc(explanation.get('per_tile_amplitude'))} grey levels "
+                 f"(mean {_esc(meta.get('amplitude_mean_grey_levels'))})"),
+                ("per-tile thresholds crossed",
+                 _esc(explanation.get("per_tile_threshold", "not recorded"))),
+                ("polarity of the component tiles",
+                 f"{_esc(explanation.get('n_tiles_rise'))} rise / "
+                 f"{_esc(explanation.get('n_tiles_fall'))} fall, tied="
+                 f"{_esc(explanation.get('polarity_is_tied'))}"),
+                ("is_instance_mask", _esc(explanation.get("is_instance_mask"))),
+                ("kind", _esc(explanation.get("kind"))),
+            ]))
+        else:
+            parts.append(_kv_table([
+                ("argmax tile (row, col)",
+                 _esc(explanation.get("tile_argmax_row_col"))),
+                ("argmax tile pixel box (proxy raster)",
+                 _esc(explanation.get("tile_argmax_pixel_box_xyxy"))
+                 + " &mdash; a TILE extent, not an object extent"),
+                ("tile_max / whole-frame template_dist",
+                 _esc(explanation.get("tile_max_over_global_template_dist"))),
+                ("would the whole-frame pass have cleared its own floor?",
+                 _esc(explanation.get("global_pass_would_clear_its_own_floor"))),
+                ("is_instance_mask", _esc(explanation.get("is_instance_mask"))),
+                ("kind", _esc(explanation.get("kind"))),
+            ]))
     else:
-        parts.append(f"<h3>{_esc(OVERLAY_HEADING)}</h3>")
+        parts.append(f"<h3>{_esc(heading)}</h3>")
         parts.append('<div class="caveat">No tile explanation is present in '
                      'the census for this candidate, so no spatial overlay is '
                      'drawn. It would have been an explanation of the detector '
@@ -1624,6 +2504,20 @@ def main(argv=None) -> int:
         max_bytes=args.max_bytes, clean=args.clean)
 
     out_dir = Path(args.out)
+    print(f"[gallery] census detection schema: "
+          f"{manifest['census_detection_mode']}", flush=True)
+    print(f"[gallery] ranked by: {manifest['ranking']['order']}", flush=True)
+    if manifest["per_tile_floor_provenance"]:
+        floor = manifest["per_tile_floor_provenance"]
+        print(f"[gallery] per-tile absolute floor F={floor['F']} x measured "
+              f"noise scale median "
+              f"{floor['noise_scale_median_grey_levels']:.6f} = "
+              f"{floor['floor_grey_levels']:.6f} grey levels "
+              f"({floor['n_tile_series']} tile series)", flush=True)
+        if floor["floor_is_degenerate_zero"]:
+            print("[gallery] WARNING: the measured noise scale median is "
+                  "ZERO, so the absolute gate is INERT. The index page says "
+                  "so in a red banner.", flush=True)
     print(f"[gallery] {manifest['n_candidates_rendered']} of "
           f"{manifest['n_candidates_in_census']} candidate clusters rendered",
           flush=True)
