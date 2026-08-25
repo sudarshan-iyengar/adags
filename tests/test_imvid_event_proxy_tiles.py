@@ -93,6 +93,91 @@ P1_PATCH = 32
 P1_CONTRAST = 25.0
 
 
+def _grid_tiled(grid: np.ndarray, tile_size: int = 60) -> dict:
+    """A minimal ``tiled`` payload wrapped around a SYNTHETIC tile grid.
+
+    Only the keys ``per_tile_camera_candidates`` reads, and the spans come
+    from the real ``tile_edges`` so the emitted pixel boxes are the real ones.
+    Building the grid directly is what lets a test control exactly which tiles
+    fire at which sample -- which is the only practical way to exercise the
+    48-of-144 cap without a 960x540 fixture.
+    """
+    n_frames, n_y, n_x = np.asarray(grid).shape
+    return {
+        "tile_template_dist": np.asarray(grid, dtype=np.float64),
+        "row_spans": proxy.tile_edges(n_y * tile_size, tile_size),
+        "col_spans": proxy.tile_edges(n_x * tile_size, tile_size),
+        "n_tile_y": int(n_y),
+        "n_tile_x": int(n_x),
+        "tile_size": int(tile_size),
+        "proxy_raster": [n_x * tile_size, n_y * tile_size],
+    }
+
+
+def _bumped_grid(n_frames: int, n_y: int, n_x: int, tiles, plateau, *,
+                 base: float = 1.0, bump: float = 5.0) -> np.ndarray:
+    """Constant grid with a raised plateau in the named tiles.
+
+    Constant off the plateau on purpose: a constant tile series has MAD 0 and
+    a threshold equal to its own median, and ``signal > threshold`` is strict,
+    so it can never fire. That leaves the FIRING SET exactly equal to
+    ``tiles``, which is what the cap and connectivity tests need.
+    """
+    grid = np.full((n_frames, n_y, n_x), float(base), dtype=np.float64)
+    lo, hi = plateau
+    for row, col in tiles:
+        grid[lo:hi, row, col] += float(bump)
+    return grid
+
+
+#: PER-TILE CENSUS FIXTURE, in INTEGER grey levels because the proxy tree is
+#: written as 8-bit PNGs. Structure mirrors the P1-REL precondition: ONE loud
+#: distractor tile whose symmetric excursion drives its own median AND its own
+#: MAD so high that its threshold exceeds its own maximum, plus a QUIET target
+#: spanning three face-adjacent tiles.
+PT_RASTER = (120, 180)                  # 2 x 3 tiles at 60 px
+PT_FRAMES = 12
+PT_BASE = 40
+PT_DISTRACTOR_TILE = (1, 0)
+PT_DISTRACTOR_SPAN = 42
+PT_TARGET_TILES = ((0, 0), (0, 1), (0, 2))
+PT_TARGET_PLATEAU = (5, 8)
+PT_TARGET_PATCH = 32
+PT_TARGET_CONTRAST = 25
+
+
+def _per_tile_census_stack(seed: int = 11) -> np.ndarray:
+    """Loud distractor + quiet 3-tile target, all INTEGER grey levels."""
+    height, width = PT_RASTER
+    rng = np.random.default_rng(seed)
+    stack = (np.full((PT_FRAMES, height, width), float(PT_BASE),
+                     dtype=np.float32)
+             + rng.integers(0, 3, size=(PT_FRAMES, height, width)
+                            ).astype(np.float32))
+    row, col = PT_DISTRACTOR_TILE
+    for t in range(PT_FRAMES):
+        offset = float(round(PT_DISTRACTOR_SPAN * t / (PT_FRAMES - 1)))
+        stack[t, row * 60:row * 60 + 60, col * 60:col * 60 + 60] += offset
+    lo, hi = PT_TARGET_PLATEAU
+    pad = (60 - PT_TARGET_PATCH) // 2
+    for row, col in PT_TARGET_TILES:
+        y0, x0 = row * 60 + pad, col * 60 + pad
+        stack[lo:hi, y0:y0 + PT_TARGET_PATCH,
+              x0:x0 + PT_TARGET_PATCH] += float(PT_TARGET_CONTRAST)
+    return stack
+
+
+def _per_tile_args(proxy_root: Path, **overrides) -> argparse.Namespace:
+    base = {
+        "per_tile_mode": True,
+        "per_tile_floor_f": proxy.DEFAULT_PER_TILE_FLOOR_F,
+        "per_tile_min_component": proxy.DEFAULT_PER_TILE_MIN_COMPONENT,
+        "per_tile_max_firing_tiles": proxy.DEFAULT_PER_TILE_MAX_FIRING_TILES,
+    }
+    base.update(overrides)
+    return _census_args(proxy_root, **base)
+
+
 class TileGeometryTests(unittest.TestCase):
     """P4: the tile partition covers every pixel exactly once."""
 
@@ -487,12 +572,603 @@ class CensusTileModeTests(unittest.TestCase):
         self.assertEqual(report["windows"][0]["n_candidates_total"], 0)
 
 
+class PerTileNoiseScaleAndFloorTests(unittest.TestCase):
+    """v2 section 3: the absolute floor is declared on NOISE, not on events."""
+
+    def test_noise_scale_is_1_4826_times_the_temporal_mad_per_tile(self):
+        #  tile (0,0) series 0,1,2,3,4 -> median 2, |dev| 2,1,0,1,2 -> MAD 1
+        grid = np.zeros((5, 1, 2), dtype=np.float64)
+        grid[:, 0, 0] = [0.0, 1.0, 2.0, 3.0, 4.0]
+        grid[:, 0, 1] = 7.0                       # constant -> MAD 0
+        scales = proxy.per_tile_noise_scale(grid)
+        self.assertEqual(scales.shape, (1, 2))
+        self.assertAlmostEqual(float(scales[0, 0]), 1.4826, places=12)
+        self.assertEqual(float(scales[0, 1]), 0.0)
+
+    def test_noise_scale_refuses_a_bad_grid(self):
+        with self.assertRaises(ContractError):
+            proxy.per_tile_noise_scale(np.zeros((1, 2, 2)))
+        with self.assertRaises(ContractError):
+            proxy.per_tile_noise_scale(np.zeros((4, 4)))
+
+    def test_floor_is_F_times_the_pooled_median_noise_scale(self):
+        scales = [np.array([[1.0, 2.0], [3.0, 4.0]])]
+        record = proxy.per_tile_absolute_floor(scales, 3.0)
+        self.assertEqual(record["noise_scale_median_grey_levels"], 2.5)
+        self.assertEqual(record["floor_grey_levels"], 7.5)
+        self.assertEqual(record["n_tile_series"], 4)
+        self.assertEqual(record["F"], 3.0)
+        self.assertTrue(
+            record["F_is_a_declared_judgment_not_derived_from_data"])
+        self.assertFalse(record["floor_is_degenerate_zero"])
+
+    def test_the_median_pools_over_all_camera_window_tile_series(self):
+        """The rule says 'over all (camera, window, tile)', so it pools."""
+        one = proxy.per_tile_absolute_floor([np.array([1.0, 1.0, 1.0])], 3.0)
+        pooled = proxy.per_tile_absolute_floor(
+            [np.array([1.0, 1.0, 1.0]), np.array([9.0, 9.0, 9.0]),
+             np.array([9.0, 9.0, 9.0])], 3.0)
+        self.assertEqual(one["noise_scale_median_grey_levels"], 1.0)
+        self.assertEqual(pooled["noise_scale_median_grey_levels"], 9.0)
+        self.assertEqual(pooled["n_tile_series"], 9)
+        self.assertEqual(pooled["n_camera_window_grids"], 3)
+
+    def test_degenerate_and_refused_cases(self):
+        zero = proxy.per_tile_absolute_floor([np.zeros(16)], 3.0)
+        self.assertEqual(zero["floor_grey_levels"], 0.0)
+        self.assertTrue(zero["floor_is_degenerate_zero"])
+        self.assertEqual(zero["n_zero_scale_tile_series"], 16)
+        with self.assertRaises(ContractError):
+            proxy.per_tile_absolute_floor([], 3.0)
+        with self.assertRaises(ContractError):
+            proxy.per_tile_absolute_floor([np.array([])], 3.0)
+        with self.assertRaises(ContractError):
+            proxy.per_tile_absolute_floor([np.array([1.0])], 0.0)
+        with self.assertRaises(ContractError):
+            proxy.per_tile_absolute_floor([np.array([np.nan])], 3.0)
+
+    def test_the_frozen_constants_are_what_the_spec_says(self):
+        self.assertEqual(proxy.DEFAULT_PER_TILE_FLOOR_F, 3.0)
+        self.assertEqual(proxy.PER_TILE_FLOOR_F_SWEEP, (1.5, 2.0, 3.0, 4.5, 6.0))
+        self.assertEqual(proxy.DEFAULT_PER_TILE_MIN_COMPONENT, 3)
+        self.assertEqual(proxy.DEFAULT_PER_TILE_MAX_FIRING_TILES, 48)
+        #  33% of the 16x9 census grid, and the grid is still 144 tiles.
+        self.assertEqual(proxy.DEFAULT_PER_TILE_MAX_FIRING_TILES, 144 // 3)
+
+
+class PerTileRelativeGateTests(unittest.TestCase):
+    """v2 section 2, and the whole reason the reduction had to change."""
+
+    @staticmethod
+    def _loud_and_quiet(n_frames=24):
+        """One loud tile with a symmetric excursion, one quiet tile with a
+        small plateau, and a strictly positive MAD everywhere."""
+        rng = np.random.default_rng(3)
+        grid = 0.75 + rng.uniform(-0.01, 0.01, size=(n_frames, 2, 4))
+        grid[:, 1, 0] += np.linspace(0.0, 43.0, n_frames)     # LOUD
+        grid[4:8, 0, 0] += 7.0                                # quiet target
+        grid[4:8, 0, 1] += 7.0
+        grid[4:8, 0, 2] += 7.0
+        return grid
+
+    def test_a_loud_tile_does_not_raise_a_quiet_tiles_threshold(self):
+        grid = self._loud_and_quiet()
+        without = grid.copy()
+        without[:, 1, 0] = grid[:, 1, 3]        # replace the loud tile
+        quiet_with = proxy.robust_threshold(grid[:, 0, 1], proxy.DEFAULT_K_MAD)
+        quiet_without = proxy.robust_threshold(without[:, 0, 1],
+                                               proxy.DEFAULT_K_MAD)
+        #  EXACTLY equal: the gate is computed from the tile's own series and
+        #  nothing else can enter it.
+        self.assertEqual(quiet_with["median"], quiet_without["median"])
+        self.assertEqual(quiet_with["mad_scaled"], quiet_without["mad_scaled"])
+        self.assertEqual(quiet_with["threshold"], quiet_without["threshold"])
+
+        #  ... while the MAX-over-tiles reduction is moved enormously.
+        max_with = proxy.robust_threshold(grid.max(axis=(1, 2)),
+                                          proxy.DEFAULT_K_MAD)
+        max_without = proxy.robust_threshold(without.max(axis=(1, 2)),
+                                             proxy.DEFAULT_K_MAD)
+        self.assertGreater(max_with["threshold"],
+                           50 * max_without["threshold"])
+        self.assertGreater(max_with["threshold"], quiet_with["threshold"] * 20)
+
+    def test_the_max_threshold_exceeds_its_own_signal_maximum(self):
+        """The audited cam12 signature: 73.99 against a maximum of 72.19."""
+        grid = self._loud_and_quiet()
+        reduced = grid.max(axis=(1, 2))
+        stats = proxy.robust_threshold(reduced, proxy.DEFAULT_K_MAD)
+        self.assertGreater(stats["threshold"], float(np.max(reduced)))
+        self.assertEqual(len(proxy.detect_changepoints(
+            reduced, [n * STRIDE for n in range(len(reduced))],
+            k_mad=proxy.DEFAULT_K_MAD, min_amplitude=0.0, stride=STRIDE)), 0)
+
+    def test_per_tile_finds_the_quiet_target_the_max_reduction_cannot(self):
+        grid = self._loud_and_quiet()
+        frames = [n * STRIDE for n in range(grid.shape[0])]
+        result = proxy.per_tile_camera_candidates(
+            _grid_tiled(grid), frames, k_mad=proxy.DEFAULT_K_MAD,
+            min_amplitude=0.1, stride=STRIDE)
+        self.assertEqual([c["polarity"] for c in result["candidates"]],
+                         ["rise", "fall"])
+        self.assertEqual([c["source_frame"] for c in result["candidates"]],
+                         [4 * STRIDE, 8 * STRIDE])
+        self.assertEqual(result["candidates"][0]["component_tiles_row_col"],
+                         [[0, 0], [0, 1], [0, 2]])
+        #  the loud tile's own gate holds it: it never fires
+        self.assertNotIn([1, 0], result["candidates"][0]["firing_tiles_row_col"])
+
+
+class GridConnectedComponentTests(unittest.TestCase):
+    """v2 section 4: FACE-adjacent, and diagonals are not faces."""
+
+    def test_diagonal_tiles_are_not_adjacent(self):
+        mask = np.zeros((4, 4), dtype=bool)
+        mask[0, 0] = mask[1, 1] = mask[2, 2] = mask[3, 3] = True
+        components = proxy.grid_connected_components(mask)
+        self.assertEqual([len(c) for c in components], [1, 1, 1, 1])
+
+    def test_face_adjacent_runs_and_shapes(self):
+        row = np.zeros((3, 5), dtype=bool)
+        row[1, 1] = row[1, 2] = row[1, 3] = True
+        self.assertEqual(proxy.grid_connected_components(row),
+                         [[(1, 1), (1, 2), (1, 3)]])
+        column = np.zeros((4, 2), dtype=bool)
+        column[0, 1] = column[1, 1] = column[2, 1] = True
+        self.assertEqual([len(c) for c in
+                          proxy.grid_connected_components(column)], [3])
+        elbow = np.zeros((3, 3), dtype=bool)
+        elbow[0, 0] = elbow[1, 0] = elbow[1, 1] = True
+        self.assertEqual(proxy.grid_connected_components(elbow),
+                         [[(0, 0), (1, 0), (1, 1)]])
+
+    def test_two_components_separated_by_one_gap(self):
+        mask = np.zeros((1, 7), dtype=bool)
+        mask[0, 0] = mask[0, 1] = mask[0, 2] = True
+        mask[0, 4] = mask[0, 5] = True
+        self.assertEqual([len(c) for c in
+                          proxy.grid_connected_components(mask)], [3, 2])
+
+    def test_a_diagonal_chain_never_reaches_the_minimum_component(self):
+        """Three scattered false positives must NOT pass as one event."""
+        mask = np.zeros((9, 16), dtype=bool)
+        for row, col in ((1, 1), (2, 2), (3, 3), (5, 9), (6, 10)):
+            mask[row, col] = True
+        self.assertTrue(all(len(c) < proxy.DEFAULT_PER_TILE_MIN_COMPONENT
+                            for c in proxy.grid_connected_components(mask)))
+
+    def test_wraparound_is_not_adjacency(self):
+        mask = np.zeros((3, 3), dtype=bool)
+        mask[0, 0] = mask[0, 2] = mask[2, 0] = True
+        self.assertEqual([len(c) for c in
+                          proxy.grid_connected_components(mask)], [1, 1, 1])
+
+    def test_empty_full_and_refusals(self):
+        self.assertEqual(proxy.grid_connected_components(
+            np.zeros((3, 3), dtype=bool)), [])
+        self.assertEqual([len(c) for c in proxy.grid_connected_components(
+            np.ones((3, 4), dtype=bool))], [12])
+        with self.assertRaises(ContractError):
+            proxy.grid_connected_components(np.ones(4, dtype=bool))
+        with self.assertRaises(ContractError):
+            proxy.grid_connected_components(np.ones((2, 2, 2), dtype=bool))
+
+
+class PerTileSpatialCoherenceTests(unittest.TestCase):
+    """v2 section 4, on the real candidate builder over a 9x16 grid."""
+
+    FRAMES = 10
+    PLATEAU = (4, 7)
+
+    def _run(self, tiles, **overrides):
+        grid = _bumped_grid(self.FRAMES, 9, 16, tiles, self.PLATEAU)
+        frames = [n * STRIDE for n in range(self.FRAMES)]
+        kwargs = {"k_mad": proxy.DEFAULT_K_MAD, "min_amplitude": 0.5,
+                  "stride": STRIDE}
+        kwargs.update(overrides)
+        return proxy.per_tile_camera_candidates(_grid_tiled(grid), frames,
+                                                **kwargs)
+
+    def test_a_constant_grid_off_the_plateau_fires_only_the_bumped_tiles(self):
+        result = self._run([(0, 0), (0, 1), (0, 2)])
+        self.assertEqual([c["n_tiles_firing_at_sample"]
+                          for c in result["candidates"]], [3, 3])
+        self.assertEqual(result["n_tiles_with_events"], 3)
+
+    def test_two_tiles_is_below_the_minimum_component(self):
+        result = self._run([(0, 0), (0, 1)])
+        self.assertEqual(result["candidates"], [])
+        reasons = {r["reason"] for r in result["rejected"]}
+        self.assertEqual(reasons,
+                         {"component_smaller_than_min_component_tiles"})
+        self.assertEqual(result["rejected"][0]["component_size_tiles"], 2)
+
+    def test_three_diagonal_tiles_are_rejected_but_three_in_a_row_are_not(self):
+        diagonal = self._run([(0, 0), (1, 1), (2, 2)])
+        self.assertEqual(diagonal["candidates"], [])
+        self.assertEqual(len(diagonal["rejected"]), 6)   # 3 tiles x rise+fall
+        straight = self._run([(0, 0), (1, 0), (2, 0)])
+        self.assertEqual(len(straight["candidates"]), 2)
+        self.assertEqual(straight["candidates"][0]["component_size_tiles"], 3)
+
+    def test_the_48_of_144_cap_is_exclusive(self):
+        forty_eight = [(r, c) for r in range(3) for c in range(16)]
+        self.assertEqual(len(forty_eight), 48)
+        capped = self._run(forty_eight)
+        self.assertEqual(capped["candidates"], [])
+        self.assertEqual({r["reason"] for r in capped["rejected"]},
+                         {"too_many_tiles_firing_global_change"})
+        self.assertEqual(capped["rejected"][0]["n_tiles_firing_at_sample"], 48)
+
+        forty_seven = forty_eight[:-1]
+        admitted = self._run(forty_seven)
+        self.assertEqual(len(admitted["candidates"]), 2)
+        self.assertEqual(admitted["candidates"][0]["n_tiles_firing_at_sample"],
+                         47)
+        self.assertEqual(admitted["candidates"][0]["component_size_tiles"], 47)
+
+    def test_the_cap_and_the_component_read_the_SAME_firing_set(self):
+        """A big global change plus a small real one is still capped out."""
+        tiles = ([(r, c) for r in range(3) for c in range(15)]
+                 + [(8, 0), (8, 1), (8, 2)])
+        self.assertEqual(len(tiles), 48)
+        result = self._run(tiles)
+        self.assertEqual(result["candidates"], [])
+
+    def test_candidate_carries_the_full_spatial_explanation(self):
+        result = self._run([(0, 0), (0, 1), (0, 2)])
+        candidate = result["candidates"][0]
+        for key in ("component_size_tiles", "n_tiles_firing_at_sample",
+                    "n_tiles_in_grid", "component_tiles_row_col",
+                    "firing_tiles_row_col", "per_tile_amplitude",
+                    "per_tile_threshold", "per_tile_median",
+                    "per_tile_mad_scaled", "per_tile_polarity",
+                    "tile_pixel_boxes_xyxy", "component_pixel_bbox_xyxy",
+                    "max_tile_amplitude"):
+            self.assertIn(key, candidate)
+        self.assertEqual(candidate["n_tiles_in_grid"], 144)
+        self.assertEqual(len(candidate["per_tile_amplitude"]), 3)
+        self.assertEqual(candidate["tile_pixel_boxes_xyxy"],
+                         [[0, 0, 60, 60], [60, 0, 120, 60], [120, 0, 180, 60]])
+        self.assertEqual(candidate["component_pixel_bbox_xyxy"],
+                         [0, 0, 180, 60])
+        #  the labelling the review gallery must not be able to drop
+        self.assertFalse(candidate["is_instance_mask"])
+        self.assertEqual(candidate["kind"], "detector_signal_explanation")
+        self.assertIn("NOT AN INSTANCE MASK", candidate["what_this_is"])
+        self.assertTrue(
+            candidate["pixel_boxes_are_tile_extent_not_object_extent"])
+        json.dumps(result["candidates"], sort_keys=True)
+
+    def test_amplitude_is_the_mean_over_the_components_own_tiles(self):
+        grid = _bumped_grid(self.FRAMES, 9, 16, [], self.PLATEAU)
+        lo, hi = self.PLATEAU
+        grid[lo:hi, 0, 0] += 2.0
+        grid[lo:hi, 0, 1] += 4.0
+        grid[lo:hi, 0, 2] += 6.0
+        result = proxy.per_tile_camera_candidates(
+            _grid_tiled(grid), [n * STRIDE for n in range(self.FRAMES)],
+            k_mad=proxy.DEFAULT_K_MAD, min_amplitude=0.5, stride=STRIDE)
+        candidate = result["candidates"][0]
+        self.assertAlmostEqual(candidate["amplitude"], 4.0, places=9)
+        self.assertAlmostEqual(candidate["max_tile_amplitude"], 6.0, places=9)
+        self.assertEqual(candidate["per_tile_amplitude"], [2.0, 4.0, 6.0])
+
+    def test_polarity_is_a_recorded_majority_never_an_ordering_constraint(self):
+        result = self._run([(0, 0), (0, 1), (0, 2)])
+        for candidate in result["candidates"]:
+            self.assertEqual(candidate["n_tiles_rise"] +
+                             candidate["n_tiles_fall"], 3)
+            self.assertIn("polarity_is_tied", candidate)
+        self.assertEqual([c["polarity"] for c in result["candidates"]],
+                         ["rise", "fall"])
+
+    def test_refusals(self):
+        grid = _bumped_grid(self.FRAMES, 9, 16, [(0, 0)], self.PLATEAU)
+        frames = [n * STRIDE for n in range(self.FRAMES)]
+        with self.assertRaises(ContractError):
+            proxy.per_tile_camera_candidates(
+                _grid_tiled(grid), frames[:-1], k_mad=3.0, min_amplitude=0.5,
+                stride=STRIDE)
+        with self.assertRaises(ContractError):
+            proxy.per_tile_camera_candidates(
+                _grid_tiled(grid), frames, k_mad=3.0, min_amplitude=0.5,
+                stride=STRIDE, min_component_tiles=0)
+        with self.assertRaises(ContractError):
+            proxy.per_tile_camera_candidates(
+                _grid_tiled(grid), frames, k_mad=3.0, min_amplitude=0.5,
+                stride=STRIDE, max_firing_tiles=0)
+        with self.assertRaises(ContractError):
+            proxy.per_tile_camera_candidates(
+                _grid_tiled(np.zeros((1, 9, 16))), [0], k_mad=3.0,
+                min_amplitude=0.5, stride=STRIDE)
+
+
+class CensusPerTileModeTests(unittest.TestCase):
+    """End to end over a real (tiny) proxy tree, in per-tile mode."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        root = Path(cls._tmp.name)
+        cls.root = root / "pertile"
+        _write_proxy_root(cls.root, _per_tile_census_stack())
+        #  whole-frame change: the DEFAULT census already sees this one
+        cls.big_root = root / "big"
+        big = np.full((8, 120, 180), 40.0, dtype=np.float32)
+        big[3:6] += 60.0
+        _write_proxy_root(cls.big_root, big)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    def test_per_tile_mode_off_is_byte_identical_to_the_pre_v2_census(self):
+        legacy = proxy.mode_census(_census_args(self.big_root))
+        with_flags_off = proxy.mode_census(
+            _census_args(self.big_root, per_tile_mode=False,
+                         per_tile_floor_f=proxy.DEFAULT_PER_TILE_FLOOR_F,
+                         per_tile_min_component=3,
+                         per_tile_max_firing_tiles=48))
+        self.assertEqual(json.dumps(legacy, sort_keys=True, default=str),
+                         json.dumps(with_flags_off, sort_keys=True,
+                                    default=str))
+        blob = json.dumps(legacy, sort_keys=True, default=str)
+        self.assertNotIn("per_tile", blob)
+        self.assertNotIn("tile_", blob)
+        #  and the pre-v2 ranking is untouched when the mode is off
+        clusters = legacy["windows"][0]["candidate_clusters"]
+        self.assertEqual([c["n_cameras_supporting"] for c in clusters],
+                         sorted([c["n_cameras_supporting"] for c in clusters],
+                                reverse=True))
+
+    def test_tile_mode_and_per_tile_mode_may_not_be_combined(self):
+        with self.assertRaises(ContractError):
+            proxy.mode_census(_per_tile_args(
+                self.root, tile_mode=True, tile_size=60,
+                tile_min_amplitude=2.0, tile_top_n=8))
+
+    def test_the_default_census_and_tile_max_both_miss_the_quiet_target(self):
+        """The NEUTER's premise, measured rather than asserted."""
+        plain = proxy.mode_census(_census_args(self.root))
+        self.assertEqual(plain["windows"][0]["n_candidates_total"], 0)
+        tiled_report = proxy.mode_census(
+            _census_args(self.root, tile_mode=True, tile_size=60,
+                         tile_min_amplitude=proxy.DEFAULT_TILE_MIN_AMPLITUDE,
+                         tile_top_n=4))
+        self.assertEqual(tiled_report["windows"][0]["n_candidates_total"], 0)
+
+    def test_neuter_per_tile_must_not_be_a_max_over_tiles_in_disguise(self):
+        """FAILS if the per-tile reduction silently becomes tile_max.
+
+        The fixture is built so the max-over-tiles threshold EXCEEDS its own
+        signal maximum -- the audited cam12 signature -- so a fallback to that
+        reduction returns a structurally guaranteed ZERO.
+        """
+        report = proxy.mode_census(_per_tile_args(self.root))
+        window = report["windows"][0]
+        self.assertGreater(window["n_candidates_total"], 0)
+
+        #  and, on the very same window, the max reduction finds nothing
+        stack = _per_tile_census_stack()
+        tiled = proxy.tiled_template_signals(stack, 60)
+        reduced = tiled["tile_max"]
+        stats = proxy.robust_threshold(reduced, proxy.DEFAULT_K_MAD)
+        self.assertGreater(stats["threshold"], float(np.max(reduced)))
+        self.assertEqual(len(proxy.detect_changepoints(
+            reduced, [n * STRIDE for n in range(len(reduced))],
+            k_mad=proxy.DEFAULT_K_MAD, min_amplitude=0.0, stride=STRIDE)), 0)
+        self.assertEqual(
+            report["per_tile_pass"]["signal"].count("INDEPENDENTLY"), 1)
+
+    def test_per_tile_census_finds_the_target_where_it_was_injected(self):
+        report = proxy.mode_census(_per_tile_args(self.root))
+        window = report["windows"][0]
+        self.assertEqual(window["n_candidates_total"], 4)   # 2 cameras x 2
+        self.assertEqual(window["n_clusters"], 2)
+        self.assertEqual(window["n_clusters_multi_camera"], 2)
+        frames = sorted(c["source_frame_median"]
+                        for c in window["candidate_clusters"])
+        self.assertEqual(frames, [PT_TARGET_PLATEAU[0] * STRIDE,
+                                  PT_TARGET_PLATEAU[1] * STRIDE])
+        for cluster in window["candidate_clusters"]:
+            self.assertEqual(cluster["signal_used_for_detection"],
+                             "per_tile_template_dist")
+            self.assertEqual(cluster["per_camera_component_size_tiles"],
+                             {"cam00": 3, "cam01": 3})
+            self.assertEqual(
+                cluster["per_camera_component_tiles_row_col"]["cam00"],
+                [list(rc) for rc in PT_TARGET_TILES])
+            self.assertFalse(cluster["is_instance_mask"])
+            self.assertIn("NOT AN INSTANCE MASK",
+                          cluster["tile_explanation_note"])
+        json.dumps(report, sort_keys=True)
+
+    def test_the_manifest_records_the_measured_floor_and_the_sweep(self):
+        report = proxy.mode_census(_per_tile_args(self.root))
+        block = report["per_tile_pass"]
+        self.assertTrue(block["enabled"])
+        self.assertTrue(block["is_primary_reading"])
+        self.assertEqual(block["primary_reading_F"], 3.0)
+        self.assertEqual(block["tile_size_px"], 60)
+        self.assertEqual(block["tile_grid"], [3, 2])
+        self.assertIn("NOT AN INSTANCE MASK", block["note"])
+        self.assertIn("EXHAUSTIVE RECALL",
+                      block["windowing_defect_not_repaired_here"])
+
+        floor = block["absolute_floor"]
+        self.assertEqual(floor["F"], 3.0)
+        self.assertTrue(floor["F_is_a_declared_judgment_not_derived_from_data"])
+        #  THE MEDIAN POOLS OVER (camera, window, tile), exactly as the rule
+        #  says: 2 cameras x 2 windows x 6 tiles.
+        self.assertEqual(floor["n_tile_series"], 2 * 2 * 6)
+        self.assertEqual(floor["n_camera_window_grids"], 2 * 2)
+        self.assertAlmostEqual(
+            floor["floor_grey_levels"],
+            3.0 * floor["noise_scale_median_grey_levels"], places=12)
+        self.assertGreater(floor["floor_grey_levels"], 0.0)
+
+        sweep = block["sensitivity_sweep"]
+        self.assertEqual([row["F"] for row in sweep],
+                         list(proxy.PER_TILE_FLOOR_F_SWEEP))
+        self.assertEqual(sum(1 for row in sweep if row["is_primary_reading"]), 1)
+        primary = [row for row in sweep if row["is_primary_reading"]][0]
+        self.assertEqual(primary["F"], 3.0)
+        self.assertEqual(primary["floor_grey_levels"],
+                         floor["floor_grey_levels"])
+        self.assertEqual(primary["n_per_camera_candidates"],
+                         report["windows"][0]["n_candidates_total"])
+        for row in sweep:
+            self.assertIn("floor_grey_levels", row)
+            self.assertIn("n_clusters", row)
+            self.assertIn("n_clusters_at_min_cameras", row)
+            if not row["is_primary_reading"]:
+                self.assertIn("SENSITIVITY PROBE", row["label"])
+        floors = [row["floor_grey_levels"] for row in sweep]
+        self.assertEqual(floors, sorted(floors))
+
+    def test_a_non_primary_F_is_labelled_as_a_probe(self):
+        report = proxy.mode_census(_per_tile_args(self.root,
+                                                  per_tile_floor_f=6.0))
+        block = report["per_tile_pass"]
+        self.assertFalse(block["is_primary_reading"])
+        self.assertFalse(block["absolute_floor"]["is_primary_reading"])
+        self.assertEqual(block["primary_reading_F"], 3.0)
+
+    def test_a_high_floor_rejects_the_target_as_an_absolute_gate(self):
+        report = proxy.mode_census(_per_tile_args(self.root,
+                                                  per_tile_floor_f=5000.0))
+        floor = report["per_tile_pass"]["absolute_floor"]["floor_grey_levels"]
+        #  above the injected target's own tile amplitude, so the ABSOLUTE
+        #  gate -- not the relative one, not coherence -- does the rejecting
+        self.assertGreater(floor, PT_TARGET_CONTRAST * PT_TARGET_PATCH ** 2
+                           / 60 ** 2)
+        self.assertEqual(report["windows"][0]["n_candidates_total"], 0)
+
+    def test_a_single_tile_false_positive_is_rejected_by_coherence(self):
+        """The coherence gate, doing its job on a REAL background fluke."""
+        report = proxy.mode_census(_per_tile_args(self.root))
+        window = report["windows"][0]
+        #  4 tiles carry crossings: the 3 target tiles plus one background
+        #  tile that fluked past its own ~3 sigma gate.
+        self.assertEqual(window["per_tile_n_tiles_with_events"],
+                         {"cam00": 4, "cam01": 4})
+        rejected = window["per_tile_rejected_by_spatial_coherence"]["cam00"]
+        self.assertEqual([r["component_size_tiles"] for r in rejected], [1])
+        self.assertEqual([r["reason"] for r in rejected],
+                         ["component_smaller_than_min_component_tiles"])
+        #  ... and it never reaches the candidate list
+        for cluster in window["candidate_clusters"]:
+            self.assertEqual(cluster["per_camera_component_size_tiles"],
+                             {"cam00": 3, "cam01": 3})
+
+    def test_rejections_are_recorded_never_silently_dropped(self):
+        report = proxy.mode_census(_per_tile_args(self.root,
+                                                  per_tile_min_component=4))
+        window = report["windows"][0]
+        self.assertEqual(window["n_candidates_total"], 0)
+        rejected = window["per_tile_rejected_by_spatial_coherence"]["cam00"]
+        self.assertEqual({r["reason"] for r in rejected},
+                         {"component_smaller_than_min_component_tiles"})
+        #  the 3-tile target is now BELOW the raised minimum, and the fact is
+        #  recorded with its measured size rather than dropped
+        self.assertIn(3, [r["component_size_tiles"] for r in rejected])
+        self.assertIn(1, [r["component_size_tiles"] for r in rejected])
+
+    def test_per_camera_signals_keep_the_global_signal_beside_the_per_tile(self):
+        report = proxy.mode_census(_per_tile_args(self.root,
+                                                  emit_signals=True))
+        signals = report["windows"][0]["per_camera_signals"]["cam00"]
+        for key in ("absdiff_mean", "template_dist", "changed_frac",
+                    "threshold", "signal_used_for_detection", "n_tiles",
+                    "n_tiles_with_events", "n_rejected_by_spatial_coherence",
+                    "per_tile_noise_scale_median"):
+            self.assertIn(key, signals)
+        self.assertEqual(signals["signal_used_for_detection"],
+                         "per_tile_template_dist")
+        self.assertEqual(signals["n_tiles"], 6)
+        self.assertEqual(signals["n_tiles_with_events"], 4)
+        self.assertEqual(signals["n_rejected_by_spatial_coherence"], 1)
+        #  The whole-frame signal is reported unchanged beside the per-tile
+        #  one, and on this fixture it shows the SAME monopolisation defect:
+        #  the loud region drives its median AND its MAD so its own threshold
+        #  exceeds its own maximum, exactly as measured on cam12.
+        self.assertGreater(signals["threshold"]["threshold"],
+                           max(signals["template_dist"]))
+
+
+class PerTileRankingTests(unittest.TestCase):
+    """v2 section 8: camera count is RETIRED as the primary order."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.root = Path(cls._tmp.name) / "ranking"
+        n_frames, height, width = 12, 120, 180
+        rng = np.random.default_rng(5)
+        base = (np.full((n_frames, height, width), 40.0, dtype=np.float32)
+                + rng.integers(0, 3, size=(n_frames, height, width)
+                               ).astype(np.float32))
+        #  LOW amplitude, seen by ALL THREE cameras, tiles (0,0..2) at j=4
+        for col in range(3):
+            base[4:6, 14:46, col * 60 + 14:col * 60 + 46] += 6.0
+        three_camera_only = base.copy()
+        #  HIGH amplitude, seen by TWO cameras only, tiles (1,0..2) at j=8
+        two_camera = base.copy()
+        for col in range(3):
+            two_camera[8:10, 66:114, col * 60 + 6:col * 60 + 54] += 40.0
+        _write_proxy_root(cls.root, two_camera, cameras=("cam00", "cam01"))
+        _write_proxy_root(cls.root, three_camera_only, cameras=("cam02",))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    def test_clusters_are_ranked_by_mean_amplitude_not_by_camera_count(self):
+        report = proxy.mode_census(_per_tile_args(self.root))
+        clusters = report["windows"][0]["candidate_clusters"]
+        amplitudes = [c["mean_amplitude"] for c in clusters]
+        self.assertEqual(amplitudes, sorted(amplitudes, reverse=True))
+
+        top = clusters[0]
+        low = [c for c in clusters if c["n_cameras_supporting"] == 3]
+        self.assertTrue(low, "the 3-camera cluster must exist")
+        #  THE INVERSION: the top-ranked cluster has FEWER supporting cameras
+        #  than a lower-ranked one, so camera count demonstrably is not the
+        #  sort key.
+        self.assertEqual(top["n_cameras_supporting"], 2)
+        self.assertGreater(top["mean_amplitude"], low[0]["mean_amplitude"])
+        self.assertGreater(clusters.index(low[0]), 0)
+
+    def test_c_min_is_a_corroboration_floor_and_never_filters_the_output(self):
+        report = proxy.mode_census(_per_tile_args(self.root, min_cameras=3))
+        window = report["windows"][0]
+        clusters = window["candidate_clusters"]
+        self.assertGreater(len(clusters), window["n_clusters_multi_camera"])
+        #  the 2-camera cluster is still emitted, and still ranked first
+        self.assertEqual(clusters[0]["n_cameras_supporting"], 2)
+        ranking = report["per_tile_pass"]["ranking"]
+        self.assertTrue(
+            ranking["c_min_is_a_corroboration_floor_never_a_sort_key"])
+        self.assertTrue(ranking["camera_count_is_retired_as_the_primary_order"])
+
+    def test_the_default_path_still_ranks_by_camera_count(self):
+        """Additive: the pre-v2 ordering is untouched with the mode off."""
+        report = proxy.mode_census(_census_args(self.root))
+        clusters = report["windows"][0]["candidate_clusters"]
+        counts = [c["n_cameras_supporting"] for c in clusters]
+        self.assertEqual(counts, sorted(counts, reverse=True))
+
+
 class TileSelfTestModeTests(unittest.TestCase):
     def test_cli_tile_selftest_passes(self):
         self.assertEqual(proxy.main(["--tile-selftest"]), 0)
 
     def test_cli_self_test_still_passes(self):
         self.assertEqual(proxy.main(["--self-test"]), 0)
+
+    def test_cli_per_tile_selftest_passes(self):
+        self.assertEqual(proxy.main(["--per-tile-selftest"]), 0)
 
 
 if __name__ == "__main__":

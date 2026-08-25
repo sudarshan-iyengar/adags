@@ -106,9 +106,37 @@ reporting the global signal beside every candidate so the sensitivity bought
 is visible. Its frozen preconditions run offline under ``--tile-selftest``.
 NO zero-event claim from this instrument is exhaustive without that pass.
 
+--------------------------------------------------------------------
+AND THE MAXIMUM-OVER-TILES REDUCTION IS ITSELF REFUTED
+--------------------------------------------------------------------
+
+``--per-tile-mode`` (OFF by default, additive, nothing existing changes)
+implements [[operations/imvid-tile-scout-v2-per-tile-2026-08-25]], which
+SUPERSEDES the detection reduction of ``--tile-mode`` -- and only that
+reduction; every measurement the earlier page recorded remains correct about
+what it measured. A ground-truth audit established that ``tile_max`` is
+MONOPOLISED by the loudest region of the raster, which therefore sets both
+the median AND the MAD of the screened scalar: a quiet tile can never move a
+maximum it does not win. On `cam12` of `scene6_puppy` the resulting
+``median + k_mad*MAD`` threshold EXCEEDS the signal's own maximum in every
+window covering either of the two audited real events, so zero candidates was
+a STRUCTURAL CERTAINTY rather than a measurement.
+
+The v2 reduction runs the SAME two-gate changepoint detector independently on
+each of the 144 per-tile signals, so tile ``(i,j)``'s relative gate is
+``median_t(S_ij) + k_mad * 1.4826 * MAD_t(S_ij)`` from THAT TILE's own series
+-- a quiet tile gets a quiet threshold. v1's inert 2.0 absolute floor is
+replaced by ``F * median over all (camera, window, tile) of
+1.4826*MAD_t(S_ij)`` with ``F = 3.0`` frozen, and spatial coherence (a
+face-adjacent connected component of >= 3 tiles, fewer than 48 of 144 tiles
+firing at that sample) carries the false-positive cost of screening 144
+signals instead of 1. Frozen preconditions run offline under
+``--per-tile-selftest``.
+
 Usage:
   python3 scripts/imvid_event_proxy.py --self-test
   python3 scripts/imvid_event_proxy.py --tile-selftest
+  python3 scripts/imvid_event_proxy.py --per-tile-selftest
   python3 scripts/imvid_event_proxy.py --mode probe \
       --source-dir /apollo/users/sri/proj_adags/data/imvid/raw/scene1_opera \
       --out        /apollo/users/sri/proj_adags/data/imvid/derived/proxy/scene1_opera.probe.json
@@ -193,6 +221,50 @@ DEFAULT_TILE_MIN_AMPLITUDE = 2.0
 
 #: Contributing tiles reported per candidate for the human-review overlay.
 DEFAULT_TILE_TOP_N = 8
+
+#: PER-TILE PASS (v2) -- OFF BY DEFAULT, additive to everything above, and it
+#: SUPERSEDES the ``tile_max`` reduction above (only the reduction; every
+#: number the v1 page recorded stays correct about what it measured). See
+#: [[operations/imvid-tile-scout-v2-per-tile-2026-08-25]].
+#:
+#: THE ABSOLUTE FLOOR IS DECLARED ON NOISE, NOT ON THE KNOWN EVENTS. v1's flat
+#: 2.0 grey levels was measured INERT on real footage -- 119 to 144 of 144
+#: tiles exceeded it in every frame, and 95.4% of v1's candidates would also
+#: have cleared the WHOLE-FRAME floor, so the tile pass fired uniquely on 4.6%
+#: of its own output. The replacement is scaled to the take's own per-tile
+#: noise:
+#:
+#:     floor = F * median over all (camera, window, tile) of
+#:                 [ 1.4826 * MAD_t( S_ij ) ]
+#:
+#: ``F = 3.0`` is a DECLARED JUDGMENT fixed in the frozen spec, chosen to match
+#: the existing relative gate's ``k_mad = 3.0`` so the two gates express the
+#: same strictness in different denominators. It is NOT derived from data and
+#: every emitted record says so. The measured floor is recorded in the census
+#: manifest.
+DEFAULT_PER_TILE_FLOOR_F = 3.0
+
+#: Supplementary sensitivity sweep over ``F``. THE PRIMARY READING IS F = 3.0
+#: ONLY; every other point is labelled a sensitivity probe in the JSON and may
+#: not be reported as the census.
+PER_TILE_FLOOR_F_SWEEP = (1.5, 2.0, 3.0, 4.5, 6.0)
+
+#: SPATIAL COHERENCE, frozen. Per-tile detection raises the false-positive
+#: rate by construction (144 signals instead of 1). The discriminator is
+#: measured: the audited real events fire 4-9 CONTIGUOUS tiles, illumination
+#: artefacts fire 38-75 tiles at once. Both bounds are DECLARED JUDGMENTS
+#: derived from observation of a known-positive and a known-negative, and that
+#: dependence is disclosed rather than hidden.
+#:
+#: Lower bound: a face-adjacent (4-connected) component of at least this many
+#: tiles. Admits the smallest observed real event (4 tiles) with one tile of
+#: margin. DIAGONAL neighbours are NOT adjacent.
+DEFAULT_PER_TILE_MIN_COMPONENT = 3
+
+#: Upper bound, EXCLUSIVE: a sample with this many or more tiles firing is a
+#: global change, not a localized one. 48 of 144 = 33%, below the smallest
+#: observed artefact (38 tiles).
+DEFAULT_PER_TILE_MAX_FIRING_TILES = 48
 
 #: Wording carried in the census JSON and in the docstring of every function
 #: that produces it. The N3V curation precedent
@@ -1156,6 +1228,274 @@ def detect_changepoints(signal: np.ndarray, source_frames: list[int], *,
     return events
 
 
+# ---------------------------------------------------------------------------
+# PER-TILE DETECTION (v2) -- the reduction that REPLACES max-over-tiles
+# ---------------------------------------------------------------------------
+
+def per_tile_noise_scale(grid: np.ndarray) -> np.ndarray:
+    """``1.4826 * MAD_t(S_ij)`` for every tile of one ``(T, ny, nx)`` grid.
+
+    This is the per-tile NOISE SCALE that the v2 absolute floor is declared
+    against. It is a property of each tile's OWN temporal series, measured
+    before any candidate is read, and it is the quantity the frozen rule takes
+    a median over.
+    """
+    array = np.asarray(grid, dtype=np.float64)
+    if array.ndim != 3 or array.shape[0] < 2:
+        raise ContractError(
+            f"need a (T>=2, ny, nx) tile grid, got shape {tuple(array.shape)}")
+    med = np.median(array, axis=0)
+    return 1.4826 * np.median(np.abs(array - med[None, :, :]), axis=0)
+
+
+def per_tile_absolute_floor(scales, floor_f: float) -> dict:
+    """The FROZEN v2 absolute floor, measured on the take's own per-tile noise.
+
+    ::
+
+        floor = F * median over all (camera, window, tile) of
+                    [ 1.4826 * MAD_t( S_ij ) ]
+
+    ``scales`` is any iterable of arrays of per-tile noise scales -- one array
+    per (camera, window) pair -- and the median is taken over ALL of them
+    pooled, exactly as the rule says. ``F`` is a DECLARED JUDGMENT, not a
+    quantity derived from data, and the returned record says so in a field
+    that survives into the manifest.
+
+    A DEGENERATE ZERO floor (every tile series constant) is reported rather
+    than refused: it makes the absolute gate inert, and a reader must be able
+    to see that from the manifest instead of inferring it.
+    """
+    if float(floor_f) <= 0:
+        raise ContractError(f"floor F must be positive, got {floor_f}")
+    arrays = [np.asarray(s, dtype=np.float64).reshape(-1) for s in scales]
+    arrays = [a for a in arrays if a.size]
+    if not arrays:
+        raise ContractError(
+            "no per-tile noise scales were supplied, so the absolute floor "
+            "cannot be measured. REFUSED -- the v2 floor is defined as a "
+            "multiple of the take's OWN noise and may not be guessed")
+    flat = np.concatenate(arrays)
+    if not np.all(np.isfinite(flat)):
+        raise ContractError("per-tile noise scales contain non-finite values")
+    median = float(np.median(flat))
+    return {
+        "F": float(floor_f),
+        "F_is_a_declared_judgment_not_derived_from_data": True,
+        "rule": ("floor = F * median over all (camera, window, tile) of "
+                 "1.4826 * MAD_t(S_ij)"),
+        "noise_scale_median_grey_levels": median,
+        "floor_grey_levels": float(floor_f) * median,
+        "n_tile_series": int(flat.size),
+        "n_camera_window_grids": len(arrays),
+        "noise_scale_min_grey_levels": float(np.min(flat)),
+        "noise_scale_max_grey_levels": float(np.max(flat)),
+        "n_zero_scale_tile_series": int(np.count_nonzero(flat == 0.0)),
+        "floor_is_degenerate_zero": bool(median == 0.0),
+    }
+
+
+def grid_connected_components(mask: np.ndarray) -> list[list[tuple[int, int]]]:
+    """4-connected (FACE-ADJACENT) components of a boolean tile grid.
+
+    Face-adjacent means up/down/left/right ONLY. Two tiles touching at a
+    corner are NOT adjacent and do not join a component -- the frozen spec
+    says "face-adjacent in the 16x9 grid", and 8-connectivity would let a
+    scatter of independent single-tile false positives masquerade as a
+    contiguous region, which is the exact discrimination this gate exists to
+    make.
+
+    Components are returned in row-major order of their first tile, each
+    component sorted, so the output is deterministic.
+    """
+    array = np.asarray(mask, dtype=bool)
+    if array.ndim != 2:
+        raise ContractError(
+            f"need a 2-D tile mask, got shape {tuple(array.shape)}")
+    n_y, n_x = array.shape
+    seen = np.zeros((n_y, n_x), dtype=bool)
+    components: list[list[tuple[int, int]]] = []
+    for i in range(n_y):
+        for j in range(n_x):
+            if not array[i, j] or seen[i, j]:
+                continue
+            seen[i, j] = True
+            pending = [(i, j)]
+            component: list[tuple[int, int]] = []
+            while pending:
+                row, col = pending.pop()
+                component.append((row, col))
+                for d_row, d_col in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    r, c = row + d_row, col + d_col
+                    if (0 <= r < n_y and 0 <= c < n_x
+                            and array[r, c] and not seen[r, c]):
+                        seen[r, c] = True
+                        pending.append((r, c))
+            components.append(sorted(component))
+    return components
+
+
+def per_tile_camera_candidates(
+        tiled: dict, source_frames: list[int], *, k_mad: float,
+        min_amplitude: float, stride: int,
+        min_component_tiles: int = DEFAULT_PER_TILE_MIN_COMPONENT,
+        max_firing_tiles: int = DEFAULT_PER_TILE_MAX_FIRING_TILES) -> dict:
+    """One camera-window's per-tile candidates. THE GATE FOLLOWS THE TILE.
+
+    ``detect_changepoints`` -- the SAME two-gate detector, unmodified -- is run
+    independently on each of the ``ny * nx`` per-tile signals, so the relative
+    gate for tile ``(i,j)`` is ``median_t(S_ij) + k_mad*1.4826*MAD_t(S_ij)``
+    computed from that tile's OWN temporal series. A quiet tile therefore gets
+    a quiet threshold, which is precisely the property the ``tile_max``
+    reduction lacked: a maximum over tiles is monopolised by the loudest
+    region, which sets both its median and its MAD, and a quiet tile can never
+    move a maximum it does not win.
+
+    Tiles firing at the SAME proxy sample are then screened for SPATIAL
+    COHERENCE: a face-adjacent connected component of at least
+    ``min_component_tiles`` tiles, and strictly fewer than ``max_firing_tiles``
+    tiles firing anywhere in the grid at that sample. Both bounds are declared
+    judgments (see the module constants), and both are evaluated on the SAME
+    firing set, as the frozen text states.
+
+    Every emitted candidate is an EXPLANATION OF THE DETECTOR SIGNAL, NOT AN
+    INSTANCE MASK (see ``TILE_EXPLANATION_NOTE``): the tile boxes bound the
+    tiles whose scalars crossed, and bound no object.
+    """
+    grid = np.asarray(tiled["tile_template_dist"], dtype=np.float64)
+    if grid.ndim != 3 or grid.shape[0] < 2:
+        raise ContractError(
+            f"need a (T>=2, ny, nx) tile grid, got shape {tuple(grid.shape)}")
+    n_frames, n_y, n_x = (int(v) for v in grid.shape)
+    if len(source_frames) != n_frames:
+        raise ContractError(
+            f"{len(source_frames)} source frames for {n_frames} proxy samples")
+    if int(min_component_tiles) < 1:
+        raise ContractError(
+            f"min component tiles must be >= 1, got {min_component_tiles}")
+    if int(max_firing_tiles) < 1:
+        raise ContractError(
+            f"max firing tiles must be >= 1, got {max_firing_tiles}")
+
+    thresholds: dict[tuple[int, int], dict] = {}
+    by_sample: dict[int, dict[tuple[int, int], dict]] = {}
+    n_tiles_with_events = 0
+    for i in range(n_y):
+        for j in range(n_x):
+            series = np.ascontiguousarray(grid[:, i, j])
+            thresholds[(i, j)] = robust_threshold(series, k_mad)
+            events = detect_changepoints(series, source_frames, k_mad=k_mad,
+                                         min_amplitude=min_amplitude,
+                                         stride=stride)
+            if events:
+                n_tiles_with_events += 1
+            for event in events:
+                by_sample.setdefault(
+                    int(event["proxy_index_in_window"]), {})[(i, j)] = event
+
+    row_spans, col_spans = tiled["row_spans"], tiled["col_spans"]
+    candidates: list[dict] = []
+    rejected: list[dict] = []
+    for sample in sorted(by_sample):
+        firing = by_sample[sample]
+        firing_rc = sorted(firing)
+        n_firing = len(firing_rc)
+        if n_firing >= int(max_firing_tiles):
+            #  A global change -- illumination, exposure, auto-white-balance.
+            #  Recorded, never silently dropped.
+            rejected.append({
+                "proxy_index_in_window": int(sample),
+                "source_frame": int(source_frames[sample]),
+                "reason": "too_many_tiles_firing_global_change",
+                "n_tiles_firing_at_sample": n_firing,
+                "max_firing_tiles_exclusive": int(max_firing_tiles),
+            })
+            continue
+        mask = np.zeros((n_y, n_x), dtype=bool)
+        for row, col in firing_rc:
+            mask[row, col] = True
+        for component in grid_connected_components(mask):
+            if len(component) < int(min_component_tiles):
+                rejected.append({
+                    "proxy_index_in_window": int(sample),
+                    "source_frame": int(source_frames[sample]),
+                    "reason": "component_smaller_than_min_component_tiles",
+                    "component_size_tiles": len(component),
+                    "min_component_tiles": int(min_component_tiles),
+                    "component_tiles_row_col": [[int(r), int(c)]
+                                                for r, c in component],
+                })
+                continue
+            events = [firing[rc] for rc in component]
+            amplitudes = [float(e["amplitude"]) for e in events]
+            excesses = [float(e["excess_over_median"]) for e in events]
+            polarities = [str(e["polarity"]) for e in events]
+            n_rise = polarities.count("rise")
+            n_fall = polarities.count("fall")
+            #  A component's polarity is its MAJORITY. Polarity is retired as
+            #  an ordering constraint by the frozen spec (it records whether
+            #  the object is the temporal MAJORITY of its window, not whether
+            #  it is present), so the tie-break is deterministic and both the
+            #  counts and the tie flag are emitted rather than hidden.
+            polarity = "rise" if n_rise >= n_fall else "fall"
+            boxes = [tile_pixel_box(r, c, row_spans, col_spans)
+                     for r, c in component]
+            bbox = [min(b[0] for b in boxes), min(b[1] for b in boxes),
+                    max(b[2] for b in boxes), max(b[3] for b in boxes)]
+            candidates.append({
+                "polarity": polarity,
+                "polarity_is_tied": bool(n_rise == n_fall),
+                "n_tiles_rise": n_rise,
+                "n_tiles_fall": n_fall,
+                "source_frame": int(source_frames[sample]),
+                "bracket_source_frames": [int(source_frames[sample - 1]),
+                                          int(source_frames[sample])],
+                "localization_frames": int(stride),
+                "proxy_index_in_window": int(sample),
+                #  The scalar the census RANKS on: the mean over the
+                #  component's own tiles, in grey levels.
+                "amplitude": float(np.mean(amplitudes)),
+                "max_tile_amplitude": float(np.max(amplitudes)),
+                "excess_over_median": float(np.mean(excesses)),
+                "component_size_tiles": len(component),
+                "n_tiles_firing_at_sample": n_firing,
+                "n_tiles_in_grid": n_y * n_x,
+                "component_tiles_row_col": [[int(r), int(c)]
+                                            for r, c in component],
+                "firing_tiles_row_col": [[int(r), int(c)]
+                                         for r, c in firing_rc],
+                "per_tile_amplitude": [round(v, 4) for v in amplitudes],
+                "per_tile_excess_over_median": [round(v, 4) for v in excesses],
+                "per_tile_polarity": polarities,
+                "per_tile_signal_before": [round(float(e["signal_before"]), 4)
+                                           for e in events],
+                "per_tile_signal_after": [round(float(e["signal_after"]), 4)
+                                          for e in events],
+                "per_tile_threshold": [
+                    round(float(thresholds[rc]["threshold"]), 4)
+                    for rc in component],
+                "per_tile_median": [round(float(thresholds[rc]["median"]), 4)
+                                    for rc in component],
+                "per_tile_mad_scaled": [
+                    round(float(thresholds[rc]["mad_scaled"]), 4)
+                    for rc in component],
+                "tile_pixel_boxes_xyxy": boxes,
+                "component_pixel_bbox_xyxy": bbox,
+                "pixel_boxes_are_tile_extent_not_object_extent": True,
+                "is_instance_mask": False,
+                "kind": "detector_signal_explanation",
+                "what_this_is": TILE_EXPLANATION_NOTE,
+            })
+    return {
+        "candidates": candidates,
+        "rejected": rejected,
+        "per_tile_threshold": thresholds,
+        "n_tiles": n_y * n_x,
+        "n_tiles_with_events": n_tiles_with_events,
+        "n_samples_with_any_tile_firing": len(by_sample),
+    }
+
+
 def cluster_candidates(per_camera: dict[str, list[dict]], polarity: str,
                        tol_frames: int) -> list[dict]:
     """Agglomerate same-polarity candidates across cameras.
@@ -1255,15 +1595,114 @@ def mode_census(args) -> dict:
                                DEFAULT_TILE_MIN_AMPLITUDE))
     tile_top_n = int(getattr(args, "tile_top_n", DEFAULT_TILE_TOP_N))
 
+    per_tile_mode = bool(getattr(args, "per_tile_mode", False))
+    per_tile_floor_f = float(getattr(args, "per_tile_floor_f",
+                                     DEFAULT_PER_TILE_FLOOR_F))
+    per_tile_min_component = int(getattr(args, "per_tile_min_component",
+                                         DEFAULT_PER_TILE_MIN_COMPONENT))
+    per_tile_max_firing = int(getattr(args, "per_tile_max_firing_tiles",
+                                      DEFAULT_PER_TILE_MAX_FIRING_TILES))
+    if tile_mode and per_tile_mode:
+        raise ContractError(
+            "--tile-mode and --per-tile-mode are two DIFFERENT reductions of "
+            "the same per-tile grid and may not be combined. --per-tile-mode "
+            "supersedes the max-over-tiles reduction of --tile-mode "
+            "([[operations/imvid-tile-scout-v2-per-tile-2026-08-25]]); pick "
+            "one, and say which one produced any number you report.")
+
+    #  PER-TILE PRE-PASS. The v2 absolute floor is defined over ALL
+    #  (camera, window, tile) noise scales, so it cannot be known until every
+    #  window's tile grid exists. Rather than decode the whole proxy set
+    #  twice, the pre-pass caches the SMALL derived products -- the
+    #  (T, ny, nx) tile grid and the per-frame global signals -- and drops the
+    #  (T, H, W) stack immediately. For scene6_puppy (39 cameras, ~20 windows
+    #  of 30 proxy samples, 144 tiles) that cache is ~28 MiB, against ~1.1 GiB
+    #  for a SINGLE window's stack. This pre-pass runs ONLY in per-tile mode;
+    #  every other path is exactly what it was.
+    per_tile_cache: dict[tuple[str, int], dict] = {}
+    per_tile_scales: list[np.ndarray] = []
+    per_tile_floor_record: dict | None = None
+    if per_tile_mode:
+        for w_start in window_starts:
+            w_end = min(w_start + window - 1, global_max)
+            for camera in sorted(manifests):
+                indices = [n for n in available[camera]
+                           if w_start <= n <= w_end]
+                if len(indices) < 2:
+                    continue
+                stack = np.stack([
+                    png_to_gray(proxy_root / camera / "frames"
+                                / f"src_{n:06d}.png") for n in indices])
+                signals = frame_signals(stack)
+                tiled = tiled_template_signals(stack, tile_size)
+                del stack
+                per_tile_cache[(camera, w_start)] = {
+                    "signals": signals, "tiled": tiled, "indices": indices}
+                per_tile_scales.append(
+                    per_tile_noise_scale(tiled["tile_template_dist"]))
+        per_tile_floor_record = per_tile_absolute_floor(per_tile_scales,
+                                                        per_tile_floor_f)
+        per_tile_floor_record["is_primary_reading"] = bool(
+            float(per_tile_floor_f) == float(DEFAULT_PER_TILE_FLOOR_F))
+        print(f"[census] PER-TILE MODE: absolute floor = F * median over "
+              f"{per_tile_floor_record['n_tile_series']} (camera, window, "
+              f"tile) noise scales = {per_tile_floor_f} * "
+              f"{per_tile_floor_record['noise_scale_median_grey_levels']:.6f} "
+              f"= {per_tile_floor_record['floor_grey_levels']:.6f} grey levels",
+              flush=True)
+        if not per_tile_floor_record["is_primary_reading"]:
+            print(f"[census] WARNING: F = {per_tile_floor_f} is a SENSITIVITY "
+                  f"PROBE, not the census. The primary reading is F = "
+                  f"{DEFAULT_PER_TILE_FLOOR_F} only.", flush=True)
+        if per_tile_floor_record["floor_is_degenerate_zero"]:
+            print("[census] WARNING: the measured noise scale median is ZERO, "
+                  "so the absolute gate is INERT on this input.", flush=True)
+
     windows_out = []
     for w_start in window_starts:
         w_end = min(w_start + window - 1, global_max)
         per_camera_events: dict[str, list[dict]] = {}
         per_camera_signals: dict[str, dict] = {}
         per_camera_tile_explanations: dict[str, list[dict]] = {}
+        per_camera_per_tile: dict[str, dict] = {}
         for camera in sorted(manifests):
             indices = [n for n in available[camera] if w_start <= n <= w_end]
             if len(indices) < 2:
+                continue
+            cached = per_tile_cache.get((camera, w_start))
+            if cached is not None:
+                #  Identical values to the branch below, computed once in the
+                #  pre-pass by the same two functions.
+                signals, tiled = cached["signals"], cached["tiled"]
+                events = per_tile_camera_candidates(
+                    tiled, indices, k_mad=float(args.k_mad),
+                    min_amplitude=per_tile_floor_record["floor_grey_levels"],
+                    stride=stride,
+                    min_component_tiles=per_tile_min_component,
+                    max_firing_tiles=per_tile_max_firing)
+                per_camera_per_tile[camera] = events
+                per_camera_events[camera] = events["candidates"]
+                stats = robust_threshold(signals["template_dist"],
+                                         float(args.k_mad))
+                per_camera_signals[camera] = {
+                    "source_frames": indices,
+                    "absdiff_mean": [round(float(v), 4)
+                                     for v in signals["absdiff_mean"]],
+                    "template_dist": [round(float(v), 4)
+                                      for v in signals["template_dist"]],
+                    "changed_frac": [round(float(v), 5)
+                                     for v in signals["changed_frac"]],
+                    "threshold": stats,
+                    "n_candidates": len(events["candidates"]),
+                    "signal_used_for_detection": "per_tile_template_dist",
+                    "n_tiles": events["n_tiles"],
+                    "n_tiles_with_events": events["n_tiles_with_events"],
+                    "n_samples_with_any_tile_firing": events[
+                        "n_samples_with_any_tile_firing"],
+                    "n_rejected_by_spatial_coherence": len(events["rejected"]),
+                    "per_tile_noise_scale_median": float(np.median(
+                        per_tile_noise_scale(tiled["tile_template_dist"]))),
+                }
                 continue
             stack = np.stack([png_to_gray(proxy_root / camera / "frames"
                                           / f"src_{n:06d}.png") for n in indices])
@@ -1343,6 +1782,39 @@ def mode_census(args) -> dict:
                             for c, e in sorted(members.items())},
                         "tile_explanation_note": TILE_EXPLANATION_NOTE,
                     }
+                elif per_tile_mode:
+                    #  Additive, per-tile-mode only: WHICH tiles carried each
+                    #  supporting camera's crossing, how big the face-adjacent
+                    #  component was, and how many tiles fired anywhere in the
+                    #  grid at that sample. An EXPLANATION OF THE DETECTOR
+                    #  SIGNAL, NOT AN INSTANCE MASK.
+                    tile_extra = {
+                        "signal_used_for_detection": "per_tile_template_dist",
+                        "per_camera_component_size_tiles": {
+                            c: e.get("component_size_tiles")
+                            for c, e in sorted(members.items())},
+                        "per_camera_n_tiles_firing_at_sample": {
+                            c: e.get("n_tiles_firing_at_sample")
+                            for c, e in sorted(members.items())},
+                        "per_camera_component_tiles_row_col": {
+                            c: e.get("component_tiles_row_col")
+                            for c, e in sorted(members.items())},
+                        "per_camera_firing_tiles_row_col": {
+                            c: e.get("firing_tiles_row_col")
+                            for c, e in sorted(members.items())},
+                        "per_camera_per_tile_amplitude": {
+                            c: e.get("per_tile_amplitude")
+                            for c, e in sorted(members.items())},
+                        "per_camera_tile_pixel_boxes_xyxy": {
+                            c: e.get("tile_pixel_boxes_xyxy")
+                            for c, e in sorted(members.items())},
+                        "per_camera_component_pixel_bbox_xyxy": {
+                            c: e.get("component_pixel_bbox_xyxy")
+                            for c, e in sorted(members.items())},
+                        "pixel_boxes_are_tile_extent_not_object_extent": True,
+                        "is_instance_mask": False,
+                        "tile_explanation_note": TILE_EXPLANATION_NOTE,
+                    }
                 clusters_out.append({
                     **tile_extra,
                     "polarity": polarity,
@@ -1361,9 +1833,21 @@ def mode_census(args) -> dict:
                     "localization_frames": stride,
                     "localization_ms": proxy_step_ms,
                 })
-        clusters_out.sort(key=lambda c: (-c["n_cameras_supporting"],
-                                         -c["mean_amplitude"],
-                                         c["source_frame_median"]))
+        if per_tile_mode:
+            #  RANKING, frozen by the v2 spec §8. Camera count is RETIRED as
+            #  the primary order and C_min stays a corroboration floor, never
+            #  a sort key: only ~15 of 39 cameras see the subject at all, so
+            #  camera count measures how GLOBAL a change is, which is the
+            #  opposite of the target property. Ranked by amplitude the two
+            #  audited real events sit at 3/76 and 17/76; ranked by camera
+            #  support the two promoted clusters were 54/76 and 60/76 -- the
+            #  two WEAKEST-amplitude clusters in the set.
+            clusters_out.sort(key=lambda c: (-c["mean_amplitude"],
+                                             c["source_frame_median"]))
+        else:
+            clusters_out.sort(key=lambda c: (-c["n_cameras_supporting"],
+                                             -c["mean_amplitude"],
+                                             c["source_frame_median"]))
         window_out = {
             "window_source_frames": [int(w_start), int(w_end)],
             "n_cameras": len(per_camera_signals),
@@ -1379,6 +1863,20 @@ def mode_census(args) -> dict:
             #  The gallery overlay consumes this. It is an EXPLANATION OF THE
             #  DETECTOR SIGNAL, NOT AN INSTANCE MASK.
             window_out["tile_explanations"] = per_camera_tile_explanations
+            window_out["tile_explanations_note"] = TILE_EXPLANATION_NOTE
+        if per_tile_mode:
+            #  Per-camera candidates in full, plus every crossing the spatial
+            #  coherence gate REJECTED and why -- a rejection is a measurement
+            #  and is never silently dropped.
+            window_out["per_tile_candidates"] = {
+                camera: entry["candidates"]
+                for camera, entry in sorted(per_camera_per_tile.items())}
+            window_out["per_tile_rejected_by_spatial_coherence"] = {
+                camera: entry["rejected"]
+                for camera, entry in sorted(per_camera_per_tile.items())}
+            window_out["per_tile_n_tiles_with_events"] = {
+                camera: entry["n_tiles_with_events"]
+                for camera, entry in sorted(per_camera_per_tile.items())}
             window_out["tile_explanations_note"] = TILE_EXPLANATION_NOTE
         windows_out.append(window_out)
 
@@ -1453,7 +1951,143 @@ def mode_census(args) -> dict:
             "top_tiles_per_candidate": tile_top_n,
             "k_mad": float(args.k_mad),
         }
+    if per_tile_mode:
+        #  Additive: present ONLY when --per-tile-mode is on, so an ordinary
+        #  census manifest is byte-for-byte what it was before this pass
+        #  existed.
+        raster = list(next(iter(rasters)))
+        sweep = per_tile_floor_sweep(
+            per_tile_cache, per_tile_scales,
+            f_values=PER_TILE_FLOOR_F_SWEEP, k_mad=float(args.k_mad),
+            stride=stride, tol_frames=tol_frames,
+            min_cameras=int(args.min_cameras),
+            min_component_tiles=per_tile_min_component,
+            max_firing_tiles=per_tile_max_firing)
+        report["per_tile_pass"] = {
+            "enabled": True,
+            "note": TILE_EXPLANATION_NOTE,
+            "is_instance_mask": False,
+            "spec": ("research-wiki/operations/"
+                     "imvid-tile-scout-v2-per-tile-2026-08-25.md"),
+            "supersedes": ("the max-over-tiles (tile_max) DETECTION REDUCTION "
+                           "of imvid-tile-scout-freeze-2026-08-25, and only "
+                           "that reduction; every measurement that page "
+                           "recorded remains correct about what it measured"),
+            "signal": ("tile_template_dist[t,i,j] = mean over tile (i,j) of "
+                       "|I_t - per-pixel temporal median|; the SAME two-gate "
+                       "detector runs INDEPENDENTLY on each of the n_tiles "
+                       "per-tile signals"),
+            "why": ("tile_max is monopolised by the loudest region, which "
+                    "sets both its median AND its MAD, so a quiet tile can "
+                    "never move a maximum it does not win; on cam12 the "
+                    "resulting threshold EXCEEDED the signal's own maximum in "
+                    "every window covering either audited real event, making "
+                    "zero candidates a structural certainty"),
+            "tile_size_px": tile_size,
+            "tile_grid": [
+                -(-raster[0] // tile_size), -(-raster[1] // tile_size)],
+            "tile_grid_order": "[n_tile_x, n_tile_y]",
+            "k_mad": float(args.k_mad),
+            "relative_gate": ("per TILE: median_t(S_ij) + k_mad * 1.4826 * "
+                              "MAD_t(S_ij), from that tile's own series"),
+            "absolute_floor": per_tile_floor_record,
+            "spatial_coherence": {
+                "min_component_tiles": per_tile_min_component,
+                "connectivity": ("4 (face-adjacent); DIAGONAL tiles are NOT "
+                                 "adjacent"),
+                "max_firing_tiles_exclusive": per_tile_max_firing,
+                "both_bounds_are_declared_judgments": True,
+                "bounds_derived_from_a_known_positive_and_known_negative": True,
+                "disclosure": ("the lower bound admits the smallest observed "
+                               "real event (4 tiles) with one tile of margin; "
+                               "the upper bound sits below the smallest "
+                               "observed artefact (38 tiles). They are NOT "
+                               "independent of the ground-truth audit and "
+                               "that dependence is disclosed here"),
+            },
+            "ranking": {
+                "order": ("mean_amplitude DESCENDING, then "
+                          "source_frame_median ascending"),
+                "camera_count_is_retired_as_the_primary_order": True,
+                "c_min_is_a_corroboration_floor_never_a_sort_key": True,
+                "min_cameras_for_multi": int(args.min_cameras),
+            },
+            "primary_reading_F": float(DEFAULT_PER_TILE_FLOOR_F),
+            "is_primary_reading": per_tile_floor_record["is_primary_reading"],
+            "sensitivity_sweep": sweep,
+            "sensitivity_sweep_is_supplementary": (
+                "THE PRIMARY READING IS F = 3.0 ONLY. Every other point in "
+                "this sweep is a sensitivity probe and may not be reported as "
+                "the census."),
+            "windowing_defect_not_repaired_here": (
+                "Windows are non-overlapping and each is templated on its OWN "
+                "temporal median. Both audited real absences EXCEED one "
+                "window, so their endpoints land in different windows and are "
+                "measured against different templates, making their "
+                "amplitudes non-comparable; and content present through one "
+                "window and absent through the next produces near-zero "
+                "residual in BOTH and no changepoint at the boundary. This is "
+                "a LIVE DEFECT, deliberately not repaired in v2. NO CLAIM OF "
+                "EXHAUSTIVE RECALL MAY BE MADE WHILE IT STANDS."),
+        }
     return report
+
+
+def per_tile_floor_sweep(cache: dict, scales: list, *, f_values, k_mad: float,
+                         stride: int, tol_frames: int, min_cameras: int,
+                         min_component_tiles: int,
+                         max_firing_tiles: int) -> list[dict]:
+    """SUPPLEMENTARY sensitivity of the census to the declared floor ``F``.
+
+    THE PRIMARY READING IS ``F = 3.0`` ONLY. Every other point returned here
+    is labelled a sensitivity probe and may not be reported as the census.
+    The sweep re-runs the whole per-tile detection and cross-camera clustering
+    at each ``F`` from the cached tile grids -- no proxy frame is decoded
+    twice -- and reports COUNTS only, never a candidate list, so a probe
+    cannot be mistaken for a census by copying rows out of it.
+    """
+    by_window: dict[int, dict[str, dict]] = {}
+    for (camera, w_start), entry in cache.items():
+        by_window.setdefault(int(w_start), {})[camera] = entry
+    out = []
+    for floor_f in f_values:
+        record = per_tile_absolute_floor(scales, float(floor_f))
+        floor = record["floor_grey_levels"]
+        n_candidates = n_clusters = n_multi = 0
+        n_rejected = 0
+        for w_start in sorted(by_window):
+            per_camera_events: dict[str, list[dict]] = {}
+            for camera, entry in sorted(by_window[w_start].items()):
+                result = per_tile_camera_candidates(
+                    entry["tiled"], entry["indices"], k_mad=k_mad,
+                    min_amplitude=floor, stride=stride,
+                    min_component_tiles=min_component_tiles,
+                    max_firing_tiles=max_firing_tiles)
+                per_camera_events[camera] = result["candidates"]
+                n_candidates += len(result["candidates"])
+                n_rejected += len(result["rejected"])
+            clusters = []
+            for polarity in ("rise", "fall"):
+                clusters += cluster_candidates(per_camera_events, polarity,
+                                               tol_frames)
+            n_clusters += len(clusters)
+            n_multi += sum(1 for c in clusters
+                           if len(c["members"]) >= int(min_cameras))
+        is_primary = float(floor_f) == float(DEFAULT_PER_TILE_FLOOR_F)
+        out.append({
+            "F": float(floor_f),
+            "is_primary_reading": is_primary,
+            "label": ("PRIMARY READING -- this row IS the census" if is_primary
+                      else "SENSITIVITY PROBE -- NOT the census, may not be "
+                           "reported as one"),
+            "floor_grey_levels": floor,
+            "n_per_camera_candidates": n_candidates,
+            "n_rejected_by_spatial_coherence": n_rejected,
+            "n_clusters": n_clusters,
+            "n_clusters_at_min_cameras": n_multi,
+            "min_cameras_for_multi": int(min_cameras),
+        })
+    return out
 
 
 def print_census(report: dict, top: int) -> None:
@@ -1478,20 +2112,62 @@ def print_census(report: dict, top: int) -> None:
               flush=True)
         for line in _wrap(tile["note"], 78):
             print(f"[census] {line}", flush=True)
+    per_tile = report.get("per_tile_pass")
+    if per_tile:
+        floor = per_tile["absolute_floor"]
+        print(f"[census] PER-TILE MODE: detection runs INDEPENDENTLY on each "
+              f"of {per_tile['tile_grid'][0]}x{per_tile['tile_grid'][1]} "
+              f"per-tile signals of {per_tile['tile_size_px']} px, each with "
+              f"its OWN median+{per_tile['k_mad']}*MAD gate.", flush=True)
+        print(f"[census] Absolute floor F={floor['F']} x median noise scale "
+              f"{floor['noise_scale_median_grey_levels']:.6f} = "
+              f"{floor['floor_grey_levels']:.6f} grey levels over "
+              f"{floor['n_tile_series']} (camera, window, tile) series. "
+              f"F IS A DECLARED JUDGMENT, not derived from data.", flush=True)
+        coherence = per_tile["spatial_coherence"]
+        print(f"[census] Spatial coherence: face-adjacent component >= "
+              f"{coherence['min_component_tiles']} tiles (4-connectivity; "
+              f"diagonal tiles are NOT adjacent) AND < "
+              f"{coherence['max_firing_tiles_exclusive']} tiles firing at "
+              f"that sample.", flush=True)
+        print("[census] RANKED BY MEAN AMPLITUDE. Camera count is retired as "
+              "the primary order; C_min is a corroboration floor, never a "
+              "sort key.", flush=True)
+        print("[census] Sweep over F (SUPPLEMENTARY; the census is F=3.0 "
+              "only):", flush=True)
+        print(f"[census]   {'F':>5}  {'floor':>10}  {'cands':>7}  "
+              f"{'clusters':>8}  {'>=C_min':>7}  reading", flush=True)
+        for row in per_tile["sensitivity_sweep"]:
+            print(f"[census]   {row['F']:>5.1f}  "
+                  f"{row['floor_grey_levels']:>10.6f}  "
+                  f"{row['n_per_camera_candidates']:>7}  "
+                  f"{row['n_clusters']:>8}  "
+                  f"{row['n_clusters_at_min_cameras']:>7}  "
+                  f"{'PRIMARY' if row['is_primary_reading'] else 'probe'}",
+                  flush=True)
+        for line in _wrap(per_tile["windowing_defect_not_repaired_here"], 78):
+            print(f"[census] {line}", flush=True)
     for window in report["windows"]:
         lo, hi = window["window_source_frames"]
         print(f"\n[census] window {lo}-{hi}: {window['n_candidates_total']} "
               f"per-camera candidates -> {window['n_clusters']} clusters, "
               f"{window['n_clusters_multi_camera']} multi-camera", flush=True)
         print(f"[census]   {'pol':>4}  {'cams':>4}  {'src_frame':>9}  "
-              f"{'spread_f':>8}  {'spread_ms':>9}  {'amp':>7}", flush=True)
+              f"{'spread_f':>8}  {'spread_ms':>9}  {'amp':>7}"
+              + (f"  {'comp':>4}  {'fire':>4}" if per_tile else ""), flush=True)
         for cluster in window["candidate_clusters"][:top]:
+            suffix = ""
+            if per_tile:
+                sizes = cluster.get("per_camera_component_size_tiles") or {}
+                firing = cluster.get("per_camera_n_tiles_firing_at_sample") or {}
+                suffix = (f"  {max(sizes.values()) if sizes else 0:>4}  "
+                          f"{max(firing.values()) if firing else 0:>4}")
             print(f"[census]   {cluster['polarity']:>4}  "
                   f"{cluster['n_cameras_supporting']:>4}  "
                   f"{cluster['source_frame_median']:>9}  "
                   f"{cluster['spread_frames']:>8}  "
                   f"{cluster['spread_ms']:>9.1f}  "
-                  f"{cluster['mean_amplitude']:>7.3f}", flush=True)
+                  f"{cluster['mean_amplitude']:>7.3f}{suffix}", flush=True)
     print("\n[census] Ranked CANDIDATES only. Curation against ground truth "
           "decides what, if anything, is an event.", flush=True)
 
@@ -1997,13 +2673,376 @@ def tile_self_test() -> int:
 
 
 # ---------------------------------------------------------------------------
+# Mode: per-tile-selftest -- the FROZEN PRECONDITIONS of the v2 per-tile pass
+# ---------------------------------------------------------------------------
+
+#: P1-REL fixture. Declared here, BEFORE any score is read, and every value is
+#: a statement about the SETUP.
+#:
+#: v1's P1 fixture was a CONSTANT background plus a patch, so its ``tile_max``
+#: series had median 0 and MAD 0 and the relative threshold was EXACTLY
+#: 0.0000. That precondition proved the max-over-tiles MECHANISM was
+#: exercised; it never exercised THE GATE THAT ACTUALLY DECIDES ON REAL
+#: FOOTAGE. This fixture is NON-CONSTANT by construction: every tile has a
+#: strictly positive temporal MAD, one region is loud, and the injected target
+#: is quiet.
+PER_TILE_P1REL_RASTER = (540, 960)       # (height, width) -- the census raster
+PER_TILE_P1REL_FRAMES = 24
+PER_TILE_P1REL_BASE = 40.0
+PER_TILE_P1REL_BG_NOISE = 1.5            # +/- grey levels, per pixel per frame
+PER_TILE_P1REL_SEED = 20260825
+
+#: THE LOUD DISTRACTOR -- a 2x2 block of tiles carrying a full-span excursion,
+#: standing in for the audited "person's legs/torso at 40-83 grey levels
+#: continuously" that monopolised ``tile_max`` on the real footage. The
+#: excursion is a SYMMETRIC RAMP, which makes the failure structural rather
+#: than a lucky draw: for a symmetric-uniform excursion the deviation series
+#: has median A/2 and MAD A/4, so its own median + 3*1.4826*MAD = 1.61*A
+#: EXCEEDS its own maximum A. That is exactly the audited cam12 signature
+#: (threshold 73.99 against a signal maximum of 72.19).
+PER_TILE_P1REL_DISTRACTOR_TILES = ((6, 1), (6, 2), (7, 1), (7, 2))
+PER_TILE_P1REL_DISTRACTOR_SPAN = 43.0
+
+#: THE QUIET TARGET -- three FACE-ADJACENT tiles, each carrying a 32x32 px
+#: patch at 25 grey levels (the v1 declared detection scale). Three tiles so
+#: the frozen spatial-coherence gate (component >= 3) can admit it; quiet so
+#: it can never win a maximum against the distractor.
+PER_TILE_P1REL_TARGET_TILES = ((2, 11), (2, 12), (2, 13))
+PER_TILE_P1REL_TARGET_PATCH = 32
+PER_TILE_P1REL_TARGET_CONTRAST = 25.0
+PER_TILE_P1REL_TARGET_PLATEAU = (10, 14)
+
+#: P3 sub-floor control. Most tiles are LOUD and a few are very QUIET, so the
+#: pooled median noise scale -- and therefore the absolute floor -- is set by
+#: the loud tiles. A tiny excursion is then injected into three adjacent QUIET
+#: tiles: it clears their own (tiny) relative gate and it clears the coherence
+#: gate, so the ABSOLUTE FLOOR is the only thing that can reject it. Without
+#: this construction a "sub-floor control" would be rejected by the relative
+#: gate first and would say nothing about the floor at all.
+PER_TILE_P3_RASTER = (300, 480)
+PER_TILE_P3_FRAMES = 20
+PER_TILE_P3_LOUD_NOISE = 12.0
+PER_TILE_P3_QUIET_NOISE = 0.2
+PER_TILE_P3_QUIET_TILES = ((0, 0), (0, 1), (0, 2))
+PER_TILE_P3_SUBFLOOR_CONTRAST = 0.15
+PER_TILE_P3_PLATEAU = (8, 12)
+
+
+def _per_tile_p1rel_fixture(with_distractor: bool = True) -> np.ndarray:
+    """The P1-REL window. Identical seed both ways, so the two variants are
+    BIT-IDENTICAL outside the distractor tiles -- which is what lets the test
+    assert that the distractor does not move the target tile's threshold at
+    all, rather than merely that it moves it a little.
+    """
+    height, width = PER_TILE_P1REL_RASTER
+    n_frames = PER_TILE_P1REL_FRAMES
+    rng = np.random.default_rng(PER_TILE_P1REL_SEED)
+    noise = rng.random((n_frames, height, width), dtype=np.float32)
+    stack = (np.float32(PER_TILE_P1REL_BASE)
+             + (noise * np.float32(2.0) - np.float32(1.0))
+             * np.float32(PER_TILE_P1REL_BG_NOISE))
+    if with_distractor:
+        for t in range(n_frames):
+            offset = np.float32(PER_TILE_P1REL_DISTRACTOR_SPAN * t
+                                / (n_frames - 1))
+            for row, col in PER_TILE_P1REL_DISTRACTOR_TILES:
+                y0, x0 = row * DEFAULT_TILE_SIZE, col * DEFAULT_TILE_SIZE
+                stack[t, y0:y0 + DEFAULT_TILE_SIZE,
+                      x0:x0 + DEFAULT_TILE_SIZE] += offset
+    lo, hi = PER_TILE_P1REL_TARGET_PLATEAU
+    pad = (DEFAULT_TILE_SIZE - PER_TILE_P1REL_TARGET_PATCH) // 2
+    for row, col in PER_TILE_P1REL_TARGET_TILES:
+        y0 = row * DEFAULT_TILE_SIZE + pad
+        x0 = col * DEFAULT_TILE_SIZE + pad
+        stack[lo:hi, y0:y0 + PER_TILE_P1REL_TARGET_PATCH,
+              x0:x0 + PER_TILE_P1REL_TARGET_PATCH] += np.float32(
+                  PER_TILE_P1REL_TARGET_CONTRAST)
+    return stack
+
+
+def _per_tile_p3_fixture(contrast: float) -> np.ndarray:
+    """Loud background, three quiet tiles, a sub-floor excursion in them."""
+    height, width = PER_TILE_P3_RASTER
+    n_frames = PER_TILE_P3_FRAMES
+    rng = np.random.default_rng(PER_TILE_P1REL_SEED + 1)
+    noise = rng.random((n_frames, height, width), dtype=np.float32) * 2.0 - 1.0
+    stack = np.float32(PER_TILE_P1REL_BASE) + noise * np.float32(
+        PER_TILE_P3_LOUD_NOISE)
+    for row, col in PER_TILE_P3_QUIET_TILES:
+        y0, x0 = row * DEFAULT_TILE_SIZE, col * DEFAULT_TILE_SIZE
+        block = slice(y0, y0 + DEFAULT_TILE_SIZE), slice(
+            x0, x0 + DEFAULT_TILE_SIZE)
+        stack[:, block[0], block[1]] = (
+            np.float32(PER_TILE_P1REL_BASE)
+            + noise[:, block[0], block[1]] * np.float32(PER_TILE_P3_QUIET_NOISE))
+    lo, hi = PER_TILE_P3_PLATEAU
+    for row, col in PER_TILE_P3_QUIET_TILES:
+        y0, x0 = row * DEFAULT_TILE_SIZE, col * DEFAULT_TILE_SIZE
+        stack[lo:hi, y0:y0 + DEFAULT_TILE_SIZE,
+              x0:x0 + DEFAULT_TILE_SIZE] += np.float32(contrast)
+    return stack
+
+
+def per_tile_self_test() -> int:
+    """FROZEN PRECONDITIONS for the v2 PER-TILE pass.
+
+    P1-REL is the one v1 lacked and it is the reason this pass exists. The
+    project's standing rule -- *"every frozen rule needs a frozen precondition
+    asserting the mechanism it reads was actually exercised, stated about the
+    setup and never about the score"* -- was applied by v1 to the wrong
+    mechanism: its fixture had median 0 and MAD 0, so the RELATIVE GATE, which
+    is what actually decides on real footage, was never exercised at all.
+    """
+    print("[per-tile-selftest] imvid_event_proxy PER-TILE PASS (v2) -- frozen "
+          "preconditions P1-REL, P3, P4, P5. Statements about the SETUP, "
+          "never about a census score. NO media files, NO ffmpeg, NO GPU.",
+          flush=True)
+    check = _Check()
+    stride = 30
+    source_frames = [n * stride for n in range(PER_TILE_P1REL_FRAMES)]
+
+    print("\n[P1-REL] THE RELATIVE GATE FOLLOWS THE TILE, on a NON-CONSTANT "
+          "fixture", flush=True)
+    with_distractor = _per_tile_p1rel_fixture(True)
+    without_distractor = _per_tile_p1rel_fixture(False)
+    tiled = tiled_template_signals(with_distractor, DEFAULT_TILE_SIZE)
+    tiled_clean = tiled_template_signals(without_distractor, DEFAULT_TILE_SIZE)
+    scales = per_tile_noise_scale(tiled["tile_template_dist"])
+
+    #  (0) the fixture is genuinely non-constant -- the defect v1 shipped.
+    check.eq("  every tile has a STRICTLY POSITIVE temporal MAD "
+             "(v1's fixture had MAD 0 everywhere)",
+             bool(np.all(scales > 0.0)), True)
+    check.eq("  the grid is 16x9 = 144 tiles at 960x540",
+             (tiled["n_tile_x"], tiled["n_tile_y"],
+              tiled["n_tile_x"] * tiled["n_tile_y"]), (16, 9, 144))
+
+    #  (a) the distractor does NOT raise the target tile's own threshold.
+    target_rc = PER_TILE_P1REL_TARGET_TILES[1]
+    distractor_rc = PER_TILE_P1REL_DISTRACTOR_TILES[0]
+    target_series = tiled["tile_template_dist"][:, target_rc[0], target_rc[1]]
+    target_series_clean = tiled_clean["tile_template_dist"][
+        :, target_rc[0], target_rc[1]]
+    target_gate = robust_threshold(target_series, DEFAULT_K_MAD)
+    target_gate_clean = robust_threshold(target_series_clean, DEFAULT_K_MAD)
+    distractor_gate = robust_threshold(
+        tiled["tile_template_dist"][:, distractor_rc[0], distractor_rc[1]],
+        DEFAULT_K_MAD)
+    max_gate = robust_threshold(tiled["tile_max"], DEFAULT_K_MAD)
+    max_gate_clean = robust_threshold(tiled_clean["tile_max"], DEFAULT_K_MAD)
+    check.close(f"  target tile {list(target_rc)} threshold is IDENTICAL with "
+                "and without the loud distractor",
+                target_gate["threshold"], target_gate_clean["threshold"], 1e-12)
+    check.eq("  the loud distractor's OWN threshold is far higher than the "
+             "target tile's",
+             distractor_gate["threshold"] > 10 * target_gate["threshold"], True)
+    check.eq("  the MAX-over-tiles threshold IS raised by the distractor",
+             max_gate["threshold"] > 10 * max_gate_clean["threshold"], True)
+
+    #  (b) the max reduction FAILS on this fixture; the per-tile one succeeds.
+    floor_record = per_tile_absolute_floor([scales], DEFAULT_PER_TILE_FLOOR_F)
+    floor = floor_record["floor_grey_levels"]
+    max_events = detect_changepoints(
+        tiled["tile_max"], source_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=floor, stride=stride)
+    per_tile = per_tile_camera_candidates(
+        tiled, source_frames, k_mad=DEFAULT_K_MAD, min_amplitude=floor,
+        stride=stride,
+        min_component_tiles=DEFAULT_PER_TILE_MIN_COMPONENT,
+        max_firing_tiles=DEFAULT_PER_TILE_MAX_FIRING_TILES)
+    candidates = per_tile["candidates"]
+    target_set = {tuple(rc) for rc in PER_TILE_P1REL_TARGET_TILES}
+    on_target = [c for c in candidates
+                 if target_set.issubset({tuple(rc) for rc
+                                         in c["component_tiles_row_col"]})]
+    print(f"  ---- P1-REL NUMBERS ----", flush=True)
+    print(f"       MAX-over-tiles reduction : threshold "
+          f"{max_gate['threshold']:.4f} vs signal maximum "
+          f"{float(np.max(tiled['tile_max'])):.4f} "
+          f"-> {len(max_events)} candidates "
+          f"(THRESHOLD EXCEEDS THE SIGNAL'S OWN MAXIMUM: "
+          f"{max_gate['threshold'] > float(np.max(tiled['tile_max']))})",
+          flush=True)
+    print(f"       PER-TILE  reduction      : target tile {list(target_rc)} "
+          f"threshold {target_gate['threshold']:.4f} vs its own plateau value "
+          f"{float(np.max(target_series)):.4f} -> {len(candidates)} accepted "
+          f"candidates, {len(on_target)} of them on the injected target",
+          flush=True)
+    print(f"       distractor tile {list(distractor_rc)} threshold "
+          f"{distractor_gate['threshold']:.4f} "
+          f"({distractor_gate['threshold'] / target_gate['threshold']:.1f}x "
+          f"the target tile's) -- the loud region gets a loud gate, and it "
+          f"only gets its own", flush=True)
+    print(f"       absolute floor F={DEFAULT_PER_TILE_FLOOR_F} x median noise "
+          f"scale {floor_record['noise_scale_median_grey_levels']:.6f} = "
+          f"{floor:.6f} grey levels", flush=True)
+    check.eq("  the MAX reduction's threshold EXCEEDS the signal's own "
+             "maximum (the audited cam12 signature)",
+             max_gate["threshold"] > float(np.max(tiled["tile_max"])), True)
+    check.eq("  so the MAX reduction FINDS NOTHING on this fixture",
+             len(max_events), 0)
+    check.eq("  the PER-TILE reduction finds the target", len(on_target), 2)
+    check.eq("  ... as a rise then a fall",
+             [c["polarity"] for c in on_target], ["rise", "fall"])
+    check.eq("  ... at the injected plateau edges",
+             [c["source_frame"] for c in on_target],
+             [PER_TILE_P1REL_TARGET_PLATEAU[0] * stride,
+              PER_TILE_P1REL_TARGET_PLATEAU[1] * stride])
+    check.eq("  ... on a face-adjacent component of exactly the 3 target tiles",
+             [c["component_tiles_row_col"] for c in on_target],
+             [[list(rc) for rc in PER_TILE_P1REL_TARGET_TILES]] * 2)
+    check.eq("  the loud distractor tile NEVER fires (its own gate holds it)",
+             any(list(distractor_rc) in c["firing_tiles_row_col"]
+                 for c in candidates), False)
+    check.eq("  every accepted candidate is under the 48-tile global-change "
+             "cap",
+             all(c["n_tiles_firing_at_sample"]
+                 < DEFAULT_PER_TILE_MAX_FIRING_TILES for c in candidates), True)
+
+    print("\n[P3] flat and SUB-FLOOR controls yield ZERO candidates", flush=True)
+    flat = np.full((PER_TILE_P1REL_FRAMES, 120, 180), 40.0, dtype=np.float32)
+    flat_tiled = tiled_template_signals(flat, DEFAULT_TILE_SIZE)
+    flat_scales = per_tile_noise_scale(flat_tiled["tile_template_dist"])
+    flat_floor = per_tile_absolute_floor([flat_scales],
+                                         DEFAULT_PER_TILE_FLOOR_F)
+    flat_result = per_tile_camera_candidates(
+        flat_tiled, source_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=flat_floor["floor_grey_levels"], stride=stride)
+    check.eq("  a constant window has zero tile deviation everywhere",
+             float(np.max(flat_tiled["tile_template_dist"])), 0.0)
+    check.eq("  its measured floor is DEGENERATE ZERO, and says so",
+             flat_floor["floor_is_degenerate_zero"], True)
+    check.eq("  constant window -> ZERO accepted candidates",
+             len(flat_result["candidates"]), 0)
+
+    p3_frames = [n * stride for n in range(PER_TILE_P3_FRAMES)]
+    sub = tiled_template_signals(_per_tile_p3_fixture(
+        PER_TILE_P3_SUBFLOOR_CONTRAST), DEFAULT_TILE_SIZE)
+    sub_scales = per_tile_noise_scale(sub["tile_template_dist"])
+    sub_floor = per_tile_absolute_floor([sub_scales],
+                                        DEFAULT_PER_TILE_FLOOR_F)
+    quiet_rc = PER_TILE_P3_QUIET_TILES[1]
+    quiet_series = sub["tile_template_dist"][:, quiet_rc[0], quiet_rc[1]]
+    quiet_gate = robust_threshold(quiet_series, DEFAULT_K_MAD)
+    quiet_peak = float(np.max(quiet_series))
+    quiet_excess = quiet_peak - quiet_gate["median"]
+    sub_result = per_tile_camera_candidates(
+        sub, p3_frames, k_mad=DEFAULT_K_MAD,
+        min_amplitude=sub_floor["floor_grey_levels"], stride=stride)
+    open_result = per_tile_camera_candidates(
+        sub, p3_frames, k_mad=DEFAULT_K_MAD, min_amplitude=0.0, stride=stride)
+    print(f"  ---- P3 SUB-FLOOR NUMBERS: quiet tile {list(quiet_rc)} peak "
+          f"{quiet_peak:.6f} vs its own relative gate "
+          f"{quiet_gate['threshold']:.6f} (PASSES), excess "
+          f"{quiet_excess:.6f} vs the absolute floor "
+          f"{sub_floor['floor_grey_levels']:.6f} (FAILS)", flush=True)
+    check.eq("  the sub-floor excursion CLEARS its own tile's relative gate",
+             quiet_peak > quiet_gate["threshold"], True)
+    check.eq("  ... and is BELOW the pooled absolute floor",
+             quiet_excess < sub_floor["floor_grey_levels"], True)
+    check.eq("  so the ABSOLUTE FLOOR alone rejects it: ZERO candidates",
+             len(sub_result["candidates"]), 0)
+    check.eq("  ... and with the floor removed it WOULD have been accepted, "
+             "so the floor is what did the work",
+             len(open_result["candidates"]) > 0, True)
+
+    print("\n[P4] the tiling covers every pixel EXACTLY ONCE, edge tiles "
+          "included", flush=True)
+    for height, width in ((540, 960), (100, 130), (61, 59), (60, 60), (1, 1)):
+        rows = tile_edges(height, DEFAULT_TILE_SIZE)
+        cols = tile_edges(width, DEFAULT_TILE_SIZE)
+        cover = np.zeros((height, width), dtype=np.int32)
+        for y0, y1 in rows:
+            for x0, x1 in cols:
+                cover[y0:y1, x0:x1] += 1
+        check.eq(f"  {width}x{height}: {len(cols)}x{len(rows)} tiles, every "
+                 "pixel covered exactly once",
+                 (int(cover.min()), int(cover.max()),
+                  sum(y1 - y0 for y0, y1 in rows),
+                  sum(x1 - x0 for x0, x1 in cols)),
+                 (1, 1, height, width))
+    check.raises("  tile size 0 refused", lambda: tile_edges(100, 0))
+    check.raises("  empty raster refused", lambda: tile_edges(0, 60))
+
+    print("\n[P4b] SPATIAL COHERENCE is 4-connected: DIAGONAL tiles are NOT "
+          "adjacent", flush=True)
+    diagonal = np.zeros((4, 4), dtype=bool)
+    diagonal[0, 0] = diagonal[1, 1] = diagonal[2, 2] = True
+    check.eq("  three diagonal tiles are THREE components, not one",
+             [len(c) for c in grid_connected_components(diagonal)], [1, 1, 1])
+    straight = np.zeros((4, 4), dtype=bool)
+    straight[1, 0] = straight[1, 1] = straight[1, 2] = True
+    check.eq("  three face-adjacent tiles are ONE component of 3",
+             [len(c) for c in grid_connected_components(straight)], [3])
+    elbow = np.zeros((4, 4), dtype=bool)
+    elbow[0, 0] = elbow[1, 0] = elbow[1, 1] = True
+    check.eq("  an L of three tiles is ONE component of 3",
+             [len(c) for c in grid_connected_components(elbow)], [3])
+    check.eq("  an empty grid has no components",
+             grid_connected_components(np.zeros((3, 3), dtype=bool)), [])
+
+    print("\n[P5] the MEASURED floor and its sweep are recorded", flush=True)
+    sweep = [per_tile_absolute_floor([scales], f)
+             for f in PER_TILE_FLOOR_F_SWEEP]
+    print(f"  ---- P5 SWEEP over F (SUPPLEMENTARY; the census is F=3.0 only)",
+          flush=True)
+    for record in sweep:
+        marker = ("PRIMARY" if record["F"] == DEFAULT_PER_TILE_FLOOR_F
+                  else "probe")
+        print(f"       F={record['F']:>4} -> floor "
+              f"{record['floor_grey_levels']:.6f} grey levels  [{marker}]",
+              flush=True)
+    check.eq("  the sweep has the five frozen points",
+             [r["F"] for r in sweep], list(PER_TILE_FLOOR_F_SWEEP))
+    check.eq("  the floor is monotone non-decreasing in F",
+             [r["floor_grey_levels"] for r in sweep]
+             == sorted(r["floor_grey_levels"] for r in sweep), True)
+    check.eq("  F = 3.0 is the primary reading and is in the sweep",
+             DEFAULT_PER_TILE_FLOOR_F in PER_TILE_FLOOR_F_SWEEP, True)
+    check.eq("  every record says F is a DECLARED JUDGMENT, not derived",
+             all(r["F_is_a_declared_judgment_not_derived_from_data"]
+                 for r in sweep), True)
+    check.close("  the recorded floor is exactly F x the median noise scale",
+                floor_record["floor_grey_levels"],
+                DEFAULT_PER_TILE_FLOOR_F
+                * floor_record["noise_scale_median_grey_levels"], 1e-12)
+    check.eq("  measured over all 144 tile series of this (camera, window)",
+             floor_record["n_tile_series"], 144)
+    check.raises("  an empty scale set is REFUSED, never guessed",
+                 lambda: per_tile_absolute_floor([], 3.0))
+
+    print("\n[P2-RECALL] NOT RUNNABLE OFFLINE -- it needs the real proxies",
+          flush=True)
+    print("  The frozen spec's P2-RECALL requires the detector to fire on "
+          "both audited ground-truth events on cam11/cam12 within +/-2 proxy "
+          "samples and to be SILENT through the absence. That is a "
+          "measurement on real footage and cannot be asserted here. It is "
+          "recorded as NOT RUN rather than omitted. Those two events are a "
+          "RECALL FIXTURE, NOT A TUNING SET: no threshold in this file may be "
+          "moved to make them pass.", flush=True)
+
+    print("\n" + "=" * 78, flush=True)
+    if check.failures:
+        print(f"[per-tile-selftest] FAILED: {len(check.failures)} of "
+              f"{check.passed + len(check.failures)} preconditions", flush=True)
+        for failure in check.failures:
+            print(f"  - {failure}", flush=True)
+        return 1
+    print(f"[per-tile-selftest] PASSED: {check.passed}/{check.passed} "
+          "preconditions", flush=True)
+    for line in _wrap(TILE_EXPLANATION_NOTE, 78):
+        print(f"[per-tile-selftest] {line}", flush=True)
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--mode", choices=("probe", "proxy", "census", "self-test",
-                                           "tile-selftest"),
+                                           "tile-selftest", "per-tile-selftest"),
                         default=None)
     parser.add_argument("--self-test", action="store_true",
                         help="run the offline arithmetic/mapping/reader checks "
@@ -2011,6 +3050,10 @@ def main(argv=None) -> int:
     parser.add_argument("--tile-selftest", action="store_true",
                         help="run the TILE PASS frozen preconditions P1-P5 and "
                              "exit; needs no media, no ffmpeg, no GPU")
+    parser.add_argument("--per-tile-selftest", action="store_true",
+                        help="run the PER-TILE PASS (v2) frozen preconditions "
+                             "P1-REL, P3, P4, P5 and exit; needs no media, no "
+                             "ffmpeg, no GPU")
     # probe / proxy
     parser.add_argument("--source-dir", default=None,
                         help="scene folder of cam*.mp4 (READ ONLY)")
@@ -2083,6 +3126,41 @@ def main(argv=None) -> int:
     parser.add_argument("--tile-top-n", type=int, default=DEFAULT_TILE_TOP_N,
                         help="census: contributing tiles recorded per candidate "
                              "for the review overlay")
+    # census: PER-TILE pass, v2 (OFF by default; supersedes --tile-mode's
+    # reduction and may not be combined with it)
+    parser.add_argument("--per-tile-mode", action="store_true",
+                        help="census: run the changepoint detector "
+                             "INDEPENDENTLY on each per-tile signal instead of "
+                             "on the max over tiles. Each tile's relative gate "
+                             "comes from its OWN temporal median and MAD, so a "
+                             "quiet tile gets a quiet threshold -- the "
+                             "property the max reduction lacked, because a "
+                             "maximum is monopolised by the loudest region, "
+                             "which sets both its median and its MAD. "
+                             "SUPERSEDES --tile-mode's reduction; the two may "
+                             "not be combined")
+    parser.add_argument("--per-tile-floor-f", type=float,
+                        default=DEFAULT_PER_TILE_FLOOR_F,
+                        help="census: the FROZEN absolute-floor multiplier. "
+                             "floor = F * median over all (camera, window, "
+                             "tile) of 1.4826*MAD_t(S_ij). F = "
+                             f"{DEFAULT_PER_TILE_FLOOR_F} is the PRIMARY "
+                             "READING and is a declared judgment, not derived "
+                             "from data; any other value is a SENSITIVITY "
+                             "PROBE and may not be reported as the census")
+    parser.add_argument("--per-tile-min-component", type=int,
+                        default=DEFAULT_PER_TILE_MIN_COMPONENT,
+                        help="census: FROZEN minimum face-adjacent "
+                             "(4-connected) component of tiles firing at the "
+                             f"same proxy sample (default "
+                             f"{DEFAULT_PER_TILE_MIN_COMPONENT})")
+    parser.add_argument("--per-tile-max-firing-tiles", type=int,
+                        default=DEFAULT_PER_TILE_MAX_FIRING_TILES,
+                        help="census: FROZEN EXCLUSIVE cap on how many tiles "
+                             "may fire at one proxy sample before the sample "
+                             "is read as a global change rather than a "
+                             f"localized one (default "
+                             f"{DEFAULT_PER_TILE_MAX_FIRING_TILES} of 144)")
     parser.add_argument("--emit-signals", action="store_true",
                         help="census: include the per-camera per-frame signals "
                              "in the manifest (large)")
@@ -2093,14 +3171,19 @@ def main(argv=None) -> int:
     mode = "self-test" if args.self_test else args.mode
     if args.tile_selftest and not args.self_test:
         mode = "tile-selftest"
+    if args.per_tile_selftest and not args.self_test and not args.tile_selftest:
+        mode = "per-tile-selftest"
     if mode is None:
-        parser.error("one of --mode {probe,proxy,census,self-test,tile-selftest} "
-                     "or --self-test or --tile-selftest")
+        parser.error("one of --mode {probe,proxy,census,self-test,"
+                     "tile-selftest,per-tile-selftest} or --self-test or "
+                     "--tile-selftest or --per-tile-selftest")
 
     if mode == "self-test":
         return self_test()
     if mode == "tile-selftest":
         return tile_self_test()
+    if mode == "per-tile-selftest":
+        return per_tile_self_test()
 
     if mode == "probe":
         if not args.source_dir:
