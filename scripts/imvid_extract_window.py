@@ -345,8 +345,16 @@ def output_pattern(output_root: Path, camera: str) -> str:
     return pattern
 
 
+#: PNG zlib effort handed to the encoder. PNG is lossless at every level, so
+#: this moves encode time and file size and NOTHING else -- the decoded pixels
+#: are bit-identical. 100 is ffmpeg's own default and is what a manifest
+#: written before this option existed used.
+DEFAULT_PNG_COMPRESSION = 100
+
+
 def build_ffmpeg_argv(video: Path, camera: str, output_root: Path,
-                      start: int, count: int) -> list[str]:
+                      start: int, count: int,
+                      png_compression: int = DEFAULT_PNG_COMPRESSION) -> list[str]:
     """`imvid_decode_frames.py:110-115` with `eq(n,K)` -> `between(n,S,E)`.
 
     `select` runs POST-INPUT and matches on `n`, the decode-order index,
@@ -355,6 +363,13 @@ def build_ffmpeg_argv(video: Path, camera: str, output_root: Path,
     muxer numbers the frames it is HANDED, and `select` hands it the
     window, so the first surviving frame is written as `frame_000000`
     whatever its source index was.
+
+    `png_compression` is passed through to the PNG encoder. It changes the
+    zlib effort ONLY -- PNG is lossless at every level, so the decoded pixels
+    are bit-identical whatever it is set to, and only file size and encode
+    time move. It is exposed because encoding, not decoding, dominates this
+    step at 5312x2988: at the default the measured throughput was ~7 of 39
+    cameras in 40 minutes, which would have put a single window at ~3.7 h.
     """
     end = int(start) + int(count) - 1
     return [
@@ -366,6 +381,7 @@ def build_ffmpeg_argv(video: Path, camera: str, output_root: Path,
         "-vsync", "0",
         "-frames:v", str(int(count)),
         "-f", "image2",
+        "-compression_level", str(int(png_compression)),
         "-start_number", "0",
         output_pattern(output_root, camera),
     ]
@@ -477,7 +493,8 @@ def probe_cameras(videos: list[Path]) -> dict:
 
 
 def build_plan(videos: list[Path], probe: dict, agreed: dict, window: dict,
-               source: Path, root: Path, workers: int) -> dict:
+               source: Path, root: Path, workers: int,
+               png_compression: int = DEFAULT_PNG_COMPRESSION) -> dict:
     fps: Fraction = agreed["fps"]
     times = window_time_record(fps, window["count"])
     times["suppressed_offset_seconds"] = float(
@@ -530,7 +547,8 @@ def build_plan(videos: list[Path], probe: dict, agreed: dict, window: dict,
         },
         "ffmpeg_argv": {
             video.stem: build_ffmpeg_argv(
-                video, video.stem, root, window["start"], window["count"]
+                video, video.stem, root, window["start"], window["count"],
+                png_compression
             )
             for video in videos
         },
@@ -553,8 +571,9 @@ def build_plan(videos: list[Path], probe: dict, agreed: dict, window: dict,
 
 
 def decode_camera(video: Path, camera: str, root: Path, start: int,
-                  count: int) -> dict:
-    argv = build_ffmpeg_argv(video, camera, root, start, count)
+                  count: int,
+                  png_compression: int = DEFAULT_PNG_COMPRESSION) -> dict:
+    argv = build_ffmpeg_argv(video, camera, root, start, count, png_compression)
     began = time.perf_counter()
     out = subprocess.run(
         argv, capture_output=True, text=True, timeout=86400,
@@ -932,6 +951,15 @@ def main(argv=None) -> int:
                              "min(cpu_count, n_cameras). ffmpeg is itself "
                              "multithreaded, so a value near the core count "
                              "oversubscribes rather than speeding up")
+    parser.add_argument("--png-compression", type=int,
+                        default=DEFAULT_PNG_COMPRESSION, choices=range(0, 101),
+                        metavar="0-100",
+                        help="PNG zlib effort. LOSSLESS at every level, so the "
+                             "decoded pixels are bit-identical whatever it is; "
+                             "only encode time and file size move. Encoding "
+                             "dominates this step at 5312x2988, so a low value "
+                             "is several times faster and costs only disk "
+                             f"(default {DEFAULT_PNG_COMPRESSION}, ffmpeg's own)")
     parser.add_argument("--manifest", default=None,
                         help="ADDITIONAL copy of the manifest for the run "
                              f"record; the consumer reads only "
@@ -976,7 +1004,8 @@ def main(argv=None) -> int:
     # output root refuses at plan time rather than after 39 decodes.
     for video in videos:
         output_pattern(root, video.stem)
-    plan = build_plan(videos, probe, agreed, window, source, root, workers)
+    plan = build_plan(videos, probe, agreed, window, source, root, workers,
+                      args.png_compression)
 
     print(f"[imvid] {len(videos)} camera(s), {agreed['width']}x{agreed['height']} "
           f"{agreed['pix_fmt']} @ {agreed['r_frame_rate']}, take {agreed['nb_frames']} "
@@ -1011,7 +1040,8 @@ def main(argv=None) -> int:
         # One ffmpeg PROCESS per camera; the Python worker only waits on it,
         # so the GIL is never contended and --workers bounds the processes.
         futures = [pool.submit(decode_camera, video, video.stem, root,
-                               window["start"], window["count"])
+                               window["start"], window["count"],
+                               args.png_compression)
                    for video in videos]
         for future in futures:
             record = future.result()
