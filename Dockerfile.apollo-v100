@@ -84,7 +84,16 @@ RUN python -m pip install --no-cache-dir "determined==0.38.0"
 #     at construction, BEFORE the flow checkpoint is loaded. Left alone it
 #     reaches the network on every task start; those weights are then
 #     overwritten by the checkpoint, so the download changes nothing about
-#     the result and is pure runtime fragility.
+#     the result and is pure runtime fragility. The RUNTIME opt-in lives in
+#     searaft_sys_path()'s os.environ.setdefault, so the copy baked below MUST
+#     stay in step with scripts/imvid_searaft_seed.py. A stale baked copy is
+#     not cosmetic drift: one predating that setdefault falls through to
+#     XDG_CACHE_HOME and dies on a PermissionError before RAFT is built, while
+#     the build still passes because the build step sets TORCH_HOME itself.
+#
+#  4. pytest, so the unit tests can run INSIDE this image. The workstation has
+#     no torch, cv2 or plyfile, so several tests and self-test branches skip
+#     there and are only ever exercised here.
 #
 # The flow CHECKPOINT is deliberately NOT baked: it stays on /apollo and is
 # verified by sha256 at runtime, so the bits in use are recorded per run
@@ -95,7 +104,8 @@ ENV ADAGS_SEARAFT_ROOT=/opt/adags/searaft \
 
 RUN python -m pip install --no-cache-dir \
       "h5py==3.11.0" \
-      "huggingface-hub==0.24.6"
+      "huggingface-hub==0.24.6" \
+      "pytest==8.3.3"
 
 RUN git clone --filter=blob:none https://github.com/princeton-vl/SEA-RAFT.git ${ADAGS_SEARAFT_ROOT} \
     && git -C ${ADAGS_SEARAFT_ROOT} checkout --detach ${SEARAFT_COMMIT} \
