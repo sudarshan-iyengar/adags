@@ -109,6 +109,8 @@ ALLOWED_ENTRYPOINT_SCRIPTS: tuple[str, ...] = (
     "scripts/imvid_extract_window.py",
     "scripts/imvid_framewise_init.py",
     "scripts/imvid_flow_searaft.py",
+    "scripts/imvid_build_population.py",
+    "scripts/imvid_assemble_arm.py",
     "scripts/build_nonconvex_reveal_scene.py",
     "scripts/imvid_to_blender.py",
     "scripts/fetch_immersive_scene.py",

@@ -363,3 +363,80 @@ strengthening remains open and is why this page is
 
 Nothing here may be described as independently verified rig status, and
 Puppy's rig class may not be inferred from the paper's Table II.
+
+---
+
+## AMENDMENT 1 (append-only, 2026-08-26, BEFORE any Cam 00 result exists)
+
+Nothing above is rewritten. These are decisions the freeze left open and
+which had to be fixed before the first training cell, recorded here rather
+than left implicit in a config.
+
+### A1.1 Capacity policy — shared, and both arms must exercise densification
+
+```
+densify_until_num_points  600_000    the SHARED point ceiling, identical in every arm
+initial-population cap    300_000    half the ceiling
+num_pts                 1_000_000    above any initial cloud
+```
+
+The cap exists because of a specific trap rather than for tidiness.
+`main.py:1658` gates the ENTIRE densification-and-pruning block on
+`get_xyz.shape[0] < densify_until_num_points`, so an arm whose initial
+population already meets the ceiling would never densify **and never prune**,
+while an arm below it would do both. That is not a difference in
+initialization; it is a difference in training regime, and it would be
+invisible in the metrics. Capping the initial population at half the ceiling
+guarantees both arms enter the same regime.
+
+NF is expected to exceed the cap (300 frames of un-deduplicated geometry) and
+FG is not. When the cap binds, the subsample is uniform, **without
+replacement**, at a fixed seed, and BOTH the pre-cap and post-cap counts are
+recorded. Without-replacement matters: the reader's own subsample at
+`scene/dataset_readers.py:498` uses `np.random.randint` and therefore returns
+duplicates. `num_pts` is set above any initial cloud so that path never fires
+at all.
+
+### A1.2 The development initializer is the FINAL one, and this is a declared limitation
+
+Framewise geometry and flow are built excluding `cam00` only. The development
+split additionally holds out `cam10`, so a development arm trains on an
+initializer that contains `cam10` observations.
+
+This is stated rather than fixed. It is defensible **only** because the
+development phase ranks schedule hyperparameters with the initializer held
+FIXED across every candidate: a leak that is identical in all arms cannot
+favour one candidate over another, so it cannot bias the ranking the
+promotion rule reads. It would NOT be defensible for a reported metric, and
+no development number is reported as a result. **`cam00` is excluded from
+both, so the final protocol is untouched.** Building a second 37-camera
+initializer would double the triangulation cost for no effect on the only
+decision development makes.
+
+### A1.3 No intermediate Cam 00 evaluation
+
+`test_iterations` is the final iteration only. `main.py:1646-1651` writes
+`chkpnt_best.pth` whenever the TEST psnr improves, and under `paper_cam00`
+the test camera IS Cam 00 — an intermediate test evaluation would have the
+trainer select a checkpoint on held-out data. `chkpnt_best.pth` and
+`best_test_psnr` are **not** reported for any arm. The 6k and 12k numbers
+come from a separate `--val` pass over `chkpnt6000.pth` / `chkpnt12000.pth`.
+
+### A1.4 Exposure, stated once and carried everywhere
+
+300 frames x 38 training cameras = **11,400 units**. At `batch_size 2` and
+12,000 iterations that is **2.105 presentations/unit**, against **12.63** for
+the canonical N3V 300-frame cell — **6.0x less exposure per unit**. This is
+the concrete form of the standing warning that "12k" does not mean on ImViD
+what it means on N3V, and it must appear beside every number this lane
+produces.
+
+### A1.5 Preprocessing changes that are NOT freeze amendments
+
+Recorded for completeness, not because they bear on a claim. PNG encoder
+effort in the window extractor was lowered after measurement (7 of 39
+cameras in 40 min at the default put one window at ~3.7 h; the whole
+extraction now takes ~10 min per scene). **PNG is lossless at every level, so
+the decoded pixels are bit-identical** — only encode time and file size
+moved. Under §8 this is search/preprocessing machinery and was free to
+change.
