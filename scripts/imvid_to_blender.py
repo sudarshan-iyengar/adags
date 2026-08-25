@@ -125,9 +125,11 @@ by an image but absent from `cameras.*`; a source image whose decoded
 size is not the camera's declared native raster; a source image carrying
 an ALPHA channel (the Blender reader would composite it,
 `scene/dataset_readers.py:404-414`, against the frozen full-frame
-no-alpha convention); a held-out camera missing from the model; a
-held-out camera name appearing anywhere in the WRITTEN training
-artifacts; an output PNG whose IHDR is not the declared output raster;
+no-alpha convention); a held-out or excluded camera missing from the
+model; a held-out camera name appearing anywhere in the WRITTEN training
+artifacts; an excluded camera name appearing in EITHER written transforms
+file; a written split that does not partition the model's cameras; an
+output PNG whose IHDR is not the declared output raster;
 a `points3d.ply` copy whose sha256 differs from the source; an existing
 destination `points3d.ply` with different content; a `sparse/`
 subdirectory under the output root; an output path inside the git
@@ -180,11 +182,40 @@ import imvid_verify_pinhole as vp  # noqa: E402
 
 SCHEMA = "imvid-to-blender-v1"
 
-#: The frozen split ([[operations/imvid-baseline-freeze]]:35-46), chosen
-#: outcome-blind as `np.linspace(0, 38, 4)` over the sorted camera ids.
-#: NOT exposed on the command line: it is frozen, and a CLI knob is how a
-#: frozen split gets changed by accident.
-HELD_OUT = ("cam00", "cam13", "cam25", "cam38")
+#: The frozen split PROFILES. Every split this converter can produce is
+#: one of the in-code tuples below and nothing else.
+#:
+#: The command line exposes a NAME drawn from this table, never a
+#: free-form camera list: a free-form knob is how a frozen split gets
+#: changed by accident, while a name can only ever select a tuple frozen
+#: here and written verbatim into the manifest, so a scene states which
+#: split produced it without anyone re-deriving it.
+#:
+#: `held_out` cameras go to `transforms_test.json` and NOWHERE else.
+#: `excluded` cameras go to NEITHER transforms file and no image is
+#: written for them at all -- they are absent from the scene. That is the
+#: whole reason `dev_cam10` exists: a development split that cannot touch
+#: a Cam00 pixel even through the test file.
+SPLIT_PROFILES: dict[str, dict[str, tuple[str, ...]]] = {
+    #: THE DEFAULT and the historical split
+    #: ([[operations/imvid-baseline-freeze]]:35-46), chosen outcome-blind
+    #: as `np.linspace(0, 38, 4)` over the sorted camera ids.
+    "adags_4cam": {"held_out": ("cam00", "cam13", "cam25", "cam38"),
+                   "excluded": ()},
+    #: ImViD's own published protocol holds out Camera 0 ONLY; this
+    #: profile exists so a parity lane can be run against their number
+    #: without hand-editing a frozen constant.
+    "paper_cam00": {"held_out": ("cam00",), "excluded": ()},
+    #: Development split. `cam10` is scored; `cam00` -- the camera the
+    #: paper protocol reports on -- is EXCLUDED from the scene entirely,
+    #: so no development decision can be taken on a Cam00 pixel.
+    "dev_cam10": {"held_out": ("cam10",), "excluded": ("cam00",)},
+}
+
+#: The split produced when `--split-profile` is not given. Changing this
+#: changes what every existing command line means and is a freeze
+#: amendment, not an edit.
+DEFAULT_SPLIT_PROFILE = "adags_4cam"
 
 #: `scene/dataset_readers.py:481` -- this exact basename or the reader
 #: silently substitutes a random uniform cloud (`:481-491`).
@@ -1004,29 +1035,143 @@ def simulate_reader_frame(contents: dict, frame: dict, extension: str) -> dict:
 
 
 # ====================================================================
-# Split enforcement -- against the WRITTEN artifacts
+# Split profiles, and split enforcement against the WRITTEN artifacts
 # ====================================================================
 
 
+def _validated_profile(name: str, entry: dict) -> dict:
+    """One `SPLIT_PROFILES` row, checked. Fail-closed on every way a row
+    can be wrong: a missing key, a held-out set that is empty (which would
+    leave nothing to score), a duplicated name, or a camera named as BOTH
+    held out and excluded -- which has no meaning, since one says "score
+    it" and the other says "it is not in the scene"."""
+    for key in ("held_out", "excluded"):
+        if key not in entry:
+            raise ContractError(f"split profile {name!r} has no {key!r} key")
+    held_out = tuple(str(v) for v in entry["held_out"])
+    excluded = tuple(str(v) for v in entry["excluded"])
+    if not held_out:
+        raise ContractError(
+            f"split profile {name!r} holds out nothing; there would be no "
+            "camera to score"
+        )
+    for label, names in (("held_out", held_out), ("excluded", excluded)):
+        if len(set(names)) != len(names):
+            raise ContractError(f"split profile {name!r} repeats a camera in {label}")
+    overlap = sorted(set(held_out) & set(excluded))
+    if overlap:
+        raise ContractError(
+            f"split profile {name!r} names {overlap} as BOTH held out and "
+            "excluded. held_out means 'scored from transforms_test.json'; "
+            "excluded means 'absent from the scene'. The two cannot both hold."
+        )
+    return {"name": name, "held_out": held_out, "excluded": excluded}
+
+
+def split_profile(name: str) -> dict:
+    """`--split-profile` NAME -> the frozen {name, held_out, excluded}.
+
+    The only route from a command line to a split. An unknown name is
+    refused by argparse's `choices=` first and here second, so the refusal
+    holds for a programmatic caller too."""
+    if name not in SPLIT_PROFILES:
+        raise ContractError(
+            f"unknown split profile {name!r}; the frozen profiles are "
+            f"{sorted(SPLIT_PROFILES)}. The split is selected by NAME from an "
+            "in-code table and never as a free-form camera list."
+        )
+    return _validated_profile(name, SPLIT_PROFILES[name])
+
+
+def _validate_split_profiles() -> None:
+    """Every frozen profile is checked once AT IMPORT, so a typo in the
+    table cannot wait for a conversion to surface."""
+    for name, entry in SPLIT_PROFILES.items():
+        _validated_profile(name, entry)
+    if DEFAULT_SPLIT_PROFILE not in SPLIT_PROFILES:
+        raise ContractError(
+            f"DEFAULT_SPLIT_PROFILE {DEFAULT_SPLIT_PROFILE!r} is not one of the "
+            f"frozen profiles {sorted(SPLIT_PROFILES)}"
+        )
+
+
+_validate_split_profiles()
+
+
+def partition_cameras(profile: dict, all_names: list[str]) -> dict:
+    """The (train, test, excluded, scene) partition a profile induces over
+    the model's camera names.
+
+    Computed ONCE here and consumed by both `cmd_convert` and the
+    self-test, so the split that is tested and the split that is written
+    cannot drift apart. `scene` is what the converter actually emits:
+    every camera minus the excluded ones, which is the list the image plan
+    and the transforms loop walk."""
+    held_out, excluded = profile["held_out"], profile["excluded"]
+    missing = [n for n in held_out + excluded if n not in all_names]
+    if missing:
+        raise ContractError(
+            f"camera(s) {missing} named by split profile {profile['name']!r} are "
+            "absent from the model. Point --model at the SUPPLIED calibration "
+            "that carries every camera, not at a training subset -- a held-out "
+            "camera needs a pose so it can be scored once at the end, and an "
+            "EXCLUDED camera has to be present before it can be verifiably "
+            "dropped."
+        )
+    train = [n for n in all_names if n not in held_out and n not in excluded]
+    test = [n for n in all_names if n in held_out]
+    dropped = [n for n in all_names if n in excluded]
+    if len(test) != len(held_out):
+        raise ContractError(
+            f"profile {profile['name']!r} expected {len(held_out)} held-out "
+            f"camera(s), matched {test}"
+        )
+    if not train:
+        raise ContractError(
+            f"profile {profile['name']!r} leaves the training split empty; the "
+            "held-out/excluded filter matched everything"
+        )
+    return {"train": train, "test": test, "excluded": dropped,
+            "scene": [n for n in all_names if n not in excluded]}
+
+
 def assert_split_on_written(train_bytes: bytes, test_bytes: bytes,
+                            profile: dict,
                             expected_train_cameras: list[str],
-                            frames_expected: int) -> dict:
+                            frames_expected: int,
+                            all_cameras: list[str]) -> dict:
     """The lesson from the 35-camera rebuild
     ([[operations/imvid-baseline-freeze]] A2): assert against what was
     WRITTEN, not against intent. An assertion about intent would not have
     caught a filter that silently matched nothing, so this re-parses the
-    emitted bytes, checks the raw TEXT for held-out camera names, and
-    requires the non-empty counts it expects."""
+    emitted bytes, checks the raw TEXT for held-out AND excluded camera
+    names, requires the non-empty counts it expects, and requires the two
+    written files plus the excluded set to PARTITION the model's cameras
+    -- an excluded camera that quietly stayed in the scene is exactly the
+    leak `dev_cam10` exists to prevent."""
+    held_out, excluded = profile["held_out"], profile["excluded"]
     train_text = train_bytes.decode("utf-8")
-    leaks = [name for name in HELD_OUT if name in train_text]
+    test_text = test_bytes.decode("utf-8")
+    leaks = [name for name in held_out if name in train_text]
     if leaks:
         raise ContractError(
             f"HELD-OUT LEAKAGE in {TRAIN_JSON}: the written bytes mention "
             f"{leaks}. The frozen split forbids any held-out camera "
             "influencing training ([[operations/imvid-baseline-freeze]]:47-50)."
         )
+    excluded_leaks = [f"{label}:{name}"
+                      for label, text in ((TRAIN_JSON, train_text),
+                                          (TEST_JSON, test_text))
+                      for name in excluded if name in text]
+    if excluded_leaks:
+        raise ContractError(
+            f"EXCLUDED-CAMERA LEAKAGE: the written bytes mention {excluded_leaks}. "
+            f"Split profile {profile['name']!r} excludes {list(excluded)} from the "
+            "scene ENTIRELY -- neither transforms file may carry it and no image "
+            "is written for it."
+        )
     train = json.loads(train_text)
-    test = json.loads(test_bytes.decode("utf-8"))
+    test = json.loads(test_text)
 
     train_cams = sorted({str(f["camera"]) for f in train["frames"]})
     test_cams = sorted({str(f["camera"]) for f in test["frames"]})
@@ -1035,10 +1180,11 @@ def assert_split_on_written(train_bytes: bytes, test_bytes: bytes,
             f"{TRAIN_JSON} carries cameras {train_cams}, expected "
             f"{sorted(expected_train_cameras)}"
         )
-    if test_cams != sorted(HELD_OUT):
+    if test_cams != sorted(held_out):
         raise ContractError(
-            f"{TEST_JSON} carries cameras {test_cams}, expected {sorted(HELD_OUT)}. "
-            "The held-out four go to the test file and NOWHERE else."
+            f"{TEST_JSON} carries cameras {test_cams}, expected {sorted(held_out)}. "
+            f"Profile {profile['name']!r} sends its held-out camera(s) to the test "
+            "file and NOWHERE else."
         )
     if not train["frames"] or not test["frames"]:
         raise ContractError(
@@ -1047,22 +1193,39 @@ def assert_split_on_written(train_bytes: bytes, test_bytes: bytes,
             "like this."
         )
     expect_train = len(expected_train_cameras) * frames_expected
-    expect_test = len(HELD_OUT) * frames_expected
+    expect_test = len(held_out) * frames_expected
     if len(train["frames"]) != expect_train or len(test["frames"]) != expect_test:
         raise ContractError(
             f"split counts wrong: train {len(train['frames'])} (expected "
             f"{expect_train}), test {len(test['frames'])} (expected {expect_test})"
         )
+    both = sorted(set(train_cams) & set(test_cams))
+    if both:
+        raise ContractError(
+            f"camera(s) {both} appear in BOTH written splits; the training and "
+            "held-out sets must be disjoint"
+        )
+    partition = set(train_cams) | set(test_cams) | set(excluded)
+    if partition != set(all_cameras):
+        raise ContractError(
+            f"the written split does not partition the model's cameras: "
+            f"train | test | excluded = {sorted(partition)} against "
+            f"{sorted(set(all_cameras))}. A camera in none of the three was "
+            "dropped by something other than the frozen profile."
+        )
     for f in train["frames"]:
         stem = Path(str(f["file_path"])).name
-        if any(stem.startswith(name) for name in HELD_OUT):
+        if any(stem.startswith(name) for name in held_out + excluded):
             raise ContractError(f"HELD-OUT LEAKAGE: train file_path {f['file_path']!r}")
     return {
-        "held_out": list(HELD_OUT),
+        "profile": profile["name"],
+        "held_out": list(held_out),
+        "excluded": list(excluded),
         "train_cameras": train_cams,
         "test_cameras": test_cams,
         "train_frames": len(train["frames"]),
         "test_frames": len(test["frames"]),
+        "partitions_all_model_cameras": True,
         "checked_against": "the WRITTEN json bytes, not the in-memory payload",
     }
 
@@ -1219,23 +1382,17 @@ def cmd_convert(args) -> dict:
         )
 
     # --- split, computed from the model and then re-checked on disk ---
+    profile = split_profile(args.split_profile)
     all_names = sorted(camera_token(n) for n in images)
     if len(set(all_names)) != len(all_names):
         raise ContractError("duplicate camera names in the model")
-    missing_held_out = [h for h in HELD_OUT if h not in all_names]
-    if missing_held_out:
-        raise ContractError(
-            f"held-out camera(s) {missing_held_out} are absent from {model_dir}. "
-            "Point --model at the SUPPLIED calibration that carries every camera, "
-            "not at a 35-camera training subset -- the held-out four need poses "
-            "so they can be scored once at the end."
-        )
-    train_cameras = [n for n in all_names if n not in HELD_OUT]
-    test_cameras = [n for n in all_names if n in HELD_OUT]
-    if len(test_cameras) != len(HELD_OUT):
-        raise ContractError(f"expected {len(HELD_OUT)} held-out cameras, matched {test_cameras}")
-    if not train_cameras:
-        raise ContractError("the training split is empty; the held-out filter matched everything")
+    partition = partition_cameras(profile, all_names)
+    train_cameras = partition["train"]
+    test_cameras = partition["test"]
+    excluded_cameras = partition["excluded"]
+    # Every camera the scene contains at all: an EXCLUDED camera is not
+    # here, so it reaches neither transforms file and no image is written.
+    scene_cameras = partition["scene"]
 
     name_to_image = {camera_token(n): (n, entry) for n, entry in images.items()}
 
@@ -1245,7 +1402,7 @@ def cmd_convert(args) -> dict:
     # --- source-image existence, checked BEFORE anything is written ---
     plan_images: list[tuple[str, int, Path, Path]] = []
     for frame_index in frame_indices:
-        for camera in all_names:
+        for camera in scene_cameras:
             src = source_image_path(frames_root, frame_index, camera)
             if not src.is_file():
                 raise ContractError(f"missing source image: {src}")
@@ -1290,10 +1447,20 @@ def cmd_convert(args) -> dict:
         "frame_indices": frame_indices,
         "frame_rate": {**fps_record(fps), "verification": fps_check},
         "split": {
-            "held_out": list(HELD_OUT),
+            "profile": profile["name"],
+            "held_out": list(profile["held_out"]),
+            "excluded": list(profile["excluded"]),
             "n_train_cameras": len(train_cameras),
             "train_cameras": train_cameras,
             "test_cameras": test_cameras,
+            "excluded_cameras": excluded_cameras,
+            "excluded_meaning": (
+                "absent from BOTH transforms files and from the images "
+                "directory; the scene does not contain these cameras at all"),
+            "profile_table": {name: {"held_out": list(entry["held_out"]),
+                                     "excluded": list(entry["excluded"])}
+                              for name, entry in SPLIT_PROFILES.items()},
+            "default_profile": DEFAULT_SPLIT_PROFILE,
         },
         "images_planned": len(plan_images),
         "cv2_calls": {"initUndistortRectifyMap": map_records},
@@ -1356,12 +1523,12 @@ def cmd_convert(args) -> dict:
     train_frames, test_frames = [], []
     pose_max_delta = 0.0
     for frame_index in frame_indices:
-        for camera in all_names:
+        for camera in scene_cameras:
             name, entry_image = name_to_image[camera]
             cam_entry = out_cameras[entry_image["camera_id"]]
             matrix = blender_transform_matrix(entry_image["qvec"], entry_image["tvec"])
             record = build_frame_entry(camera, frame_index, matrix, cam_entry, fps)
-            (test_frames if camera in HELD_OUT else train_frames).append(record)
+            (test_frames if camera in profile["held_out"] else train_frames).append(record)
 
     train_payload = build_transforms(train_frames, out_cameras)
     test_payload = build_transforms(test_frames, out_cameras)
@@ -1370,8 +1537,9 @@ def cmd_convert(args) -> dict:
     atomic_write_bytes(out_root / TRAIN_JSON, train_bytes)
     atomic_write_bytes(out_root / TEST_JSON, test_bytes)
 
-    split_record = assert_split_on_written(train_bytes, test_bytes,
-                                           train_cameras, len(frame_indices))
+    split_record = assert_split_on_written(train_bytes, test_bytes, profile,
+                                           train_cameras, len(frame_indices),
+                                           all_names)
 
     # --- replay the reader over the WRITTEN artifacts ---
     reader_report = {}
@@ -1446,7 +1614,8 @@ def cmd_convert(args) -> dict:
             "eval": True,
             "why_eval": ("scene/dataset_readers.py:475-477 MERGES the test split "
                          "into training when eval is False; the frozen split "
-                         "forbids that"),
+                         f"(profile {profile['name']!r}, held out "
+                         f"{list(profile['held_out'])}) forbids that"),
             "resolution": 1,
             "why_resolution": ("utils/camera_utils.py:43-46 rescales cx/cy by a "
                                "naive cx / scale, NOT the frozen "
@@ -1613,40 +1782,159 @@ def run_self_test() -> list[dict]:
         {"note": "the rate is carried as NUM/DEN so 59.94 and 60000/1001 can "
                  "never be confused"}))
 
-    # 10 -- the split, and the WRITTEN-artifact assertion's negative control
+    # 10 -- the DEFAULT split, and the WRITTEN-artifact assertion's
+    #       negative control. The historical 35/4 partition is reproduced
+    #       exactly, so the profile table cannot have moved the default.
     names = [f"cam{i:02d}" for i in range(39)]
-    train = [n for n in names if n not in HELD_OUT]
-    test = [n for n in names if n in HELD_OUT]
+    default_profile = split_profile(DEFAULT_SPLIT_PROFILE)
+    default_parts = partition_cameras(default_profile, names)
+    train = default_parts["train"]
+    test = default_parts["test"]
     good_train = dump_transforms(build_transforms(
         [build_frame_entry(n, 0, matrix, entry, fps) for n in train], {2: entry}))
     good_test = dump_transforms(build_transforms(
         [build_frame_entry(n, 0, matrix, entry, fps) for n in test], {2: entry}))
-    ok_split = assert_split_on_written(good_train, good_test, train, 1)
+    ok_split = assert_split_on_written(good_train, good_test, default_profile,
+                                       train, 1, names)
     leak_train = dump_transforms(build_transforms(
         [build_frame_entry(n, 0, matrix, entry, fps) for n in train + ["cam13"]],
         {2: entry}))
     caught_leak = False
     try:
-        assert_split_on_written(leak_train, good_test, train, 1)
+        assert_split_on_written(leak_train, good_test, default_profile, train, 1, names)
     except ContractError:
         caught_leak = True
     empty_caught = False
     try:
         assert_split_on_written(dump_transforms(build_transforms([], {2: entry})),
-                                good_test, train, 1)
+                                good_test, default_profile, train, 1, names)
     except ContractError:
         empty_caught = True
     checks.append(_check(
         "split_logic_and_its_negative_controls",
-        len(train) == 35 and sorted(test) == sorted(HELD_OUT)
+        DEFAULT_SPLIT_PROFILE == "adags_4cam"
+        and default_profile["held_out"] == ("cam00", "cam13", "cam25", "cam38")
+        and default_parts["excluded"] == []
+        and len(train) == 35 and sorted(test) == sorted(default_profile["held_out"])
         and ok_split["train_frames"] == 35 and ok_split["test_frames"] == 4
+        and ok_split["excluded"] == [] and ok_split["profile"] == "adags_4cam"
         and caught_leak and empty_caught,
-        {"held_out": list(HELD_OUT), "n_train": len(train), "n_test": len(test),
+        {"profile": DEFAULT_SPLIT_PROFILE,
+         "held_out": list(default_profile["held_out"]),
+         "n_train": len(train), "n_test": len(test),
          "leak_detected": caught_leak,
          "silently_empty_split_detected": empty_caught,
          "note": ("the assertion reads the WRITTEN bytes; an assertion about "
                   "intent would not catch a filter that silently matched "
                   "nothing ([[operations/imvid-baseline-freeze]] A2)")}))
+
+    # 10b -- every frozen profile induces exactly the partition it declares,
+    #        and a name outside the table is refused
+    parts = {name: partition_cameras(split_profile(name), names)
+             for name in SPLIT_PROFILES}
+    paper, dev = parts["paper_cam00"], parts["dev_cam10"]
+    sizes = {name: (len(part["train"]), len(part["test"]), len(part["excluded"]))
+             for name, part in parts.items()}
+    unknown_refused = False
+    try:
+        split_profile("cam00_only")
+    except ContractError:
+        unknown_refused = True
+    overlap_refused = False
+    try:
+        _validated_profile("bad", {"held_out": ("cam00",), "excluded": ("cam00",)})
+    except ContractError:
+        overlap_refused = True
+    checks.append(_check(
+        "split_profiles_partition_as_declared",
+        sorted(SPLIT_PROFILES) == ["adags_4cam", "dev_cam10", "paper_cam00"]
+        and sizes["adags_4cam"] == (35, 4, 0)
+        and sizes["paper_cam00"] == (38, 1, 0) and paper["test"] == ["cam00"]
+        and sizes["dev_cam10"] == (37, 1, 1) and dev["test"] == ["cam10"]
+        and dev["excluded"] == ["cam00"]
+        and "cam00" not in dev["train"] and "cam00" not in dev["test"]
+        and "cam00" not in dev["scene"]
+        and all(set(part["train"]).isdisjoint(part["test"]) for part in parts.values())
+        and all(set(part["train"]) | set(part["test"]) | set(part["excluded"])
+                == set(names) for part in parts.values())
+        and unknown_refused and overlap_refused,
+        {"n_cameras": len(names),
+         "train_test_excluded": sizes,
+         "unknown_profile_refused": unknown_refused,
+         "held_out_and_excluded_overlap_refused": overlap_refused,
+         "note": ("paper_cam00 is ImViD's own protocol (Camera 0 only); "
+                  "dev_cam10 scores cam10 while cam00 is absent from the "
+                  "scene, so no development decision can see a Cam00 pixel")}))
+
+    # 10c -- the ImViD paper protocol, checked on the WRITTEN bytes: 38/1
+    paper_profile = split_profile("paper_cam00")
+    paper_train = dump_transforms(build_transforms(
+        [build_frame_entry(n, 0, matrix, entry, fps) for n in paper["train"]],
+        {2: entry}))
+    paper_test = dump_transforms(build_transforms(
+        [build_frame_entry(n, 0, matrix, entry, fps) for n in paper["test"]],
+        {2: entry}))
+    paper_split = assert_split_on_written(paper_train, paper_test, paper_profile,
+                                          paper["train"], 1, names)
+    checks.append(_check(
+        "paper_cam00_written_split_is_38_train_1_test",
+        paper_split["train_frames"] == 38 and paper_split["test_frames"] == 1
+        and paper_split["test_cameras"] == ["cam00"]
+        and paper_split["excluded"] == []
+        and b"cam00" not in paper_train,
+        {"profile": paper_split["profile"],
+         "train_frames": paper_split["train_frames"],
+         "test_frames": paper_split["test_frames"],
+         "note": ("ImViD's published protocol holds out Camera 0 only; the "
+                  "count is asserted against the emitted bytes, not intent")}))
+
+    # 10d -- an EXCLUDED camera reaches NEITHER written file, and the
+    #        assertion catches it if it ever does
+    dev_profile = split_profile("dev_cam10")
+    dev_train = dump_transforms(build_transforms(
+        [build_frame_entry(n, 0, matrix, entry, fps) for n in dev["train"]],
+        {2: entry}))
+    dev_test = dump_transforms(build_transforms(
+        [build_frame_entry(n, 0, matrix, entry, fps) for n in dev["test"]],
+        {2: entry}))
+    dev_split = assert_split_on_written(dev_train, dev_test, dev_profile,
+                                        dev["train"], 1, names)
+    excluded_in_train_caught = False
+    try:
+        assert_split_on_written(
+            dump_transforms(build_transforms(
+                [build_frame_entry(n, 0, matrix, entry, fps)
+                 for n in dev["train"] + ["cam00"]], {2: entry})),
+            dev_test, dev_profile, dev["train"] + ["cam00"], 1, names)
+    except ContractError:
+        excluded_in_train_caught = True
+    excluded_in_test_caught = False
+    try:
+        assert_split_on_written(
+            dev_train,
+            dump_transforms(build_transforms(
+                [build_frame_entry(n, 0, matrix, entry, fps)
+                 for n in dev["test"] + ["cam00"]], {2: entry})),
+            dev_profile, dev["train"], 1, names)
+    except ContractError:
+        excluded_in_test_caught = True
+    checks.append(_check(
+        "excluded_camera_is_absent_from_the_written_bytes",
+        b"cam00" not in dev_train and b"cam00" not in dev_test
+        and dev_split["excluded"] == ["cam00"]
+        and dev_split["train_frames"] == 37 and dev_split["test_frames"] == 1
+        and dev_split["test_cameras"] == ["cam10"]
+        and dev_split["partitions_all_model_cameras"] is True
+        and excluded_in_train_caught and excluded_in_test_caught,
+        {"profile": dev_split["profile"],
+         "excluded": dev_split["excluded"],
+         "train_frames": dev_split["train_frames"],
+         "test_frames": dev_split["test_frames"],
+         "excluded_in_train_detected": excluded_in_train_caught,
+         "excluded_in_test_detected": excluded_in_test_caught,
+         "note": ("the raw bytes are searched for the excluded name, so a "
+                  "camera that survived in either file is caught the same way "
+                  "a held-out leak is")}))
 
     # 11 -- the point-cloud basename is the exact one the reader needs
     checks.append(_check(
@@ -1811,6 +2099,17 @@ def main(argv=None) -> int:
                         help="restrict to these frame indices, e.g. '0,150,299' "
                              "or '0-49'. Default: every frame_* directory found")
     parser.add_argument("--out", default=None, help="scene root; OUTSIDE the repository")
+    parser.add_argument("--split-profile", default=DEFAULT_SPLIT_PROFILE,
+                        choices=tuple(SPLIT_PROFILES),
+                        help="NAME of a frozen split from SPLIT_PROFILES; the "
+                             "only way the split can be chosen, because a "
+                             "free-form camera list is how a frozen split gets "
+                             "changed by accident. adags_4cam (DEFAULT) holds "
+                             "out cam00/cam13/cam25/cam38; paper_cam00 is "
+                             "ImViD's own protocol, Camera 0 only; dev_cam10 "
+                             "holds out cam10 and EXCLUDES cam00 from the scene "
+                             "entirely. The chosen name and both tuples are "
+                             "recorded in the manifest")
     parser.add_argument("--scale", type=float, default=0.5,
                         help="declared output scale of the undistorted raster")
     parser.add_argument("--fps-rational", default=None,

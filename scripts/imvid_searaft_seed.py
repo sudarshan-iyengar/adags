@@ -45,14 +45,38 @@ def seed_resnet() -> int:
     return 0
 
 
-def build_check() -> int:
+def searaft_sys_path() -> str:
+    """Put the baked SEA-RAFT checkout on ``sys.path`` and return its root.
+
+    Shared by this module's build check and by
+    ``scripts/imvid_flow_searaft.py`` so there is exactly ONE import path for
+    SEA-RAFT.  Two copies of this would be two chances to get it subtly
+    different, and the failure mode is silent-wrong rather than loud.
+    """
     if not os.path.isdir(SEARAFT_ROOT):
         raise SystemExit(f"REFUSE: SEA-RAFT root {SEARAFT_ROOT} is absent")
+    os.environ.setdefault("TORCH_HOME", os.environ.get("ADAGS_TORCH_HOME", "/opt/adags/torchhub"))
+    # SEA-RAFT uses IMPLICIT RELATIVE IMPORTS inside its own package:
+    # core/raft.py line 7 is `from update import BasicUpdateBlock`, not
+    # `from .update import ...`.  So `core/` must be on sys.path in its own
+    # right -- putting only the repo root there gets `core.raft` imported and
+    # then fails on its first internal import.  Upstream hides this by running
+    # every entrypoint from the repo root with `sys.path.append('core')`;
+    # importing SEA-RAFT as a library does not inherit that, and this is the
+    # first thing that breaks.  Both paths, root first so `config.parser` and
+    # `core.raft` resolve as packages.
+    for entry in (SEARAFT_ROOT, os.path.join(SEARAFT_ROOT, "core")):
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+    return SEARAFT_ROOT
+
+
+def build_check() -> int:
+    searaft_sys_path()
     cfg = os.path.join(SEARAFT_ROOT, EVAL_CFG)
     if not os.path.isfile(cfg):
         raise SystemExit(f"REFUSE: eval config {cfg} is absent")
 
-    sys.path.insert(0, SEARAFT_ROOT)
     from config.parser import json_to_args  # noqa: E402
     from core.raft import RAFT  # noqa: E402
 
