@@ -154,6 +154,7 @@ USAGE
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import hashlib
 import json
 import shutil
@@ -1482,42 +1483,83 @@ def cmd_convert(args) -> dict:
     # --- write the images ---
     image_hashes: dict[str, dict] = {}
     border_check: dict | None = None
-    for position, (camera, frame_index, src, dst) in enumerate(plan_images):
+
+    def _undistort_one(item: tuple[str, int, Path, Path]) -> dict:
+        """Undistort ONE planned image; independent of every other one.
+
+        Nothing here touches shared mutable state: the maps are read-only, the
+        destination path is unique per item, and `remap_image` performs its own
+        fail-closed size/channel/alpha checks. So the BYTES this produces do
+        not depend on the order or the concurrency it is produced in -- only
+        the wall clock does. That is what makes `--workers` safe.
+        """
+        camera, _frame, src, dst = item
         _, entry_image = name_to_image[camera]
         cam_entry = out_cameras[entry_image["camera_id"]]
         map1, map2 = maps[entry_image["camera_id"]]
         result = remap_image(src, dst, map1, map2, cam_entry)
-        if border_check is None:
-            # ONE image is checked against the analytic map: every pixel
-            # that falls entirely outside the bilinear support must be
-            # exactly borderValue. This proves the map that was MEASURED is
-            # the map that was APPLIED. (Pixels in the one-pixel blend band
-            # legitimately are not exactly 0, so they are excluded.)
-            fully_outside = ((map1 <= -1.0) | (map1 >= float(cam_entry["native_width"]))
-                             | (map2 <= -1.0) | (map2 >= float(cam_entry["native_height"])))
-            array = result["array"]
-            n_outside = int(fully_outside.sum())
-            if n_outside and not bool((array[fully_outside] == 0).all()):
-                raise ContractError(
-                    f"{dst}: pixels outside the source raster are not borderValue; "
-                    "the applied map is not the measured map"
-                )
-            border_check = {
-                "image": str(dst),
-                "pixels_fully_outside_source": n_outside,
-                "all_exactly_borderValue": True if n_outside else None,
-                "note": ("one-directional by design: an interior pixel may be "
-                         "black for photographic reasons, so only the fully "
-                         "outside set is asserted"),
-            }
+        return {"src": src, "dst": dst, "result": result, "cam_entry": cam_entry,
+                "map1": map1, "map2": map2}
+
+    def _record(done: dict) -> None:
         if args.hash_images:
+            dst, src = done["dst"], done["src"]
             image_hashes[dst.name] = {"bytes": dst.stat().st_size,
                                       "sha256": sha256_file(dst),
                                       "source": str(src),
                                       "source_sha256": sha256_file(src)}
-        if (position + 1) % 25 == 0 or position + 1 == len(plan_images):
-            print(f"[imvid] undistorted {position + 1}/{len(plan_images)} images",
-                  flush=True)
+
+    # The FIRST image is undistorted ALONE, because the applied-vs-measured map
+    # check needs its array and has to be able to stop the run on image 1
+    # rather than after 11,700 of them.
+    first = _undistort_one(plan_images[0])
+    map1, map2 = first["map1"], first["map2"]
+    cam_entry, dst = first["cam_entry"], first["dst"]
+    # ONE image is checked against the analytic map: every pixel that falls
+    # entirely outside the bilinear support must be exactly borderValue. This
+    # proves the map that was MEASURED is the map that was APPLIED. (Pixels in
+    # the one-pixel blend band legitimately are not exactly 0, so they are
+    # excluded.)
+    fully_outside = ((map1 <= -1.0) | (map1 >= float(cam_entry["native_width"]))
+                     | (map2 <= -1.0) | (map2 >= float(cam_entry["native_height"])))
+    array = first["result"]["array"]
+    n_outside = int(fully_outside.sum())
+    if n_outside and not bool((array[fully_outside] == 0).all()):
+        raise ContractError(
+            f"{dst}: pixels outside the source raster are not borderValue; "
+            "the applied map is not the measured map"
+        )
+    border_check = {
+        "image": str(dst),
+        "pixels_fully_outside_source": n_outside,
+        "all_exactly_borderValue": True if n_outside else None,
+        "note": ("one-directional by design: an interior pixel may be "
+                 "black for photographic reasons, so only the fully "
+                 "outside set is asserted"),
+    }
+    _record(first)
+
+    rest = plan_images[1:]
+    workers = max(1, int(args.workers))
+    if workers == 1:
+        for position, item in enumerate(rest, start=1):
+            _record(_undistort_one(item))
+            if (position + 1) % 25 == 0 or position + 1 == len(plan_images):
+                print(f"[imvid] undistorted {position + 1}/{len(plan_images)} images",
+                      flush=True)
+    else:
+        # THREADS, not processes: cv2's imread/remap/imwrite release the GIL,
+        # and the two resampling maps are ~32 MB each -- pickling them to a
+        # process pool per task would cost more than the work. Measured
+        # single-threaded throughput was 0.35 images/s, i.e. 9.3 h for one
+        # 11,700-image window, which is why this exists.
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(_undistort_one, item) for item in rest]
+            for position, future in enumerate(concurrent.futures.as_completed(futures), start=1):
+                _record(future.result())
+                if (position + 1) % 100 == 0 or position + 1 == len(plan_images):
+                    print(f"[imvid] undistorted {position + 1}/{len(plan_images)} images",
+                          flush=True)
 
     # --- build and write the transforms ---
     train_frames, test_frames = [], []
@@ -2140,6 +2182,14 @@ def main(argv=None) -> int:
     parser.add_argument("--measure-border", action="store_true",
                         help="dry-run only: build the maps and measure the "
                              "invalid border without writing anything")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="threads used for the undistortion pass. The bytes "
+                             "written do not depend on this -- each image is "
+                             "independent and remap_image does its own checks -- "
+                             "only the wall clock does. The default of 1 "
+                             "reproduces the single-threaded behaviour exactly; "
+                             "one 11,700-image window measured 0.35 images/s "
+                             "there, i.e. 9.3 h")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--manifest", default=None, help="manifest path; outside the repo")
