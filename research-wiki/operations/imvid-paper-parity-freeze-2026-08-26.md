@@ -761,3 +761,52 @@ has already completed on `dgx`; no flow work remains.
 
 Recorded rather than absorbed. The 6k reading salvaged from 298 is in
 [[imvid-paper-parity-result-2026-08-26]] §7B with its four caveats.
+
+## AMENDMENT 8 (append-only, 2026-08-26) — A1.1's original 600,000 is RESTORED, and 298 keeps running
+
+User-directed, and it is a better arrangement than A7 proposed.
+
+### A8.1 The ceiling returns to 600,000
+
+A7.3 retained A6's 400,000 out of caution about untested memory on H100. With
+**81,559 MiB against the V100's 32,768 — 2.5x** — the constraint that forced
+the reduction is gone, so the ORIGINAL frozen policy is restored rather than
+a hardware-forced compromise being carried onto hardware that does not need
+it. A6 and A7.3 are superseded on this point; their measurements stand.
+
+**Uncapped was offered and declined.** `densify_until_num_points: -1` disables
+the ceiling entirely (`main.py:1658`), which removes the only backstop on
+densification. 600,000 is a value this project already reasoned about and
+froze; inventing a third number, or none, would make the capacity policy less
+comparable to the N3V canonical cell, not more.
+
+### A8.2 Experiment 298 CONTINUES on dgx, and is NOT part of the pair
+
+A7.2 would have cancelled 298 to keep both arms on one hardware class. That is
+no longer necessary, because the matched pair is now formed differently:
+
+```
+MATCHED PAIR (the comparison)   hopper/H100, ceiling 600,000, both arms
+SECONDARY OBSERVATION           298, dgx/V100, ceiling 400,000, FG only
+```
+
+**The pair is what the lane claims from.** 298 is a single arm under a
+different ceiling on different hardware, so it cannot be half of a
+comparison — but it costs nothing to finish, it is already 6,000+ iterations
+in, and its 6k checkpoint is evaluated and recorded
+([[imvid-paper-parity-result-2026-08-26]] §7B). If it survives to 12,000 it
+yields a second FG reading under a DIFFERENT capacity policy, which is
+informative about capacity sensitivity precisely because it differs.
+
+**Its survival is not assumed.** 298 stood at 374,648 points against its
+400,000 ceiling when this was written, and 297 died at 399,865 under the same
+ceiling. It may not reach 12,000. That is an acceptable outcome for a
+secondary observation and would be an unacceptable one for half of the pair —
+which is the substantive reason the pair moved rather than being left to
+chance.
+
+### A8.3 What this changes about hardware
+
+§9.2 (dgx/V100) and A7.2 are superseded for the COMPARISON only. Preprocessing
+stays on dgx and is complete. Both Puppy arms also run on hopper, for the same
+one-hardware-class reason.

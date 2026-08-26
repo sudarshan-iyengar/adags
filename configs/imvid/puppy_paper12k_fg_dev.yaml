@@ -35,14 +35,17 @@
 # the freeze names as primary; the training-time path is unclamped, has no
 # LPIPS, and may never appear in a reported table.
 #
-# CAPACITY. densify_until_num_points is the SHARED point-ceiling policy and is
-# 400,000 after MEASUREMENT, not by choice: at the original 600,000 the NF arm
-# reached 516,990 points at iteration 2,866 and the container was killed with
-# no traceback -- a CUDA abort inside the rasterizer, whose per-Gaussian sort
-# buffers at 2656x1494 are what exhaust a 32 GB V100, not the parameter
-# tensors (those are ~580 MB at that count). 400,000 sits 23% below the
-# observed failure and still lets NF grow 1.42x from its 282,672-point start.
-# See freeze AMENDMENT 6.
+# CAPACITY. densify_until_num_points is the SHARED point-ceiling policy, and
+# it is back at A1.1's original 600,000 because the comparison now runs on
+# hopper/H100 (81,559 MiB against the V100's 32,768).
+#
+# The V100 could reach NEITHER value: experiment 295 died at 516,990 points
+# under a 600,000 ceiling, and 297 died at 399,865 under a 400,000 one -- at
+# the ceiling itself. What exhausts 32 GB is the rasterizer's per-Gaussian
+# sort and tile buffers at 2656x1494, not the parameter tensors (~580 MB at
+# that count). 2.5x the memory removes the constraint rather than working
+# around it, so the ORIGINAL frozen policy is restored instead of carrying a
+# hardware-forced compromise. See freeze AMENDMENTS 6, 7 and 8.
 # identical in both arms. The initial population is capped at half that
 # ceiling so BOTH arms exercise densification; an arm starting at or above the
 # ceiling would skip the whole densification-and-pruning block
@@ -105,7 +108,7 @@ OptimizationParams:
   densify_until_iter: 10_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.000005
-  densify_until_num_points: 400_000
+  densify_until_num_points: 600_000
   final_prune_from_iter: -1
   # 30 -> qualitative renders at held-out frames 0,30,...,270: ten per
   # evaluation, at indices IDENTICAL across every arm. Applied after all
