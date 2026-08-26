@@ -396,7 +396,46 @@ restating a structural guarantee. PENDING the first FG build.
 
 ## 7. Results at 6k and 12k
 
-PENDING.
+**PENDING — both arms are training.** Run identities, verified from their own
+emitted manifests rather than from the submission command:
+
+```
+295  imvid_opera_nf   dgx  commit b9e89bf861f32716bf1735a5cdc6ac223dd396c2
+     image  sha256:02ad9cb41d0b613db73c0cee3777e547899c42dd2b93220edd30317d7f04b1e6
+     seed 0   evidence_bearing false   projected_gpu_hours 14.0
+     run_dir /apollo/users/sri/proj_adags/runs/elgs/20260826T020643Z_imvid_opera_nf_0_b9e89bf
+     input.ply 9,893,798 B  (282,672 points)
+
+296  imvid_opera_fg   dgx  same commit, same image digest, seed 0
+     run_dir /apollo/users/sri/proj_adags/runs/elgs/20260826T020708Z_imvid_opera_fg_0_b9e89bf
+     input.ply   694,152 B  (19,825 points)
+```
+
+The two `input.ply` sizes are the cheapest available proof that each arm
+received its OWN initializer rather than a shared one.
+
+Each carries `archive_sha256`, `config_canonical_hash`,
+`rendered_config_sha256`, an O_EXCL claim path and a ledger line. Both are
+`evidence_bearing: false`, matching the freeze's status.
+
+**No number may be entered here from the training-time path.** The 6k and 12k
+figures come from a separate `--val` pass over `chkpnt6000.pth` and
+`chkpnt12000.pth` in the clamped / pooled-PSNR / LPIPS-AlexNet convention
+frozen in §7 of the freeze.
+
+## 7A. What may NOT be concluded from this lane, restated before any number exists
+
+- Not an exact reproduction of the ImViD paper: method parity is unavailable
+  (no released implementation) and window parity holds only for Opera, and
+  only in the weaker `window-constrained-by-measurement` sense.
+- Not a statement about the published table. STG and IVV are external
+  anchors; nothing here was tuned against them, and 12,000 iterations is not
+  the paper's 30 epochs.
+- Not a same-capacity comparison. FG begins with 7% of NF's points, and part
+  of any difference is initial coverage rather than the flow mechanism
+  (§5E.1).
+- Not an independently verified rig status: Opera and Puppy remain
+  SUPPLIER-DECLARED per the freeze's §10 evidence boundary.
 
 ## 8. Deviations, failures and cost
 
