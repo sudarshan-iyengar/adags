@@ -191,28 +191,40 @@ def run_one_frame(job: dict) -> dict:
 
 
 def _collect_points(out_dir: Path, frame: int, t: float, out_root: Path) -> dict:
-    """Read the frame's triangulated points and store them with their time."""
-    from plyfile import PlyData
+    """Read the frame's triangulated points and store them with their time.
 
-    candidates = sorted(out_dir.rglob("points3D.ply")) + sorted(out_dir.rglob("*.ply"))
-    if not candidates:
-        # fall back to the text model COLMAP always writes
-        txt = sorted(out_dir.rglob("points3D.txt"))
-        if not txt:
-            raise ContractError(f"no point output under {out_dir}")
-        xyz, rgb = [], []
-        for line in txt[0].read_text(encoding="utf-8").splitlines():
-            if not line.strip() or line.startswith("#"):
-                continue
-            p = line.split()
-            xyz.append([float(p[1]), float(p[2]), float(p[3])])
-            rgb.append([int(p[4]), int(p[5]), int(p[6])])
-        pts = np.asarray(xyz, dtype=np.float64)
-        col = np.asarray(rgb, dtype=np.uint8)
-    else:
-        data = PlyData.read(str(candidates[0]))["vertex"]
-        pts = np.stack([data["x"], data["y"], data["z"]], axis=1).astype(np.float64)
-        col = np.stack([data["red"], data["green"], data["blue"]], axis=1).astype(np.uint8)
+    THE OUTPUT MODEL IS NAMED EXPLICITLY, never discovered.
+    `imvid_sparse_init.py` writes THREE model directories under its workdir:
+    `model_in` (the supplied poses, whose `points3D.txt` is the literal string
+    "# 3D point list" -- an EMPTY input), `model_out` (binary) and `model_txt`
+    (the text export of the result). A glob for `points3D.txt` returns
+    `model_in` first because "model_in" sorts before "model_txt", so a
+    discovery-based reader silently returns ZERO points from a perfectly
+    successful reconstruction -- which is exactly what it did, on a frame that
+    had 38 contributing cameras and a mean track length of 4.11.
+    """
+    txt = out_dir / "model_txt" / "points3D.txt"
+    if not txt.is_file():
+        raise ContractError(
+            f"{txt} is absent; imvid_sparse_init.py did not write its text export"
+        )
+    xyz, rgb = [], []
+    for line in txt.read_text(encoding="utf-8").splitlines():
+        if not line.strip() or line.startswith("#"):
+            continue
+        p = line.split()
+        xyz.append([float(p[1]), float(p[2]), float(p[3])])
+        rgb.append([int(p[4]), int(p[5]), int(p[6])])
+    if not xyz:
+        # A successful COLMAP run that triangulated nothing is a failure, not
+        # an empty success. Left unguarded it produces a cloud file per frame
+        # and an initializer with no geometry in it.
+        raise ContractError(
+            f"frame {frame}: COLMAP returned 0 points from {txt}. A successful "
+            "reconstruction with no geometry is a defect, not an empty result."
+        )
+    pts = np.asarray(xyz, dtype=np.float64)
+    col = np.asarray(rgb, dtype=np.uint8)
 
     out_root.mkdir(parents=True, exist_ok=True)
     dst = out_root / f"frame_{frame:06d}.npz"
