@@ -222,6 +222,19 @@ def main(argv=None) -> int:
     parser.add_argument("--model", required=True, help="supplied cameras.txt + images.txt")
     parser.add_argument("--workdir", required=True, help="all outputs land here")
     parser.add_argument("--max-image-size", type=int, default=NATIVE_WIDTH)
+    parser.add_argument("--max-num-features", type=int, default=8192,
+                        help=(
+                            "SiftExtraction.max_num_features. COLMAP's own default "
+                            "is 8192, so the default here changes nothing. Exposed "
+                            "because exhaustive matching costs O(F^2) per pair and "
+                            "the feature CAP -- not the raster -- is what binds on "
+                            "detailed scenes: halving F quarters the matching cost "
+                            "while leaving keypoint LOCALISATION, and therefore the "
+                            "reprojection residual, untouched. Reducing "
+                            "--max-image-size instead would buy the same speed by "
+                            "degrading precision, which the 2.0 px native gate does "
+                            "not have room for."
+                        ))
     parser.add_argument("--use-gpu", type=int, default=0)
     parser.add_argument("--verify-only", action="store_true",
                         help="re-run the calibration check and statistics over an "
@@ -279,6 +292,7 @@ def main(argv=None) -> int:
         "--ImageReader.single_camera", "1",
         "--ImageReader.camera_params", ",".join(cam_params),
         "--SiftExtraction.max_image_size", str(args.max_image_size),
+        "--SiftExtraction.max_num_features", str(args.max_num_features),
         "--SiftExtraction.use_gpu", str(args.use_gpu),
     ], "feature_extractor"))
     steps.append(_run([

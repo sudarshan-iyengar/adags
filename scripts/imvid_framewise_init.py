@@ -157,7 +157,9 @@ def run_one_frame(job: dict) -> dict:
         [sys.executable, str(SPARSE_INIT),
          "--images", str(images_dir), "--model", str(model_dir),
          "--workdir", str(work / "out"),
-         "--max-image-size", str(job["max_image_size"]), "--use-gpu", "0"],
+         "--max-image-size", str(job["max_image_size"]),
+         "--max-num-features", str(job["max_num_features"]),
+         "--use-gpu", "0"],
         capture_output=True, text=True,
     )
     record = {
@@ -234,6 +236,12 @@ def main(argv=None) -> int:
     ap.add_argument("--exclude-cameras", default="cam00",
                     help="cameras that MUST NOT contribute an observation")
     ap.add_argument("--max-image-size", type=int, default=2656)
+    ap.add_argument("--max-num-features", type=int, default=8192,
+                    help="SiftExtraction.max_num_features; COLMAP's own default, so "
+                         "unchanged unless set. Matching is O(F^2) per pair and the "
+                         "feature CAP, not the raster, is what binds on detailed "
+                         "scenes -- and unlike --max-image-size it does not degrade "
+                         "keypoint localisation, so the reprojection gate is unaffected")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--manifest", default=None)
     ap.add_argument("--keep-staged", action="store_true")
@@ -279,6 +287,7 @@ def main(argv=None) -> int:
         "cameras_txt": cams_txt,
         "images_txt": imgs_txt,
         "max_image_size": args.max_image_size,
+        "max_num_features": args.max_num_features,
         "cleanup": not args.keep_staged,
     } for f in frames]
 
@@ -317,6 +326,7 @@ def main(argv=None) -> int:
         "cameras_used": keep,
         "excluded_cameras": list(exclude),
         "max_image_size": args.max_image_size,
+        "max_num_features": args.max_num_features,
         "total_points": int(sum(r.get("points", 0) for r in ok)),
         "points_per_frame": {str(r["frame"]): r.get("points") for r in ok},
         "elapsed_s": round(time.time() - started, 2),
