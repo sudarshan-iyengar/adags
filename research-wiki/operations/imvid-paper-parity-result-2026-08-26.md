@@ -559,6 +559,104 @@ UPPER bound on pure run-to-run variance and cannot be attributed to any one
 of the three. Separating them would need replicates, which the block has not
 paid for.
 
+## 7D. THE COMPLETE MATCHED PAIR, at both frozen endpoints
+
+All four cells below are the SAME pool (hopper/H100), the SAME ceiling
+(600,000), the SAME seed and the SAME frozen 12,000-iteration schedule. Only
+the initial population differs, which is the one variable this lane exists to
+vary.
+
+| run | arm | iter | PSNR | SSIM | LPIPS | points |
+|---|---|---:|---:|---:|---:|---:|
+| 300/304 | NF | 6,000 | 26.805 | 0.8783 | 0.3853 | 599,333 |
+| 300/306 | **NF** | **12,000** | **26.855** | **0.8868** | **0.3673** | 599,305 |
+| 301/303 | FG | 6,000 | 24.347 | 0.8380 | 0.5346 | 350,525 |
+| 301/305 | FG | 12,000 | 24.083 | 0.8414 | 0.5026 | 599,698 |
+
+**NF - FG at 6,000:** +2.458 dB PSNR, +0.0403 SSIM, -0.1493 LPIPS.
+**NF - FG at 12,000:** +2.772 dB PSNR, +0.0454 SSIM, -0.1353 LPIPS.
+
+Both clear the 1.385 dB replicate floor of §7C.2 by roughly a factor of two,
+in the same direction, on all three metrics, at both endpoints.
+
+### 7D.1 The capacity confound is present at 6k and ABSENT at 12k
+
+This is the load-bearing observation of the whole comparison, and it was not
+designed for -- it fell out of the ceiling being reached by both arms.
+
+At 6,000 iterations NF carries **1.710x** FG's primitives (599,333 against
+350,525), exactly the confound §5E.1 predicted when the populations were
+built: FG starts with 7% of NF's points, so part of any 6k difference is
+initial coverage rather than the flow mechanism.
+
+At 12,000 iterations **both arms have converged to the same budget** --
+599,305 against 599,698, a difference of 393 points, or **0.066%**. Capacity
+is matched to within a fifteenth of one percent, and NF still leads by
+**2.772 dB**.
+
+**A capacity explanation of the NF advantage is therefore available at 6k and
+NOT available at 12k.** The advantage is slightly LARGER at the matched
+endpoint than at the confounded one, which is the opposite of what a
+capacity-driven gap would do.
+
+What this still does NOT establish: that flow-guided initialization is
+harmful in general. It establishes that ON THIS WINDOW, at this schedule and
+this ceiling, the flow-guided initial population reaches a worse held-out
+optimum than uniform seeding does, and that the deficit is not explained by
+the primitive budget. The FG population is 35,107 points against NF's
+1,000,000-capped 300,000; a starting population two orders of magnitude
+smaller may simply never recover, which is a statement about THIS
+construction of FG, not about flow priors.
+
+### 7D.2 12,000 iterations is the right endpoint at the 600k ceiling
+
+NF's best held-out PSNR is at iteration 12,000 (`best_val_iter: 12000` in its
+own summary), and it IMPROVES from 6k to 12k on all three metrics
+(+0.050 dB, +0.0085 SSIM, -0.0180 LPIPS). FG loses 0.264 dB but improves on
+both SSIM and LPIPS.
+
+**This WITHDRAWS the concern raised in §7C.1** that 12,000 iterations is past
+the optimum. That concern was raised from the 400,000-ceiling run and does
+not survive contact with the 600,000-ceiling runs, exactly as §7C.1 itself
+flagged it might not.
+
+### 7D.3 CORRECTION, append-only: the frozen-topology mechanism in §7C.1 is REFUTED
+
+§7C.1 attributed the -3.203 dB collapse of the 400k run to `main.py:1658`
+freezing the entire densification block -- pruning and opacity reset included
+-- once the point count reaches the ceiling. **That mechanism does not
+operate, and the error was mine.**
+
+`densify_and_prune` caps its own growth internally
+(`scene/gaussian_model.py:2567-2568`):
+
+```python
+if max_total_points is not None and max_total_points >= 0:
+    remaining_new_points = max(0, int(max_total_points) - int(self.get_xyz.shape[0]))
+```
+
+so the population **asymptotes just below the ceiling and never crosses it**.
+Every run in this lane ends below its own cap -- 399,709 of 400,000;
+599,305 and 599,698 of 600,000 -- so the outer gate's
+`get_xyz.shape[0] < opt.densify_until_num_points` stays TRUE throughout and
+the topology is never frozen. Pruning and opacity reset ran for the whole
+schedule in all four runs.
+
+The numbers in §7C.1 are unaffected; only the explanation is withdrawn. The
+surviving candidate mechanism is **starved densification**: once the internal
+cap binds, `remaining_new_points` is 0, so each opacity-reset cycle continues
+to fire with no ability to regrow what it suppresses. That account is
+CONSISTENT with the 400k run and INCONSISTENT with NF, which saturated its
+budget by 6k and still gained. It is recorded as an open hypothesis and is
+**not needed for anything this lane concludes** -- the three runs differ in
+ceiling, hardware and arm simultaneously, so none of them can separate it.
+
+**Carry as method:** the freeze reading was taken from a point-count
+trajectory that plateaued, and a plateau at a cap looks identical whether the
+cap is enforced inside the operator or outside it. Reading the gate condition
+in source is what distinguished them, and it should have come first.
+
+
 ## 7A. What may NOT be concluded from this lane, restated before any number exists
 
 - Not an exact reproduction of the ImViD paper: method parity is unavailable
@@ -575,8 +673,106 @@ paid for.
 
 ## 8. Deviations, failures and cost
 
-PENDING.
+Every amendment is recorded append-only in
+[[imvid-paper-parity-freeze-2026-08-26]] §Amendments 1-8. This section
+records only what they cost and what they taught.
+
+**Cells that produced no science (~7.8 slot-hours discarded):**
+
+| exp | arm | pool | outcome |
+|---|---|---|---|
+| 295 | NF | V100 | OOM at iteration 2,866 / 516,990 points (600k ceiling) |
+| 296 | FG | V100 | cancelled with 295 when the ceiling was amended |
+| 297 | NF | V100 | OOM at iteration 2,032 / 399,865 points -- **at** the 400k ceiling |
+
+Both OOMs died without a Python traceback, which is the signature of a
+SIGKILL or a CUDA abort rather than an allocator failure inside PyTorch. The
+parameter tensors are only ~580 MB at that count; the memory goes to the
+rasterizer's per-Gaussian sort and tile buffers at 2656x1494. **Lowering the
+ceiling from 600k to 400k did not fix it -- 297 died AT the lower ceiling** --
+which is what settled that the V100's 32 GB is the binding constraint and
+sent this lane to the H100.
+
+**Two engineering findings that cost real time and are worth carrying:**
+
+1. **A build-time gate proves the BUILD environment, not the RUNTIME one**,
+   whenever it supplies a variable the runtime will not. The SEA-RAFT
+   construction check passed inside the image build because the build step
+   set `TORCH_HOME` itself; the first real run died on a `PermissionError`
+   against root-owned weights. Fixed by baking `ADAGS_TORCH_HOME` and
+   `chmod -R a+rX /opt/adags`.
+
+2. **The triangulation cost model was wrong by ~16x** because I assumed SIFT
+   feature count scales with pixel area. COLMAP caps at
+   `max_num_features 8192` and both rasters saturate the cap, so halving the
+   raster bought nothing. Measured feature-cap curve: 1024 -> 33 s/frame,
+   2048 -> 89 s, 8192 -> >=840 s, all with 38 cameras contributing and mean
+   track length 4.11-4.15. Correcting the model improved the plan rather than
+   just the estimate.
+
+**One defect found in the point collector, and it reported a FALSE ZERO.** It
+globbed for `points3D.txt` and matched `model_in/` -- the empty INPUT model,
+which sorts before `model_txt/` -- and so reported 0 points from a
+reconstruction with 38 contributing cameras. Fixed by naming the output model
+explicitly and refusing on zero points. A collector that returns 0 from a
+healthy reconstruction is the failure mode that would have silently produced
+an empty initial population.
+
+**Two claims of mine were corrected during the lane, both append-only:** that
+NF's ~4 s/iteration had been measured, when the preflight that would have
+printed it was killed first; and the frozen-topology mechanism of §7C.1,
+refuted in §7D.3 above.
+
+**Provenance gap, recorded rather than papered over:** flow shard manifests
+1-3 were never written, because the direction guard refused when resumed
+shards carried too few fresh pairs. The flow DATA is complete (11,362 pairs,
+all 38 cameras x 299) but per-shard provenance is not, so **the FORWARD
+direction of the SEA-RAFT assets rests on the dedicated probe (ratios
+1.358 / 1.399 on 83,742 / 89,263 evidence pixels), not on the production
+run's own self-check.**
 
 ## 9. Recommended starting point for the later gating pair
 
-PENDING.
+**Recommendation: freeze the NF configuration --
+`configs/imvid/opera_paper12k_nf.yaml` -- unchanged, on hopper/H100.**
+
+Concretely: 600,000-point ceiling, `densify_until_iter: 10_000`,
+`num_pts: 1_000_000`, 12,000 iterations, `position_lr_max_steps: 12_000`,
+seed 0, image `sudarshaniyengar/adags@sha256:0d5771688c9b...`, Cam 00 held
+out, 2x-downsampled 300-frame window at frames 0-299.
+
+Four reasons, in order of weight:
+
+1. **NF is the better substrate on every metric at both endpoints**, by a
+   margin that clears the replicate floor twice over, AT MATCHED CAPACITY
+   (§7D.1). A gating experiment run on the FG substrate would be building on
+   a 2.772 dB deficit that has nothing to do with gating.
+
+2. **12,000 iterations is where NF is best** (§7D.2), so the endpoint the
+   user directed is also the endpoint the data supports. No amendment needed.
+
+3. **The V100 is not viable for this window** and the H100 is (§8). This is
+   settled, not a preference.
+
+4. **NF has no initializer machinery in the loop**, so an episode-gating
+   result on top of it is attributable to gating alone. FG adds a second
+   moving part -- flow-derived support bands -- whose interaction with
+   temporal gating is unknown and would confound the very thing the later
+   pair is built to measure.
+
+**What must be paid for before that pair is claim-grade**, and none of it was
+in this lane's scope:
+
+- **Replicates.** The 1.385 dB floor is an UPPER bound confounded by ceiling
+  and hardware. A gating effect smaller than that is currently unresolvable,
+  and the N3V programme already holds the general form of this result
+  ([[operations/b1f-flow-postmortem-2026-08-23]]). At least 3 same-config
+  replicates at one seed are needed before any gating delta is quoted.
+- **A rendered-vs-declared temporal-width decision.** The marginal is applied
+  twice ([[temporal-marginal-applied-twice-2026-08-26]]), so every authored
+  support width renders at 1/sqrt(2) of its stored value. That is harmless
+  for arm-vs-arm ratios and NOT harmless for any gating spec that authors an
+  episode duration in seconds.
+- **Puppy.** Experiments 307 and 308 are running as this is written; a
+  single-scene recommendation should not be frozen across scenes until they
+  return.
