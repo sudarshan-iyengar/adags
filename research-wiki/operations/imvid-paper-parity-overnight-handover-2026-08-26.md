@@ -78,7 +78,12 @@ statement of a support duration in this project is wrong by 41%.
 | **Opera FG training** | **RUNNING** | **Determined experiment 296** |
 | Puppy conversion onward | see §9 | |
 
-## 3A. LIVE RUNS AT HANDOVER
+## 3A. LIVE RUNS AT HANDOVER — SUPERSEDED, see 3B
+
+### (historical, kept for the run identities it records)
+
+## 3A0. Historical
+
 
 ```
 295  imvid_opera_nf   RUNNING  dgx  commit b9e89bf  seed 0
@@ -112,6 +117,42 @@ Evaluate each saved checkpoint through the FROZEN `--val` path once it exists:
 ```bash
 .\submit_val.ps1 -Cell imvid_opera_nf_val6k -Config configs/imvid/opera_paper12k_nf.yaml -Ckpt <run_dir>/chkpnt6000.pth
 ```
+
+## 3B. CURRENT LIVE STATE (this supersedes 3A)
+
+```
+MATCHED PAIR -- the comparison claims from THIS
+  300  imvid_opera_nf_h100   hopper/H100  ceiling 600,000  RUNNING
+       /apollo/.../runs/elgs/20260826T091926Z_imvid_opera_nf_h100_0_2576178
+       input.ply 9,893,798 B (282,672 points)
+  301  imvid_opera_fg_h100   hopper/H100  ceiling 600,000  RUNNING
+       /apollo/.../runs/elgs/20260826T091943Z_imvid_opera_fg_h100_0_2576178
+       input.ply   694,152 B (19,825 points)
+  image sha256:0d5771688c9b6580f70133f813b7a4110bd5c967920afe3c5fd1856bb098800e
+  commit 2576178
+
+SECONDARY OBSERVATION -- NOT half of any comparison
+  298  imvid_opera_fg        dgx/V100     ceiling 400,000  RUNNING
+       one arm, different ceiling, different hardware. Kept because it costs
+       nothing to finish and yields a second FG reading under a DIFFERENT
+       capacity policy. Survival NOT assumed: 374,648 points against a
+       400,000 ceiling, and 297 died at 399,865 under that same ceiling.
+
+COMPLETED
+  299  imvid_opera_fg_val6k  PSNR 22.961 SSIM 0.831 LPIPS 0.531, 347,600 GS
+       the 6k checkpoint of 298. See result page 7B for its four caveats.
+
+FAILED / SUPERSEDED
+  295  ERROR    OOM at 516,990 points (ceiling 600,000, V100)
+  296  CANCELED policy change (A6)
+  297  ERROR    OOM at 399,865 points (ceiling 400,000, V100) -- AT the ceiling
+```
+
+**Puppy is fully preprocessed and queued.** Window, conversion, 100-frame
+triangulation (389,188 points), flow (11,362 pairs) and all four arm roots are
+built and verified. `arm_nf` 300,000 points (capped from 389,188), `arm_fg`
+35,107 (static 91.87 / abstain 5.76 / dynamic 2.37%, 0 unseen). Its pair runs
+on hopper when slots free, for the same one-hardware-class reason.
 
 ## 4. PROVENANCE
 
