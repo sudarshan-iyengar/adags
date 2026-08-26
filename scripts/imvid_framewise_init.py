@@ -64,24 +64,43 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SPARSE_INIT = REPO_ROOT / "scripts" / "imvid_sparse_init.py"
 
 
-def pinhole_cameras_txt(cameras: dict[int, dict], scale: float) -> str:
-    """Render the derived PINHOLE cameras.txt the undistorted images live in."""
-    lines = []
+def pinhole_cameras_txt(cameras: dict[int, dict], scale: float) -> tuple[str, int]:
+    """The derived PINHOLE camera as ONE row, plus the id it was given.
+
+    `imvid_sparse_init.py` requires exactly one supplied camera -- it was
+    written against the 300-frame SAMPLE, whose `cameras.txt` carries a single
+    shared entry.  The FULL takes carry 39 entries, ids 1..39, with identical
+    parameters.  Collapsing them to one row is lossless ONLY IF they really
+    are identical, so that is CHECKED here rather than assumed: a take whose
+    cameras genuinely differ must not be silently flattened onto whichever row
+    happened to sort first.
+
+    K_new is the SAME 3x3 the resampling map and the transforms JSON are built
+    from, so the COLMAP camera cannot drift from the pixels it is asked to
+    explain.  `images_txt_subset` rewrites every image onto the returned id.
+    """
+    derived = {}
     for cid in sorted(cameras):
         out = derive_output_camera(cameras[cid], scale)
-        # K_new is the SAME 3x3 the resampling map and the transforms JSON are
-        # built from, so the COLMAP camera cannot drift from the pixels it is
-        # asked to explain.
         k = out["K_new"]
-        lines.append(
-            f"{cid} PINHOLE {out['width']} {out['height']} "
-            f"{float(k[0, 0])!r} {float(k[1, 1])!r} "
-            f"{float(k[0, 2])!r} {float(k[1, 2])!r}"
+        derived[cid] = (int(out["width"]), int(out["height"]),
+                        float(k[0, 0]), float(k[1, 1]),
+                        float(k[0, 2]), float(k[1, 2]))
+    distinct = sorted(set(derived.values()))
+    if len(distinct) != 1:
+        raise ContractError(
+            f"this take carries {len(distinct)} DISTINCT derived cameras across "
+            f"{len(derived)} entries: {distinct}. They cannot be collapsed to the "
+            "single supplied camera imvid_sparse_init.py requires, and flattening "
+            "them would put every image in the wrong camera's frame."
         )
-    return "\n".join(lines) + "\n"
+    canonical_id = min(derived)
+    w, h, fx, fy, cx, cy = distinct[0]
+    row = f"{canonical_id} PINHOLE {w} {h} {fx!r} {fy!r} {cx!r} {cy!r}"
+    return row + "\n", canonical_id
 
 
-def images_txt_subset(images: dict[str, dict], keep: set[str]) -> str:
+def images_txt_subset(images: dict[str, dict], keep: set[str], camera_id: int) -> str:
     """Re-render images.txt for a camera subset, preserving every pose field.
 
     COLMAP's text images.txt is two lines per image: the pose line and a
@@ -96,7 +115,7 @@ def images_txt_subset(images: dict[str, dict], keep: set[str]) -> str:
         t = entry["tvec"]
         out.append(
             f"{entry['image_id']} {q[0]!r} {q[1]!r} {q[2]!r} {q[3]!r} "
-            f"{t[0]!r} {t[1]!r} {t[2]!r} {entry['camera_id']} {name}"
+            f"{t[0]!r} {t[1]!r} {t[2]!r} {camera_id} {name}"
         )
         out.append("")
     return "\n".join(out) + "\n"
@@ -244,8 +263,8 @@ def main(argv=None) -> int:
         raise ContractError("every camera was excluded")
 
     num, den = (int(x) for x in args.fps_rational.split("/"))
-    cams_txt = pinhole_cameras_txt(cameras, args.scale)
-    imgs_txt = images_txt_subset(images, set(keep))
+    cams_txt, canonical_id = pinhole_cameras_txt(cameras, args.scale)
+    imgs_txt = images_txt_subset(images, set(keep), canonical_id)
 
     frames = list(range(args.frame_start,
                         args.frame_start + args.frame_count,
@@ -271,6 +290,18 @@ def main(argv=None) -> int:
             status = "ok" if rec["returncode"] == 0 else "FAIL"
             print(f"[frame {rec['frame']:>4}] {status} "
                   f"points={rec.get('points', '-')} {rec['elapsed_s']}s", flush=True)
+            if rec["returncode"] != 0:
+                # Surface the cause HERE. It was previously only in the manifest,
+                # and the summary print deliberately omits `records` -- so a run
+                # in a container whose /tmp is discarded reported 300 failures
+                # and not one reason for any of them.
+                print(f"  rc={rec['returncode']}", flush=True)
+                for key in ("stdout_tail", "stderr_tail"):
+                    tail = rec.get(key)
+                    if tail:
+                        print(f"  --- {key} ---", flush=True)
+                        for line in tail.strip().splitlines()[-15:]:
+                            print(f"  | {line}", flush=True)
 
     failed = [r for r in records if r["returncode"] != 0]
     ok = [r for r in records if r["returncode"] == 0]
@@ -314,8 +345,10 @@ def run_self_test() -> int:
         "-0.024546867645992888 0.0035148158874614976 -0.0004507998572363207 "
         "-0.00023832152424359775\n"
     )
-    txt = pinhole_cameras_txt(cams, 0.5)
+    txt, canonical_id = pinhole_cameras_txt(cams, 0.5)
     parts = txt.split()
+    results.append(_check("collapsed_to_a_single_camera_row",
+                          len(txt.strip().splitlines()) == 1, txt.strip()))
     results.append(_check("pinhole_model_and_raster",
                           parts[1] == "PINHOLE" and parts[2] == "2656" and parts[3] == "1494",
                           " ".join(parts[:4])))
