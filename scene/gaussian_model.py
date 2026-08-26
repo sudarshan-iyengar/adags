@@ -1095,7 +1095,12 @@ class GaussianModel:
             if pcd.time is None:
                 fused_times = (torch.rand(fused_point_cloud.shape[0], 1, device="cuda") * 1.2 - 0.1) * (self.time_duration[1] - self.time_duration[0]) + self.time_duration[0]
             else:
-                fused_times = torch.from_numpy(pcd.time).cuda().float()
+                # ascontiguousarray: fetchPly returns `vertices['time'][:, None]`,
+                # a STRIDED VIEW into plyfile's structured array whose stride is
+                # the record size (35 bytes for a cloud carrying time+t_extent)
+                # and therefore not a multiple of the element size.
+                # torch.from_numpy rejects that outright.
+                fused_times = torch.from_numpy(np.ascontiguousarray(pcd.time)).cuda().float()
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
@@ -1115,8 +1120,31 @@ class GaussianModel:
                 # standard deviation is dist_t ** 0.25 and the inverse is
                 # dist_t = std ** 4. Getting this wrong is silent: a wrong
                 # exponent still trains, just with the wrong support width.
-                dist_t = torch.from_numpy(np.asarray(pcd.t_extent)).cuda().float().pow(4)
-                dist_t = torch.clamp_min(dist_t, 1e-10).reshape(fused_times.shape)
+                if self.rot_4d:
+                    # Under rot_4d, get_cov_t builds the 4x4 covariance and
+                    # returns Sigma[3,3] = get_scaling_t ** 2 = dist_t, so a
+                    # standard deviation would invert as dist_t = std ** 2, not
+                    # ** 4. Refusing rather than applying the wrong exponent:
+                    # the wrong one does not raise, it just renders every
+                    # support width wrong by a large factor.
+                    raise ValueError(
+                        "per-point t_extent is not supported with rot_4d=True: the "
+                        "standard-deviation-to-dist_t exponent differs (2, not 4) "
+                        "because get_cov_t returns Sigma[3,3] rather than "
+                        "get_scaling_t. Refusing rather than silently mis-scaling."
+                    )
+                extent = torch.from_numpy(
+                    np.ascontiguousarray(pcd.t_extent)).cuda().float().reshape(fused_times.shape)
+                if not bool(torch.isfinite(extent).all()) or bool((extent <= 0).any()):
+                    # A zero or negative column is an authoring error, and a
+                    # clamp would turn it into a run that trains to completion
+                    # with every primitive invisible outside its own frame.
+                    raise ValueError(
+                        "pcd.t_extent must be finite and strictly positive; it is a "
+                        f"temporal standard deviation in seconds. min={float(extent.min())}, "
+                        f"finite={bool(torch.isfinite(extent).all())}"
+                    )
+                dist_t = extent.pow(4)
             scales_t = torch.log(torch.sqrt(dist_t))
             if self.rot_4d:
                 rots_r = torch.zeros((fused_point_cloud.shape[0], 4), device="cuda")

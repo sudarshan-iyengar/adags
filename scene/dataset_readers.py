@@ -509,16 +509,29 @@ def readNerfSyntheticInfo(path, white_background, eval, extension=".png", num_pt
             times = pcd.time[mask]
         else:
             times = None
+        # t_extent must ride along with every other per-point column. Dropping
+        # it here would not raise: create_from_pcd would fall back to its
+        # uniform default and the per-point temporal support would silently
+        # cease to exist, while every upstream manifest still described it.
+        extents = pcd.t_extent[mask] if getattr(pcd, "t_extent", None) is not None else None
         xyz = pcd.points[mask]
         rgb = pcd.colors[mask]
         normals = pcd.normals[mask]
         if times is not None:
-            time_mask = (times[:,0] < time_duration[1]) & (times[:,0] > time_duration[0])
+            # INCLUSIVE at both ends. A per-frame initializer puts points at
+            # exactly t = time_duration[0] and exactly t = time_duration[1]
+            # (frame 0 and the last frame), and strict inequalities deleted
+            # both whole frames -- including, for a reference-frame static
+            # population, all of it.
+            time_mask = (times[:,0] <= time_duration[1]) & (times[:,0] >= time_duration[0])
             xyz = xyz[time_mask]
             rgb = rgb[time_mask]
             normals = normals[time_mask]
             times = times[time_mask]
-        pcd = BasicPointCloud(points=xyz, colors=rgb, normals=normals, time=times)
+            if extents is not None:
+                extents = extents[time_mask]
+        pcd = BasicPointCloud(points=xyz, colors=rgb, normals=normals, time=times,
+                              t_extent=extents)
         
     if num_extra_pts > 0:
         times = pcd.time

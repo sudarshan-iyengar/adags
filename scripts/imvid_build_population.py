@@ -35,10 +35,18 @@ deduplication needs a distance threshold, a threshold is a tuned parameter,
 and a tuned parameter makes the initializer a fitted object rather than a
 frozen one -- the reasoning `scripts/imvid_build_initialization.py` already
 records for the three-frame union.  Taking the reference frame's static
-points is threshold-free.  Its disclosed cost is that static geometry which
-becomes visible only later in the window is dropped from the static set;
-such points are still present as whatever the classifier calls them in the
-frames they were triangulated in.
+points is threshold-free.
+
+ITS COST IS REAL AND IS NOT HIDDEN: a point classified STATIC in a
+non-reference frame is DROPPED ENTIRELY.  It does not become abstain and it
+does not become dynamic -- there is no fourth arm.  So static geometry that
+becomes visible only later in the window (a surface revealed as the performer
+moves) has NO initial primitive in FG while it has one in NF.  FG is
+therefore not simply "NF with better temporal support": it also starts with
+less coverage, and part of any FG-vs-NF difference is that.  The manifest
+reports `static_dropped_non_reference` for exactly this reason, and
+`static_duplication_reduction` must be read beside it rather than as a
+efficiency figure.
 
 THE THRESHOLD IS IN MEASURED PIXELS, NOT THE PAPER'S NUMBER.  ImViD reports
 `epsilon_f = 0.1` and never states its units; 0.1 px at 2656x1494 and 0.1
@@ -83,6 +91,13 @@ EPS_STATIC_PX = 0.5
 #: flow noise, which is what creates a genuine abstention band instead of a
 #: single knife-edge threshold.
 EPS_DYNAMIC_PX = 1.5
+
+#: A class holding at least this share of all classified observations means the
+#: three-way split did not happen in any meaningful sense.  Stated as a
+#: FRACTION rather than as "all of them" because an exact-equality test is
+#: defeated by a single stray point, which is precisely how a mechanism that
+#: never engaged reports as healthy.
+DEGENERATE_SHARE = 0.99
 
 #: Temporal support is carried in the PLY as a per-point temporal STANDARD
 #: DEVIATION in seconds.  The trainer stores `_scaling_t` such that
@@ -157,6 +172,10 @@ def max_flow_per_point(xyz: np.ndarray, geom: dict, flow_root: Path, frame: int,
     """
     best = np.zeros(xyz.shape[0], dtype=np.float32)
     seen = np.zeros(xyz.shape[0], dtype=np.int32)
+    # The LAST frame has no forward pair, so it is classified with the
+    # previous pair's field. Recorded here and in the manifest rather than
+    # left as an unstated reading rule: a point that begins moving exactly at
+    # the final frame is classified static or abstain.
     src = min(frame, last_pair)
     for cam, g in geom.items():
         fp = flow_root / f"{cam}_{src:06d}.npz"
@@ -164,6 +183,23 @@ def max_flow_per_point(xyz: np.ndarray, geom: dict, flow_root: Path, frame: int,
             raise ContractError(f"flow field {fp} is absent")
         with np.load(fp) as z:
             flow = z["flow"].astype(np.float32)
+            # The asset describes its own units and rasters. Reading them is
+            # the difference between a threshold in pixels and a threshold in
+            # some other scene's pixels: regenerate flow from a different
+            # source raster and every magnitude shifts by that ratio, moving
+            # points across both bands with nothing to show for it.
+            units = str(z["magnitude_units"]) if "magnitude_units" in z else None
+            src_raster = z["source_raster"].tolist() if "source_raster" in z else None
+        if units is not None and units != "full_raster_pixels":
+            raise ContractError(
+                f"{fp} declares magnitude_units={units!r}; the thresholds here are "
+                "in full-raster pixels and cannot be compared against another unit"
+            )
+        if src_raster is not None and tuple(src_raster) != (g["w"], g["h"]):
+            raise ContractError(
+                f"{fp} was computed from a {src_raster} raster but this camera is "
+                f"{[g['w'], g['h']]}; every magnitude would be off by that ratio"
+            )
         opened.append(str(fp))
 
         pc = xyz @ g["R"].T + g["t"]
@@ -257,7 +293,14 @@ def main(argv=None) -> int:
 
     exclude = tuple(c.strip() for c in args.exclude_cameras.split(",") if c.strip())
     opened: list[str] = []
+    #: WRITTEN composition -- what ends up in the cloud.
     stats = {"static": 0, "dynamic": 0, "abstain": 0}
+    #: CLASSIFIED composition -- every observation in every frame. These are the
+    #: commensurable counts; `stats["static"]` covers ONE frame by construction,
+    #: so a degeneracy test built on `stats` would be comparing a per-frame
+    #: number against two per-window ones.
+    classified = {"static": 0, "dynamic": 0, "abstain": 0}
+    unseen_total = 0
     xs, cs, ts, es = [], [], [], []
 
     if args.arm == "nf":
@@ -274,12 +317,24 @@ def main(argv=None) -> int:
         geom = camera_geometry(Path(args.model), args.scale, exclude)
         flow_root = Path(args.flow_root)
         last_pair = max(frames) - 1
+        if args.reference_frame not in clouds:
+            raise ContractError(
+                f"--reference-frame {args.reference_frame} is not among the "
+                f"triangulated frames {frames[0]}..{frames[-1]}. The static branch "
+                "would never fire and the FG cloud would silently contain NO static "
+                "geometry while reporting a perfect duplication reduction."
+            )
         mags_all = []
         per_frame_static_sum = 0
         for f in frames:
             c = clouds[f]
             best, seen = max_flow_per_point(c["xyz"], geom, flow_root, f, last_pair, opened)
-            mags_all.append(best)
+            # Only points at least one camera saw carry a MEASUREMENT. `best`
+            # is zero-initialised, so including unseen points would report a
+            # median of 0.0 whatever the field says -- a diagnostic that reads
+            # "the scene is static" when the truth is "the projection missed".
+            mags_all.append(best[seen > 0])
+            unseen_total += int((seen == 0).sum())
             is_static = best <= args.eps_static_px
             is_dynamic = best >= args.eps_dynamic_px
             is_abstain = ~is_static & ~is_dynamic
@@ -291,6 +346,9 @@ def main(argv=None) -> int:
             is_abstain = is_abstain | unseen
 
             per_frame_static_sum += int(is_static.sum())
+            classified["static"] += int(is_static.sum())
+            classified["dynamic"] += int(is_dynamic.sum())
+            classified["abstain"] += int(is_abstain.sum())
             stats["dynamic"] += int(is_dynamic.sum())
             stats["abstain"] += int(is_abstain.sum())
 
@@ -308,7 +366,13 @@ def main(argv=None) -> int:
                 es.append(np.full(int(is_static.sum()), broad))
                 stats["static"] = int(is_static.sum())
             opened.append(str(c["path"]))
-        allm = np.concatenate(mags_all)
+        allm = np.concatenate(mags_all) if any(m.size for m in mags_all) else np.zeros(0)
+        if allm.size == 0:
+            raise ContractError(
+                "no candidate point was seen by ANY training camera; the projection "
+                "or the calibration is wrong and every classification below would be "
+                "an artefact of that"
+            )
         mag_summary = {
             "mean": float(allm.mean()), "median": float(np.median(allm)),
             "p90": float(np.percentile(allm, 90)), "p99": float(np.percentile(allm, 99)),
@@ -330,24 +394,71 @@ def main(argv=None) -> int:
         xyz, rgb, times, extents = xyz[idx], rgb[idx], times[idx], extents[idx]
         capped = True
 
-    leaked = sorted({c for c in exclude for p in opened if f"/{c}_" in p.replace("\\", "/")})
-    if leaked:
-        raise ContractError(f"held-out camera(s) {leaked} were READ; this run is void")
+    # The leak that matters is UPSTREAM. Nothing in this script could read a
+    # held-out image: camera_geometry drops excluded cameras before any path is
+    # formed, so a substring test over `opened` restates a structural guarantee
+    # and for the NF arm -- whose opened list is only frame_*.npz clouds --
+    # cannot fire at all. The real question is whether the candidate geometry
+    # was TRIANGULATED without the held-out view, and that is answerable only
+    # from the framewise manifest.
+    upstream = Path(args.clouds_root).parent / "MANIFEST.framewise.json"
+    leak_record: dict = {"upstream_manifest": str(upstream)}
+    if upstream.is_file():
+        fw = json.loads(upstream.read_text(encoding="utf-8"))
+        used = set(fw.get("cameras_used") or [])
+        offending = sorted(set(exclude) & used)
+        if offending:
+            raise ContractError(
+                f"the candidate geometry was triangulated USING {offending}, which "
+                f"this run excludes. {upstream} records cameras_used; the clouds are "
+                "contaminated at source and no downstream filter can undo it."
+            )
+        leak_record.update(upstream_cameras_used=sorted(used),
+                           upstream_excluded=fw.get("excluded_cameras"),
+                           verified=True)
+    else:
+        # Not a silent pass: an unverifiable provenance claim is recorded as
+        # unverified rather than treated as clean.
+        leak_record.update(verified=False,
+                           note="framewise manifest absent; upstream camera set NOT verified")
+    direct = sorted({c for c in exclude for q in opened
+                     if Path(q).name.startswith(f"{c}_")})
+    if direct:
+        raise ContractError(f"held-out camera(s) {direct} were READ; this run is void")
+    leak_record["direct_reads_of_excluded"] = 0
 
     if args.arm == "fg" and args.require_nondegenerate:
-        classified = stats["static"] + stats["dynamic"] + stats["abstain"]
-        degenerate = [k for k, v in stats.items() if v == classified and classified > 0]
-        if classified == 0:
+        total = sum(classified.values())
+        if total == 0:
             raise ContractError("no candidate observation was classified; the FG "
                                 "mechanism did not engage and this run is INVALID")
-        if degenerate:
+        # A FRACTION, not exact equality. The earlier test asked whether one
+        # class held EVERY observation, so a single stray point defeated it --
+        # a run in which 5 of six million points were static, and the mechanism
+        # therefore never engaged, passed as non-degenerate.
+        share = {k: v / total for k, v in classified.items()}
+        dominant = [k for k, v in share.items() if v >= DEGENERATE_SHARE]
+        if dominant:
             raise ContractError(
-                f"classification is degenerate -- every point is {degenerate[0]!r}. "
-                "The precondition that the mechanism was exercised has FAILED; "
-                f"measured flow magnitudes {mag_summary}. This run is INVALID and "
-                "the thresholds or the units must be re-derived, not the reading."
+                f"classification is degenerate -- {share[dominant[0]]:.4%} of "
+                f"{total} classified observations are {dominant[0]!r}, at or above "
+                f"the {DEGENERATE_SHARE:.0%} floor. The precondition that the "
+                "mechanism was exercised has FAILED. Measured flow magnitudes over "
+                f"SEEN points only: {mag_summary}. This run is INVALID: re-derive "
+                "the thresholds or the units, not the reading."
             )
-        if per_frame_static_sum is not None and stats["static"] >= per_frame_static_sum:
+        # Static geometry must actually SURVIVE. `stats["static"]` counts one
+        # frame, so comparing it against a per-window sum can only ever say
+        # "fewer", never "none" -- and losing 100% of it satisfied that.
+        if per_frame_static_sum > 0 and stats["static"] == 0:
+            raise ContractError(
+                f"{per_frame_static_sum} observations classified static across the "
+                f"window, but NONE survived into the cloud: the reference frame "
+                f"({args.reference_frame}) contributed no static points, so the FG "
+                "population has no static geometry at all while the duplication "
+                "figure would read as a perfect reduction"
+            )
+        if stats["static"] >= per_frame_static_sum > 0:
             raise ContractError(
                 f"static deduplication did not occur: kept {stats['static']} against "
                 f"a per-frame static sum of {per_frame_static_sum}"
@@ -355,6 +466,12 @@ def main(argv=None) -> int:
         if len(np.unique(times)) < 2:
             raise ContractError("every point carries the same timestamp; dynamic "
                                 "geometry did not receive frame-local support")
+        if len(np.unique(extents)) < 2:
+            raise ContractError(
+                "every point carries the same temporal extent; the compact/broad "
+                "distinction that is half of this arm's mechanism is not present in "
+                "the written cloud"
+            )
 
     out_ply = Path(args.out_ply)
     write_ply(out_ply, xyz.astype(np.float32), rgb, times.astype(np.float32),
@@ -375,8 +492,24 @@ def main(argv=None) -> int:
         "subsample_seed": args.subsample_seed,
         "distinct_timestamps": int(len(np.unique(times))),
         "distinct_t_extents": sorted(float(x) for x in np.unique(extents)),
-        "classification": stats if args.arm == "fg" else None,
+        "written_composition": stats if args.arm == "fg" else None,
+        "classified_composition_all_frames": classified if args.arm == "fg" else None,
+        "classified_shares": ({k: round(v / max(sum(classified.values()), 1), 6)
+                               for k, v in classified.items()}
+                              if args.arm == "fg" else None),
+        "degenerate_share_floor": DEGENERATE_SHARE,
+        "points_seen_by_no_training_camera": unseen_total if args.arm == "fg" else None,
+        "abstain_note": ("abstentions merge band-abstentions with points no camera "
+                         "saw; the latter are counted separately above"),
         "per_frame_static_sum": per_frame_static_sum,
+        "static_dropped_non_reference": (
+            None if per_frame_static_sum is None
+            else per_frame_static_sum - stats["static"]),
+        "counts_are_pre_cap": True,
+        "last_frame_flow_substitution": (
+            "the final frame has no forward pair and is classified with the "
+            "previous pair's field"),
+        "held_out_provenance": leak_record if args.arm in ("nf", "fg") else None,
         "static_duplication_reduction": (
             None if per_frame_static_sum in (None, 0)
             else round(1.0 - stats["static"] / per_frame_static_sum, 6)),
