@@ -208,6 +208,47 @@ explanation, not after it. This is the same shape as the lane's other two
 self-corrections -- an unmeasured iteration time reported as measured, and a
 smoke test killed before its silence could be read as the signal it was.
 
+## 3E. PUPPY RETURNED — and it is the reason to read three metrics, not one
+
+Experiments 307/308 trained, 309-312 evaluated through the frozen `--val`
+path. Same pool, ceiling, seed, schedule, image digest.
+
+| arm | iter | PSNR | SSIM | LPIPS | points |
+|---|---:|---:|---:|---:|---:|
+| NF | 6,000 | 19.744 | 0.4207 | 0.6201 | 599,377 |
+| **NF** | **12,000** | **19.910** | **0.4347** | **0.5895** | 599,484 |
+| FG | 6,000 | 18.635 | 0.3344 | 0.8406 | 599,873 |
+| FG | 12,000 | 18.753 | 0.3416 | 0.8205 | 599,481 |
+
+Capacity is matched at BOTH endpoints here -- 3 points apart at 12k -- because
+Puppy's FG arm saturated the budget by 6k, which Opera's did not. Puppy is
+therefore the cleaner of the two comparisons.
+
+**THE FINDING: PSNR alone would have called this a null.** The PSNR margin is
+1.157 dB, below the 1.385 dB replicate floor. But the floors on the other two
+metrics, computed from the SAME already-paid-for 299/303 pair, are 0.0073
+SSIM and 0.0034 LPIPS -- and Puppy's margins are **0.0931 SSIM (12.8x) and
+0.2310 LPIPS (68x)**.
+
+Puppy's perceptual separation is LARGER than Opera's while its PSNR
+separation is smaller, which is ordinary behaviour for a per-pixel metric on
+a low-PSNR scene. Across both scenes NF wins **12 of 12**
+arm-metric-endpoint comparisons, all in the same direction.
+
+**Carry as method: a replicate floor must be established on every metric a
+claim will be quoted on.** This one was established on PSNR because PSNR was
+the metric in hand, and reading the lane on PSNR alone would have reported
+one win and one null from data that is unanimous. The two extra floors cost
+nothing -- the pair had already been run.
+
+**Puppy is a much harder scene** (19.9 dB / 0.435 / 0.590 against Opera's
+26.9 / 0.887 / 0.367 at the same budget and schedule). Nothing here diagnoses
+why, and it matters: a later gating effect has to clear that scene's noise,
+which is already comparable to the between-arm difference measured here.
+
+**`best_val_iter` is 12,000 for all four arms across both scenes**, so the
+directed endpoint is supported by every cell this lane ran.
+
 ## 4. PROVENANCE
 
 ```

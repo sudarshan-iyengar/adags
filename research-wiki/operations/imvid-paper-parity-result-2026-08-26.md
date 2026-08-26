@@ -5,7 +5,7 @@ EXPLORATORY, `evidence_bearing: false`. Frozen protocol:
 windows, the split, the metrics, the arms and the endpoints, and every claim
 below is bounded by its §1 parity table and its §10 evidence boundary.
 
-**Status: OPERA COMPLETE (§7D); PUPPY TRAINING (experiments 307, 308).**
+**Status: COMPLETE. Opera §7D, Puppy §7E, recommendation §9.**
 Sections marked `PENDING` have not run. Nothing in
 this page may be read as a completed comparison until §7 carries numbers.
 
@@ -668,6 +668,72 @@ cap is enforced inside the operator or outside it. Reading the gate condition
 in source is what distinguished them, and it should have come first.
 
 
+## 7E. PUPPY — the second scene, and it changes how the pair must be read
+
+Experiments 307/308 trained; 309-312 evaluated through the frozen `--val`
+path. Same pool, ceiling, seed, schedule and image digest as Opera.
+
+| run | arm | iter | PSNR | SSIM | LPIPS | points |
+|---|---|---:|---:|---:|---:|---:|
+| 307/309 | NF | 6,000 | 19.744 | 0.4207 | 0.6201 | 599,377 |
+| 307/310 | **NF** | **12,000** | **19.910** | **0.4347** | **0.5895** | 599,484 |
+| 308/311 | FG | 6,000 | 18.635 | 0.3344 | 0.8406 | 599,873 |
+| 308/312 | FG | 12,000 | 18.753 | 0.3416 | 0.8205 | 599,481 |
+
+**NF - FG at 6,000:** +1.109 dB, +0.0863 SSIM, -0.2205 LPIPS.
+**NF - FG at 12,000:** +1.157 dB, +0.0931 SSIM, -0.2310 LPIPS.
+
+**Capacity is matched at BOTH endpoints on Puppy** -- 0.083% apart at 6k and
+**3 points apart** at 12k. Puppy's FG arm saturated the budget by 6,000,
+which Opera's did not, so Puppy is the cleaner of the two comparisons: it has
+no capacity-confounded endpoint at all.
+
+### 7E.1 PSNR does NOT resolve the arms here. SSIM and LPIPS resolve them decisively.
+
+The PSNR margin, 1.157 dB, is **below the 1.385 dB replicate floor** of
+§7C.2. Read on PSNR alone, Puppy is a null.
+
+Read against the floor measured on each metric from the same 299/303 pair --
+PSNR 1.385, SSIM 0.0073, LPIPS 0.0034 -- the three metrics disagree sharply
+about how large this effect is:
+
+| metric | Opera @12k | x floor | Puppy @12k | x floor |
+|---|---:|---:|---:|---:|
+| PSNR | 2.772 | 2.0x | 1.157 | **0.8x** |
+| SSIM | 0.0454 | 6.2x | 0.0931 | **12.8x** |
+| LPIPS | 0.1353 | 39.8x | 0.2310 | **68x** |
+
+**Puppy's perceptual separation is LARGER than Opera's while its PSNR
+separation is smaller.** That is not a contradiction: it is the ordinary
+behaviour of PSNR on a low-PSNR scene, where a per-pixel mean-square metric
+is dominated by content neither arm reconstructs.
+
+**Consequence for this lane, and it is a method point:** quoting the NF/FG
+comparison on PSNR would have reported Opera as a win and Puppy as a null
+from data in which NF wins **12 of 12** arm-metric-endpoint comparisons
+across both scenes, every one in the same direction. The replicate floor was
+established on PSNR because PSNR was the metric in hand; it should have been
+established on all three from the start, and the two additional floors above
+were computed from the same already-paid-for pair.
+
+### 7E.2 Puppy is a much harder scene, and that is worth carrying forward
+
+19.9 dB / 0.435 SSIM / 0.590 LPIPS against Opera's 26.9 / 0.887 / 0.367, on
+the same rig, schedule and budget. Both Puppy arms are also at the same
+600,000 ceiling as Opera, so this is not a capacity difference.
+
+Nothing in this lane diagnoses why. It matters for what comes next: an
+episode-gating effect has to be resolvable against Puppy's noise, and the
+scene's own PSNR floor is already comparable to the between-arm difference
+measured here.
+
+### 7E.3 The endpoint choice replicates on a second scene
+
+`best_val_iter` is 12,000 for BOTH Puppy arms, and both improve from 6k to
+12k on all three metrics (NF +0.166 dB / +0.0140 / -0.0306; FG +0.118 dB /
++0.0072 / -0.0201). Combined with §7D.2, the directed 12,000-iteration
+endpoint is now supported on two scenes and four arms.
+
 ## 7A. What may NOT be concluded from this lane, restated before any number exists
 
 - Not an exact reproduction of the ImViD paper: method parity is unavailable
@@ -744,8 +810,12 @@ run's own self-check.**
 
 ## 9. Recommended starting point for the later gating pair
 
-**Recommendation: freeze the NF configuration --
-`configs/imvid/opera_paper12k_nf.yaml` -- unchanged, on hopper/H100.**
+**Recommendation: freeze the NF configuration -- `..._nf.yaml` for the scene
+in question -- unchanged, on hopper/H100. CONFIRMED ON BOTH SCENES.**
+
+Across Opera and Puppy, NF beats FG on **12 of 12** arm-metric-endpoint
+comparisons, every one in the same direction, at matched capacity in three
+of the four endpoint pairs and within 0.083% in the fourth.
 
 Concretely: 600,000-point ceiling, `densify_until_iter: 10_000`,
 `num_pts: 1_000_000`, 12,000 iterations, `position_lr_max_steps: 12_000`,
@@ -754,13 +824,15 @@ out, 2x-downsampled 300-frame window at frames 0-299.
 
 Four reasons, in order of weight:
 
-1. **NF is the better substrate on every metric at both endpoints**, by a
-   margin that clears the replicate floor twice over, AT MATCHED CAPACITY
-   (§7D.1). A gating experiment run on the FG substrate would be building on
-   a 2.772 dB deficit that has nothing to do with gating.
+1. **NF is the better substrate on every metric at both endpoints on both
+   scenes** (§7D, §7E), at matched capacity. A gating experiment on the FG
+   substrate would be building on a 2.772 dB deficit (Opera) or a 0.231 LPIPS
+   deficit (Puppy) that has nothing to do with gating.
 
-2. **12,000 iterations is where NF is best** (§7D.2), so the endpoint the
-   user directed is also the endpoint the data supports. No amendment needed.
+2. **12,000 iterations is where every arm is best** -- `best_val_iter` is
+   12,000 for all four arms across both scenes (§7D.2, §7E.3), so the
+   directed endpoint is also the endpoint the data supports. No amendment
+   needed.
 
 3. **The V100 is not viable for this window** and the H100 is (§8). This is
    settled, not a preference.
@@ -784,6 +856,13 @@ in this lane's scope:
   support width renders at 1/sqrt(2) of its stored value. That is harmless
   for arm-vs-arm ratios and NOT harmless for any gating spec that authors an
   episode duration in seconds.
-- **Puppy.** Experiments 307 and 308 are running as this is written; a
-  single-scene recommendation should not be frozen across scenes until they
-  return.
+- **Puppy replicates.** Puppy returned (§7E) and CORROBORATES the
+  recommendation -- NF wins all three metrics at both endpoints -- but its
+  PSNR margin (1.157 dB) sits below the PSNR replicate floor, so on that
+  metric alone Puppy is a null. The recommendation rests on SSIM and LPIPS
+  there, at 12.8x and 68x their own floors. If a later reviewer will only
+  accept PSNR, Puppy needs replicates before it can carry weight.
+- **A per-metric replicate floor.** §7E.1 computed SSIM and LPIPS floors
+  from the pair that had already been paid for, and they change the reading
+  of the whole lane. Any future floor must be established on every metric a
+  claim will be quoted on, not only on PSNR.
