@@ -154,6 +154,60 @@ built and verified. `arm_nf` 300,000 points (capped from 389,188), `arm_fg`
 35,107 (static 91.87 / abstain 5.76 / dynamic 2.37%, 0 unseen). Its pair runs
 on hopper when slots free, for the same one-hardware-class reason.
 
+## 3C. FINAL STATE — Opera COMPLETE, Puppy training (this supersedes 3B)
+
+**The Opera matched pair is finished at both endpoints.** All four cells are
+hopper/H100, 600,000-point ceiling, seed 0, same image digest, same frozen
+12,000-iteration schedule; only the initial population differs.
+
+| arm | iter | PSNR | SSIM | LPIPS | points |
+|---|---:|---:|---:|---:|---:|
+| NF | 6,000 | 26.805 | 0.8783 | 0.3853 | 599,333 |
+| **NF** | **12,000** | **26.855** | **0.8868** | **0.3673** | 599,305 |
+| FG | 6,000 | 24.347 | 0.8380 | 0.5346 | 350,525 |
+| FG | 12,000 | 24.083 | 0.8414 | 0.5026 | 599,698 |
+
+**NF - FG: +2.458 dB at 6k, +2.772 dB at 12k**, both roughly twice the
+1.385 dB replicate floor, same direction on all three metrics at both
+endpoints.
+
+**The single most important line in this handover:** at 6,000 iterations NF
+carries 1.710x FG's primitives, so the comparison is capacity-confounded
+exactly as predicted when the populations were built. At 12,000 both arms
+have converged to the same budget -- **599,305 against 599,698, 0.066%
+apart** -- and NF's lead is slightly LARGER. A capacity explanation is
+available at 6k and unavailable at 12k.
+
+**Puppy is running as experiments 307 (NF) and 308 (FG)**, same pool, same
+ceiling, same schedule, launched when the Opera pair released the hopper
+slots. Both arm roots were built and hash-verified hours earlier:
+`arm_nf` 300,000 points (capped from 389,188,
+sha256 `18240e0e...`), `arm_fg` 35,107 points (sha256 `6c042e7a...`,
+static 91.87% / abstain 5.76% / dynamic 2.37%, 0 unseen).
+
+## 3D. A CORRECTION THAT OUTRANKS THE NUMBERS
+
+The 400k run's -3.203 dB collapse from 6k to 12k was attributed, in the
+result page's §7C.1, to `main.py:1658` freezing the entire densification
+block once the point count reaches the ceiling. **That mechanism does not
+operate.** `densify_and_prune` caps its own growth internally, so the
+population asymptotes just BELOW the ceiling and the outer gate never trips;
+every run in this lane ends under its own cap. Pruning and opacity reset ran
+throughout.
+
+The refutation is recorded append-only as result-page §7D.3. The measured
+numbers are unaffected; the explanation is withdrawn, and the surviving
+candidate (starved densification under continuing opacity resets) is
+consistent with the 400k run and INCONSISTENT with NF, so it stays an open
+hypothesis that nothing here concludes.
+
+**Carry as method: a point-count plateau at a cap looks identical whether the
+cap is enforced inside the operator or outside it.** Only reading the gate
+condition in source distinguished them, and that should have come before the
+explanation, not after it. This is the same shape as the lane's other two
+self-corrections -- an unmeasured iteration time reported as measured, and a
+smoke test killed before its silence could be read as the signal it was.
+
 ## 4. PROVENANCE
 
 ```

@@ -5,7 +5,8 @@ EXPLORATORY, `evidence_bearing: false`. Frozen protocol:
 windows, the split, the metrics, the arms and the endpoints, and every claim
 below is bounded by its §1 parity table and its §10 evidence boundary.
 
-**Status: IN PROGRESS.** Sections marked `PENDING` have not run. Nothing in
+**Status: OPERA COMPLETE (§7D); PUPPY TRAINING (experiments 307, 308).**
+Sections marked `PENDING` have not run. Nothing in
 this page may be read as a completed comparison until §7 carries numbers.
 
 ## 1. Provenance
@@ -435,7 +436,17 @@ two per-window ones, a collapsed static set refuses, and the held-out check
 asserts against the framewise manifest's recorded camera set rather than
 restating a structural guarantee. PENDING the first FG build.
 
+**SUPERSEDED (append-only):** the FG build ran and every precondition
+passed; see §5E and §6. This paragraph is left as written because it records
+what the guards looked like BEFORE they were exercised.
+
 ## 7. Results at 6k and 12k
+
+**SUPERSEDED BY §7D (append-only).** The two runs identified below (295, 296)
+never produced a number -- 295 died on OOM and 296 was cancelled with it
+(§8). The Opera result is the hopper/H100 pair in §7D. This section is kept
+for the run-identity discipline it records, which applied to every later
+cell.
 
 **PENDING — both arms are training.** Run identities, verified from their own
 emitted manifests rather than from the submission command:
