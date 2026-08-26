@@ -506,6 +506,59 @@ would expect of an arm that begins with 19,825 primitives. It is stated as an
 observation, not a diagnosis; the 12k reading and the NF arm are what would
 settle it.
 
+## 7C. TWO FINDINGS FROM THE FG READINGS, and both outrank the numbers themselves
+
+| run | arm | iter | pool | ceiling | PSNR | SSIM | LPIPS | points |
+|---|---|---:|---|---:|---:|---:|---:|---:|
+| 299 | FG | 6,000 | V100 | 400k | 22.961 | 0.8307 | 0.5312 | 347,600 |
+| 302 | FG | 12,000 | V100 | 400k | **19.758** | 0.7993 | 0.5446 | 399,709 |
+| 303 | FG | 6,000 | H100 | 600k | 24.347 | 0.8380 | 0.5346 | 350,525 |
+
+### 7C.1 Held-out quality DEGRADES from 6k to 12k, by 3.203 dB
+
+Same run (298), two checkpoints. Its own training trajectory:
+
+```
+total_points  1:19,825  2k:52,760  4k:181,740  6k:347,600  8k:399,780
+              10k:399,710  11k:399,710  12k:399,710      <- FROZEN from ~8k
+train loss    6k:0.13663  8k:0.13461  10k:0.10845        <- still improving
+train l1      6k:0.01719  10k:0.01472                    <- still improving
+HELD-OUT      6k:22.961            12k:19.758            <- WORSE by 3.203 dB
+```
+
+**Training loss falls while held-out PSNR falls.** That is overfitting, and
+there is a mechanism for why it is severe here: `main.py:1658` gates the
+ENTIRE densification block on the point count, so once the population reaches
+the ceiling at ~8,000 iterations, **pruning and opacity reset stop as well as
+densification**. From there the model has a frozen topology of 399,710
+primitives and can only fit them harder to the 38 training views.
+
+**Consequence for the frozen endpoint: 12,000 iterations is PAST the optimum
+for this configuration.** That is a statement about the user-directed
+endpoint and is raised, not acted on. It is also NOT yet known to generalise:
+the 600,000-ceiling runs have far more headroom (301 was at 350,525 at 6k)
+and may never freeze, in which case the mechanism above would not apply.
+
+### 7C.2 A cross-hardware replicate difference of 1.385 dB
+
+299 and 303 are the SAME arm at the SAME iteration with the same seed, and
+**neither had reached its ceiling** (347,600 against 400,000; 350,525 against
+600,000), so up to 6,000 iterations the two runs should be behaviourally
+identical. They differ by **1.385 dB PSNR** and by 0.8% in point count.
+
+**Any NF-vs-FG difference smaller than ~1.4 dB is therefore not resolvable by
+single runs on this protocol.** This is the ImViD instance of a result this
+project already holds on N3V — that the substrate is chaotic and
+densification is the amplifier
+([[operations/b1f-flow-postmortem-2026-08-23]]) — and it means the eventual
+NF/FG comparison needs its difference reported against this floor, not
+against zero.
+
+The two runs also differ in ceiling and in hardware, so the 1.385 dB is an
+UPPER bound on pure run-to-run variance and cannot be attributed to any one
+of the three. Separating them would need replicates, which the block has not
+paid for.
+
 ## 7A. What may NOT be concluded from this lane, restated before any number exists
 
 - Not an exact reproduction of the ImViD paper: method parity is unavailable
