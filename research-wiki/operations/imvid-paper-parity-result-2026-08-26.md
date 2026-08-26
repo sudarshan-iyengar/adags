@@ -151,6 +151,27 @@ stats/validation.json written
 smoke, on the superseded 4-camera split, and its PSNR may not be compared
 with anything.
 
+## 5B0. Puppy conversion — DONE, and it derived its OWN camera
+
+```
+images        11,700/11,700
+split         profile paper_cam00, held_out ['cam00'], 38 training cameras
+derived cam   PINHOLE 2656x1494  fx 1341.9557193  fy 1345.6522931  cx 1327.75  cy 746.75
+invalid_fraction  0.0
+required_config   eval true, resolution 1, motion_track_dt 1001/60000,
+                  time_duration [0.0, 4.988316666666667]
+```
+
+**Puppy's focal lengths differ from Opera's** (1301.6663 / 1301.1218), which
+is the check that matters here: the freeze recorded that Puppy ships its own
+OPENCV intrinsics with `p1` opposite in sign, and reusing Opera's maps would
+have displaced every feature while leaving poses and intrinsics superficially
+correct. The two scenes demonstrably went through their own derivation.
+
+`cx`/`cy` coincide at 1327.75 / 746.75 because both scenes share the same
+5312x2988 raster and both put the principal point at the image centre; that
+is the raster, not a shared camera.
+
 ## 5C. Framewise triangulation — the cost model was wrong, and correcting it improved the plan
 
 Planning assumed SIFT feature count scales with pixel area, so halving the
