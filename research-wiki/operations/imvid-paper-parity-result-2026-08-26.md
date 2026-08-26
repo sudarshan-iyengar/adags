@@ -151,6 +151,44 @@ stats/validation.json written
 smoke, on the superseded 4-camera split, and its PSNR may not be compared
 with anything.
 
+## 5C. Framewise triangulation — the cost model was wrong, and correcting it improved the plan
+
+Planning assumed SIFT feature count scales with pixel area, so halving the
+raster would cut exhaustive matching ~16x (it is O(F^2) per camera pair).
+**It does not**: COLMAP caps detections at `max_num_features` = 8192 and a
+detailed scene saturates that cap at BOTH rasters, so the dominant term never
+moved. Measured, one frame on all 80 cores: **>= 14 minutes against a
+projected 90 s.**
+
+The cap is the lever the raster is not, and unlike `--max-image-size` it does
+not touch keypoint localisation, so the frozen 2.0 px native reprojection gate
+is unaffected:
+
+| `max_num_features` | s/frame | cameras contributing | mean track length |
+|---:|---:|---:|---:|
+| 8192 (default) | >= 840 | — | — |
+| 2048 | 89 | 38 | 4.152 |
+| **1024** | **33** | **38** | **4.110** |
+
+Thinner, not degenerate — all 38 training cameras contribute at every cap.
+Instantiated per freeze A5: **1024 features, stride 3, 100 frames**, which is
+MORE temporal coverage than the stride it superseded (100 frames vs 50), paid
+for in points-per-frame. For an arm whose mechanism IS per-frame temporal
+assignment, frames are the axis that carries the mechanism.
+
+Production, first frames: `points 2428 / 2734 / 2857` at ~60 s each with 3
+workers — projecting ~270k points over 100 frames, below the 300k initial cap
+so no subsample binds.
+
+**A silent defect surfaced in the same probe.** The point collector globbed
+for `points3D.txt` and matched `model_in/` — the EMPTY INPUT file
+imvid_sparse_init.py writes, which sorts before `model_txt/`. It reported
+**0 points from a reconstruction with 38 contributing cameras and a mean track
+length of 4.11**. Unrepaired it yields one cloud file per frame, an
+initializer with no geometry, and success codes throughout. The output model
+is now named rather than discovered, and zero points from a successful COLMAP
+run is a refusal.
+
 ## 5B. The initialization seam — PROVEN through the CUDA path
 
 The one link nothing upstream could verify: that a cloud carrying per-point
