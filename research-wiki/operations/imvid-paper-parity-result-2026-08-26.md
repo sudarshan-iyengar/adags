@@ -242,6 +242,48 @@ and it would have stopped every arm at initialisation.
 [[temporal-marginal-applied-twice-2026-08-26]] the rendered supports are
 0.09437 / 0.70669 / 1.76364 s, not the stored 0.13347 / 0.99942 / 2.49416.
 
+## 5D. Opera NF initializer — BUILT AND VERIFIED
+
+```
+framewise clouds      100/100 frames (stride 3), 282,672 points, 38 training cameras
+points per frame      2,428 / 2,734 / 2,828 / 2,967 / 2,657 / 2,962 / 3,001 / 2,823 (sampled)
+written points        282,672  (below the 300,000 cap, so no subsample binds)
+distinct timestamps   100
+window_span_seconds   4.988316666666667   <- EXACTLY the config's time_duration
+sampled_span_seconds  4.954950            <- frames 0..297
+support bands (s)     broad 2.4941583  default 0.9994153  compact 0.1334667
+out_ply_sha256        0290431490880133932165077c56215289b8a0c3062fba3201fb8a143ad49994
+held-out provenance   verified: true, upstream cameras_used = cam01..cam38, upstream_excluded = cam00
+arm roots             arm_nf (38 train / cam00 test), arm_nf_dev (37 train / cam10 test, cam00 absent)
+```
+
+The abstain band, 0.9994153 s, is exactly `(time_duration / 5) ** 0.25` — the
+value the trainer would use with no `t_extent` column at all. That equality is
+the point of the band, and it is the thing the defect below broke.
+
+### 5D.1 A defect the exit code did not show
+
+The FIRST NF build returned 0 and wrote a complete cloud with support bands
+**three times too narrow**: `broad 0.826 s` where the window implies 2.494,
+and an abstain band of `0.758 s` against the trainer's own 0.999.
+
+`span` was derived from the NUMBER OF TRIANGULATED CLOUDS rather than from the
+window. At stride 1 those coincide, so it was invisible until striding was
+introduced; at stride 3, 100 clouds spanning frame indices 0..297 gave
+1.652 s against the true 4.988 s. The per-point TIMESTAMPS were correct
+throughout, so two descriptions of the same window disagreed with nothing to
+flag it.
+
+Now derived from the declared window, with a refusal if the clouds span more
+than it, and a self-test pinning the 3.02x discrepancy the stride produces.
+
+**This is the fourth defect this block whose only symptom was a wrong number
+inside an otherwise-successful run**, alongside the reader dropping
+`t_extent`, the collector reading the empty input model, and the degeneracy
+guards that could not fire. The pattern is consistent enough to state as
+method: on this pipeline the return code carries almost no information, and
+every stage is checked by reading its emitted manifest.
+
 ## 6. Flow, and the initializer engagement checks
 
 ### 6.1 Measured flow magnitudes (an input property, not an outcome)
