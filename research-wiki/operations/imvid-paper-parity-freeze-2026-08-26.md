@@ -508,3 +508,48 @@ quarter matching cost while changing initializer density), and a further
 `--max-image-size` reduction (COLMAP rescales keypoints back to original
 image coordinates, so the calibration correspondence would survive, but the
 claim needs checking rather than assuming).
+
+## AMENDMENT 4 (append-only, 2026-08-26) — the stride is instantiated
+
+A2.1's fallback fires. The branch taken is (2), a uniform stride, and the
+value is fixed here by the rule stated there, not chosen after seeing any
+result.
+
+**The budget, declared first:** 90 minutes of triangulation per scene, set so
+that both final Opera arms can still start tonight. Framewise geometry is
+built before any arm trains, so no model performance can enter this choice.
+
+**The cost, projected from the one measurement available** — the historical
+native-raster run (39 cameras: features 72 s, exhaustive matching 1,204 s,
+triangulation 8.2 s). At 2656x1494 with 38 cameras the pair count falls x0.949
+and the per-image feature count roughly x0.25, and exhaustive matching scales
+with the SQUARE of the feature count:
+
+```
+matching     71.4 s     features  16.6 s     triangulate  2.0 s
+TOTAL       ~90.1 s per frame
+```
+
+| stride | frames | projected | fits 90 min |
+|---:|---:|---:|:--|
+| 1 | 300 | 450 min | no |
+| 3 | 100 | 150 min | no |
+| 5 |  60 |  90 min | marginal |
+| **6** | **50** | **75 min** | **yes — smallest that fits** |
+
+**INSTANTIATED: stride 6, frames `range(0, 300, 6)` = 50 frames**, identical
+for both scenes and both arms. The initializer is therefore **50-frame
+framewise**, not 300-frame, and is reported as such everywhere. Fifty
+timestamps spread evenly over the 4.988 s window is one every ~0.1 s, so
+per-frame temporal assignment survives as a real property of both arms — what
+is lost is density, not the mechanism.
+
+Because the stride is shared, it cannot move NF relative to FG. If time
+allows, the complementary frames may be added afterwards — that only ever
+densifies both arms equally, and the final count is what gets reported.
+
+**The projection above is a projection.** The measured per-frame cost from the
+production run is recorded in
+[[imvid-paper-parity-result-2026-08-26]]; if it differs materially from
+90.1 s the discrepancy is reported rather than the estimate quietly
+retired.
