@@ -475,3 +475,36 @@ window)**. Each image is independent, reads read-only maps and writes a unique
 destination, so **the bytes produced do not depend on the worker count** —
 only the wall clock does. Under §8 this is preprocessing machinery and was
 free to change; it is recorded because the measurement is worth keeping.
+
+## AMENDMENT 3 (append-only, 2026-08-26) — deferred engineering that would make 300 frames affordable
+
+Recorded with its motivation while the motivation is measured, so a later
+block does not have to rediscover it.
+
+**The cost is exhaustive matching, and it does not parallelise away.**
+`colmap exhaustive_matcher` matches all `C(38, 2) = 703` camera pairs per
+frame and its CPU SIFT matcher already saturates every core, so running
+several frames concurrently does not reduce total wall clock — the work is
+fixed and the cores are already busy. Historical measurement at NATIVE
+5312x2988 with 39 cameras: feature extraction 72 s, **exhaustive matching
+1,204 s**, triangulation 8.2 s. On the undistorted 2656x1494 raster the
+feature count falls ~4x and pair matching ~16x, putting a frame at order
+100 s and a 300-frame window at order **8 h per scene**.
+
+**The unexploited structure: the rig is FIXED and its geometry is known.**
+Every frame matches the same 703 camera pairs, most of which share almost no
+field of view. COLMAP 3.6 supports `matches_importer --match_list_path`, so a
+pair list built once from the supplied camera positions — each camera against
+its k nearest neighbours — would cut ~703 pairs to ~200 and the matching cost
+with it. It is not done tonight because it is a new mechanism that changes
+which correspondences exist, and therefore track lengths and triangulated
+point counts, and it would need its own validation against the fixed-pose
+residual gate before it could feed an initializer. The stride declared in
+A2.1 is the already-frozen route and needs no new assumptions.
+
+Two further knobs, recorded and NOT used for the same reason:
+`--SiftExtraction.max_num_features` (default 8192; halving it would
+quarter matching cost while changing initializer density), and a further
+`--max-image-size` reduction (COLMAP rescales keypoints back to original
+image coordinates, so the calibration correspondence would survive, but the
+claim needs checking rather than assuming).
