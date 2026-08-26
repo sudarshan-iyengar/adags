@@ -189,6 +189,23 @@ initializer with no geometry, and success codes throughout. The output model
 is now named rather than discovered, and zero points from a successful COLMAP
 run is a refusal.
 
+### 5C.1 Flow and triangulation must be SERIALISED, measured not assumed
+
+Run concurrently on one node, triangulation managed ~1.0 frames/min and flow
+fell from 3.82 to ~1.2 pairs/s. With flow paused, triangulation measured
+**2.99 frames/min — a 3.0x speedup.** Both stages are CPU-and-NFS hungry
+(COLMAP saturates every core; flow copies two 2 MB PNGs per pair), so
+overlapping them costs more than it buys:
+
+```
+parallel:   ~90 min for both
+serial:     ~23 min triangulation + ~24 min flow = ~47 min
+```
+
+Recorded because the obvious intuition — flow is GPU work, triangulation is
+CPU work, so overlap them — is wrong here, and the pipeline defaults should
+reflect the measurement rather than the intuition.
+
 ## 5B. The initialization seam — PROVEN through the CUDA path
 
 The one link nothing upstream could verify: that a cloud carrying per-point
