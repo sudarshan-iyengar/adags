@@ -284,6 +284,67 @@ guards that could not fire. The pattern is consistent enough to state as
 method: on this pipeline the return code carries almost no information, and
 every stage is checked by reading its emitted manifest.
 
+## 5E. Opera FG initializer — BUILT, and its engagement preconditions PASS
+
+Classified over all 282,672 candidate observations (100 frames x ~2,800):
+
+```
+static    264,879   93.71%
+abstain    14,820    5.24%
+dynamic     2,973    1.05%
+points seen by NO training camera: 0
+```
+
+**Every frozen precondition of freeze §6.1 holds.** The three-way split is
+real and far from the 99% degeneracy floor; abstention is preserved rather
+than forced; the classification is not all-static, all-dynamic or
+all-abstain; and every candidate point projects into at least one training
+view, so no classification rests on absent evidence.
+
+**The reviewer's F11 worry did not materialise, and inverted.** The concern
+was that a maximum over 38 views with no occlusion test would flag nearly
+everything dynamic (`1 - 0.95^38 = 0.86`). Measured, dynamic is **1.05%**.
+Adjacent-frame motion at 59.94 fps is simply too small — mean 0.17 px — for
+the union to saturate.
+
+### 5E.1 The written population, and the capacity asymmetry it creates
+
+```
+written   static 2,032 (reference frame only) + dynamic 2,973 + abstain 14,820
+          = 19,825 points
+NF                                            = 282,672 points
+```
+
+**FG starts with 7% of NF's geometry — a 14x difference.** That is the
+literal consequence of the two constructions the directive specifies, and it
+is legitimate ("the point population that construction legitimately
+produces") — but it is large enough that it must be read alongside every
+metric rather than discovered afterwards.
+
+`static_duplication_reduction` is **0.992329**, and it must be read beside
+`static_dropped_non_reference` = **262,847**. Those 262,847 are not all
+redundant copies: static surfaces first revealed after the reference frame
+have NO initial primitive in FG and do have one in NF. Part of any FG-vs-NF
+difference is therefore initial coverage, not the flow mechanism.
+
+**It also makes the arms differ in COST, not just in content.** NF's 282,672
+points measure ~4 s/iteration against roughly 1 s for a ~20k population, so
+the same 12,000-iteration schedule is a very different amount of compute per
+arm.
+
+### 5E.2 Flow direction provenance — stated precisely
+
+The production flow's OWN direction check had nothing to evaluate. The shards
+were paused and resumed (see 5C.1), and on resume every existing pair is
+skipped before a direction record can be collected, so `direction_records`
+was empty and the check was correctly skipped rather than passed.
+
+**Direction is therefore established by the dedicated probe, not by the
+production run**: cam01 at gap 8, reversed/forward warp-error ratios
+**1.358 and 1.399** on 83,742 and 89,263 evidence pixels, same scene, same
+model, same checkpoint. That is sound evidence, and it is recorded as what it
+is rather than implied to be a self-check of the production artifact.
+
 ## 6. Flow, and the initializer engagement checks
 
 ### 6.1 Measured flow magnitudes (an input property, not an outcome)
