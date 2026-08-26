@@ -610,3 +610,72 @@ the cap does not bind and no subsample is applied.
 
 **A4's stride 6 is superseded and was never run to completion.** No result was
 produced under it.
+
+## AMENDMENT 6 (append-only, 2026-08-26) — the shared point ceiling was INFEASIBLE on this hardware
+
+**A1.1's 600,000-point ceiling cannot be reached on a 32 GB V100 at this
+raster.** This is a measurement, not a revision of judgement, and it was paid
+for with a failed run.
+
+### A6.1 What happened
+
+Determined experiment **295** (Opera NF) ran 3 h 3 m and was then killed with
+**no traceback and no checkpoint**:
+
+```
+died at iteration   2,866 of 12,000
+points at death     516,990   (started 282,672, ceiling 600,000)
+measured rate       3.843 s/iteration  -> 12k projected 12.8 h
+```
+
+The absence of a Python traceback is the diagnostic: an exception would have
+flushed one. A silent SIGKILL is a CUDA abort or an out-of-memory kill. The
+parameter tensors at 516,990 points are only ~580 MB, so the memory is going
+to the rasterizer's per-Gaussian sort and tile buffers at 2656x1494 — which
+scale with the number of Gaussians AND their screen overlap, not with the
+parameter count.
+
+**Experiment 296 (FG) was healthy throughout** — 4,430 iterations,
+**1.242 s/iteration**, 212,246 points, projected 4.14 h. It is the point
+count, not the code, that separates them.
+
+### A6.2 The amendment
+
+```
+densify_until_num_points   600_000  ->  400_000
+```
+
+400,000 is **23% below the observed failure point** and still allows the NF
+arm to grow **1.42x** from its 282,672-point start, so neither arm is denied
+densification — the property A1.1 exists to protect. Lower values were
+rejected for that reason: at 300,000 the NF arm could grow only 1.06x, which
+would reintroduce exactly the "one arm cannot densify" asymmetry.
+
+**A semantics-preserving fix was considered and rejected.** Halving
+`batch_size` would cut rasterizer memory without touching the capacity
+policy, but it would halve presentations/unit at a fixed 12,000 iterations —
+changing the exposure statement of A1.4, which is a claim-bearing quantity.
+Lowering a capacity ceiling is the smaller semantic change and is the one the
+freeze anticipates.
+
+### A6.3 Both arms rerun, and what that cost
+
+Per this page's own rule that a post-freeze amendment reruns every affected
+arm, **experiment 296 was CANCELLED at iteration ~4,430 despite being
+healthy**, and both arms restart under the amended ceiling. A comparison in
+which the two arms ran under different capacity policies would not be a
+comparison.
+
+Cost of the amendment: **~3.1 slot-hours on 295 (failed) plus ~1.5 on 296
+(cancelled while healthy) = ~4.6 slot-hours discarded.** Recorded rather than
+absorbed silently.
+
+### A6.4 Carry as method
+
+**A capacity ceiling is a claim about the hardware as much as about the
+method, and it was never validated against the hardware.** A1.1 reasoned
+carefully about which arm could densify and not at all about whether the
+ceiling was reachable; the cost preflight that would have caught it was
+launched and then killed before it printed. The general form: a frozen
+parameter that no run has ever reached is an untested assumption, and
+declaring it inside a well-argued amendment does not make it a measurement.

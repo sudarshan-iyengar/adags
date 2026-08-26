@@ -36,6 +36,13 @@
 # LPIPS, and may never appear in a reported table.
 #
 # CAPACITY. densify_until_num_points is the SHARED point-ceiling policy and is
+# 400,000 after MEASUREMENT, not by choice: at the original 600,000 the NF arm
+# reached 516,990 points at iteration 2,866 and the container was killed with
+# no traceback -- a CUDA abort inside the rasterizer, whose per-Gaussian sort
+# buffers at 2656x1494 are what exhaust a 32 GB V100, not the parameter
+# tensors (those are ~580 MB at that count). 400,000 sits 23% below the
+# observed failure and still lets NF grow 1.42x from its 282,672-point start.
+# See freeze AMENDMENT 6.
 # identical in both arms. The initial population is capped at half that
 # ceiling so BOTH arms exercise densification; an arm starting at or above the
 # ceiling would skip the whole densification-and-pruning block
@@ -98,7 +105,7 @@ OptimizationParams:
   densify_until_iter: 10_000
   densify_grad_threshold: 0.0002
   densify_grad_t_threshold: 0.000005
-  densify_until_num_points: 600_000
+  densify_until_num_points: 400_000
   final_prune_from_iter: -1
   # 30 -> qualitative renders at held-out frames 0,30,...,270: ten per
   # evaluation, at indices IDENTICAL across every arm. Applied after all
