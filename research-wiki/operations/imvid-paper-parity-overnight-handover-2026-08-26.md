@@ -91,10 +91,18 @@ Both: image `sha256:02ad9cb4…b1e6`, 12,000 iterations, checkpoints at 6,000
 and 12,000, `test_iterations` at the final iteration only so no checkpoint can
 be selected on Cam 00.
 
-**Expect very different wall clocks.** NF carries 282,672 initial points and
-measured ~4 s/iteration; a ~20k population measured ~1 s. That asymmetry is
-the legitimate consequence of the two constructions, not a defect, and it
-means FG is likely to reach 12k hours before NF does.
+**Expect very different wall clocks, on an ESTIMATE not a measurement.** NF
+carries 282,672 initial points against FG's 19,825. The only measured
+per-iteration figure on this trainer at this raster is the earlier
+500-iteration plumbing smoke at 20,157 points, which ran ~1 s/iteration
+including startup. A dedicated NF preflight was launched and **killed before
+it printed**, so no per-iteration figure for a 282k population has been
+measured; the expectation that NF is several times slower is inference from
+the point count, and is labelled as such. The true rates are recorded when
+`chkpnt6000.pth` lands in each run dir.
+
+The asymmetry itself is the legitimate consequence of the two constructions,
+not a defect.
 
 Monitor: `python scripts/det_monitor.py`, or
 `det e describe 295 --json` / `det task logs -f <task-id>`.
