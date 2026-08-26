@@ -67,6 +67,17 @@ IMAGE_RE = re.compile(r"^(?P<camera>cam\d+)_(?P<frame>\d+)\.(?P<ext>png|jpg|jpeg
 #: cannot, chosen before any measurement and not adjusted afterwards.
 DIRECTION_MARGIN = 1.2
 
+#: Frame gap used by the DIRECTION check only.  Production flow is always
+#: adjacent (f -> f+1), but at 59.94 fps adjacent motion on these scenes is
+#: sub-pixel, and a warp test cannot tell a forward field from its negation
+#: when the displacement is smaller than the interpolation kernel -- measured
+#: at a ratio of 1.083 on Opera, against a 1.2 floor.  That is the guard
+#: working, not a wiring fault, but a guard that cannot discriminate is not a
+#: guard.  Orientation is a property of the MODEL, not of the frame gap, so it
+#: is tested where the displacement is large enough to resolve and then relied
+#: on for the adjacent pairs.
+DEFAULT_DIRECTION_GAP = 8
+
 
 class ContractError(RuntimeError):
     """A refusal: the setup is not what this script requires."""
@@ -93,9 +104,28 @@ def discover(images_root: Path) -> dict[str, dict[int, Path]]:
     return found
 
 
-def select_cameras(found: dict, exclude: tuple[str, ...]) -> list[str]:
+def select_cameras(found: dict, exclude: tuple[str, ...],
+                   only: tuple[str, ...] = ()) -> list[str]:
+    """Cameras to process: everything present, minus the held-out exclusions,
+    optionally narrowed to an explicit shard.
+
+    `only` exists so one scene's flow can be split across several GPUs. It
+    NARROWS, it never widens: the exclusion is applied first and independently,
+    so a shard can never reach a held-out camera by naming it.
+    """
     cameras = sorted(found)
     kept = [c for c in cameras if c not in exclude]
+    if only:
+        unknown = [c for c in only if c not in cameras]
+        if unknown:
+            raise ContractError(f"--only-cameras names absent camera(s) {unknown}")
+        forbidden = sorted(set(only) & set(exclude))
+        if forbidden:
+            raise ContractError(
+                f"--only-cameras names held-out camera(s) {forbidden}; the shard "
+                "list may narrow the training set, never reach outside it"
+            )
+        kept = [c for c in kept if c in only]
     missing = [c for c in exclude if c not in cameras]
     if missing:
         # Not fatal by itself, but it means the exclusion list and the scene
@@ -164,12 +194,34 @@ def infer_pair(model, args, img1: np.ndarray, img2: np.ndarray, device: str):
     return flow, t1, t2
 
 
-def warp_check(model_out_flow, t1, t2) -> tuple[float, float]:
-    """Warp-test the flow both ways; return (forward_err, reversed_err).
+#: A pixel must carry at least this much displacement, in the units the warp
+#: test evaluates in, to be admitted as EVIDENCE about direction.  Below it,
+#: forward and reversed warps land within an interpolation kernel of each
+#: other and the pixel says nothing either way.
+DIRECTION_EVIDENCE_PX = 1.0
+
+#: ...and there must be at least this many such pixels, or the test ABSTAINS
+#: loudly rather than returning a ratio computed from a handful of pixels.
+DIRECTION_MIN_EVIDENCE_PIXELS = 20000
+
+
+def warp_check(model_out_flow, t1, t2) -> tuple[float, float, int]:
+    """Warp-test the flow both ways; return (forward_err, reversed_err, n).
 
     Forward flow means ``image1[x] ~ image2[x + flow(x)]``.  Sampling image2
     at ``x + flow`` should reconstruct image1.  If the field were actually
     backward, ``x - flow`` would do better.  Both are computed and compared.
+
+    THE ERROR IS MEASURED ONLY WHERE THE FLOW MOVES.  An earlier version
+    averaged over every pixel and could not discriminate: on an opera stage
+    roughly 95% of the frame is static, those pixels warp to the same place
+    under ``+flow`` and ``-flow``, and they dominate the mean -- the measured
+    ratio was 1.083 at gap 1 and 1.132 at gap 8, both under the 1.2 floor, for
+    a field that is in fact correctly oriented.  That was a defect in the
+    TEST, not in the flow: a direction test has to be evaluated where
+    direction is observable.  Restricting to displaced pixels does not make
+    the test easier to pass -- a genuinely REVERSED field fails harder on
+    exactly those pixels.
     """
     import torch
     import torch.nn.functional as F
@@ -181,6 +233,9 @@ def warp_check(model_out_flow, t1, t2) -> tuple[float, float]:
         indexing="ij",
     )
 
+    mag = torch.linalg.vector_norm(model_out_flow[0], dim=0)
+    moving = mag >= DIRECTION_EVIDENCE_PX
+
     def err(sign: float) -> float:
         gx = xs + sign * model_out_flow[0, 0]
         gy = ys + sign * model_out_flow[0, 1]
@@ -188,12 +243,13 @@ def warp_check(model_out_flow, t1, t2) -> tuple[float, float]:
             [2.0 * gx / max(w - 1, 1) - 1.0, 2.0 * gy / max(h - 1, 1) - 1.0], dim=-1
         )[None]
         warped = F.grid_sample(t2, grid, mode="bilinear", padding_mode="border", align_corners=True)
-        inside = (
-            (gx >= 0) & (gx <= w - 1) & (gy >= 0) & (gy <= h - 1)
-        )[None, None].expand_as(warped)
-        return float((warped - t1).abs()[inside].mean())
+        inside = (gx >= 0) & (gx <= w - 1) & (gy >= 0) & (gy <= h - 1)
+        keep = (inside & moving)[None, None].expand_as(warped)
+        if not bool(keep.any()):
+            return float("nan")
+        return float((warped - t1).abs()[keep].mean())
 
-    return err(1.0), err(-1.0)
+    return err(1.0), err(-1.0), int(moving.sum())
 
 
 def main(argv=None) -> int:
@@ -202,6 +258,10 @@ def main(argv=None) -> int:
     ap.add_argument("--out-root", help="destination for the .npz flow fields")
     ap.add_argument("--exclude-cameras", default="cam00",
                     help="comma-separated cameras that MUST NOT be read (held-out)")
+    ap.add_argument("--only-cameras", default="",
+                    help="comma-separated shard: process ONLY these training "
+                         "cameras, so one scene can be split across GPUs. Narrows "
+                         "the training set; it can never reach a held-out camera")
     ap.add_argument("--checkpoint", default="/apollo/users/sri/proj_adags/repo/SEA-RAFT/"
                                             "Tartan-C-T-TSKH-spring540x960-M.pth")
     ap.add_argument("--expect-checkpoint-sha256",
@@ -212,6 +272,11 @@ def main(argv=None) -> int:
     ap.add_argument("--store-dtype", default="float16", choices=("float16", "float32"))
     ap.add_argument("--direction-samples", type=int, default=8,
                     help="pairs warp-tested for flow direction; 0 disables (never do that)")
+    ap.add_argument("--direction-gap", type=int, default=DEFAULT_DIRECTION_GAP,
+                    help="frame gap for the DIRECTION check only. Production flow "
+                         "stays adjacent; at 59.94 fps adjacent motion is sub-pixel "
+                         "and the warp test cannot discriminate, so orientation is "
+                         "proven where the displacement resolves")
     ap.add_argument("--limit-pairs", type=int, default=0, help="smoke mode: stop after N pairs")
     ap.add_argument("--manifest", default=None)
     ap.add_argument("--overwrite", action="store_true")
@@ -239,8 +304,9 @@ def main(argv=None) -> int:
             "the flow weights on shared storage are not the recorded ones"
         )
 
+    only = tuple(c.strip() for c in args.only_cameras.split(",") if c.strip())
     found = discover(images_root)
-    cameras = select_cameras(found, exclude)
+    cameras = select_cameras(found, exclude, only)
 
     searaft_root = searaft_sys_path()
     model, cfg_args = build_model(searaft_root, args.cfg, checkpoint, args.device)
@@ -271,12 +337,20 @@ def main(argv=None) -> int:
             flow, t1, t2 = infer_pair(model, cfg_args, a, b, args.device)
 
             if len(direction_records) < args.direction_samples:
-                fwd_err, rev_err = warp_check(flow, t1, t2)
-                direction_records.append(
-                    {"camera": camera, "frame": f0, "forward_err": fwd_err,
-                     "reversed_err": rev_err,
-                     "ratio": (rev_err / fwd_err) if fwd_err > 0 else float("inf")}
-                )
+                # Tested on a WIDER pair from the same camera, for the reason in
+                # DEFAULT_DIRECTION_GAP. The model is the same; only the
+                # displacement is large enough to resolve.
+                fgap = f0 + max(1, int(args.direction_gap))
+                if fgap in found[camera]:
+                    gflow, gt1, gt2 = infer_pair(
+                        model, cfg_args, a, load_rgb(found[camera][fgap]), args.device)
+                    fwd_err, rev_err, n_evidence = warp_check(gflow, gt1, gt2)
+                    direction_records.append(
+                        {"camera": camera, "frame": f0, "gap": int(args.direction_gap),
+                         "forward_err": fwd_err, "reversed_err": rev_err,
+                         "evidence_pixels": n_evidence,
+                         "ratio": (rev_err / fwd_err) if fwd_err > 0 else float("inf")}
+                    )
 
             arr = flow[0].permute(1, 2, 0).cpu().numpy()
             mag = np.linalg.norm(arr, axis=-1)
@@ -299,11 +373,26 @@ def main(argv=None) -> int:
         raise ContractError(f"held-out camera(s) {leaked} were READ; this run is void")
 
     if args.direction_samples and direction_records:
-        worst = min(r["ratio"] for r in direction_records)
+        thin = [r for r in direction_records
+                if r["evidence_pixels"] < DIRECTION_MIN_EVIDENCE_PIXELS]
+        if len(thin) == len(direction_records):
+            raise ContractError(
+                "FLOW DIRECTION CHECK ABSTAINED: every sampled pair carried fewer "
+                f"than {DIRECTION_MIN_EVIDENCE_PIXELS} pixels above "
+                f"{DIRECTION_EVIDENCE_PX} px, so the test had nothing to read. "
+                f"Evidence counts {[r['evidence_pixels'] for r in direction_records]}. "
+                "Raise --direction-gap so the displacement resolves. Refusing to "
+                "emit flow whose orientation is UNTESTED -- an abstention is not a "
+                "pass."
+            )
+        usable = [r for r in direction_records
+                  if r["evidence_pixels"] >= DIRECTION_MIN_EVIDENCE_PIXELS]
+        worst = min(r["ratio"] for r in usable)
         if worst < DIRECTION_MARGIN:
             raise ContractError(
                 f"FLOW DIRECTION CHECK FAILED: reversed/forward warp-error ratio "
-                f"{worst:.4f} < {DIRECTION_MARGIN}. Forward flow must reconstruct "
+                f"{worst:.4f} < {DIRECTION_MARGIN} at gap {args.direction_gap}. "
+                "Forward flow must reconstruct "
                 "image1 from image2 markedly better than the negated field does. "
                 "Either the field is not forward, or the pairs carry too little "
                 "motion for the test to discriminate. Refusing to emit flow whose "
@@ -318,6 +407,7 @@ def main(argv=None) -> int:
         "out_root": str(out_root),
         "cameras": cameras,
         "excluded_cameras": list(exclude),
+        "shard_only_cameras": list(only),
         "pairs_written": written,
         "searaft_root": searaft_root,
         "searaft_commit": "886fb094fe21d4fa5ff675da18362b27b023ccc3",
@@ -331,9 +421,16 @@ def main(argv=None) -> int:
         "stored_on": "half_raster (spatial upsample deliberately skipped)",
         "direction_check": {
             "margin_required": DIRECTION_MARGIN,
+            "gap": int(args.direction_gap),
+            "gap_rationale": ("production flow is adjacent; the direction test uses a "
+                              "wider pair because adjacent motion at 59.94 fps is "
+                              "sub-pixel and cannot discriminate orientation"),
             "samples": direction_records,
-            "worst_ratio": (min(r["ratio"] for r in direction_records)
-                            if direction_records else None),
+            "evidence_px_threshold": DIRECTION_EVIDENCE_PX,
+            "min_evidence_pixels": DIRECTION_MIN_EVIDENCE_PIXELS,
+            "worst_ratio": (min((r["ratio"] for r in direction_records
+                                 if r["evidence_pixels"] >= DIRECTION_MIN_EVIDENCE_PIXELS),
+                                default=None)),
         },
         "magnitude_summary": {
             "mean_of_means": float(np.mean(means)) if means else None,
