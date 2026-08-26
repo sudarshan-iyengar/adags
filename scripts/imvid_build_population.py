@@ -257,6 +257,12 @@ def main(argv=None) -> int:
     ap.add_argument("--manifest", default=None)
     ap.add_argument("--scale", type=float, default=0.5)
     ap.add_argument("--fps-rational", default="60000/1001")
+    ap.add_argument("--window-frames", type=int, default=300,
+                    help="length of the DECLARED window in frames, not the number "
+                         "of triangulated clouds. Temporal support widths are "
+                         "derived from this so they match the trainer's "
+                         "time_duration; using the cloud count instead makes every "
+                         "band too narrow by the stride")
     ap.add_argument("--reference-frame", type=int, default=0)
     ap.add_argument("--exclude-cameras", default="cam00")
     ap.add_argument("--eps-static-px", type=float, default=EPS_STATIC_PX)
@@ -283,7 +289,22 @@ def main(argv=None) -> int:
     clouds = load_frame_clouds(Path(args.clouds_root))
     frames = sorted(clouds)
     num, den = (int(x) for x in args.fps_rational.split("/"))
-    span = (len(frames) - 1) * den / num
+    # SPAN IS THE WINDOW, NOT THE SAMPLE COUNT. `frames` holds only the
+    # triangulated subset -- at stride 3 that is 100 clouds spanning frame
+    # indices 0..297 -- so `len(frames) - 1` is three times too small and every
+    # support band comes out ~3x too narrow, while the per-point TIMES remain
+    # correct. The two then disagree, and the trainer's own uniform default is
+    # derived from `time_duration`, which describes the WINDOW. Deriving span
+    # from --window-frames keeps the abstain band exactly equal to what the
+    # trainer would have used with no t_extent column at all.
+    span = (int(args.window_frames) - 1) * den / num
+    sampled_span = (max(frames) - min(frames)) * den / num if len(frames) > 1 else 0.0
+    if sampled_span > span + 1e-9:
+        raise ContractError(
+            f"the triangulated frames span {sampled_span:.6f} s but --window-frames "
+            f"{args.window_frames} implies {span:.6f} s; the clouds do not belong to "
+            "the declared window"
+        )
     broad = float(span * BROAD_SUPPORT_SPAN_FRAC)
     compact = float(COMPACT_SUPPORT_FRAMES * den / num)
     # Reproduces the trainer's uniform default EXACTLY when expressed as a
@@ -485,6 +506,9 @@ def main(argv=None) -> int:
         "reference_frame": args.reference_frame,
         "excluded_cameras": list(exclude),
         "frames": len(frames),
+        "window_frames": int(args.window_frames),
+        "window_span_seconds": span,
+        "sampled_span_seconds": sampled_span,
         "raw_points": raw_count,
         "written_points": int(xyz.shape[0]),
         "capped": capped,
@@ -568,6 +592,19 @@ def run_self_test() -> int:
     results.append(_check("compact_std_is_much_narrower_than_default",
                           compact < default_std / 5.0,
                           f"compact={compact:.4f}s default={default_std:.4f}s"))
+
+    # The stride bug: with 100 clouds sampled at stride 3 from a 300-frame
+    # window, deriving span from the CLOUD COUNT gives 1.652 s against the
+    # window's true 4.988 s, and every support band comes out 3x too narrow.
+    den, num2 = 1001, 60000
+    window_span = (300 - 1) * den / num2
+    count_span = (100 - 1) * den / num2
+    results.append(_check("span_comes_from_the_window_not_the_sample_count",
+                          abs(window_span - 4.988316666666667) < 1e-12
+                          and abs(count_span - 1.65165) < 1e-9
+                          and window_span / count_span > 2.9,
+                          f"window {window_span:.6f}s vs sample-count {count_span:.6f}s "
+                          f"= {window_span / count_span:.2f}x"))
 
     rng = np.random.default_rng(0)
     idx = rng.choice(1000, size=100, replace=False)
