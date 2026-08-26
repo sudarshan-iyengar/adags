@@ -70,7 +70,40 @@ statement of a support duration in this project is wrong by 41%.
 | Opera flow | RUNNING | 4-way GPU shard, 3.82 pairs/s (0.96 single) |
 | Opera triangulation | RUNNING | **1024 features, stride 3, 100 frames** (freeze A5, superseding A4); first frames 2,428 / 2,734 / 2,857 points |
 | Puppy conversion onward | NOT RUN | §9 |
-| Final NF/FG training | **NOT RUN** | §9 |
+| Opera flow | **DONE** | 11,362/11,362 pairs, all 38 training cameras x 299 |
+| Opera triangulation | **DONE** | 100/100 frames, 282,672 points, 1024 features, stride 3 |
+| Opera NF initializer | **DONE + VERIFIED** | 282,672 pts; support 2.4942 / 0.9994 / 0.1335 s; window span == config `time_duration` exactly; upstream leak check `verified: true` |
+| Opera FG initializer | **DONE + PRECONDITIONS PASS** | static 93.71% / abstain 5.24% / dynamic 1.05%; 0 points unseen; 19,825 written |
+| **Opera NF training** | **RUNNING** | **Determined experiment 295** |
+| **Opera FG training** | **RUNNING** | **Determined experiment 296** |
+| Puppy conversion onward | see §9 | |
+
+## 3A. LIVE RUNS AT HANDOVER
+
+```
+295  imvid_opera_nf   RUNNING  dgx  commit b9e89bf  seed 0
+     /apollo/users/sri/proj_adags/runs/elgs/20260826T020643Z_imvid_opera_nf_0_b9e89bf
+296  imvid_opera_fg   RUNNING  dgx  commit b9e89bf  seed 0
+     /apollo/users/sri/proj_adags/runs/elgs/20260826T020708Z_imvid_opera_fg_0_b9e89bf
+```
+
+Both: image `sha256:02ad9cb4…b1e6`, 12,000 iterations, checkpoints at 6,000
+and 12,000, `test_iterations` at the final iteration only so no checkpoint can
+be selected on Cam 00.
+
+**Expect very different wall clocks.** NF carries 282,672 initial points and
+measured ~4 s/iteration; a ~20k population measured ~1 s. That asymmetry is
+the legitimate consequence of the two constructions, not a defect, and it
+means FG is likely to reach 12k hours before NF does.
+
+Monitor: `python scripts/det_monitor.py`, or
+`det e describe 295 --json` / `det task logs -f <task-id>`.
+
+Evaluate each saved checkpoint through the FROZEN `--val` path once it exists:
+
+```bash
+.\submit_val.ps1 -Cell imvid_opera_nf_val6k -Config configs/imvid/opera_paper12k_nf.yaml -Ckpt <run_dir>/chkpnt6000.pth
+```
 
 ## 4. PROVENANCE
 
