@@ -464,6 +464,48 @@ figures come from a separate `--val` pass over `chkpnt6000.pth` and
 `chkpnt12000.pth` in the clamped / pooled-PSNR / LPIPS-AlexNet convention
 frozen in §7 of the freeze.
 
+## 7B. FIRST Cam 00 NUMBER — Opera FG at 6,000 iterations
+
+Determined experiment **299**, the frozen `--val` path over all 300 held-out
+Cam 00 frames, reading `chkpnt6000.pth` of experiment 298:
+
+```
+PSNR 22.961224   SSIM 0.830659   LPIPS 0.531246   num_GS 347,600
+```
+
+Published Opera row for context — external anchors, never tuning targets:
+
+| | PSNR | SSIM | LPIPS |
+|---|---:|---:|---:|
+| Gaussian4D | 25.61 | 0.873 | 0.206 |
+| STG | 26.30 | 0.899 | 0.169 |
+| IVV (Ours) | 33.51 | 0.916 | 0.070 |
+| **this, FG @ 6k** | **22.96** | **0.831** | **0.531** |
+
+**Four things this number is NOT:**
+
+1. **Not a completed arm.** 6,000 of 12,000, with the LR decay horizon and
+   `densify_until_iter` both set for 12,000 — it is a mid-trajectory reading,
+   not an endpoint.
+2. **Not a comparison.** The NF counterpart does not exist; every NF attempt
+   so far died of memory (§7C). The lane's actual question is untouched.
+3. **Not the frozen configuration.** Experiment 298 ran under the 400,000
+   ceiling of amendment A6, which is being superseded because the V100 cannot
+   reach it either. This measures THAT setup.
+4. **Not comparable to the published table** beyond the crudest ordering: no
+   method parity, a different schedule, and — for LPIPS especially — a
+   convention that has not been cross-checked against whatever the authors
+   used.
+
+**The number worth watching is LPIPS.** It moved 0.584 -> 0.531 between the
+600-iteration plumbing smoke and 6,000 iterations, while PSNR moved
+20.56 -> 22.96 over the same interval. A perceptual metric that barely
+responds while PSNR climbs is the signature of a reconstruction that is
+getting the low frequencies right and not the detail — which is what one
+would expect of an arm that begins with 19,825 primitives. It is stated as an
+observation, not a diagnosis; the 12k reading and the NF arm are what would
+settle it.
+
 ## 7A. What may NOT be concluded from this lane, restated before any number exists
 
 - Not an exact reproduction of the ImViD paper: method parity is unavailable
