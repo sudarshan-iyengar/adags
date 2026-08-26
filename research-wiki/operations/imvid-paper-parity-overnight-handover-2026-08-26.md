@@ -67,7 +67,8 @@ statement of a support duration in this project is wrong by 41%.
 | Arm assembly + splits | **DONE** | `paper_cam00` 38 train / test `['cam00']`, no overlap; `dev_cam10` 37 train / test `['cam10']` / `cam00` excluded; images symlinked, PLY hash preserved |
 | **Initialization seam (CUDA)** | **DONE + PROVEN** | all three support bands land, 6,719 rows each = 20,157/3 exactly; 20,157 points at init, NOT the `num_pts` fallback |
 | Opera conversion | **DONE + VERIFIED** | 11,700/11,700, 53m11s; derived PINHOLE matches frozen exp-156 (`cx 1327.75`); `invalid_fraction 0.0`; `motion_track_dt 1001/60000`; split profile `paper_cam00`, 38 train cameras |
-| Opera flow + triangulation | RUNNING | stride 6 = 50 frames (freeze A4) |
+| Opera flow | RUNNING | 4-way GPU shard, 3.82 pairs/s (0.96 single) |
+| Opera triangulation | RUNNING | **1024 features, stride 3, 100 frames** (freeze A5, superseding A4); first frames 2,428 / 2,734 / 2,857 points |
 | Puppy conversion onward | NOT RUN | §9 |
 | Final NF/FG training | **NOT RUN** | §9 |
 
@@ -124,6 +125,25 @@ and passed.
 9. **Per-frame COLMAP scratch accumulating** — tens of GB in `/tmp` over 300
    frames; the whole workdir is now removed once its points are on shared
    storage.
+10. **The triangulation cost model was WRONG, and the correction improved the
+    plan.** Planning assumed SIFT feature count scales with pixel area, so
+    halving the raster would cut matching ~16x. COLMAP caps detections at
+    8192 and a detailed scene saturates that cap at BOTH rasters, so the
+    dominant term never moved: **>= 14 min per frame on all 80 cores against
+    a projected 90 s**. The cap is the lever the raster is not, and unlike
+    `--max-image-size` it leaves keypoint localisation — and therefore the
+    2.0 px gate — untouched. At 1024 features a frame costs **33 s** with all
+    38 cameras still contributing. The replacement is MORE temporal coverage
+    than the stride it superseded (100 frames vs 50), paid for in points per
+    frame, which is the right way round for an arm whose mechanism IS
+    per-frame temporal assignment.
+11. **The point collector read the EMPTY INPUT model.** It globbed for
+    `points3D.txt` and matched `model_in/`, which sorts before `model_txt/`,
+    reporting **0 points from a reconstruction with 38 contributing cameras
+    and mean track length 4.11**. Unrepaired it produces one cloud file per
+    frame, an initializer with no geometry, and success codes throughout.
+    Caught only because a cost probe happened to print the point count beside
+    the COLMAP statistics.
 
 ## 6. FLOW — direction is MEASURED, and the first test was wrong
 
