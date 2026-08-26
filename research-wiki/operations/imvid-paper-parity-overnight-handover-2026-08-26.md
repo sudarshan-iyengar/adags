@@ -61,10 +61,14 @@ statement of a support duration in this project is wrong by 41%.
 | Dependency closure | DONE | §5 |
 | Runtime image | DONE | digest `sha256:02ad9cb41d0b613db73c0cee3777e547899c42dd2b93220edd30317d7f04b1e6` |
 | Container validation | DONE | `OVERALL_FAIL=0`; 5 self-test suites, 6 pytest tests, RAFT constructed offline |
-| Opera window extraction | **DONE + VERIFIED** | 11,700/11,700 PNGs, 300/camera x 39, IHDR read from every file, 137,142,068,651 B, `suppressed_offset 0.0` |
-| Puppy window extraction | see §9 | |
+| Opera window extraction | **DONE + VERIFIED** | 11,700/11,700 PNGs, 300/camera x 39, IHDR read from every file, 137,142,068,651 B, `suppressed_offset 0.0`, 14m27s |
+| Puppy window extraction | **DONE + VERIFIED** | 11,700/11,700, 300/camera x 39, 351,471,430,904 B, `suppressed_offset 0.0`, 59m27s |
 | Flow wiring + direction | **DONE, MEASURED** | §6 |
-| Opera conversion / triangulation | see §9 | |
+| Arm assembly + splits | **DONE** | `paper_cam00` 38 train / test `['cam00']`, no overlap; `dev_cam10` 37 train / test `['cam10']` / `cam00` excluded; images symlinked, PLY hash preserved |
+| **Initialization seam (CUDA)** | **DONE + PROVEN** | all three support bands land, 6,719 rows each = 20,157/3 exactly; 20,157 points at init, NOT the `num_pts` fallback |
+| Opera conversion | **DONE + VERIFIED** | 11,700/11,700, 53m11s; derived PINHOLE matches frozen exp-156 (`cx 1327.75`); `invalid_fraction 0.0`; `motion_track_dt 1001/60000`; split profile `paper_cam00`, 38 train cameras |
+| Opera flow + triangulation | RUNNING | stride 6 = 50 frames (freeze A4) |
+| Puppy conversion onward | NOT RUN | §9 |
 | Final NF/FG training | **NOT RUN** | §9 |
 
 ## 4. PROVENANCE
