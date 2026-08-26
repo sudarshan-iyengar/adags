@@ -553,3 +553,60 @@ production run is recorded in
 [[imvid-paper-parity-result-2026-08-26]]; if it differs materially from
 90.1 s the discrepancy is reported rather than the estimate quietly
 retired.
+
+## AMENDMENT 5 (append-only, 2026-08-26) — A4's stride is SUPERSEDED; the cost model in A2/A4 was WRONG
+
+A4 fixed stride 6 from a projection. **That projection was wrong, and this
+records why before recording what replaces it.**
+
+### A5.1 The error
+
+A2.1 and A4 projected per-frame triangulation cost by assuming the SIFT
+feature count scales with pixel area, so that halving the raster would cut
+exhaustive-matching cost ~16x (matching is O(F^2) per pair). **It does not.**
+COLMAP caps detections at `SiftExtraction.max_num_features`, default **8192**,
+and a detailed scene saturates that cap at BOTH rasters — so halving the
+raster bought nothing on the dominant term.
+
+Measured, one frame, one worker, all 80 cores, at the 2656x1494 raster:
+**>= 14 minutes**, against the projected 90 s. The 8-worker run that preceded
+it produced no completed frame in 22 minutes, which is consistent.
+
+### A5.2 The measurement that replaces it
+
+The cap, not the raster, is the lever — and unlike `--max-image-size` it does
+not touch keypoint LOCALISATION, so the frozen `mean <= 2.0 px AT NATIVE`
+reprojection gate is unaffected. One frame, one worker, per cap:
+
+| `max_num_features` | s/frame | 300 frames | cameras with observations | mean track length |
+|---:|---:|---:|---:|---:|
+| 8192 (default) | >= 840 | ~12 h | — | — |
+| 2048 | 89 | 445 min | 38 | 4.152 |
+| **1024** | **33** | **165 min** | **38** | **4.110** |
+
+All 38 training cameras contribute at every cap and the mean track length is
+essentially unchanged, so the reconstruction is thinner, not degenerate.
+
+### A5.3 INSTANTIATED, superseding A4
+
+```
+max_num_features  1024        (was COLMAP's default 8192)
+stride            3           (was 6)
+frames            100         (was 50)
+projected cost    ~55 min per scene
+```
+
+Both parameters are **identical for both scenes and both arms**, so neither
+can move NF relative to FG. Against A4 this is strictly MORE temporal
+coverage — 100 frames rather than 50, one every ~0.05 s across the 4.988 s
+window — bought by accepting fewer points per frame (~2,300 against ~7,000 at
+the default cap, inferred from observations / mean track length).
+
+**That trade is the right way round for this lane specifically:** the FG
+arm's mechanism is per-frame temporal assignment, so frames are the axis that
+carries the mechanism and points-per-frame is the axis that does not. Stride
+3 also keeps the expected ~230k points below the 300k initial cap of A1.1, so
+the cap does not bind and no subsample is applied.
+
+**A4's stride 6 is superseded and was never run to completion.** No result was
+produced under it.
