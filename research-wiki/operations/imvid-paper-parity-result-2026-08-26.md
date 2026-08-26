@@ -214,6 +214,18 @@ cam01 f2 gap 8  evidence 89,263 px  forward 9.151  reversed  ...     ratio 1.399
 trivially satisfied — `cam00` was staged alongside the training camera and
 the run recorded it as excluded and unread.
 
+### 6.2a Throughput, and why flow is sharded
+
+Measured on one V100: **0.96 adjacent pairs/s**, so one scene's
+38 x 299 = 11,362 pairs is **3.2 h**. Split across four GPUs by camera the
+measured rate is **3.82 pairs/s** — a clean 4.0x — bringing a scene to ~50
+minutes.
+
+The shard list NARROWS and can never widen: the held-out exclusion is applied
+first and independently, and naming a held-out camera inside a shard is
+refused rather than quietly honoured. The four shards partition all 38
+training cameras exactly, with `cam00` absent from every one.
+
 ### 6.3 Engagement preconditions
 
 The frozen anti-vacuity preconditions of freeze §6.1 are evaluated before any
