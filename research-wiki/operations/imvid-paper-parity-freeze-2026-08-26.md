@@ -679,3 +679,85 @@ ceiling was reachable; the cost preflight that would have caught it was
 launched and then killed before it printed. The general form: a frozen
 parameter that no run has ever reached is an untested assumption, and
 declaring it inside a well-argued amendment does not make it a measurement.
+
+## AMENDMENT 7 (append-only, 2026-08-26) — the comparison moves to hopper/H100
+
+### A7.1 Why
+
+A6 lowered the shared ceiling to 400,000 after experiment 295 exhausted V100
+memory at 516,990 points. **That did not fix it.** Experiment 297 ran under
+the amended ceiling and died at **399,865 points — at the ceiling itself**:
+
+```
+295  ceiling 600,000  died iteration 2,866  at 516,990 points  3.843 s/iter
+297  ceiling 400,000  died iteration 2,032  at 399,865 points  1.693 s/iter
+298  ceiling 400,000  RUNNING, 374,648 points at iteration 6,204, 1.265 s/iter
+```
+
+The V100's 32 GB cannot sustain ~400,000 Gaussians at 2656x1494 on this
+scene. 298 survived only because FG densifies from a 14x smaller start and
+had not yet reached the ceiling — at 374,648 and still growing it was on the
+same trajectory.
+
+**User-authorised, and it resolves the constraint rather than working around
+it:** `hopper` carries NVIDIA H100 PCIe with **81,559 MiB against the V100's
+32,768** — 2.5x the memory, verified on the pool.
+
+### A7.2 What moves, and why BOTH arms
+
+**Both Opera arms move.** Running NF on H100 and FG on V100 would put a
+hardware difference inside the comparison the lane exists to make, and
+[[imvid-baseline-freeze]]'s requirement that the whole comparison stay on ONE
+hardware class is binding. Experiment 298 is therefore cancelled a second
+time despite being healthy. Puppy's arms run on hopper too, for the same
+reason.
+
+This **supersedes §9.2's** user-directed resolution of `dgx`/V100. That
+resolution was correct when made — every ImViD cell to that point had run on
+`dgx` — and it is superseded by a measured hardware limit, not by preference.
+Preprocessing (extraction, conversion, triangulation, flow) stays on `dgx`,
+since none of it is claim-bearing and all of it completed there.
+
+### A7.3 The ceiling is RETAINED at 400,000, not reverted
+
+The obvious move on 80 GB is to restore A1.1's original 600,000. It is
+**deliberately not done.** A6's *justification* was V100 memory and that
+justification is now gone, but the *value* stands on its own terms: both arms
+densify and NF grows 1.42x from its 282,672-point start, which is the
+property A1.1 exists to protect. Re-raising it would be an untested memory
+change on hardware whose limit has not been measured, buying no scientific
+gain and risking another multi-hour failure. **A6 therefore stands as the
+operative policy, with its reasoning corrected here rather than its number.**
+
+### A7.4 Runtime
+
+Training on hopper uses the existing H100 image, digest
+`sha256:0d5771688c9b6580f70133f813b7a4110bd5c967920afe3c5fd1856bb098800e`
+(`apollo-h100-88ee245`), NOT the SEA-RAFT image built for this lane — that
+one sets `TORCH_CUDA_ARCH_LIST="7.0 8.9"` and has no sm_90 code.
+
+This is safe because **the CUDA sources are byte-identical between that
+image's build commit `88ee245` and this branch's HEAD** (`git diff --stat`
+over `diff-gaussian-rasterization`, `simple-knn`, `pointops2` is empty, and
+`88ee245` is an ancestor of HEAD). The trainer's Python code travels in the
+`git archive` context, so every change made in this lane still applies.
+Verified on an H100 before use: capability `(9, 0)`, 81,559 MiB, and the
+`gaussian_renderer` -> rasterizer chain imports and runs.
+
+The SEA-RAFT image remains correct for flow and for the preprocessing that
+has already completed on `dgx`; no flow work remains.
+
+### A7.5 Cost of the two capacity failures
+
+```
+295  ~3.1 slot-h  FAILED  (OOM at 516,990)
+296  ~1.5 slot-h  CANCELLED while healthy (A6 policy change)
+297  ~1.0 slot-h  FAILED  (OOM at 399,865)
+298  ~2.2 slot-h  CANCELLED while healthy (A7 pool change)
+                  -- its 6,000-iteration checkpoint WAS evaluated first
+                     (experiment 299) and is kept as a recorded reading
+     ~7.8 slot-hours discarded across two amendments.
+```
+
+Recorded rather than absorbed. The 6k reading salvaged from 298 is in
+[[imvid-paper-parity-result-2026-08-26]] §7B with its four caveats.
