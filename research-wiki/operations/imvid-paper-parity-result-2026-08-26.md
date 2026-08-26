@@ -151,6 +151,42 @@ stats/validation.json written
 smoke, on the superseded 4-camera split, and its PSNR may not be compared
 with anything.
 
+## 5B. The initialization seam — PROVEN through the CUDA path
+
+The one link nothing upstream could verify: that a cloud carrying per-point
+`time` and `t_extent` is actually consumed by `create_from_pcd`, under the
+`paper_cam00` split, and trains. A cloud was built from the real
+20,157-point union with its rows split evenly across the three declared
+support bands, assembled into an arm root, and trained for 20 iterations;
+`_scaling_t` was then read back out of the checkpoint (capture-tuple index
+14) and converted to a temporal standard deviation:
+
+```
+train cams 38   test ['cam00']
+Number of points at initialisation : 20157      <- NOT the 1,000,000 num_pts fallback
+rows 20157 | distinct temporal centres 16636
+recovered temporal std  min 0.12979  med 1.00572  max 2.59613
+  within 5% of compact (0.13347 s):  6719 rows
+  within 5% of broad   (2.49416 s):  6719 rows
+  within 5% of default (0.99942 s):  6719 rows
+VERDICT: ALL THREE SUPPORT BANDS LANDED
+```
+
+6,719 is exactly 20,157/3, the construction. The seam is verified end to
+end: writer -> `fetchPly` -> `BasicPointCloud` -> `create_from_pcd` ->
+`_scaling_t` -> checkpoint.
+
+**This probe is also what confirmed the reviewer's most speculative finding.**
+Before the repair it failed with `given numpy array strides not a multiple of
+the element byte size` — the reviewer had predicted exactly this from the
+35-byte record stride and could not test it without torch. It is a genuine
+production failure on a path no cloud in this repository had ever exercised,
+and it would have stopped every arm at initialisation.
+
+**Renders at 1/sqrt(2):** per
+[[temporal-marginal-applied-twice-2026-08-26]] the rendered supports are
+0.09437 / 0.70669 / 1.76364 s, not the stored 0.13347 / 0.99942 / 2.49416.
+
 ## 6. Flow, and the initializer engagement checks
 
 ### 6.1 Measured flow magnitudes (an input property, not an outcome)
