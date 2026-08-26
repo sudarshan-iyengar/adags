@@ -159,7 +159,18 @@ class GaussianExtractor(object):
 
 
     @torch.no_grad()
-    def export_image(self, path,mode="validation"):
+    def export_image(self, path, mode="validation", stride=1):
+        """Write qualitative renders. `stride` subsamples the test cameras.
+
+        This runs AFTER `reconstruction` has already computed every metric, so
+        a stride cannot move a reported number -- it only decides how many
+        qualitative images are kept. It exists because a 300-frame held-out
+        set costs ~8 s per camera here (four images each) against ~1 s for the
+        metric itself, i.e. ~40 minutes of pure I/O per evaluation. The
+        default of 1 reproduces the historical behaviour exactly, and a stride
+        selects indices 0, stride, 2*stride, ... which are IDENTICAL across
+        arms and therefore still comparable side by side.
+        """
         render_path = os.path.join(path, "renders")
         gts_path = os.path.join(path, "gt")
         # vis_path = os.path.join(path, "vis")
@@ -172,7 +183,10 @@ class GaussianExtractor(object):
         # os.makedirs(vis_path, exist_ok=True)
         os.makedirs(gts_path, exist_ok=True)
         # os.makedirs(flow_path,exist_ok=True)
+        stride = max(1, int(stride))
         for idx, viewpoint_cam in tqdm(enumerate(self.viewpoint_stack), desc="export images"):
+            if idx % stride:
+                continue
             if mode == "validation" and viewpoint_cam[0] is not None:
                 gt = viewpoint_cam[0][0:3, :, :]
                 save_img_u8(gt.permute(1,2,0).cpu().numpy(), os.path.join(gts_path, '{0:05d}'.format(idx) + ".png"))

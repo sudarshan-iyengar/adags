@@ -99,6 +99,11 @@ OptimizationParams:
   densify_grad_t_threshold: 0.000005
   densify_until_num_points: 600_000
   final_prune_from_iter: -1
+  # 30 -> qualitative renders at held-out frames 0,30,...,270: ten per
+  # evaluation, at indices IDENTICAL across every arm. Applied after all
+  # metrics are computed (main.py:1062-1064), so it cannot move a number;
+  # exporting all 300 costs ~40 min of pure I/O per evaluation.
+  export_image_stride: 30
   sh_increase_interval: 1000
   lambda_opa_mask: 0.0
   lambda_rigid: 0.0

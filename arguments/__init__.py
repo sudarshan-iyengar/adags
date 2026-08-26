@@ -104,6 +104,11 @@ class OptimizationParams(ParamGroup):
         self.densify_grad_t_threshold = 0.0002 / 40
         self.densify_until_num_points = -1
         self.final_prune_from_iter = -1
+        # Qualitative-render subsampling for the --val path ONLY. Applied
+        # after every metric has been computed, so it cannot move a reported
+        # number; 1 reproduces the historical behaviour exactly. An int, not
+        # a bool, because ParamGroup renders every bool as store_true.
+        self.export_image_stride = 1
         self.sh_increase_interval = 1000
         self.lambda_opa_mask = 0.0
         self.lambda_rigid = 0.0

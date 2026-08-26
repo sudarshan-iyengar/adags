@@ -1061,7 +1061,8 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     print("export rendered testing images ...")
     os.makedirs(test_dir, exist_ok=True)
     validation_stats = gaussExtractor.reconstruction(scene.getTestCameras(), test_dir, stage="validation")
-    gaussExtractor.export_image(test_dir, mode="validation")
+    gaussExtractor.export_image(test_dir, mode="validation",
+                                stride=getattr(opt, "export_image_stride", 1))
     summary_updates = {
         "validation_checkpoint": checkpoint,
         "validation_output_dir": test_dir,
