@@ -115,7 +115,12 @@ def test_trainer_source_pins_the_exponent_and_refuses_rot_4d():
     without a test going red. Both are silent failures otherwise: a wrong
     exponent still trains, it just renders every support width wrong.
     """
-    block = GAUSSIAN_MODEL.split("pcd.t_extent", 1)[1][:2000]
+    # Bound the search by the STRUCTURE, not by a character count. A fixed
+    # window silently stopped covering the conversion as soon as the rot_4d
+    # refusal was added ahead of it -- .pow(4) moved to 2,109 chars and the
+    # test failed while the code was correct.
+    after = GAUSSIAN_MODEL.split("pcd.t_extent", 1)[1]
+    block = after.split("scales_t = torch.log", 1)[0]
     assert re.search(r"\.pow\(4\)", block), (
         "create_from_pcd no longer raises t_extent to the 4th power. "
         "get_scaling_t = sqrt(dist_t) and get_cov_t consumes THAT as a variance, "
@@ -140,8 +145,13 @@ def test_conversion_is_invertible_at_the_bands_that_are_actually_used(band_name)
     dist_t = std ** 4
     assert dist_t ** 0.25 == pytest.approx(std, rel=1e-12)
     if band_name != "default":
-        # the wrong exponent is not a near miss here
-        assert abs(std ** 2 - dist_t) / dist_t > 1.0
+        # The wrong exponent is not a near miss here. Compared as a RATIO,
+        # which is direction-agnostic: a relative-difference threshold only
+        # works for std < 1, because for std > 1 `std**2 < std**4` and the
+        # relative gap is `1 - 1/std**2 < 1` however large the factor is.
+        wrong = std ** 2
+        factor = max(wrong, dist_t) / min(wrong, dist_t)
+        assert factor > 5.0, f"{band_name}: std**2={wrong:.6g} vs std**4={dist_t:.6g}"
 
 
 def test_default_band_reproduces_the_trainers_uniform_initialisation():
