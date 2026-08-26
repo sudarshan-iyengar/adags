@@ -263,6 +263,26 @@ and it would have stopped every arm at initialisation.
 [[temporal-marginal-applied-twice-2026-08-26]] the rendered supports are
 0.09437 / 0.70669 / 1.76364 s, not the stored 0.13347 / 0.99942 / 2.49416.
 
+## 5B1. Puppy triangulation — DONE
+
+```
+frames_requested 100   frames_ok 100   frames_failed []
+total_points     389,188          cameras_used 38   excluded ['cam00']
+max_num_features 1024             stride 3
+points/frame     min 3,694  median 3,898  max 4,038
+```
+
+Denser than Opera (median 3,898 against ~2,800) at the same feature cap,
+consistent with a more textured scene.
+
+**389,188 EXCEEDS the 300,000 initial cap of freeze A1.1**, so Puppy's NF
+population WILL be subsampled — uniformly, without replacement, at a fixed
+seed, with both the pre-cap and post-cap counts recorded. Opera's 282,672 sat
+below the cap and was not subsampled. That difference is between SCENES, not
+between arms, so it cannot move NF relative to FG within either scene; it
+does mean the two scenes' NF arms are not capacity-matched to each other, and
+no cross-scene capacity comparison may be drawn from them.
+
 ## 5D. Opera NF initializer — BUILT AND VERIFIED
 
 ```
