@@ -1073,6 +1073,10 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
             "psnr": "test/psnr",
             "ssim": "test/ssim",
             "lpips": "test/lpips",
+            # The 3DGS-inherited convention, carried alongside the reference
+            # one so a published-table comparison names which metric it used
+            # (utils/mesh_utils.py; 18.4% apart on real images).
+            "lpips_3dgs": "test/lpips_3dgs",
             "num_GS": "points/dynamic",
             "static": "points/hard_static",
         }

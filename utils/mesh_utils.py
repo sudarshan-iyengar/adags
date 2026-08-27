@@ -72,8 +72,23 @@ class GaussianExtractor(object):
             os.makedirs(hub_dir, exist_ok=True)
             os.environ["TORCH_HOME"] = hub_dir
             torch.hub.set_dir(hub_dir)
+        # TWO LPIPS conventions, because they are not comparable and the gap
+        # is large. Same AlexNet weights, same [0,1] clamped inputs; only the
+        # input scaling differs.
+        #   normalize=True  -> inputs in [0,1] are rescaled to [-1,1], the
+        #       REFERENCE convention. This is what ADAGS has always reported.
+        #   normalize=False -> the [0,1] tensor is consumed as if it were
+        #       already [-1,1], i.e. the compressed range that 3DGS's
+        #       metrics.py ships and that most published GS numbers inherit.
+        # Measured on real images at 1160x550 by experiment 99
+        # (diva360-protocol-parity-audit): 0.14685 reference vs 0.12398
+        # 3DGS-inherited -- 0.02287 absolute, 18.4% relative. Reporting only
+        # one of these beside a published table silently compares two metrics.
         lpips = LearnedPerceptualImagePatchSimilarity(
                     net_type="alex", normalize=True,
+                    ).to("cuda")
+        lpips_3dgs = LearnedPerceptualImagePatchSimilarity(
+                    net_type="alex", normalize=False,
                     ).to("cuda")
         
         fps_list = []
@@ -119,6 +134,9 @@ class GaussianExtractor(object):
                 metrics["psnr"].append(psnr(gt_image.unsqueeze(0), rgb.unsqueeze(0)))
                 metrics["ssim"].append(ssim(gt_image, rgb))
                 metrics["lpips"].append(lpips(gt_image.unsqueeze(0), rgb.unsqueeze(0)))
+                metrics["lpips_3dgs"].append(
+                    lpips_3dgs(gt_image.unsqueeze(0), rgb.unsqueeze(0))
+                )
             del render_pkg, rgb, alpha, depth, flow, dynamic, static
             torch.cuda.empty_cache()
         if stage == "validation":
@@ -130,7 +148,8 @@ class GaussianExtractor(object):
                 }
             )
             print(
-                f"PSNR: {stats['psnr']:.3f}, SSIM: {stats['ssim']:.4f}, LPIPS: {stats['lpips']:.4f}",
+                f"PSNR: {stats['psnr']:.3f}, SSIM: {stats['ssim']:.4f}, "
+                f"LPIPS(ref): {stats['lpips']:.4f}, LPIPS(3dgs): {stats['lpips_3dgs']:.4f}",
                 f"Number of GS: {stats['num_GS']}, Number of static: {stats['static']}",
                 f"FPS: {np.mean(fps_list):.2f}, Max FPS: {np.max(fps_list):.2f}",
             )
