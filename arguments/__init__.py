@@ -131,6 +131,12 @@ class OptimizationParams(ParamGroup):
         self.motion_lora_rank = 8
         self.motion_lora_anchors = 16
         self.motion_lora_init_scale = 0.01
+        # Which time the SHARED LoRA basis is indexed at. "primitive" (default,
+        # and every historical run) reads it at time relative to each
+        # primitive's own temporal centre; "global" reads it at absolute
+        # sequence time, the DynMF convention. The phase-alignment ablation is
+        # exactly this one variable.
+        self.motion_lora_time_reference = "primitive"
         self.motion_lora_coeff_lr = -1.0
         self.motion_lora_basis_lr = -1.0
 

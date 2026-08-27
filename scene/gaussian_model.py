@@ -197,6 +197,10 @@ class GaussianModel:
         self.motion_lora_rank = 8
         self.motion_lora_anchors = 16
         self.motion_lora_init_scale = 0.01
+        # "primitive" indexes the shared basis at time relative to each
+        # primitive's own temporal centre; "global" indexes it at absolute
+        # sequence time so every primitive reads the same phase.
+        self.motion_lora_time_reference = "primitive"
         self._motion_lora_coeff = torch.empty(0)
         self._motion_lora_basis = None
         self.motion_scaffold_enable = False
@@ -359,6 +363,7 @@ class GaussianModel:
                 "motion_lora_rank": self.motion_lora_rank,
                 "motion_lora_anchors": self.motion_lora_anchors,
                 "motion_lora_init_scale": self.motion_lora_init_scale,
+                "motion_lora_time_reference": self.motion_lora_time_reference,
                 "motion_scaffold_enable": self.motion_scaffold_enable,
                 "motion_scaffold_count": self.motion_scaffold_count,
                 "motion_scaffold_rank": self.motion_scaffold_rank,
@@ -545,6 +550,9 @@ class GaussianModel:
                 )
                 self.motion_lora_init_scale = routing_motion_params.get(
                     "motion_lora_init_scale", self.motion_lora_init_scale
+                )
+                self.motion_lora_time_reference = routing_motion_params.get(
+                    "motion_lora_time_reference", self.motion_lora_time_reference
                 )
                 self.motion_scaffold_enable = routing_motion_params.get(
                     "motion_scaffold_enable", self.motion_scaffold_enable
@@ -789,7 +797,7 @@ class GaussianModel:
             offset = offset + self._motion_a * dt * dt
         return offset
 
-    def _sample_lora_basis(self, relative_dt):
+    def _sample_lora_basis(self, relative_dt, u=None):
         if self._motion_lora_basis is None:
             return None
         if self._motion_lora_basis.numel() == 0:
@@ -800,8 +808,9 @@ class GaussianModel:
         if num_anchors < 2:
             return basis[:, 0:1, :].permute(1, 0, 2).expand(relative_dt.shape[0], -1, -1)
 
-        duration = max(float(self.time_duration[1] - self.time_duration[0]), 1e-6)
-        u = ((relative_dt / duration) + 1.0) * 0.5
+        if u is None:
+            duration = max(float(self.time_duration[1] - self.time_duration[0]), 1e-6)
+            u = ((relative_dt / duration) + 1.0) * 0.5
         u = u.clamp(0.0, 1.0).squeeze(-1)
         pos = u * float(num_anchors - 1)
         lo = torch.floor(pos).long().clamp(0, num_anchors - 1)
@@ -824,7 +833,35 @@ class GaussianModel:
             return torch.zeros_like(self._xyz)
 
         relative_dt = timestamp - self.get_t
-        basis_at_dt = self._sample_lora_basis(relative_dt)
+        if self.motion_lora_time_reference in ("global", "global_matched"):
+            # Ablation arms: index the shared dictionary at ABSOLUTE sequence
+            # time, so every primitive reads the SAME phase and the model is a
+            # rank-R factorization in absolute time. The default "primitive"
+            # arm reads it at relative_dt, giving each primitive its own phase
+            # offset into the table.
+            #
+            # The two global arms differ ONLY in how much of the anchor table
+            # they address, and that is deliberate. A primitive arm maps
+            # t in [t0, t0+d] onto a window exactly HALF the table wide whose
+            # centre is set by t_i, so no primitive ever reaches more than 16
+            # of 32 anchors:
+            #   "global_matched" reproduces the mid-sequence primitive's window
+            #     [0.25, 0.75] for every primitive -- same width, same temporal
+            #     resolution, ONLY the per-primitive phase removed. This is the
+            #     control that isolates phase alignment.
+            #   "global" spans the whole table [0, 1], the DynMF convention.
+            #     It removes phase AND doubles temporal resolution, so it
+            #     answers the practical question, not the mechanistic one.
+            duration = max(float(self.time_duration[1] - self.time_duration[0]), 1e-6)
+            elapsed = (timestamp - float(self.time_duration[0])) / duration
+            if self.motion_lora_time_reference == "global_matched":
+                elapsed = 0.25 + 0.5 * elapsed
+            u_abs = torch.zeros_like(relative_dt) + elapsed
+            basis_at_dt = self._sample_lora_basis(relative_dt, u=u_abs)
+        else:
+            basis_at_dt = self._sample_lora_basis(relative_dt)
+        # relative_dt = 0 maps to u = 0.5 in both arms, so the centring term is
+        # the same anchor for every primitive and every arm.
         basis_at_center = self._sample_lora_basis(torch.zeros_like(relative_dt))
         if basis_at_dt is None or basis_at_center is None:
             return torch.zeros_like(self._xyz)
@@ -1535,6 +1572,7 @@ class GaussianModel:
         self.motion_lora_rank = getattr(training_args, "motion_lora_rank", 8)
         self.motion_lora_anchors = getattr(training_args, "motion_lora_anchors", 16)
         self.motion_lora_init_scale = getattr(training_args, "motion_lora_init_scale", 0.01)
+        self.motion_lora_time_reference = getattr(training_args, "motion_lora_time_reference", "primitive")
         self.motion_scaffold_enable = getattr(training_args, "motion_scaffold_enable", False)
         self.motion_scaffold_count = getattr(training_args, "motion_scaffold_count", 512)
         self.motion_scaffold_rank = getattr(training_args, "motion_scaffold_rank", 8)
