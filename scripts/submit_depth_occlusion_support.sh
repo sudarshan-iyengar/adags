@@ -30,7 +30,7 @@ Environment overrides:
   DEPTH_SUPPORT_MAX_PIXEL_FRACTION=0.03
   DEPTH_SUPPORT_FILL_COMPONENT_TILES=0
   PARTITION=boost_usr_prod
-  ACCOUNT=euhpc_d21_034
+  ACCOUNT=euhpc_d36_068
   QOS=boost_qos_lprod
   TIME=00:30:00
   CPUS_PER_TASK=8
@@ -108,7 +108,7 @@ DEPTH_OUT_DIR="${DEPTH_OUT_DIR:-$REPO_ROOT/refine-logs/depth_occlusion_support/r
 SUPPORT_OUT_DIR="${SUPPORT_OUT_DIR:-$REPO_ROOT/refine-logs/depth_occlusion_support/r031_depth_support}"
 
 PARTITION="${PARTITION:-boost_usr_prod}"
-ACCOUNT="${ACCOUNT:-euhpc_d21_034}"
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 QOS="${QOS:-boost_qos_lprod}"
 if [[ -z "${TIME:-}" ]]; then
   if [[ "$MODE" == "infer" ]]; then

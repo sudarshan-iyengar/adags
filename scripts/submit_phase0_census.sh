@@ -10,11 +10,14 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 PROJECT_ROOT="${ADAGS_PROJECT_ROOT:-${WORK:?WORK must be set}/proj_adags}"
 CONFIG="${PHASE0_CENSUS_CONFIG:-$REPO_ROOT/configs/depth_visibility/phase0_census_v1.json}"
 LOG_DIR="$REPO_ROOT/logs"
+# EUHPC_D21_034's allocation ended 2026-07-30; jobs now charge
+# EUHPC_D36_068. Overridable, which the hardcoded value below was not.
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 mkdir -p "$LOG_DIR"
 
 sbatch \
   --job-name=phase0-census-v1 \
-  --account=euhpc_d21_034 \
+  --account="$ACCOUNT" \
   --partition=boost_usr_prod \
   --qos=boost_qos_lprod \
   --nodes=1 \

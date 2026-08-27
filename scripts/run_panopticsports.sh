@@ -20,6 +20,9 @@ WANDB_PROJECT="${WANDB_PROJECT:-adags}"
 WANDB_ENTITY="${WANDB_ENTITY:-}"
 WANDB_GROUP="${WANDB_GROUP:-panopticsports}"
 REPO_ROOT="${WORK}/proj_adags/repo/adags"
+# EUHPC_D21_034's allocation ended 2026-07-30; jobs now charge
+# EUHPC_D36_068. Overridable, which the hardcoded value below was not.
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 LOG_ROOT="${REPO_ROOT}/logs"
 
 mkdir -p "$LOG_ROOT"
@@ -55,7 +58,7 @@ for SCENE in "${SCENES[@]}"; do
 
   TRAIN_JOBID=$(
     sbatch --parsable \
-      -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
+      -p boost_usr_prod -A "$ACCOUNT" --qos=boost_qos_lprod \
       -N 1 --ntasks=1 --cpus-per-task="$CPUS_PER_TASK" --gres=gpu:1 \
       -t "$TRAIN_TIME" \
       -o "$LOG_ROOT/panopticsports_${SCENE}_%j.out" \
@@ -71,7 +74,7 @@ for SCENE in "${SCENES[@]}"; do
     EVAL_JOBID=$(
       sbatch --parsable \
         --dependency=afterok:${TRAIN_JOBID} \
-        -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
+        -p boost_usr_prod -A "$ACCOUNT" --qos=boost_qos_lprod \
         -N 1 --ntasks=1 --cpus-per-task=8 --gres=gpu:1 \
         -t 00:50:00 \
         -o "$LOG_ROOT/panopticsports_${SCENE}_eval_%j.out" \

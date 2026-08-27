@@ -20,6 +20,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR" && pwd)"
+# EUHPC_D21_034's allocation ended 2026-07-30; jobs now charge
+# EUHPC_D36_068. Overridable, which the hardcoded value below was not.
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 PROJECT_ROOT="${ADAGS_PROJECT_ROOT:-${WORK:?WORK must be set}/proj_adags}"
 SUBMIT_SCRIPT="$REPO_DIR/scripts/run_leonardo.sh"
 DRY_RUN="${DRY_RUN:-0}"
@@ -243,7 +246,7 @@ for IDX in "${!CFG_NAMES[@]}"; do
 
     TRAIN_JOBID=$(
       submit_sbatch \
-        -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
+        -p boost_usr_prod -A "$ACCOUNT" --qos=boost_qos_lprod \
         -N 1 --ntasks=1 --cpus-per-task="$CPUS_PER_TASK" --gres=gpu:1 \
         -t "$TRAIN_TIME" \
         -o "$PROJECT_ROOT/exp_index/${LOG_PREFIX}_%j.out" \
@@ -259,7 +262,7 @@ for IDX in "${!CFG_NAMES[@]}"; do
       EVAL_JOBID=$(
         submit_sbatch \
           --dependency=afterok:${TRAIN_JOBID} \
-          -p boost_usr_prod -A euhpc_d21_034 --qos=boost_qos_lprod \
+          -p boost_usr_prod -A "$ACCOUNT" --qos=boost_qos_lprod \
           -N 1 --ntasks=1 --cpus-per-task=8 --gres=gpu:1 \
           -t 00:50:00 \
           -o "$PROJECT_ROOT/exp_index/${LOG_PREFIX}_eval_%j.out" \

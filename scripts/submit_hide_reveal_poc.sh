@@ -42,7 +42,7 @@ Environment overrides:
   HIDE_REVEAL_BOUNDARY_MIN_SCORE=0.05
   HIDE_REVEAL_BOUNDARY_USE_FLOW=1
   PARTITION=boost_usr_prod
-  ACCOUNT=euhpc_d21_034
+  ACCOUNT=euhpc_d36_068
   QOS=boost_qos_lprod
   TIME=00:20:00
   CPUS_PER_TASK=8
@@ -145,7 +145,7 @@ if [[ -z "$EVAL_OUT_DIR" ]]; then
 fi
 
 PARTITION="${PARTITION:-boost_usr_prod}"
-ACCOUNT="${ACCOUNT:-euhpc_d21_034}"
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 QOS="${QOS:-boost_qos_lprod}"
 TIME="${TIME:-00:20:00}"
 CPUS_PER_TASK="${CPUS_PER_TASK:-8}"

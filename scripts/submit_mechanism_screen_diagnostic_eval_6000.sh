@@ -72,7 +72,7 @@ WANDB_MODE="${WANDB_MODE:-offline}"
 MECHANISM_MANIFEST="${MECHANISM_MANIFEST:-$PROJECT_ROOT/exp_index/mechanism_screen_wandb_sync_20260617_173511.tsv}"
 
 PARTITION="${PARTITION:-boost_usr_prod}"
-ACCOUNT="${ACCOUNT:-euhpc_d21_034}"
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 QOS="${QOS:-boost_qos_lprod}"
 
 if [[ ! -f "$MECHANISM_MANIFEST" ]]; then

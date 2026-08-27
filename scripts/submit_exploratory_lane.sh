@@ -20,11 +20,14 @@ RUN_DIR="$PROJECT_ROOT/runs/csvl_vpl_v2_exploratory/${STAMP}_${SCENE}_${LANE}_${
 CONFIG="$REPO_ROOT/configs/n3v/${LANE}.yaml"
 [[ -f "$CONFIG" ]] || { echo "missing config $CONFIG" >&2; exit 2; }
 LOG_DIR="$REPO_ROOT/logs"
+# EUHPC_D21_034's allocation ended 2026-07-30; jobs now charge
+# EUHPC_D36_068. Overridable, which the hardcoded value below was not.
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 mkdir -p "$LOG_DIR" "$RUN_DIR"
 
 sbatch \
   --job-name="${LANE}-${ROUND}" \
-  --account=euhpc_d21_034 \
+  --account="$ACCOUNT" \
   --partition=boost_usr_prod \
   --qos=boost_qos_lprod \
   --nodes=1 --ntasks=1 --cpus-per-task=8 --mem=64G --gres=gpu:1 \

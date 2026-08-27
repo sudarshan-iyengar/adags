@@ -73,7 +73,7 @@ FIXED_BUDGET_METHODS="${FIXED_BUDGET_METHODS:-lora_route0 scaffold_lora_route0_n
 FIXED_BUDGETS="${FIXED_BUDGETS:-400k 600k 800k}"
 
 PARTITION="${PARTITION:-boost_usr_prod}"
-ACCOUNT="${ACCOUNT:-euhpc_d21_034}"
+ACCOUNT="${ACCOUNT:-euhpc_d36_068}"
 QOS="${QOS:-boost_qos_lprod}"
 
 timestamp="$(date +%Y%m%d_%H%M%S)"
