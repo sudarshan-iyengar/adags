@@ -248,8 +248,9 @@ def self_test() -> int:
 # point cloud
 # --------------------------------------------------------------------------
 def triangulate_cloud(cams: list[dict], K_news: dict, images: dict,
-                      max_points: int, min_views: int = 3,
-                      reproj_px: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
+                      max_points: int, neighbours: int = 6,
+                      reproj_px: float = 2.0,
+                      nfeatures: int = 8000) -> tuple[np.ndarray, np.ndarray]:
     """SIFT + pairwise triangulation on ONE frame, using the KNOWN poses.
 
     The Blender reader fabricates a uniform random cloud when points3d.ply is
@@ -258,7 +259,7 @@ def triangulate_cloud(cams: list[dict], K_news: dict, images: dict,
     """
     import cv2
 
-    sift = cv2.SIFT_create(nfeatures=4000)
+    sift = cv2.SIFT_create(nfeatures=nfeatures)
     feats = {}
     for c in cams:
         img = cv2.imread(str(images[c["name"]]), cv2.IMREAD_GRAYSCALE)
@@ -282,47 +283,53 @@ def triangulate_cloud(cams: list[dict], K_news: dict, images: dict,
         Kn = K_news[c["name"]]
         P[c["name"]] = Kn @ np.hstack([c["R"], c["t"].reshape(3, 1)])
 
-    pts, cols = [], []
-    colour_cache = {}
+    # Build the pair set SYMMETRICALLY. Taking each camera's k nearest and then
+    # skipping `name_b <= name_a` silently drops every pair whose neighbour
+    # sorts earlier -- a camera whose k nearest all sort below it contributes
+    # nothing at all. Collect unordered pairs and dedupe instead.
+    pair_set = set()
     for i, name_a in enumerate(names):
         if name_a not in feats:
             continue
         d = np.linalg.norm(centres - centres[i], axis=1)
-        order = np.argsort(d)[1:4]                    # three nearest neighbours
-        for j in order:
+        for j in np.argsort(d)[1:neighbours + 1]:
             name_b = names[j]
-            if name_b not in feats or name_b <= name_a:
-                continue
-            (pa, da), (pb, db) = feats[name_a], feats[name_b]
-            raw = matcher.knnMatch(da, db, k=2)
-            good = [m for m, n in (r for r in raw if len(r) == 2)
-                    if m.distance < 0.75 * n.distance]
-            if len(good) < 8:
-                continue
-            ia = np.array([m.queryIdx for m in good])
-            ib = np.array([m.trainIdx for m in good])
-            xa, xb = pa[ia].T, pb[ib].T
-            X = cv2.triangulatePoints(P[name_a], P[name_b], xa, xb)
-            X = (X[:3] / np.where(np.abs(X[3]) < 1e-12, np.nan, X[3])).T
-            keep = np.isfinite(X).all(axis=1)
-            for nm, x2 in ((name_a, xa), (name_b, xb)):
-                cam = by_name[nm]
-                Xc = (cam["R"] @ X.T).T + cam["t"]
-                keep &= Xc[:, 2] > 1e-6                       # cheirality
-                proj = (P[nm] @ np.c_[X, np.ones(len(X))].T)
-                proj = (proj[:2] / np.where(np.abs(proj[2]) < 1e-12, np.nan, proj[2])).T
-                keep &= np.nan_to_num(
-                    np.linalg.norm(proj - x2.T, axis=1), nan=1e9) < reproj_px
-            if not keep.any():
-                continue
-            if name_a not in colour_cache:
-                colour_cache[name_a] = cv2.imread(str(images[name_a]), cv2.IMREAD_COLOR)
-            rgb_img = colour_cache[name_a]
-            uv = np.round(xa.T[keep]).astype(int)
-            uv[:, 0] = np.clip(uv[:, 0], 0, rgb_img.shape[1] - 1)
-            uv[:, 1] = np.clip(uv[:, 1], 0, rgb_img.shape[0] - 1)
-            cols.append(rgb_img[uv[:, 1], uv[:, 0]][:, ::-1])   # BGR -> RGB
-            pts.append(X[keep])
+            if name_b in feats and name_b != name_a:
+                pair_set.add(tuple(sorted((name_a, name_b))))
+
+    pts, cols = [], []
+    colour_cache = {}
+    for name_a, name_b in sorted(pair_set):
+        (pa, da), (pb, db) = feats[name_a], feats[name_b]
+        raw = matcher.knnMatch(da, db, k=2)
+        good = [m for m, n in (r for r in raw if len(r) == 2)
+                if m.distance < 0.75 * n.distance]
+        if len(good) < 8:
+            continue
+        ia = np.array([m.queryIdx for m in good])
+        ib = np.array([m.trainIdx for m in good])
+        xa, xb = pa[ia].T, pb[ib].T
+        X = cv2.triangulatePoints(P[name_a], P[name_b], xa, xb)
+        X = (X[:3] / np.where(np.abs(X[3]) < 1e-12, np.nan, X[3])).T
+        keep = np.isfinite(X).all(axis=1)
+        for nm, x2 in ((name_a, xa), (name_b, xb)):
+            cam = by_name[nm]
+            Xc = (cam["R"] @ X.T).T + cam["t"]
+            keep &= Xc[:, 2] > 1e-6                       # cheirality
+            proj = (P[nm] @ np.c_[X, np.ones(len(X))].T)
+            proj = (proj[:2] / np.where(np.abs(proj[2]) < 1e-12, np.nan, proj[2])).T
+            keep &= np.nan_to_num(
+                np.linalg.norm(proj - x2.T, axis=1), nan=1e9) < reproj_px
+        if not keep.any():
+            continue
+        if name_a not in colour_cache:
+            colour_cache[name_a] = cv2.imread(str(images[name_a]), cv2.IMREAD_COLOR)
+        rgb_img = colour_cache[name_a]
+        uv = np.round(xa.T[keep]).astype(int)
+        uv[:, 0] = np.clip(uv[:, 0], 0, rgb_img.shape[1] - 1)
+        uv[:, 1] = np.clip(uv[:, 1], 0, rgb_img.shape[0] - 1)
+        cols.append(rgb_img[uv[:, 1], uv[:, 0]][:, ::-1])   # BGR -> RGB
+        pts.append(X[keep])
 
     if not pts:
         raise ContractError("triangulation produced no points")
@@ -369,6 +376,9 @@ def main() -> int:
                     help="REQUIRED, e.g. 30/1. Decimals are refused.")
     ap.add_argument("--frames", nargs=2, type=int, default=[0, 50])
     ap.add_argument("--max-points", type=int, default=200_000)
+    ap.add_argument("--neighbours", type=int, default=6,
+                    help="nearest cameras paired with each camera")
+    ap.add_argument("--sift-features", type=int, default=8000)
     ap.add_argument("--expect-points-min", type=int, default=5_000)
     ap.add_argument("--check-model", action="store_true",
                     help="assert cv2.fisheye == the publisher model, then exit")
@@ -437,7 +447,9 @@ def main() -> int:
 
     # ---- point cloud ------------------------------------------------------
     train_cams = [c for c in cams if c["name"] not in HELD_OUT]
-    xyz, rgb = triangulate_cloud(train_cams, K_news, frame0, args.max_points)
+    xyz, rgb = triangulate_cloud(train_cams, K_news, frame0, args.max_points,
+                                 neighbours=args.neighbours,
+                                 nfeatures=args.sift_features)
     if len(xyz) < args.expect_points_min:
         raise ContractError(
             f"triangulated only {len(xyz)} points (< {args.expect_points_min}). "
