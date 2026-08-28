@@ -1132,7 +1132,15 @@ class GaussianModel:
             if pcd.time is None:
                 fused_times = (torch.rand(fused_point_cloud.shape[0], 1, device="cuda") * 1.2 - 0.1) * (self.time_duration[1] - self.time_duration[0]) + self.time_duration[0]
             else:
-                fused_times = torch.from_numpy(pcd.time).cuda().float()
+                # ascontiguousarray, not a bare from_numpy: a per-point `time`
+                # read out of a plyfile structured array is a STRIDED VIEW, and
+                # torch.from_numpy refuses it with "given numpy array strides
+                # not a multiple of the element byte size". Every cloud used
+                # before ImViD's arm_nf lacked a time field, so this branch was
+                # never exercised and the defect sat latent.
+                fused_times = torch.from_numpy(
+                    np.ascontiguousarray(pcd.time)
+                ).cuda().float()
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
