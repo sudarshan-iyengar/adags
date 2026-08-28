@@ -370,8 +370,15 @@ def main() -> int:
     ap.add_argument("--out", type=Path)
     ap.add_argument("--scale", type=float, default=0.5,
                     help="resolution factor; 0.5 is the ImViD 2x downsample")
-    ap.add_argument("--focal-scale", type=float, default=0.5,
-                    help="pinhole focal / fisheye focal; STG uses 0.5 undistorted")
+    ap.add_argument("--focal-scale", type=float, default=0.85,
+                    help="pinhole focal / fisheye focal. 0.85 is the "
+                         "smallest value measured to leave 0%% of the frame "
+                         "outside the fisheye coverage on all 45 cameras of "
+                         "02_Flames. NOT 0.5: that is STG's undistorted-path "
+                         "value and it fabricates 33%% of every frame.")
+    ap.add_argument("--max-invalid-frac", type=float, default=0.005,
+                    help="refuse if more of a frame than this maps outside "
+                         "the fisheye raster")
     ap.add_argument("--fps-rational", default=None,
                     help="REQUIRED, e.g. 30/1. Decimals are refused.")
     ap.add_argument("--frames", nargs=2, type=int, default=[0, 50])
@@ -418,12 +425,34 @@ def main() -> int:
 
     # ---- undistort every frame -------------------------------------------
     frame0 = {}
+    invalid_frac: dict[str, float] = {}
     for idx, c in enumerate(cams, 1):
         name = c["name"]
         w, h = rasters[name]
         # ONE K_new object: it maps the pixels AND it is written to JSON.
         m1, m2 = cv2.fisheye.initUndistortRectifyMap(
             c["K"], c["D"], np.eye(3), K_news[name], (w, h), cv2.CV_32FC1)
+        # A pinhole frame wider than the fisheye's coverage is filled with
+        # BORDER_CONSTANT black, and the trainer cannot tell fabricated black
+        # from scene black -- it fits it, and it drags every metric down
+        # everywhere. Measured, not assumed: at focal_scale 0.5 this is 33.2%
+        # of EVERY frame, which is what made the first pilot's training PSNR
+        # (23.99 at 6k iterations) worse than an N3V smoke's at 200.
+        invalid = float((
+            (m1 < 0) | (m1 > c["width"] - 1) | (m2 < 0) | (m2 > c["height"] - 1)
+            | ~np.isfinite(m1) | ~np.isfinite(m2)).mean())
+        invalid_frac[name] = invalid
+        if invalid > args.max_invalid_frac:
+            raise ContractError(
+                f"{name}: {invalid * 100:.2f}% of the undistorted frame maps "
+                f"outside the fisheye raster (limit "
+                f"{args.max_invalid_frac * 100:.2f}%). RAISE --focal-scale: it "
+                f"narrows the pinhole field of view until every output pixel "
+                f"has a real source. 0.85 measured clean on all 45 cameras of "
+                f"02_Flames; 0.5 -- STG's undistorted-path value, which is "
+                f"safe for them only because they never TRAIN on these "
+                f"pixels -- leaves a third of the frame fabricated."
+            )
         src_dir = args.frames_root / name
         for f in range(start, end):
             src = src_dir / f"{f:06d}.png"
@@ -505,6 +534,8 @@ def main() -> int:
         "cameras_total": len(cams), "cameras_train": len(train_cams),
         "held_out": list(HELD_OUT), "raster": list(rasters[cams[0]["name"]]),
         "points": int(len(xyz)), "points3d_sha256": ply_sha,
+        "invalid_frac_max": max(invalid_frac.values()),
+        "invalid_frac_mean": sum(invalid_frac.values()) / len(invalid_frac),
         "comparability": ("PINHOLE PORT -- not comparable to published STG or "
                           "ImViD Immersive numbers, which train in fisheye space"),
     }
