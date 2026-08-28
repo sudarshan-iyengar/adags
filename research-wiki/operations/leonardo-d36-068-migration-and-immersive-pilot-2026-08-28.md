@@ -152,3 +152,41 @@ Training job 54674975 (6,000 iterations, 50 frames, 45 cameras, held-out
 `Found transforms_train.json` (the Blender branch, as intended) and **7,248
 points at initialisation — the real cloud, not the reader's silent random
 substitute**. Results append below, never above.
+
+---
+
+## APPENDIX (2026-08-28, append-only) — the pilot OOM'd, and it was fragmentation not capacity
+
+**Job 54674975 FAILED at iteration 4,640 of 6,000** after 36m44s, at 426,916
+points, having reached training PSNR 28.68. `sacct` gives exit `1:0` with no
+Python traceback in stderr; the diagnosis is in stdout:
+
+```
+55.05 GiB in use.  Of the allocated memory 16.54 GiB is allocated by PyTorch,
+and 37.94 GiB is reserved by PyTorch but unallocated.
+```
+
+**Only 16.5 GiB of a 64 GiB A100 held real tensors.** The other 38 GiB was
+reserved and fragmented. Densification churns allocations of steadily changing
+size, which is the pattern that fragments the caching allocator, and the point
+count was still climbing toward the 600,000 cap.
+
+Resubmitted (job **54687155**) with `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`,
+the setting PyTorch's own message names. **Confirmed effective**: the retry
+passed 4,780 iterations at **457,222 points** — beyond the previous run in both
+iteration and point count.
+
+**Set via the job export, deliberately NOT in `scripts/run_leonardo.sh`.**
+Changing the allocator repo-wide would alter memory behaviour for every
+Leonardo lane, including the flow and variance work whose comparisons rest on
+runs being bit-identical outside the variable under test. A memory-layout
+change is not obviously neutral there, and this lane does not need it to be.
+
+The failed run is preserved rather than overwritten, per the standing rule on
+failed and superseded experiments.
+
+**What this does NOT indicate.** Nothing upstream of training was implicated:
+poses, undistortion, the split and the seed cloud were all validated before
+this run and none of them changed. It is a scaling property of the trainer on
+this raster and point budget, and the same fragmentation would be expected on
+any lane that densifies to several hundred thousand primitives at 1280x960.
