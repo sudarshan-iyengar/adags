@@ -138,3 +138,97 @@ in [[block-2026-08-24-handover]] §6 and is not reopened here.
 ## 7. Status
 
 Spec frozen 2026-08-27, before submission. Results append below, never above.
+
+---
+
+## RESULT (2026-08-28, append-only) — NOT RESOLVED at n=3
+
+Run on **Leonardo** (`boost_usr_prod`, A100-SXM-64GB, account `euhpc_d36_068`),
+not Apollo. The Apollo attempt of 2026-08-27 never produced a cohort: the three
+`global_matched` cells stalled short of 6,000 iterations and `det` became
+unresponsive. Deviations from §3, recorded rather than absorbed:
+
+* **pool**: Leonardo A100 replaces Apollo `dgx`/`hopper`. All six cells share
+  it, so it cannot separate the arms — but it is not the hardware the 33.5050
+  reference was measured on.
+* **the seed genuinely varies now.** `scripts/run_leonardo.sh` never passed
+  `--seed`, so every Leonardo run had silently taken main.py's default 6666.
+  The Apollo cohort could not have varied it either. Repaired in `ec6075d`,
+  verified per cell in `meta/run_info.txt` before reading any score.
+
+### Gates, evaluated before the contrast
+
+| gate | result |
+|---|---|
+| **V1** non-vacuity: worst middle-90% `get_t` span | **1.139** of the sequence against a 0.5 floor — **PASS** |
+| **V2** arms diverged: bit-identical P/G-M pairs | **none** — **PASS** |
+
+V1 passes with room to spare, so the mechanism was genuinely exercised: the
+temporal centres stayed dispersed across the whole sequence and the two arms
+were reading the shared dictionary at materially different phases. This is not
+a null from a dead instrument.
+
+### Cells
+
+| arm | seed | PSNR | t-dispersion |
+|---|---:|---:|---:|
+| primitive | 0 | 33.4373 | 1.178 |
+| primitive | 1 | 33.4738 | 1.177 |
+| primitive | 2 | 33.8420 | 1.176 |
+| global_matched | 0 | 33.3140 | 1.146 |
+| global_matched | 1 | 33.2965 | 1.146 |
+| global_matched | 2 | 33.4295 | 1.139 |
+
+P mean **33.5844** (spread 0.4047), G-M mean **33.3467** (spread 0.1330).
+
+### The frozen rule, applied
+
+| seed | P − G-M |
+|---|---:|
+| 0 | +0.1233 |
+| 1 | +0.1773 |
+| 2 | +0.4125 |
+| **paired mean** | **+0.2377 dB** |
+
+* sign consistency: **3 of 3 positive — PASSES**
+* magnitude: **+0.2377 against the +0.50 floor — FAILS**
+
+**VERDICT: NOT RESOLVED at n=3. Phase alignment is not established as the
+load-bearing inductive bias, and the reframing
+[[../.aris novelty check 2026-08-27]] proposed is retired.**
+
+### What this does and does not say
+
+It does **not** say the effect is zero. Every seed favours the primitive arm,
+and 3-of-3 in the predicted direction is p = 0.125 one-sided — suggestive, and
+nothing more.
+
+What it says is that **the effect, if real, is about +0.24 dB, which is below
+this protocol's own resolution.** The measured same-code replicate floor is
+0.4945 dB, and the primitive arm's own three-seed spread here is **0.4047 dB —
+larger than the contrast being measured.** A difference smaller than the noise
+of one arm is not a finding at this n, which is exactly why the floor was fixed
+before the cells ran rather than after.
+
+**The stopping rule fires and n=9 is deliberately NOT run.** Per §5 a negative
+does not license a lower threshold or a larger sample; that would buy a better
+estimate of an endpoint the spec already declared. The honest close is that the
+one mechanism the novelty check identified as possibly unoccupied does not
+carry measurable weight at the protocol this project can afford.
+
+### Two things worth carrying
+
+**A cross-platform corroboration nobody asked for.** The primitive arm — the
+incumbent design under the 181 protocol — reads **33.5844** here against the
+**33.5050** recorded on Apollo `dgx` (experiment 194), a difference of
+**+0.079 dB** across different hardware, a different Slurm site, a different
+allocator setting and a genuinely different seed. That is well inside the
+replicate floor and is the strongest evidence to date that the Leonardo tree
+reproduces the Apollo protocol.
+
+**The arms differ in cost, and it was not predicted.** `global_matched` cells
+ran **2h39m** against `primitive`'s **1h44m** — roughly 53% slower for
+arithmetic that should be near-identical. Not diagnosed here; the plausible
+cause is a different densification trajectory rather than the mapping itself,
+and it is recorded because a per-arm cost asymmetry can bias any future
+comparison run under a wall-clock budget rather than an iteration budget.
