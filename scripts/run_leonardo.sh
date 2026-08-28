@@ -18,6 +18,11 @@ PROJECT_ROOT="${ADAGS_PROJECT_ROOT:-${WORK:?WORK must be set}/proj_adags}"
 CONFIG="${CONFIG:-configs/n3v/default.yaml}"
 DATASET_ROOT="${DATASET_ROOT:-$PROJECT_ROOT/data/n3v}"
 SCENE="${SCENE:-cut_roasted_beef}"           # override per job via --export
+# main.py's own default is 6666, so leaving SEED unset reproduces every run
+# submitted before this variable existed. Until now the seed could not be
+# varied from here at all, which silently turned any multi-seed design on
+# Leonardo into repeated runs at one seed.
+SEED="${SEED:-6666}"
 RUN_TAG="${RUN_TAG:-baseline}"               # free text
 RUN_LABEL="${RUN_LABEL:-}"                   # optional subdirectory under runs/
 
@@ -118,6 +123,7 @@ export MAX_JOBS="${MAX_JOBS:-${CPUS_PER_TASK:-4}}"
   fi
   echo "config: ${CONFIG}"
   echo "dataset_path: ${DATASET_PATH}"
+  echo "seed: ${SEED}"
   echo "ckpt_iter: ${CKPT_ITER}"
   [[ -n "$CKPT_PATH" ]] && echo "ckpt_path: ${CKPT_PATH}"
   echo "wandb_project: ${WANDB_PROJECT}"
@@ -145,6 +151,7 @@ if [[ "$MODE" == "train" ]]; then
     --config "$CONFIG"
     --model_path "$RUN_DIR"
     --source_path "$DATASET_PATH"
+    --seed "$SEED"
     --use_wandb
     --wandb_project "$WANDB_PROJECT"
     --wandb_mode "$WANDB_MODE"
@@ -186,6 +193,7 @@ elif [[ "$MODE" == "eval" ]]; then
     --config "$CONFIG"
     --model_path "$RUN_DIR"
     --source_path "$DATASET_PATH"
+    --seed "$SEED"
     --start_checkpoint "$CKPT_PATH"
     --val
     --use_wandb
