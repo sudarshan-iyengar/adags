@@ -358,3 +358,83 @@ Seven scenes: acquisition 37.3 GiB, ~13 GB decoded per scene on scratch,
 ~1h08m training plus ~5m eval per scene on one A100, plus serial decode and
 convert at roughly 7 minutes each. The Slurm **submit cap is 20 jobs per
 user**, which is what refused `12_Cave` on the first pass.
+
+---
+
+## APPENDIX 4 (2026-08-28, append-only) — the N3V six-scene IVV-protocol table
+
+Protocol: 300 frames, 1352x1014 (the ImViD paper's 2x downsample of native
+2704x2028), `cam00` held out, 6,000 iterations, 600k primitive cap, seed 0,
+single run per scene. `configs/n3v/ivv_protocol_300f_6k.yaml`, one config for
+all six so the protocol is identical by construction.
+
+**Data was READ IN PLACE from `/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v`,
+not copied.** `cindata` shows `/leonardo_work/EUHPC_D36_068` at **3.6 T of 4 T
+(91.1%)**, i.e. ~400 GB of headroom shared with another project user, while
+D21_034 sits at 45%. A 53.1 GiB copy (all six scenes excluding `flow/`) was
+started and then **cancelled** as not worth 13% of the remaining margin.
+For the record if it is ever wanted: `flow/` alone is **57 GiB for ONE scene**
+(~340 GiB across six) against 53.1 GiB for everything else combined, and no
+lane in this table consumes it — the config sets `motion_prior_root: ""` and
+`dynamic_mask_from_residual: true`.
+
+| scene | PSNR | SSIM | LPIPS ref | LPIPS 3dgs | primitives | best iter |
+|---|---:|---:|---:|---:|---:|---:|
+| flame_salmon_1 | 28.05 | 0.9173 | 0.1197 | 0.0762 | 599,385 | 6,000 |
+| coffee_martini | 28.43 | 0.9079 | 0.1304 | 0.0842 | 599,190 | 6,000 |
+| cut_roasted_beef | 32.21 | 0.9504 | 0.1054 | 0.0562 | 599,478 | 6,000 |
+| cook_spinach | 32.34 | 0.9502 | 0.1012 | 0.0527 | 599,609 | 6,000 |
+| flame_steak | 32.37 | 0.9576 | 0.0880 | 0.0435 | 599,630 | 6,000 |
+| sear_steak | 33.51 | 0.9595 | 0.0841 | 0.0387 | 599,585 | 6,000 |
+| **mean** | **31.15** | **0.9405** | **0.1048** | **0.0586** | | |
+
+### The truncation cost is now measured, not assumed
+
+`cut_roasted_beef` on this exact scene, raster and split:
+
+| | iterations | PSNR |
+|---|---:|---:|
+| this table | 6,000 | **32.21** |
+| B0-C ([[b0c-canonical-300f-2026-08-20]]) | 36,000 schedule, peak ~12,000 | **33.251** |
+
+**-1.04 dB from truncating the schedule**, measured directly rather than
+inferred. Every scene here reports `best_val_iter = 6000` and finishes within
+810 primitives of the 600k cap, so all six are simultaneously schedule-limited
+and capacity-limited, and were still improving when they stopped. 6,000
+iterations over 300 frames at batch 2 is ~2.1 presentations per training unit
+against B0-C's 12.63.
+
+### Position against the literature, with the right comparison
+
+The frequently-cited **33.52 is STG's published `cut_roasted_beef`**, a
+per-scene figure, not a dataset average ([[stg-n3v-protocol-parity-2026-08-19]]).
+Against it, this run's `cut_roasted_beef` is **32.21, i.e. 1.31 dB below** —
+and B0-C's 33.251 at the same protocol's peak is 0.27 dB below.
+
+Six-scene averages are the other published family: FreeTimeGS 33.19,
+SharpTimeGS 33.57. This table's **31.15** sits ~2.0-2.4 dB under those, at half
+the iterations of its own measured optimum and with a binding primitive cap.
+None of this is a like-for-like deficit and it is not admissible as a benchmark
+result; it is a same-protocol cross-scene comparison of this substrate against
+itself.
+
+The scene ordering is a useful sanity signal: `flame_salmon_1` and
+`coffee_martini` are lowest and `sear_steak` highest, which is the difficulty
+ordering the N3V literature reports. Nothing here is anomalous per scene.
+
+### The two LPIPS conventions diverge further at small values
+
+Mean 0.1048 reference against 0.0586 3DGS-inherited — the reference convention
+reads **79% higher**, against 47.9% on the Immersive table and 18.4% on
+DiVa-360. The absolute gap shrinks as the images get easier but the RELATIVE
+gap grows, which is the direction that most easily corrupts a table: at
+sear_steak the two conventions read 0.0841 and 0.0387, and a reader given only
+one number cannot recover the other.
+
+### Cost
+
+Six trainings 1h44m-1h50m each plus six evals of ~10m, all `COMPLETED` exit
+`0:0`. Charged roughly 3.5 local h per GPU-hour; the project stood at
+11,474/144,000 local h (8.0%) with 3,035 of the 11,835 monthly allowance
+remaining at submission. **Compute is not the binding constraint here; the
+4 TB `$WORK` quota is.**
