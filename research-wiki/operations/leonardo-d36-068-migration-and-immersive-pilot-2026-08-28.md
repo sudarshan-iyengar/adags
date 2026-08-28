@@ -285,3 +285,76 @@ decode -> convert -> train -> eval. Note the Slurm **submit cap is 20 jobs per
 user**: five scenes filled it exactly and `12_Cave` was refused with
 `QOSMaxSubmitJobPerUserLimit`, with no orphan jobs created. It is submitted
 once the queue drains.
+
+---
+
+## APPENDIX 3 (2026-08-28, append-only) — all seven STG Immersive scenes
+
+Protocol: 50 frames, 1280x960 (the ImViD 2x downsample), held-out
+`camera_0001`, `focal_scale 0.85`, 6,000 iterations, 600k primitive cap,
+seed 0, single run per scene. Pooled+clamped `--val` metrics.
+
+| scene | PSNR | SSIM | LPIPS ref | LPIPS 3dgs | primitives | seed pts | invalid |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 01_Welder | 24.53 | 0.8255 | 0.2928 | 0.2212 | 599,231 | 37,703 | 0.0000 |
+| 04_Truck | 25.60 | 0.8445 | 0.2932 | 0.2054 | 599,385 | 36,519 | 0.0000 |
+| 02_Flames | 26.72 | 0.8520 | 0.2606 | 0.1881 | 599,744 | 13,328 | 0.0000 |
+| 09_Alexa_Meade_Exhibit | 26.99 | 0.8528 | 0.2516 | 0.1747 | 599,597 | 34,611 | 0.0000 |
+| 11_Alexa_Meade_Face_Paint_2 | 27.95 | 0.9026 | 0.2527 | 0.1634 | 599,523 | 11,870 | 0.0000 |
+| 12_Cave | 29.66 | 0.8420 | 0.3411 | 0.2226 | 599,538 | 108,765 | 0.0000 |
+| 10_Alexa_Meade_Face_Paint_1 | 30.15 | 0.9280 | 0.2476 | 0.1356 | 599,634 | 15,000 | 0.0000 |
+| **mean** | **27.37** | **0.8639** | **0.2771** | **0.1873** | | | |
+
+PSNR sd 2.04, range 24.53-30.15.
+
+### Three things this table says that its headline number does not
+
+**(1) EVERY scene is capacity-limited, so none of these is the method's
+ceiling.** All seven finish between 599,231 and 599,744 primitives against a
+600,000 cap — the cap binds everywhere, not just on the pilot. `02_Flames`
+additionally had `best_val_iter = 6000`, still improving when the schedule
+ended. These numbers therefore measure *LoRA at 600k primitives and 6,000
+iterations*, and the cap and the schedule are both doing work in them. A
+comparison that omits that is comparing budgets, not methods.
+
+**(2) The seed cloud does not predict the result.** Seed sizes span 9.2x
+(11,870 to 108,765) and Spearman rho against PSNR is **-0.214** — no
+relationship, and if anything the wrong sign. The two best scenes have the
+third-smallest (15,000) and the largest (108,765) clouds. At this budget
+densification dominates initialisation, which also means the triangulation
+quality worried about in Appendix 2 was not the limiting factor. It does NOT
+license removing the `points3d.ply` floor: the floor exists to stop the reader
+silently substituting a random cloud, which is a different failure from a
+small real one.
+
+**(3) The two LPIPS conventions are 47.9% apart at the mean** (0.2771
+reference vs 0.1873 3DGS-inherited), wider than the 38.5% on `02_Flames` alone
+and far wider than the 18.4% measured on DiVa-360. Any Immersive table must
+name its convention; the two are not interchangeable at this magnitude.
+
+`invalid = 0.0000` on all seven confirms the Appendix 2 guard held across
+scenes with different distortion coefficients, not just on the one it was
+tuned against.
+
+### Position against the literature, stated with its caveats
+
+STG's published 7-scene Immersive average on record is **29.2 dB**
+([[loop2-sweep-2026-08]]); this run is **27.37 dB**, 1.83 dB below. That gap is
+NOT a like-for-like deficit, and the differences all run the same way:
+
+* **pinhole vs fisheye** — STG trains in fisheye space; this is a different
+  method, and the comparison is not admissible as a benchmark result;
+* **6,000 vs 20,000 iterations**, with the schedule still improving;
+* **600k primitive cap binding on every scene**;
+* single seed, single run, no replicate floor measured on this dataset.
+
+The honest statement is: *a pinhole port of the ADAGS LoRA substrate reaches
+27.37 dB mean over STG's seven Immersive scenes at 6,000 iterations under a
+600k primitive cap.* Nothing stronger.
+
+### Cost
+
+Seven scenes: acquisition 37.3 GiB, ~13 GB decoded per scene on scratch,
+~1h08m training plus ~5m eval per scene on one A100, plus serial decode and
+convert at roughly 7 minutes each. The Slurm **submit cap is 20 jobs per
+user**, which is what refused `12_Cave` on the first pass.
