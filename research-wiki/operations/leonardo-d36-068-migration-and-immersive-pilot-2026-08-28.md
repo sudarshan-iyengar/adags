@@ -190,3 +190,98 @@ poses, undistortion, the split and the seed cloud were all validated before
 this run and none of them changed. It is a scaling property of the trainer on
 this raster and point budget, and the same fragmentation would be expected on
 any lane that densifies to several hundred thousand primitives at 1280x960.
+
+---
+
+## APPENDIX 2 (2026-08-28, append-only) — the pilot number was wrong for a findable reason, and the corrected result
+
+The first completed pilot (job 54687155, `focal_scale 0.5`) scored **17.90 dB
+held-out, SSIM 0.535**, peaking at iteration 3,000 and degrading after. It
+would have been easy to file that as "a pinhole port on a hard dark scene".
+
+**The tell was the TRAINING number, not the held-out one.** 23.99 dB on
+training views after 6,000 iterations, when the N3V integration smoke reached
+25.8 dB in 200. A model that cannot fit the views it is optimising against is
+not being limited by generalisation.
+
+### What it was
+
+Measured exactly — the fraction of output pixels whose remap source falls
+outside the native fisheye raster, not inferred from brightness:
+
+| `focal_scale` | invalid fraction, worst of 45 cameras |
+|---|---:|
+| 0.50 | **33.2%** |
+| 0.75 | 2.94% |
+| 0.80 | 0.67% |
+| **0.85** | **0.000%** |
+
+A third of every training image was `BORDER_CONSTANT` black with no source
+pixel behind it. The trainer cannot distinguish fabricated black from scene
+black, so it spent capacity fitting a constant, and the loss it minimised was
+one third fiction.
+
+**The error was carrying a constant across a method boundary.** 0.5 is STG's
+undistorted-path focal scale, and it is safe *there* only because STG never
+trains on the undistorted images — it trains in fisheye space and those frames
+are an intermediate. Copying the number without its precondition is the whole
+mistake.
+
+**It was nearly missed twice.** The earlier "54% black" reading was correct and
+was explained away as the dark scene — the scene *is* dark (source frames 32%
+black at threshold 4/255, mean brightness 21/255), which made the wrong
+explanation fit. Only the exact remap measurement separated the two.
+
+### The corrected pilot
+
+`02_Flames`, `focal_scale 0.85`, jobs 54698858 / 54698863 / 54698864,
+convert 6m27s, train 1h08m, eval 4m39s:
+
+| quantity | fs 0.50 | **fs 0.85** |
+|---|---:|---:|
+| invalid fraction (max over cameras) | 33.2% | **0.000%** |
+| seed points | 7,248 | **13,328** |
+| held-out PSNR | 17.90 | **26.72** |
+| held-out SSIM | 0.535 | **0.852** |
+| LPIPS-alex (reference, `normalize=True`) | — | **0.2606** |
+| LPIPS-alex (3DGS-inherited convention) | — | **0.1881** |
+| best iteration | 3,000 (then degrading) | **6,000 (still improving)** |
+| final primitives | 479,852 | 599,744 (at the 600k cap) |
+
+**+8.83 dB and +0.317 SSIM from one preprocessing constant.**
+
+Two things worth carrying:
+
+**The two LPIPS conventions differ by 28% relative on real renders**
+(0.2606 vs 0.1881), which is larger than the 18.4% measured on DiVa-360 and
+far larger than the spacing between published methods. Emitting both was not
+bookkeeping; a table naming only one would be uninterpretable.
+
+**The run is compute-limited, not over-densified.** It hits the 600k primitive
+cap and `best_val_iter` is 6,000, i.e. still improving at the schedule's end —
+unlike the fs 0.50 run, which peaked at 3,000 because the extra capacity was
+going into fabricated black. Any future comparison at this protocol should
+state that 6,000 iterations is a truncation, not a converged endpoint.
+
+### Guard
+
+`immersive_to_blender.py` now measures the invalid fraction per camera and
+**refuses** above `--max-invalid-frac` (default 0.5%), with `focal_scale`
+defaulting to 0.85 (commit `345af35`). Same shape as the `points3d.ply` floor:
+the failure produced a plausible-looking scene, a completed run, and a quietly
+wrong number.
+
+Two fixes from this block that stand independently of the focal scale:
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` for allocator fragmentation
+under densification, and LPIPS weights pre-cached into `TORCH_HOME` from a
+login node because **compute nodes have no egress** — the eval died on
+`URLError [Errno 101] Network is unreachable`, the same failure this wiki
+already recorded for job 48760029.
+
+### Fan-out
+
+The other six STG scenes are acquired (32.2 GiB, on scratch) and chained
+decode -> convert -> train -> eval. Note the Slurm **submit cap is 20 jobs per
+user**: five scenes filled it exactly and `12_Cave` was refused with
+`QOSMaxSubmitJobPerUserLimit`, with no orphan jobs created. It is submitted
+once the queue drains.
