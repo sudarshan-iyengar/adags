@@ -1,0 +1,156 @@
+diff --git a/colmap.sh b/colmap.sh
+index 195861a..a9f331f 100644
+--- a/colmap.sh
++++ b/colmap.sh
+@@ -2,7 +2,7 @@
+ 
+ workdir=$1
+ datatype=$2 # blender, hypernerf, llff
+-export CUDA_VISIBLE_DEVICES=0
++export CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+ rm -rf $workdir/sparse_
+ rm -rf $workdir/image_colmap
+ python scripts/"$datatype"2colmap.py $workdir
+diff --git a/prepare_pseudo_label.sh b/prepare_pseudo_label.sh
+index 1d853f9..faf3daa 100644
+--- a/prepare_pseudo_label.sh
++++ b/prepare_pseudo_label.sh
+@@ -1,13 +1,15 @@
+ #!/bin/bash
+ 
+ # Check if the user provided an argument
+-if [ "$#" -ne 2 ]; then
++if [ "$#" -lt 2 ]; then
+     echo "Usage: $0 <dataset_name>"
+     exit 1
+ fi
+ 
+ dataset="$1"
+ gpu="$2"
++cam="${3:-cam15}"
++cam="${3:-cam15}"
+ 
+ export CUDA_VISIBLE_DEVICES=$gpu
+ 
+@@ -27,8 +29,8 @@ if [[ $dataset == *"hypernerf"* ]]; then
+   img_path="../$dataset/rgb/2x"
+   output_path="../$dataset/pseudo_label"
+ elif [[ $dataset == *"dynerf"* ]]; then
+-  img_path="../$dataset/cam15/images"
+-  output_path="../$dataset/cam15/pseudo_label"
++  img_path="../$dataset/$cam/images"
++  output_path="../$dataset/$cam/pseudo_label"
+ else
+   echo "Cannot recognize this dataset type!"
+ fi
+diff --git a/render_4dgs.py b/render_4dgs.py
+index 03c7074..a9a7066 100644
+--- a/render_4dgs.py
++++ b/render_4dgs.py
+@@ -9,7 +9,7 @@
+ # For inquiries contact  george.drettakis@inria.fr
+ #
+ import os, sys
+-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
++os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+ import imageio
+ import numpy as np
+ import torch
+diff --git a/render_ie.py b/render_ie.py
+index ba694a8..57bcb15 100644
+--- a/render_ie.py
++++ b/render_ie.py
+@@ -7,7 +7,7 @@
+ # GRAPHDECO research group, https://team.inria.fr/graphdeco
+ 
+ import os, sys
+-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
++os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+ import torch
+ from scene import Scene
+ from tqdm import tqdm
+@@ -101,6 +101,8 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
+         pred_obj_mask_list.append(pred_obj_mask)
+         # pca_list.append(pca)
+ 
++    makedirs(os.path.join(model_path, name, "ours_{}".format(iteration)), exist_ok=True)
++    makedirs(os.path.join(model_path, name, "ours_{}".format(iteration)), exist_ok=True)
+     imageio.mimwrite(os.path.join(model_path, name, "ours_{}".format(iteration), 'video_mask.mp4'), pred_obj_mask_list, fps=30)
+     # imageio.mimwrite(os.path.join(model_path, name, "ours_{}".format(iteration), 'video_pca.mp4'), pca_list, fps=30)
+ 
+diff --git a/scene/deformation.py b/scene/deformation.py
+index b87ffce..0e3209d 100644
+--- a/scene/deformation.py
++++ b/scene/deformation.py
+@@ -2,7 +2,6 @@ import functools
+ import math
+ import os
+ import time
+-from tkinter import W
+ 
+ import numpy as np
+ import torch
+diff --git a/submodules/simple-knn/simple_knn.egg-info/PKG-INFO b/submodules/simple-knn/simple_knn.egg-info/PKG-INFO
+index bb654da..8545c5a 100644
+--- a/submodules/simple-knn/simple_knn.egg-info/PKG-INFO
++++ b/submodules/simple-knn/simple_knn.egg-info/PKG-INFO
+@@ -1,3 +1,3 @@
+ Metadata-Version: 2.1
+-Name: simple-knn
++Name: simple_knn
+ Version: 0.0.0
+diff --git a/train_4dgs.py b/train_4dgs.py
+index ce0d0a7..20d46ab 100644
+--- a/train_4dgs.py
++++ b/train_4dgs.py
+@@ -11,7 +11,7 @@
+ import numpy as np
+ import random
+ import os, sys
+-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
++os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+ # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+ import torch
+ from random import randint
+diff --git a/train_ie.py b/train_ie.py
+index fbd0bd1..c9c7246 100644
+--- a/train_ie.py
++++ b/train_ie.py
+@@ -11,7 +11,7 @@
+ import numpy as np
+ import random
+ import os, sys
+-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
++os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+ # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+ import torch
+ from random import randint
+diff --git a/utils/general_utils.py b/utils/general_utils.py
+index 22874a7..6d6af2c 100644
+--- a/utils/general_utils.py
++++ b/utils/general_utils.py
+@@ -140,7 +140,7 @@ def safe_state(silent):
+     
+     # 确保CUDA可用并正确设置
+     assert torch.cuda.is_available(), "CUDA must be available"
+-    device = torch.device("cuda")
++    device = torch.device("cuda:0")
+     torch.cuda.set_device(device)
+     torch.cuda.manual_seed(0)
+     
+diff --git a/utils/point_utils.py b/utils/point_utils.py
+index cef4db9..e5ad21c 100644
+--- a/utils/point_utils.py
++++ b/utils/point_utils.py
+@@ -5,7 +5,10 @@ from torch.utils.data import TensorDataset, random_split
+ from tqdm import tqdm
+ import open3d as o3d
+ import numpy as np
+-from torch_cluster import grid_cluster
++try:
++    from torch_cluster import grid_cluster
++except ImportError:
++    grid_cluster = None
+ def voxel_down_sample_custom(points, voxel_size):
+     # 将点云归一化到体素网格
+     voxel_grid = torch.floor(points / voxel_size)
