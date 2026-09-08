@@ -1,0 +1,236 @@
+# N3V GATED TRAINING ARM: EL-GS localized episodic presence on the real
+# 300-frame IVV-protocol substrate.
+#
+# EXPLORATORY, evidence_bearing: false.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS CONFIG IS
+# ---------------------------------------------------------------------------
+# Every training key is copied VERBATIM from configs/n3v/ivv_protocol_300f_6k.yaml
+# (iterations 6_000, densify_from_iter 500, densify_until_iter 5_000,
+# densify_until_num_points 600000, opacity_reset_interval 40000, batch_size 2,
+# route_logit_init 4.0, resolution 1 = 1352x1014, eval True,
+# time_duration [0.0, 10.0], num_pts 300_0000, motion_track_dt 0.0333333333,
+# dynamic_mask_from_residual true). The scene is still supplied at submit time
+# via --source_path, so this config is scene-agnostic exactly as the comparator
+# is.
+#
+# THE UNGATED COMPARATOR IS configs/n3v/ivv_protocol_300f_6k.yaml, and the two
+# YAMLs differ ONLY in the `elgs_*` block appended at the bottom of
+# OptimizationParams (plus this header). Nothing above the DIFFERS marker was
+# retuned, reordered, or re-derived. Diff the two files to check that claim.
+#
+# The elgs_* values are copied from configs/lrv3/a1_local.yaml -- the corrected
+# LRV3 localized-presence cell (the 2026-08-20 +1.0496 dB fixture positive) --
+# with ONE deliberate change: `elgs_oracle_episodes` points at an N3V program
+# instead of the LRV3 oracle. `resolution: 1` and `eval: True` are inherited
+# from the comparator and are load-bearing: `eval: False` makes the reader
+# MERGE the test split into training, and `resolution: 2` would give the
+# quarter-raster error.
+#
+# ---------------------------------------------------------------------------
+# THE PROGRAM PATH IS A PLACEHOLDER AND THE FILE DOES NOT EXIST YET
+# ---------------------------------------------------------------------------
+# `elgs_oracle_episodes: configs/n3v/crb300_program_spatial.json` names a v2
+# episode program (`adags-episode-program-v2`) that must still be produced by
+# scripts/estimate_episodes.py from a `cut_roasted_beef` ivv_protocol_300f_6k
+# checkpoint. Until that file exists this config CANNOT run: seeding raises at
+# elgs/trainer_hooks.py:900 (load_oracle_episodes -> Path.read_text).
+#
+# The name says `_spatial` because a TRAINING run seeds a fresh
+# `create_from_pcd` cloud, and `resolve_v2_membership` (trainer_hooks.py:777-796)
+# refuses `membership_mode: row_ids` whenever the seeding cloud's row count or
+# xyz fingerprint differs from the program's -- which it always does for a
+# fresh run. Emit this program with `--membership_mode spatial_voxel`. The
+# `row_ids` variant of the same estimate is for the render-time evaluator
+# (scripts/eval_n3v_gated.py), which seeds on the RESTORED cloud.
+#
+# ---------------------------------------------------------------------------
+# RESERVED-PARITY DECISION: false HERE, BUT THE COMPARATOR IS NOT UNIT-MATCHED
+# ---------------------------------------------------------------------------
+# `elgs_reserved_parity: false`, and on THIS arm the flag is a verified NO-OP:
+# `reserved_indices_for_parity` returns None whenever `elgs_enable` is set
+# (elgs/trainer_hooks.py:1510-1511), precisely so the reservation is never
+# applied twice. Setting it true here would change nothing.
+#
+# What it does NOT mean is that this arm trains on the same units as the
+# comparator. The reserved confirmation pool is built UNCONDITIONALLY for every
+# EL-GS run (trainer_hooks.py:211 `build_reserved_pool`, :261
+# `reserved_indices=...`), and main.py:1229 `filter_elgs_reserved` drops those
+# indices from the training dataset with no flag guarding it. The reservation
+# rule keeps `(frame_order + camera_order) % 4 == 0` (trainer_hooks.py:1471), so
+# THIS ARM TRAINS ON ~75% OF THE TRAINING UNITS while
+# ivv_protocol_300f_6k.yaml as written trains on 100%. On
+# `cut_roasted_beef` that is ~1,425 of 5,700 units withheld.
+#
+# CONSEQUENCE, stated so it is not discovered in the results table: a
+# comparison against ivv_protocol_300f_6k.yaml as-is hands the ungated arm a
+# third more data. A unit-matched comparator is ivv_protocol_300f_6k.yaml with
+# `elgs_reserved_parity: true` added and nothing else changed -- that is exactly
+# what the flag exists for (trainer_hooks.py:1493-1506, main.py:1234-1240), and
+# it is a no-op on any config that does not set it. Whether the matched or the
+# full-data comparator is primary is an experiment-design decision and is NOT
+# settled by this file; both must be named in whatever spec uses it.
+#
+# Seeding does NOT refuse without the flag. The only reservation-derived
+# refusal is the slot-grid arithmetic at trainer_hooks.py:222-232, which needs
+# `len(reserved) >= n_rounds * elgs_candidate_cap * elgs_confirmation_samples`
+# = 3 * 2 * 8 = 48 units (n_rounds from prereg_structural_v1.json's
+# schedule.full.round_iterations, which is read whether or not rounds run).
+# ~1,425 >= 48, so it binds nowhere near this scene. The stratification guards
+# at :1480-1489 also pass: 20 cameras per timestamp and 300 timestamps.
+#
+# ---------------------------------------------------------------------------
+# OTHER PRECONDITIONS THIS CONFIG SATISFIES, with citations
+# ---------------------------------------------------------------------------
+#   * `elgs_local_presence: true` requires a non-empty `elgs_oracle_episodes`
+#     (trainer_hooks.py:291-296), and a v2 program requires local presence
+#     (:905-911). Both hold.
+#   * All fourteen `elgs_*` numeric parameters must be set; the -1 sentinels
+#     are refused at :150-153. All are given explicit values below.
+#   * `elgs_confirmation_samples` must be >= 6 (:218-221). It is 8.
+#   * Seeding refuses a program that gates ZERO rows on the seeding cloud
+#     (:953-959) -- a real risk for `spatial_voxel` membership on a fresh
+#     cloud, and the reason the training arm needs a preflight.
+#   * `elgs_rounds_enabled: false` and `elgs_a_lr: 0.0` freeze the program:
+#     no structural search, no boundary learning. The gate is exactly the
+#     supplied episode program and nothing else.
+#   * `elgs_routing_pins_enabled: false` leaves gated rows' static/dynamic
+#     mixture learning like every other row's (:1554-1569, and the a1_local
+#     header's defect 4).
+#   * `elgs_tracks_dir: ""` keeps the run photometric-only: `attach_evidence`
+#     returns immediately (:364-366), so no tracks artifact is consumed and
+#     `elgs_beta`/`elgs_tau_b`/`elgs_c_cap`/`elgs_r_site`/
+#     `elgs_binding_threshold` are inert. They are still set explicitly
+#     because they are the frozen a1_local values and a silent -1 would be a
+#     latent refusal the moment a tracks dir is added.
+#
+# Every key below exists on ModelParams / PipelineParams / OptimizationParams
+# in arguments/__init__.py; main.py's config merge asserts that
+# (`assert hasattr(args, key)`).
+#
+gaussian_dim: 4
+time_duration: [0.0, 10.0]
+num_pts: 300_0000
+num_pts_ratio: 1.0
+rot_4d: False
+force_sh_3d: True
+batch_size: 2
+exhaust_test: False
+
+ModelParams:
+  sh_degree: 3
+  images: "images"
+  resolution: 1
+  white_background: False
+  data_device: "cuda"
+  eval: True
+  extension: ".png"
+  num_extra_pts: 0
+  loaded_pth: ""
+  frame_ratio: 1
+  dataloader: True
+
+PipelineParams:
+  convert_SHs_python: False
+  compute_cov3D_python: False
+  debug: False
+  env_map_res: 0
+  env_optimize_until: 5000000000
+  env_optimize_from: 0
+  eval_shfs_4d: True
+
+OptimizationParams:
+  iterations: 6_000
+  position_lr_init: 0.00016
+  position_t_lr_init: -1.0
+  position_lr_final: 0.0000016
+  position_lr_delay_mult: 0.01
+  position_lr_max_steps: 6_000
+  feature_lr: 0.0025
+  opacity_lr: 0.05
+  scaling_lr: 0.005
+  rotation_lr: 0.001
+  percent_dense: 0.01
+  lambda_dssim: 0.2
+  thresh_opa_prune: 0.005
+  densification_interval: 100
+  opacity_reset_interval: 40000
+  densify_from_iter: 500
+  densify_until_iter: 5_000
+  densify_grad_threshold: 0.0002
+  densify_grad_t_threshold: 0.000005
+  densify_until_num_points: 600000
+  final_prune_from_iter: -1
+  sh_increase_interval: 1000
+  lambda_opa_mask: 0.0
+  lambda_rigid: 0.0
+  enable_hard_static_conversion: false
+  lambda_sparsity: 0.0
+  lambda_motion_gate: 0.0
+  static_conversion_threshold: 0.99
+  gate_activation_iter: 1000
+  gate_warmup_until_iter: 2000
+  enable_soft_routing: true
+  route_logit_init: 4.0
+  route_lr: -1.0
+  motion_model: "lora"
+  motion_poly_order: 2
+  motion_lr_init: -1.0
+  motion_reg_lambda: 0.0
+  motion_lora_rank: 8
+  motion_lora_anchors: 32
+  motion_lora_init_scale: 0.01
+  motion_lora_coeff_lr: -1.0
+  motion_lora_basis_lr: -1.0
+  motion_prior_root: ""
+  dynamic_mask_from_residual: true
+  dynamic_mask_residual_quantile: 0.85
+  dynamic_mask_dilate: 2
+  lambda_dynamic_roi: 0.5
+  lambda_static_exclusion: 0.02
+  lambda_track_flow: 0.0
+  lambda_scaffold_smooth: 0.0
+  lambda_scaffold_reg: 0.0
+  motion_scaffold_enable: false
+  motion_scaffold_count: 512
+  motion_scaffold_rank: 8
+  motion_scaffold_anchors: 32
+  motion_scaffold_knn: 4
+  motion_scaffold_init_scale: 0.01
+  motion_scaffold_weight_temp: 0.05
+  motion_scaffold_chunk: 65536
+  motion_scaffold_coeff_lr: -1.0
+  motion_scaffold_basis_lr: -1.0
+  motion_track_dt: 0.0333333333
+  enable_rendered_flow: false
+  enable_motion_aware_densify: false
+  motion_aware_densify_boost: 1.0
+  blur_until_iter: 0
+  blur_start_sigma: 8.0
+  histogram_log_interval: 100
+  # ---- DIFFERS (EL-GS localized presence) --------------------------------
+  # The ONLY block that differs from configs/n3v/ivv_protocol_300f_6k.yaml.
+  # Values copied from configs/lrv3/a1_local.yaml except elgs_oracle_episodes.
+  elgs_enable: true
+  elgs_rounds_enabled: false
+  elgs_prereg_dir: "configs/elgs"
+  elgs_smoke_schedule: false
+  elgs_tracks_dir: ""
+  elgs_oracle_episodes: "configs/n3v/crb300_program_spatial.json"
+  elgs_local_presence: true
+  elgs_routing_pins_enabled: false
+  elgs_a_lr: 0.0
+  elgs_reserved_parity: false
+  elgs_beta: 0.1
+  elgs_kappa: 0.01
+  elgs_chi: 0.01
+  elgs_mu: 0.01
+  elgs_tau_b: 1.0
+  elgs_k_se: 1.0
+  elgs_lambda_u: 1.0
+  elgs_c_cap: 4
+  elgs_candidate_cap: 2
+  elgs_confirmation_samples: 8
+  elgs_r_site: 0.5
+  elgs_binding_threshold: 0.25
