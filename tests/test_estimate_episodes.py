@@ -301,6 +301,218 @@ class TestDecisionRule(unittest.TestCase):
         self.assertTrue(ee.boundary_is_dense(coarse + [7], 8))
 
 
+class _StubCameraDataset(object):
+    """The two attributes `build_view_index` reads: `len()` and the stack.
+
+    `utils/data_utils.py`'s CameraDataset decodes an image on `__getitem__`;
+    the view index deliberately never indexes it, so a stub does not need one.
+    """
+
+    def __init__(self, viewpoint_stack):
+        self.viewpoint_stack = list(viewpoint_stack)
+
+    def __len__(self):
+        return len(self.viewpoint_stack)
+
+
+class TestFrameRange(unittest.TestCase):
+    """The measured window: absolute frames, and a byte-identical default.
+
+    Every helper here takes plain ints and lists, so the window logic is
+    checkable without a renderer, a checkpoint or a CUDA extension.
+    """
+
+    N3V_FRAMES = 300           # cut_roasted_beef, 300 frames at 30 fps
+    N3V_WINDOW = (140, 230)    # the blade event: occluded [158,187], back [190,209]
+
+    # -- the default path must not move ------------------------------------
+
+    def test_no_window_is_the_whole_sequence(self):
+        self.assertEqual(ee.resolve_frame_range(None, N_FRAMES), (0, N_FRAMES - 1))
+        self.assertEqual(ee.resolve_frame_range(None, self.N3V_FRAMES),
+                         (0, self.N3V_FRAMES - 1))
+
+    def test_default_coarse_grid_reproduces_the_pre_window_expression(self):
+        """The exact expression this pass used before `--frame_range` existed.
+
+        `list(range(0, n_frames, stride))`, with `n_frames - 1` appended when
+        the stride misses it. If this ever diverges, every historical report's
+        sampling grid becomes unreproducible.
+        """
+        for n_frames in (10, 50, 60, 299, 300, 301):
+            for stride in (1, 2, 3, 4, 7, 16):
+                legacy = list(range(0, n_frames, stride))
+                if (n_frames - 1) not in legacy:
+                    legacy.append(n_frames - 1)
+                start, end = ee.resolve_frame_range(None, n_frames)
+                self.assertEqual(ee.coarse_frame_grid(start, end, stride), legacy,
+                                 "n_frames=%d stride=%d" % (n_frames, stride))
+
+    def test_default_fine_window_reproduces_the_pre_window_clamp(self):
+        """Was `max(0, b - stride)` / `min(n_frames - 1, b + stride)`."""
+        n_frames = self.N3V_FRAMES
+        start, end = ee.resolve_frame_range(None, n_frames)
+        for stride in (1, 4, 9):
+            for boundary in (0, 1, 3, 158, 190, 298, 299):
+                legacy = (max(0, boundary - stride),
+                          min(n_frames - 1, boundary + stride))
+                self.assertEqual(
+                    ee.clamp_fine_window(boundary, stride, start, end), legacy,
+                    "boundary=%d stride=%d" % (boundary, stride))
+
+    # -- the window itself --------------------------------------------------
+
+    def test_window_grid_stays_inside_and_always_ends_on_the_last_frame(self):
+        start, end = self.N3V_WINDOW
+        grid = ee.coarse_frame_grid(start, end, 4)
+        self.assertEqual(grid[0], start)
+        self.assertEqual(grid[-1], end)
+        self.assertEqual(min(grid), start)
+        self.assertEqual(max(grid), end)
+        self.assertEqual(len(grid), len(set(grid)))
+        self.assertEqual(grid[:3], [140, 144, 148])
+        # [140, 230] is RAGGED under stride 4: the walk stops at 228 and the
+        # last frame is appended, so the final interval is 2 frames, not 4.
+        self.assertEqual(grid[-2:], [228, 230])
+        self.assertEqual(len(grid), 24)
+
+    def test_an_exact_fit_window_appends_no_duplicate_tail(self):
+        grid = ee.coarse_frame_grid(140, 228, 4)
+        self.assertEqual(grid[-1], 228)
+        self.assertEqual(grid[-2], 224)
+        self.assertEqual(len(grid), 23)
+        self.assertEqual(len(grid), len(set(grid)))
+
+    def test_frames_are_absolute_not_window_relative(self):
+        """Load-bearing: a relative index would silently mistime the program.
+
+        A 2-frame timing error measures -2.39 dB (experiment 191), and the
+        window starts at 140, so a relative convention would be off by 140.
+        """
+        start, end = self.N3V_WINDOW
+        grid = ee.coarse_frame_grid(start, end, 4)
+        self.assertNotIn(0, grid)
+        self.assertIn(180, grid)
+        self.assertTrue(all(f >= start for f in grid))
+
+    def test_fine_refinement_never_leaves_the_window(self):
+        """A frame outside the window has no base render to difference against."""
+        start, end = self.N3V_WINDOW
+        for boundary in (start, start + 1, 158, 190, end - 1, end):
+            low, high = ee.clamp_fine_window(boundary, 4, start, end)
+            self.assertGreaterEqual(low, start)
+            self.assertLessEqual(high, end)
+        self.assertEqual(ee.clamp_fine_window(start, 4, start, end), (start, start + 4))
+        self.assertEqual(ee.clamp_fine_window(end, 4, start, end), (end - 4, end))
+
+    def test_frames_in_range_filters_and_preserves_order(self):
+        self.assertEqual(ee.frames_in_range(range(0, 300, 50), 140, 230),
+                         [150, 200])
+        self.assertEqual(ee.frames_in_range([139, 140, 230, 231], 140, 230),
+                         [140, 230])
+        self.assertEqual(ee.frames_in_range(range(300), 0, 299), list(range(300)))
+
+    # -- fail closed ---------------------------------------------------------
+
+    def test_malformed_windows_fail_closed(self):
+        for bad in ([-1, 10], [10, 5], [0, 300], [5, 5], [140], [1, 2, 3]):
+            with self.assertRaises(ContractError, msg=repr(bad)):
+                ee.resolve_frame_range(bad, self.N3V_FRAMES)
+        with self.assertRaises(ContractError):
+            ee.resolve_frame_range(None, 0)
+        with self.assertRaises(ContractError):
+            ee.coarse_frame_grid(0, 10, 0)
+
+    def test_window_boundaries_are_admitted_at_the_extremes(self):
+        self.assertEqual(ee.resolve_frame_range([0, 299], 300), (0, 299))
+        self.assertEqual(ee.resolve_frame_range((140, 230), 300), (140, 230))
+
+    # -- the window does not touch the decision rule -------------------------
+
+    def test_a_windowed_series_decides_exactly_as_the_full_one_would(self):
+        """The detector is handed a shorter list, not a different rule.
+
+        A group with TWO occlusions abstains on shape over the full take and
+        resolves cleanly once the window isolates one of them -- and the frames
+        it reports are the same absolute frames the full series would have
+        crossed at, had it been able to express two gaps.
+        """
+        frames = list(range(300))
+        values = [0.0 if (60 <= f <= 90 or 158 <= f <= 189) else 1.0
+                  for f in frames]
+        self.assertEqual(ee.detect_gap(frames, values)[2], ee.ABSTAIN_SHAPE)
+
+        start, end = self.N3V_WINDOW
+        windowed = [f for f in frames if start <= f <= end]
+        offset, onset, reason = ee.detect_gap(
+            windowed, [values[f] for f in windowed])
+        self.assertIsNone(reason)
+        self.assertEqual(offset, 158)
+        self.assertEqual(onset, 190)
+
+    def test_gap_seconds_from_a_windowed_estimate_are_absolute_model_time(self):
+        """Absolute frames in, absolute seconds out -- no window offset."""
+        config = lrv3_config()
+        frame_dt = 1.0 / 30.0
+        gap_start, gap_end = ee.inset_gap_seconds(158, 190, frame_dt, config.w)
+        # 157/30 + 1/3 and 190/30 - 1/3, hand-computed
+        self.assertAlmostEqual(gap_start, 5.5666666666666, places=10)
+        self.assertAlmostEqual(gap_end, 6.0, places=10)
+        # and NOT the window-relative reading, which is 140 frames early
+        window_relative = ee.inset_gap_seconds(158 - 140, 190 - 140, frame_dt,
+                                               config.w)
+        self.assertAlmostEqual(gap_start - window_relative[0], 140 * frame_dt,
+                               places=10)
+
+
+class TestN3VViewIndexConventions(unittest.TestCase):
+    """N3V naming and timing, checked against `cam07_0150`-style image names.
+
+    `scene/dataset_readers.py:380,400` set `timestamp = frame['time']` and
+    `image_name = Path(file_path).stem`, and the N3V transforms carry
+    `time = frame_index / 30`, so these are the two conventions the estimator
+    parses out of the training stack.
+    """
+
+    def test_camera_id_parses_from_an_n3v_image_name(self):
+        for name, expected in (("cam07_0150", 7), ("cam00_0000", 0),
+                               ("cam20_0299", 20), ("cam01_0158", 1)):
+            camera = types.SimpleNamespace(image_name=name)
+            self.assertEqual(ee.camera_id_of(camera), expected)
+        with self.assertRaises(ContractError):
+            ee.camera_id_of(types.SimpleNamespace(image_name="0150"))
+
+    def test_view_index_yields_absolute_frames_0_to_299(self):
+        """300 frames at 30 fps, cam00 held out, cam04 absent from the rig."""
+        camera_ids = [c for c in range(1, 21) if c != 4]
+        stack = []
+        for cam in camera_ids:
+            for frame in range(300):
+                stack.append(types.SimpleNamespace(
+                    image_name="cam%02d_%04d" % (cam, frame),
+                    timestamp=frame / 30.0))
+        dataset = _StubCameraDataset(stack)
+
+        timestamps = [c.timestamp for c in stack]
+        frame_dt = min(b - a for a, b in zip(sorted(set(timestamps)),
+                                             sorted(set(timestamps))[1:]))
+        time_span = max(timestamps) - min(timestamps)
+        n_frames = int(round(time_span / frame_dt)) + 1
+        self.assertEqual(n_frames, 300)
+
+        views, cameras = ee.build_view_index(dataset, frame_dt)
+        self.assertEqual(sorted(views.keys()), camera_ids)
+        self.assertEqual(len(cameras), 19 * 300)
+        for cam in camera_ids:
+            self.assertEqual(sorted(views[cam].keys()), list(range(300)))
+
+    def test_camera_selection_is_an_even_spread_over_the_n3v_rig(self):
+        camera_ids = [c for c in range(1, 21) if c != 4]
+        self.assertEqual(ee.select_cameras(camera_ids, 4), [1, 6, 11, 16])
+        self.assertEqual(ee.select_cameras(camera_ids, 19), camera_ids)
+        self.assertEqual(ee.select_cameras(camera_ids, 25), camera_ids)
+
+
 class TestBoundaryInset(unittest.TestCase):
     def test_gap_is_inset_by_exactly_w(self):
         config = lrv3_config()
@@ -671,7 +883,7 @@ class TestStructuralSeparation(unittest.TestCase):
             names,
             {"gaussians", "dataset", "views", "frame_dt", "interval_config",
              "schedule", "pipe", "background", "height", "width",
-             "coarse_stride", "n_frames", "verbose"},
+             "coarse_stride", "n_frames", "frame_range", "verbose"},
         )
 
     def test_scoring_is_the_only_stage_that_takes_the_source_path(self):
@@ -685,6 +897,9 @@ class TestStructuralSeparation(unittest.TestCase):
         "measure_series", "build_footprints", "build_voxel_groups",
         "voxel_grid", "freeze_program", "build_v2_program",
         "_render_error", "_dilate",
+        # the measured-window helpers run inside the stage too
+        "resolve_frame_range", "coarse_frame_grid", "clamp_fine_window",
+        "frames_in_range",
     )
 
     #: Attributes an estimation-stage function may never touch.

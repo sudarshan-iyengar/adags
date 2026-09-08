@@ -499,6 +499,90 @@ def boundary_is_dense(evaluated_frames, frame):
     return (int(frame) - 1) in set(int(f) for f in evaluated_frames)
 
 
+# ---------------------------------------------------------------------------
+# measured frame window (pure; absolute frame indices throughout)
+# ---------------------------------------------------------------------------
+#
+# WHY A WINDOW EXISTS AT ALL. `detect_gap` can express exactly ONE interior
+# absence, so a group that is occluded more than once over a long take
+# abstains on shape no matter how clean each individual episode is. On the
+# 300-frame N3V takes that is the common case, and the only way to measure a
+# single named event without changing the decision rule is to restrict which
+# frames the series is built from.
+#
+# The window is a SAMPLING bound, never a decision rule: the frames stay
+# ABSOLUTE, so `offset_frame` / `onset_frame` in the report and the program are
+# absolute frame indices and `inset_gap_seconds` still yields absolute model
+# time. Everything downstream -- contrast, hysteresis, agreement, density,
+# admissibility -- is byte-identical code operating on a shorter series.
+
+
+def resolve_frame_range(frame_range, n_frames):
+    """(start, end) INCLUSIVE absolute frame indices for the measured window.
+
+    `None` means the whole sequence, so the default path is exactly the
+    `[0, n_frames - 1]` the pass has always measured.
+    """
+    total = int(n_frames)
+    if total < 1:
+        raise ContractError("n_frames must be at least 1; got %d" % total)
+    if frame_range is None:
+        return 0, total - 1
+    if len(frame_range) != 2:
+        raise ContractError("frame_range must be exactly two frame indices")
+    start = int(frame_range[0])
+    end = int(frame_range[1])
+    if start < 0:
+        raise ContractError("frame_range start %d is negative" % start)
+    if end < start:
+        raise ContractError(
+            "frame_range end %d precedes start %d" % (end, start))
+    if end > total - 1:
+        raise ContractError(
+            "frame_range end %d is past the last frame %d" % (end, total - 1))
+    if start == end:
+        raise ContractError(
+            "frame_range [%d, %d] contains a single frame; a series needs at "
+            "least two" % (start, end))
+    return start, end
+
+
+def coarse_frame_grid(start, end, stride):
+    """Absolute coarse frames over the INCLUSIVE window, last frame included.
+
+    For the full-sequence window this is exactly `list(range(0, n_frames,
+    stride))` with `n_frames - 1` appended, i.e. the grid this pass used before
+    the window existed.
+    """
+    step = int(stride)
+    if step < 1:
+        raise ContractError("coarse_stride must be >= 1; got %d" % step)
+    frames = list(range(int(start), int(end) + 1, step))
+    if int(end) not in frames:
+        frames.append(int(end))
+    return frames
+
+
+def clamp_fine_window(boundary, stride, start, end):
+    """The INCLUSIVE fine-refinement neighbourhood of a crossing, clipped.
+
+    Clipped to the measured window rather than to `[0, n_frames - 1]`: a frame
+    outside the window was never rendered for the base series either, so
+    refining into it would compare a windowed base against an unwindowed
+    ablation.
+    """
+    low = max(int(start), int(boundary) - int(stride))
+    high = min(int(end), int(boundary) + int(stride))
+    return low, high
+
+
+def frames_in_range(frames, start, end):
+    """Absolute frames of `frames` that lie inside the INCLUSIVE window."""
+    lo = int(start)
+    hi = int(end)
+    return [int(f) for f in frames if lo <= int(f) <= hi]
+
+
 def inset_gap_seconds(offset_frame, onset_frame, frame_dt, w):
     """Absence gap in model seconds, boundaries INSET by exactly w.
 
@@ -713,13 +797,21 @@ def _dilate(mask, pixels):
 
 
 def build_footprints(gaussians, labels, n_groups, views, dataset, height, width,
-                     dilate=FOOTPRINT_DILATE_PX):
+                     dilate=FOOTPRINT_DILATE_PX, frame_range=None):
     """(n_groups, H, W) bool per camera: where a group could ever contribute.
 
-    The union over EVERY frame, so the mask is fixed in time and the per-frame
-    series is comparable across frames. Pure projection -- no render. All rows
-    are projected once per (camera, frame) and scattered into the per-group
-    accumulator, so the cost is one projection per view, not one per group.
+    The union over every MEASURED frame, so the mask is fixed in time and the
+    per-frame series is comparable across frames. Pure projection -- no render.
+    All rows are projected once per (camera, frame) and scattered into the
+    per-group accumulator, so the cost is one projection per view, not one per
+    group.
+
+    `frame_range` is the inclusive measured window (None = every frame, the
+    historical behaviour). It is honoured because the mask NORMALIZES the
+    per-frame value: `measure_series` averages the ablation delta OVER the
+    footprint, so pixels a group occupies only outside the window would be
+    averaged in at delta ~0 at every measured frame and would dilute the whole
+    series uniformly.
     """
     from utils.motion_prior_utils import project_points_to_screen
 
@@ -729,7 +821,11 @@ def build_footprints(gaussians, labels, n_groups, views, dataset, height, width,
     footprints = {}
     for camera_id in sorted(views.keys()):
         acc = torch.zeros((n_groups, flat_pixels), dtype=torch.bool, device=device)
-        for frame in sorted(views[camera_id].keys()):
+        frame_keys = sorted(views[camera_id].keys())
+        if frame_range is not None:
+            frame_keys = frames_in_range(frame_keys, frame_range[0],
+                                         frame_range[1])
+        for frame in frame_keys:
             # `viewpoint_stack` directly, NOT dataset[i]: indexing the dataset
             # decodes the training image (utils/data_utils.py:20-32) and this
             # pass needs geometry only.
@@ -811,6 +907,7 @@ def estimate_episode_program(
     width,
     coarse_stride,
     n_frames,
+    frame_range=None,
     verbose=False,
 ):
     """Estimate one interior absence gap per candidate group.
@@ -820,7 +917,14 @@ def estimate_episode_program(
     `scene`, no `source_path`, no event spec and no identity buffer: the
     scoring inputs are unreachable from this call. See the module docstring;
     tests/test_estimate_episodes.py asserts this signature.
+
+    `frame_range` is an inclusive (start, end) pair of ABSOLUTE frame indices
+    bounding every series measured here, or None for the whole sequence. It is
+    a numeric sampling bound and carries no ground-truth information: an
+    operator naming a window is naming where to LOOK, and the estimator still
+    has to find the boundaries inside it or abstain.
     """
+    frame_start, frame_end = resolve_frame_range(frame_range, n_frames)
     labels, n_groups = build_voxel_groups(gaussians._xyz)
     if n_groups == 0:
         raise ContractError("voxel grouping produced no group above the row floor")
@@ -830,12 +934,11 @@ def estimate_episode_program(
 
     ablation = AblationRuntime(gaussians, labels, n_groups, interval_config, schedule)
     footprints = build_footprints(gaussians, labels, n_groups, views, dataset,
-                                  height, width)
+                                  height, width,
+                                  frame_range=(frame_start, frame_end))
     counters = {"base_renders": 0, "ablated_renders": 0}
 
-    coarse_frames = list(range(0, n_frames, int(coarse_stride)))
-    if (n_frames - 1) not in coarse_frames:
-        coarse_frames.append(n_frames - 1)
+    coarse_frames = coarse_frame_grid(frame_start, frame_end, coarse_stride)
 
     # Up-front cost signal: the coarse stage dominates, and an operator who
     # sees an unaffordable projection here can abort before any render.
@@ -847,7 +950,8 @@ def estimate_episode_program(
              per_view_groups * len(coarse_frames),
              per_view_groups, len(views), len(coarse_frames)))
     if verbose:
-        print("coarse stage: %d frames (stride %d)" % (len(coarse_frames), coarse_stride))
+        print("coarse stage: %d frames (stride %d) over frames [%d, %d]"
+              % (len(coarse_frames), coarse_stride, frame_start, frame_end))
     values = measure_series(gaussians, ablation, footprints, views, dataset,
                             coarse_frames, pipe, background, counters, verbose)
     evaluated = set(coarse_frames)
@@ -864,8 +968,8 @@ def estimate_episode_program(
         if reason is not None:
             continue
         for boundary in (offset, onset):
-            low = max(0, boundary - int(coarse_stride))
-            high = min(n_frames - 1, boundary + int(coarse_stride))
+            low, high = clamp_fine_window(boundary, coarse_stride,
+                                          frame_start, frame_end)
             for frame in range(low, high + 1):
                 if frame not in evaluated:
                     fine_frames.add(frame)
@@ -890,6 +994,7 @@ def estimate_episode_program(
         "n_groups": n_groups,
         "decisions": decisions,
         "evaluated_frames": evaluated_frames,
+        "frame_range": [int(frame_start), int(frame_end)],
         "coarse_frames": sorted(coarse_frames),
         "fine_frames": sorted(fine_frames),
         "render_counts": dict(counters),
@@ -1322,6 +1427,16 @@ def main(argv=None):
                              % MIN_AGREEING_CAMERAS)
     parser.add_argument("--coarse_stride", type=int, default=4)
     parser.add_argument(
+        "--frame_range", nargs=2, type=int, default=None,
+        metavar=("A", "B"),
+        help=("restrict every measured series to the INCLUSIVE absolute frame "
+              "window [A, B]. Omitted = the whole sequence, which is the "
+              "historical behaviour exactly. Reported onset/offset frames stay "
+              "ABSOLUTE and gap seconds stay absolute model time. Use it when a "
+              "long take contains several occlusions of the same group: the "
+              "frozen detector expresses exactly ONE interior absence and would "
+              "otherwise abstain on shape"))
+    parser.add_argument(
         "--skip-scoring", dest="skip_scoring", action="store_true",
         help=("omit the ground-truth scoring stage. It builds a SPHERE "
               "membership test from event_spec.json's event_object "
@@ -1426,8 +1541,11 @@ def main(argv=None):
     guard.assert_manifests_empty()
     guard.assert_train_only(used_cameras, train_stack)
 
-    print("groups grid %d^3 | cameras %s | frames %d | coarse stride %d"
-          % (VOXEL_CELLS_PER_AXIS, chosen, n_frames, args.coarse_stride))
+    measured_range = resolve_frame_range(args.frame_range, n_frames)
+    print("groups grid %d^3 | cameras %s | frames %d | coarse stride %d "
+          "| measured frames [%d, %d]"
+          % (VOXEL_CELLS_PER_AXIS, chosen, n_frames, args.coarse_stride,
+             measured_range[0], measured_range[1]))
 
     started = time.perf_counter()
     with guard:
@@ -1444,6 +1562,7 @@ def main(argv=None):
             width=width,
             coarse_stride=int(args.coarse_stride),
             n_frames=n_frames,
+            frame_range=args.frame_range,
             verbose=bool(args.verbose),
         )
     elapsed = time.perf_counter() - started
@@ -1506,6 +1625,7 @@ def main(argv=None):
             "train_camera_ids_available": sorted(all_views.keys()),
             "train_camera_ids_used": chosen,
             "n_frames": n_frames,
+            "frame_range": estimate["frame_range"],
             "coarse_stride": int(args.coarse_stride),
             "coarse_frames": estimate["coarse_frames"],
             "fine_frames": estimate["fine_frames"],
