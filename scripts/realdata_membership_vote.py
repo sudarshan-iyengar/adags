@@ -1312,6 +1312,10 @@ def build_parser():
     parser.add_argument("--emit_program_spatial", default="")
     parser.add_argument("--fine_cells", type=int, default=64)
     parser.add_argument("--pad", type=float, default=0.05)
+    parser.add_argument(
+        "--max_dist_from_seed", type=float, default=0.0,
+        help="drop voted members farther than this (model units) from the "
+             "SEED rows' centroid before emitting; 0 = no cap (default)")
     parser.add_argument("--skip_checkpoint_hash", action="store_true")
     # Scene-shape arguments, matching scripts/estimate_episodes.py:1336-1344.
     # `_merge_config` asserts every YAML key already exists on `args`, so
@@ -1917,6 +1921,30 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
         w_out_total += w_out_by_camera[cam_id]
     members, share, vote_stats = membership_vote(w_in_total, w_out_total,
                                                  tau=args.tau)
+    distance_cap = None
+    if args.max_dist_from_seed and args.max_dist_from_seed > 0:
+        # A SETUP-side compactness cap: the vote is a visual-hull test over
+        # the chosen cameras, and with a one-sided camera subset the hull is
+        # elongated along the common viewing direction. Rows farther than R
+        # from the SEED centroid (the T1 group, not the voted set) cannot be
+        # the object the seed found and are dropped before anything is
+        # emitted. R is declared by the caller and recorded here.
+        seed_xyz = xyz_np[np.asarray(seed_np, dtype=bool)].astype(np.float64)
+        seed_centroid = seed_xyz.mean(axis=0)
+        dist = np.linalg.norm(xyz_np.astype(np.float64) - seed_centroid, axis=1)
+        before = int(members.sum())
+        members = np.logical_and(members, dist <= float(args.max_dist_from_seed))
+        member_dist = dist[members]
+        distance_cap = {
+            "max_dist_from_seed": float(args.max_dist_from_seed),
+            "seed_centroid": [float(v) for v in seed_centroid],
+            "n_members_before": before,
+            "n_members_after": int(members.sum()),
+            "n_dropped": before - int(members.sum()),
+            "member_distance_percentiles": {
+                str(q): float(np.percentile(member_dist, q))
+                for q in (50, 90, 95, 99, 100)} if members.any() else None,
+        }
     n_members = int(members.sum())
     if n_members == 0:
         raise ContractError(
@@ -2014,6 +2042,8 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
             source["id_rule"] = str(args.id_rule)
             source["mass_cover"] = float(args.mass_cover)
             source["id_min_mass_frac"] = float(args.id_min_mass_frac)
+        if distance_cap is not None:
+            source["max_dist_from_seed"] = float(args.max_dist_from_seed)
         row_column = np.where(members, EMITTED_GROUP_ID, -1).astype(np.int64)
 
         emitted = []
@@ -2124,6 +2154,7 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
         "per_camera_agreement": per_camera_agreement,
         "leave_one_camera_out": loco,
         "geometry": geometry,
+        "distance_cap": distance_cap,
         "share_quantiles": {
             str(q): float(np.quantile(share[(w_in_total + w_out_total) > 0], q))
             for q in (0.05, 0.25, 0.5, 0.75, 0.95)
