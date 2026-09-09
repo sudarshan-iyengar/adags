@@ -1,5 +1,56 @@
 # Query Pack
 
+## 2026-09-09 BLOCK — real-data gating lane on Leonardo: the six-step programme ran end to end; the gate is NEGATIVE at render time on a real occlusion, the training comparison is DESIGN_WITHOUT_POWER, and two estimators produced PSNR-free real-data results
+
+Full record: [[operations/realdata-gating-lane-2026-09-09]]. ~130 A100-h.
+
+**(1) Paired densification was REJECTED as the first move** (it pins the
+amplifier not the source; it removes the topology channel the code shows
+is real; replayed prunes delete the rows the gate preserves) and the
+cost premise died: Leonardo D36_068 has 131k local h left, a 12k
+300-frame cell is 3h55–4h17, and 155 cells/arm is 3% of the allocation.
+**Iteration count, not frame count, sets cell cost.**
+
+**(2) Headroom, zero training:** on `cut_roasted_beef` the beef box
+renders within ≤ 0.8 dB of pre-occlusion on the clean return frames; the
+2–3 dB dips are the hand and knife re-entering the box. Beef texture
+LEAKS through a translucent hand render during the occlusion.
+
+**(3) THE RENDER-TIME GATE ON THE REAL OCCLUSION IS NEGATIVE: −3.4 dB in
+the occluded box, −0.14 dB over frames 140–230, one fixed model, paired,
+deterministic.** The rows a training-view vote calls "the beef" also
+paint the hand over the same location during the gap: a 4D primitive
+with broad temporal support is shared between the object and its
+occluder, and the total gate removes both. Occlusion ≠ absence, at the
+row level.
+
+**(4) Two estimator results on real footage, no PSNR:** T1 gated **1 of
+1,218** groups with first-absent frame 159 / first-present 188 against
+a curated occlusion 158–187 (3 of 4 cameras agreeing; the frozen 8-cell
+grid over the raw bbox had to be replaced by 16 cells over the [1,99]
+percentile box — 23 groups otherwise). The closed-form vote on the 8
+cameras where DEVA segments the pile separately: 3,326 members, LOCO
+Jaccard ≥ 0.985, but a visual hull elongated along the one-sided camera
+subset (capped at 0.5 units from the seed centroid).
+
+**(5) THE TRAINING COMPARISON (8 U / 8 G / 8 G-mis, 12k, unit-matched,
+spec frozen after an 18-defect Codex review) RETURNED
+DESIGN_WITHOUT_POWER on both primaries.** Every G and G-mis cell failed
+the frozen exercise precondition: seeding bound **389 rows of 366k** on
+the fresh cloud and clone/split grew them only to ~500 of 600k (the
+render-time program gated 3,326 on the trained cloud) — gated rows get
+diluted gradients, so the object's late-born rows are born un-gated.
+The sham (same rows, wrong time) cost **+0.05 dB** where the fixture's
+mistiming cost 2.4 dB: vacuous, and the precondition said so before any
+score. **Replicate sd on the occlusion box at n = 8: 0.60 dB (U),
+1.04 dB (G)**; n2 = 155/arm at δ = 0.30 → feasibility stop.
+
+**(6) TRAPS RECORDED:** every EL-GS run withholds the reserved diagonal
+(25% of units) UNCONDITIONALLY, so an ungated comparator must set
+`elgs_reserved_parity: true` (eight cells were cancelled and rerun);
+SLURM snapshots batch scripts at submit; the CINECA certificate lasts
+12 h.
+
 ## 2026-08-24 BLOCK — three vacuity catches and the asymmetry between them; ImViD is ADMITTED and TRAINS; the hull question is unanswerable by this route
 
 Full records: [[operations/block-2026-08-24-handover]],

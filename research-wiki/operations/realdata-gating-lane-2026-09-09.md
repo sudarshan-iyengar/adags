@@ -639,3 +639,122 @@ window, with +0.2 dB outside the gap attributable to the marginal
 replacement, not to gating.** This is a quantitative real-data result
 with no training-variance problem (one model, deterministic renders,
 paired within the model), and it is negative.
+
+## 6-v2 results, part 1 — the precondition, read before any endpoint (16:50 CEST)
+
+All 16 G / G-mis cells trained to 12,000 without error (jobs 56954843–58,
+56954859–73; U cells: reserved 1,425 / 5,700 in every cell; gated cells:
+reserved 1,425 / 5,700 recomputed and audited, so the arms are
+unit-matched). From `precondition.json` (12 of 16 written at the time of
+reading; the remaining four are in their precondition step):
+
+| clause | frozen minimum | measured, every G and G-mis cell |
+|---|---:|---|
+| (a) gated rows at seeding | > 0 | **389 / 366,366** (identical in every cell — seeding is deterministic given the program and the initial cloud) |
+| (b) gated rows surviving at 12,000 | ≥ 1,000 | **476–519 / ~599,400** |
+| (c) gated rows projecting into the F box at frame 150 (cam00) | ≥ 100 | **69–82** |
+| (d) frames with presence exactly 0 | ≥ 1 | 27 |
+
+**Every G and every G-mis cell FAILS clauses (b) and (c).** The
+mechanism-exercised analysis set for G is therefore EMPTY, and by the
+frozen reading rules no benefit can be claimed from the ITT analysis
+whatever it returns; a harm can still be read, because a harm from a
+weakly exercised gate is a fortiori a harm.
+
+**What this measures, and it is the lane's structural finding.** The
+render-time program gated 3,326 rows on the trained 6k cloud (0.55%).
+The training arm must bind membership at seeding on a fresh cloud —
+`num_pts` 3,000,000 subsampled to 366,366 initial rows — through the
+program's fixed 2,963 fine cells; only 389 of those rows fell in them,
+and twelve thousand iterations of clone/split grew the family to ~500
+(0.08%), not to the ~3,300 the same cells hold on a trained cloud. The
+reason is the channel §0 named: gated rows receive zero positional
+gradient through their gap and their accumulated gradient is diluted, so
+densification prefers un-gated rows even inside the object's own cells —
+the object's late-born rows are born UN-gated. Membership bound once at
+seeding does not propagate to the capacity that ends up representing the
+object. This is the recorded LRV3 limitation ("membership binds ONCE at
+seeding; children inherit") appearing on real data in its worst form: on
+the fixture the seeding cloud already contained the object; here the
+object's rows are mostly created later.
+
+Consequence for the six-step programme: step 6 cannot test the
+representation claim on this scene with seeding-time membership. A
+training arm that gates the object would need membership to be
+re-bound during training (a running instrument, not a seeding program),
+which is a method change and not a comparison. The wave-1 analysis is
+still run mechanically and reported below for the record, with the ITT
+label it earns.
+
+## 6-v2 results, part 2 — wave 1, mechanical (`scripts/realdata_gate_analysis.py` sha256 `a6650b60…bf5e00`, output `runs/realdata/analysis_wave1/wave1.{json,md}` sha256 `c8ffef0a…b27a88`, 24/24 cells complete, reserved 1,425/5,700 consistent across all 24)
+
+Per-arm means and the pre-registered contrasts (F box, cam00, 97.5% CIs):
+
+| endpoint | mean U | mean G | G − U | 97.5% CI | placebo q95 (35 splits of U) |
+|---|---:|---:|---:|---|---:|
+| P1 ghost 158–187 | 28.755 | 28.424 | −0.330 | [−1.433, +0.773] | 0.826 |
+| P2 return_clean 190–199 | 36.350 | 36.306 | −0.044 | [−0.910, +0.822] | 1.033 |
+| S1 curated 190–209 | 35.216 | 35.208 | −0.008 | [−0.723, +0.707] | 0.837 |
+| H1 pre-occlusion 100–157 | 36.144 | 36.263 | +0.119 | [−0.421, +0.659] | 0.523 |
+| H2 whole frame | 33.258 | 33.311 | +0.053 | [−0.316, +0.422] | 0.293 |
+
+Positive control, G-mis − U on its own window C1 (118–147): **+0.055 dB,
+CI [−0.465, +0.575]** against a required ≤ −1.0 dB with the CI below 0 →
+**INVALID**. Correctness contrast G − G-mis: P1 +0.11 [−1.03, +1.26], P2
+−0.35 [−0.89, +0.19], not separable. Harm guard: FAIL on both H1 and H2
+(the 97.5% upper bounds of U − G are 0.42 and 0.32 dB, above the frozen
+0.15 dB margin — a width failure, not a measured harm). TOST at ±0.30:
+fails on both primaries. Sizing: sd(U) 0.604 / sd(G) 1.045 on P1,
+0.804 / 0.517 on P2; n2 = 155 (P1) and 98 (P2) per arm → **FEASIBILITY
+STOP** (cap 60).
+
+**Verdict on both primaries: DESIGN_WITHOUT_POWER** (ITT; the
+mechanism-exercised G set is empty, part 1). No claim in any direction.
+
+### Reading, in the order the rules force it
+
+1. **The sham is vacuous, and that is the finding.** G-mis withholds the
+   same rows as G for 30 frames while the object is fully visible; on the
+   fixture the analogous mistiming cost 2.4 dB. Here it costs +0.05 dB,
+   because the rows it withholds are ~500 of 600k — part 1's seeding
+   failure, now visible in a score. The positive control did exactly what
+   it was for: it showed the pipeline could not have detected a gate
+   effect, so a null on G is uninformative and a favourable G would have
+   been meaningless.
+2. **The replicate floor on the primary region is 0.60 dB (P1) and 0.80 dB
+   (P2) at n = 8, 12k, unit-matched, real footage** — above the 0.4945 dB
+   union floor, as §3 predicted from the pixel-time ratio. A 0.30 dB
+   effect needs 155 cells per arm on P1. Budget is not the constraint
+   (155 × 2 × 3.7 h ≈ 1,150 GPU-h ≈ 3% of the allocation); the point is
+   that the mechanism that would produce such an effect is not exercised
+   by seeding-time membership at all.
+3. **The render-time result (§4) stands as the lane's one clean
+   real-data number**: at fixed substrate the gate is −3.4 dB in the
+   occluded box, because on an occlusion the "object rows" are also the
+   occluder's rows.
+4. **The estimator results (§5) stand**: a training-view-only timing
+   estimate within one frame of the curated occlusion on real footage,
+   1 of 1,218 groups gated; a training-view-only membership that is
+   stable across cameras (LOCO Jaccard ≥ 0.985) but is a visual hull,
+   not an object.
+
+### What the six steps returned, one line each
+
+| step | outcome |
+|---|---|
+| 1 cost | recomputed; 12k cell = 3h55–4h17 on A100; budget not binding |
+| 2 supply | one usable event; precondition machinery built, and it fired |
+| 3 headroom | ≤ 0.8 dB on the clean return; occluder dominates the box |
+| 4 render-time gate | NEGATIVE, −3.4 dB in the occluded box, fixed substrate |
+| 5 estimators | timing within 1 frame of GT, membership stable; both real-data, PSNR-free |
+| 6 training comparison | DESIGN_WITHOUT_POWER; sham vacuous because seeding-time membership does not propagate; sd 0.60/0.80 dB on the region |
+
+### What would change the answer (not run, not proposed as next)
+
+A membership that is re-bound during training (a running instrument on
+the live cloud, so late-born object rows inherit the gate) is the only
+route to an exercised training arm; it is a method change, and §4 says
+that on an occlusion the gate would then remove the occluder's paint. A
+true leave-and-return event (ImViD, or a curated N3V segment where an
+object exits the frame) is where the fixture's claim could be tested on
+real footage; this scene does not contain one.
