@@ -658,8 +658,29 @@ def assert_min_group_rows_single_sourced():
     return True
 
 
-def voxel_grid(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS):
-    """(lo, span, keys) for the ABSOLUTE grid over the cloud's bounding box.
+def percentile_bounds(xyz, percentile):
+    """(lo, span) of the per-axis [p_lo, p_hi] percentile box of the cloud.
+
+    A real scene's raw bounding box is dominated by a few far background rows
+    (on cut_roasted_beef the raw span is ~60 units while 98% of rows sit in a
+    5 x 11 x 7 box), so an 8-cell grid over it puts an entire counter in one
+    cell. The percentile box is a SETUP quantity of the cloud alone; rows
+    outside it are substrate (-1), exactly as `resolve_v2_membership` treats
+    rows outside a program's `lo`/`span`.
+    """
+    p_lo, p_hi = float(percentile[0]), float(percentile[1])
+    if not (0.0 <= p_lo < p_hi <= 100.0):
+        raise ContractError("grid_percentile must satisfy 0 <= lo < hi <= 100")
+    points = xyz.detach()
+    lo = torch.quantile(points, p_lo / 100.0, dim=0)
+    hi = torch.quantile(points, p_hi / 100.0, dim=0)
+    return lo, (hi - lo).clamp_min(1e-6)
+
+
+def voxel_grid(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS, bounds=None):
+    """(lo, span, keys) for the ABSOLUTE grid over the cloud's bounding box,
+    or over `bounds` = (lo, span) when given. Keys are -1 for rows outside
+    `bounds` so they never join a cell.
 
     Factored out so the emitted v2 program can carry `lo`/`span` and reapply
     the very same world-space grid to a DIFFERENT cloud -- which is what a
@@ -670,15 +691,23 @@ def voxel_grid(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS):
     if cells < 1:
         raise ContractError("cells_per_axis must be >= 1")
     points = xyz.detach()
-    lo = points.min(dim=0).values
-    span = (points.max(dim=0).values - lo).clamp_min(1e-6)
+    if bounds is None:
+        lo = points.min(dim=0).values
+        span = (points.max(dim=0).values - lo).clamp_min(1e-6)
+    else:
+        lo, span = bounds
+        lo = lo.to(points.device, points.dtype)
+        span = span.to(points.device, points.dtype)
     voxel = ((points - lo) / span * cells).clamp(0, cells - 1).long()
     keys = voxel[:, 0] * cells * cells + voxel[:, 1] * cells + voxel[:, 2]
+    if bounds is not None:
+        inside = ((points >= lo) & (points <= lo + span)).all(dim=1)
+        keys = torch.where(inside, keys, torch.full_like(keys, -1))
     return lo, span, keys
 
 
 def build_voxel_groups(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS,
-                       min_rows=MIN_GROUP_ROWS):
+                       min_rows=MIN_GROUP_ROWS, bounds=None):
     """Per-row group labels over the cloud's own bounding box; -1 = substrate.
 
     Identical construction to `seed_families` (elgs/trainer_hooks.py:686-693),
@@ -689,10 +718,11 @@ def build_voxel_groups(xyz, cells_per_axis=VOXEL_CELLS_PER_AXIS,
     labels = torch.full((count,), -1, dtype=torch.long, device=points.device)
     if count == 0:
         return labels, 0
-    _, _, keys = voxel_grid(points, cells_per_axis)
+    _, _, keys = voxel_grid(points, cells_per_axis, bounds=bounds)
     unique_keys, inverse_map = torch.unique(keys, sorted=True, return_inverse=True)
     counts = torch.bincount(inverse_map, minlength=int(unique_keys.numel()))
     keep = counts >= int(min_rows)
+    keep = keep & (unique_keys >= 0)
     remap = torch.full((int(unique_keys.numel()),), -1, dtype=torch.long,
                        device=points.device)
     kept = int(keep.sum())
@@ -909,8 +939,14 @@ def estimate_episode_program(
     n_frames,
     frame_range=None,
     verbose=False,
+    grid_cells=None,
+    grid_bounds=None,
 ):
     """Estimate one interior absence gap per candidate group.
+
+    `grid_cells` / `grid_bounds` override the frozen 8-cell grid over the raw
+    bounding box with a `grid_cells`-per-axis grid over `grid_bounds` =
+    (lo, span); both default to the historical construction.
 
     Every argument is either the trained model, the TRAIN camera dataset, the
     train view index, or a numeric/render parameter. There is deliberately no
@@ -925,7 +961,9 @@ def estimate_episode_program(
     has to find the boundaries inside it or abstain.
     """
     frame_start, frame_end = resolve_frame_range(frame_range, n_frames)
-    labels, n_groups = build_voxel_groups(gaussians._xyz)
+    cells_used = int(grid_cells) if grid_cells else VOXEL_CELLS_PER_AXIS
+    labels, n_groups = build_voxel_groups(gaussians._xyz, cells_per_axis=cells_used,
+                                          bounds=grid_bounds)
     if n_groups == 0:
         raise ContractError("voxel grouping produced no group above the row floor")
     if verbose:
@@ -1127,7 +1165,7 @@ def freeze_program(estimate, frame_dt, interval_config):
 
 def build_v2_program(decisions, labels, xyz, frame_dt, interval_config,
                      membership_mode, cells_per_axis=VOXEL_CELLS_PER_AXIS,
-                     source=None):
+                     source=None, bounds=None):
     """The STANDALONE trainable artifact: schema `adags-episode-program-v2`.
 
     Derived only from the frozen decisions and the cloud, so it is emitted
@@ -1161,7 +1199,7 @@ def build_v2_program(decisions, labels, xyz, frame_dt, interval_config,
     wanted = torch.tensor(gated_ids, dtype=labels_cpu.dtype)
     row_ids = torch.where(torch.isin(labels_cpu, wanted), labels_cpu,
                           torch.full_like(labels_cpu, -1))
-    lo, span, keys = voxel_grid(xyz, cells_per_axis)
+    lo, span, keys = voxel_grid(xyz, cells_per_axis, bounds=bounds)
     keys_cpu = keys.to("cpu")
     group_cell_keys = {}
     for group_id in gated_ids:
@@ -1427,6 +1465,16 @@ def main(argv=None):
                              % MIN_AGREEING_CAMERAS)
     parser.add_argument("--coarse_stride", type=int, default=4)
     parser.add_argument(
+        "--grid_cells", type=int, default=None,
+        help=("cells per axis of the candidate-group grid (default: the frozen "
+              "%d). A real scene needs finer cells than the fixture" % VOXEL_CELLS_PER_AXIS))
+    parser.add_argument(
+        "--grid_percentile", nargs=2, type=float, default=None,
+        metavar=("P_LO", "P_HI"),
+        help=("build the grid over the per-axis [P_LO, P_HI] percentile box of "
+              "the cloud instead of its raw bounding box; rows outside are "
+              "substrate. A setup quantity of the cloud alone"))
+    parser.add_argument(
         "--frame_range", nargs=2, type=int, default=None,
         metavar=("A", "B"),
         help=("restrict every measured series to the INCLUSIVE absolute frame "
@@ -1542,6 +1590,14 @@ def main(argv=None):
     guard.assert_train_only(used_cameras, train_stack)
 
     measured_range = resolve_frame_range(args.frame_range, n_frames)
+    grid_bounds = None
+    if args.grid_percentile:
+        grid_bounds = percentile_bounds(gaussians._xyz, args.grid_percentile)
+        print("grid: %d cells per axis over the [%g, %g] percentile box lo=%s span=%s"
+              % (int(args.grid_cells) if args.grid_cells else VOXEL_CELLS_PER_AXIS,
+                 args.grid_percentile[0], args.grid_percentile[1],
+                 [round(float(v), 4) for v in grid_bounds[0].tolist()],
+                 [round(float(v), 4) for v in grid_bounds[1].tolist()]))
     print("groups grid %d^3 | cameras %s | frames %d | coarse stride %d "
           "| measured frames [%d, %d]"
           % (VOXEL_CELLS_PER_AXIS, chosen, n_frames, args.coarse_stride,
@@ -1563,6 +1619,8 @@ def main(argv=None):
             coarse_stride=int(args.coarse_stride),
             n_frames=n_frames,
             frame_range=args.frame_range,
+            grid_cells=args.grid_cells,
+            grid_bounds=grid_bounds,
             verbose=bool(args.verbose),
         )
     elapsed = time.perf_counter() - started
@@ -1576,11 +1634,13 @@ def main(argv=None):
     # provably carries nothing from the ground truth.
     v2_program = None
     v2_hash = None
+    grid_cells_used = int(args.grid_cells) if args.grid_cells else VOXEL_CELLS_PER_AXIS
     if args.emit_program:
         Path(args.emit_program).parent.mkdir(parents=True, exist_ok=True)
         v2_program, v2_hash = build_v2_program(
             estimate["decisions"], estimate["labels"], gaussians._xyz.detach(),
             frame_dt, interval_config, args.membership_mode,
+            cells_per_axis=grid_cells_used, bounds=grid_bounds,
             source={
                 "checkpoint": str(args.start_checkpoint),
                 "config": str(args.config),
@@ -1615,8 +1675,12 @@ def main(argv=None):
             "sha256": v2_hash,
         },
         "grouping": {
-            "method": "voxel_grid_over_cloud_bounding_box",
-            "cells_per_axis": VOXEL_CELLS_PER_AXIS,
+            "method": ("voxel_grid_over_cloud_percentile_box" if grid_bounds is not None
+                       else "voxel_grid_over_cloud_bounding_box"),
+            "cells_per_axis": grid_cells_used,
+            "grid_percentile": list(args.grid_percentile) if args.grid_percentile else None,
+            "grid_lo": [float(v) for v in grid_bounds[0].tolist()] if grid_bounds is not None else None,
+            "grid_span": [float(v) for v in grid_bounds[1].tolist()] if grid_bounds is not None else None,
             "min_group_rows": MIN_GROUP_ROWS,
             "n_groups": estimate["n_groups"],
             "n_rows": int(gaussians._xyz.shape[0]),
