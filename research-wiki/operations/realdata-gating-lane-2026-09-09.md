@@ -478,3 +478,90 @@ G-mis differ only in the program path.
 5. Build the manifest from `jobs/cells.txt` and run
    `scripts/realdata_gate_analysis.py --manifest ... --wave 1`; apply
    6-v2.5.
+
+### 5.2a Seed-footprint diagnostic (job 56948338, 4 cameras at frame 150) — read before any rule was chosen
+
+Seed rows' rendered contribution S = Σ α_i T_i over the 1,483 T1 rows:
+S max 0.93–0.97 in every view, 2,550–3,900 pixels above 0.5, i.e. a
+compact, opaque footprint; the fraction rule failed only because the DEVA
+id containing it is large in some cameras. Per view ONE id carries
+98–99.9% of the S-mass (cam01 id 100, 60,816 px = the whole cutting
+board; cam11 id 142, 95,513 px; cam06 id 90, 9,388 px; cam16 id 94,
+11,852 px — the two compact ones are the beef pile as its own segment,
+verified on the overlay images). Unlabelled pixels carry < 0.4% of the
+mass. Pure projection of the seed rows into the held-out camera at frame
+150: x 634–768, y 962–1018 — the LOWER part of the F box
+`[664,912,744,976]` and the counter just below it, so group 1033 is the
+lower half of the beef pile (the cell edge 0.42 units cuts through the
+pile); the upper half sits in a neighbouring cell that abstained.
+
+Rule chosen from this diagnostic, before any vote: S-mass harmonisation
+(`--id_rule mass`), restricted to cameras whose top id is compact — area
+≤ 3× the seed footprint (pixels with S > 0.05) — so that views in which
+the segmenter merged the pile into the board do not admit board rows.
+The camera selection is made from the all-camera diagnostic (job
+56949592, frames 150 and 196) and recorded with its ratios.
+
+### 5.2b All-camera diagnostic (job 56949592, frames 150 and 196) — camera selection
+
+Ratio = area of the top-S-mass DEVA id / seed footprint (S > 0.05):
+
+| cameras | ratio at 150 / 196 | reading |
+|---|---|---|
+| 6, 8, 13, 14, 15, 16, 17, 18 | 1.44–2.25, same id at both frames | pile is its own segment, id survives the occlusion |
+| 1, 2, 3, 5, 7, 9, 10, 11, 12, 19 | 6.1–14.7 | pile merged into the board segment |
+| 20 | no footprint (S max 0.004) | does not see the pile |
+
+Selected for the vote: **8 cameras (6, 8, 13–18)**, rule `mass` with
+defaults (cover 0.8, min mass fraction 0.05). Held-out projection of the
+1,483 seed rows at frame 150: 161 inside the F box, bbox y 962–1013 —
+the lower part of the pile; clause (c) of 6-v2.3 (≥ 100) is met by the
+seed alone before any refinement.
+
+### 5.2c The vote (job 56951112) and a compactness cap decided BEFORE any gate score was read
+
+8 cameras, mass rule, anchor frames 145–152 and return frames 192–199,
+tau 0.5: **4,323 members** of 599,478 (eligible 377,531; 1,141 of the
+1,483 seed rows are members), per-camera agreement 0.95–0.98, leave-one-
+camera-out Jaccard ≥ 0.985, rendered-weight partition identity holds to
+1e-6. One DEVA id per camera was chosen, the same id at every anchor and
+return frame. Report `runs/realdata/membership_ivv300f6k/realdata_membership_vote.json`.
+
+But the members are NOT compact: median distance from the seed centroid
+0.36 units, 95th percentile 0.67, maximum 1.63; bbox 1.75×1.12×0.65 units
+against a seed cell of 0.33×0.71×0.42. The eight admissible cameras all
+sit on one side of the rig, so the visual hull is elongated along their
+common viewing direction, and rows along those rays (median opacity 0.52,
+i.e. real contributors) vote in. Gating such rows during the gap would
+punch holes in the held-out view. **Decision, taken now, before the
+render-time gate result (job 56951113, launched on the uncapped rows
+program) is read: members are capped at R = 0.5 units from the SEED
+centroid** — the seed bbox half-diagonal (0.416) × 1.2 — which keeps
+3,326 of 4,323. The uncapped gate result is kept as a diagnostic labelled
+"pre-cap" and is not the §4 number. Cap implemented as
+`--max_dist_from_seed 0.5` (commit below), recorded in the report and in
+the program's `source`.
+
+### 6-v2.8 Freeze list — FROZEN at commit `fd8c78c` (2026-09-09 12:15 CEST), before the first G or G-mis submission
+
+| item | value |
+|---|---|
+| repository commit executing every cell | `fd8c78c` (Leonardo checkout; `train_cell_g.sbatch` records the commit per cell) |
+| torch | 2.5.1+cu121, A100-SXM-64GB, `boost_usr_prod` |
+| U config `configs/n3v/b0c_crb300_12k_rp.yaml` | `9d1f74de…d073d3` |
+| G config `configs/n3v/elgs_local_crb300_12k.yaml` | `ed672c18…3168f2` (differs from U only in `elgs_*`; verified by diff) |
+| G-mis config `configs/n3v/elgs_local_crb300_12k_mis.yaml` | `e55430b7…6dd128` (differs from G only in the program path) |
+| G program `configs/n3v/crb300_program_spatial.json` | `afd3f895…2a59a5` — gap frames 159–187 (offset 159, onset 188), 3,326 members, 2,963 cells of a 64³ grid, cap 0.5, 8 cameras, mass rule; byte-identical to `runs/realdata/membership_ivv300f6k_cap05/membership_program_spatial.json` (checked by `cmp` before submission) |
+| G-mis program `configs/n3v/crb300_program_spatial_mis118_147.json` | `2d3505ee…3fedc` — same membership, gap frames 118–147 (offset 118, onset 148) |
+| analysis `scripts/realdata_gate_analysis.py` | `a6650b60…bf5e00` |
+| precondition extractor `scripts/gate_cell_precondition.py` | `360d5a58…fd396b` |
+| evaluator `scripts/eval_n3v_gated.py` | `be8b14f2…267fd8` |
+| profile `scripts/event_region_frame_profile.py` | `63050ccd…05428a` |
+| mask manifest `configs/n3v/ladder_event_masks_crb0_299.json` | `36332365…cd5df6` |
+| seeds | 0–7 in every arm |
+| checkpoint rule | `chkpnt12000.pth`, `--val` renders at 12,000 |
+| U cells (already complete, endpoints unread) | jobs 56845450–56845452, 56845454–56845457, 56845464 |
+
+Full-length hashes are in `agent-control/realdata/freeze_*.txt` on Leonardo.
+FREEZE STATUS: **FROZEN**. Reading of any endpoint is permitted from this
+point through `scripts/realdata_gate_analysis.py` only.
