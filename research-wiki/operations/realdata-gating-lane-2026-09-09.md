@@ -565,3 +565,77 @@ the program's `source`.
 Full-length hashes are in `agent-control/realdata/freeze_*.txt` on Leonardo.
 FREEZE STATUS: **FROZEN**. Reading of any endpoint is permitted from this
 point through `scripts/realdata_gate_analysis.py` only.
+
+## 4. Render-time gate on the existing 6k model — pre-cap diagnostic (job 56951113, COMPLETED)
+
+`scripts/eval_n3v_gated.py`, config `elgs_local_crb300_6k.yaml`, the
+UNCAPPED row-ids program (4,323 members, the vote of §5.2c before the
+cap), frames 140–230, held-out cam00, same model rendered twice.
+Precondition (written before any metric): gated rows 4,323 / 599,478;
+frames with exact absence on a gated row: 160–186 (27 frames; the
+program's boundaries 159/188 are inset by the edge half-width w = 2
+frames); no frame rendered identically in the two arms.
+
+| endpoint (F box unless stated) | gated | ungated | Δ |
+|---|---:|---:|---:|
+| P1 ghost 158–187 | 21.703 | 25.253 | **−3.550** |
+| P2 return 190–199 | 34.064 | 33.839 | +0.226 |
+| S1 curated 190–209 | 33.079 | 32.945 | +0.134 |
+| H1 pre-occlusion 140–157 | 33.099 | 33.012 | +0.087 |
+| whole frame, 158–187 | 31.478 | 31.934 | −0.456 |
+| whole frame, 140–230 | 32.025 | 32.190 | −0.165 |
+
+**Reading.** The ghost channel does not exist on this event as the
+substrate represents it: removing the member rows during the occlusion
+makes the box 3.55 dB WORSE, not better. The rows the vote calls "the
+beef" — rows that render into the beef segment on eight cameras when the
+beef is visible — are also the rows painting the hand and blade over the
+same location during the gap: a 4D primitive with broad temporal support
+is shared between the object and whatever later occupies its place, and
+the total gate removes both. What is left when they are gated is the
+board, which is further from the hand than the leaky blend was. The
+small positive deltas OUTSIDE the gap are not gating: the localized gate
+replaces the gated rows' learned temporal marginal by presence 1, so
+those rows render slightly more strongly whenever present.
+
+This is the occlusion-versus-absence mismatch made concrete, at the row
+level: on a true absence (LRV3) the gated rows have nothing else to
+paint; on an occlusion they do. It does not by itself decide the training
+comparison — a G cell cannot use gated rows to paint the occluder during
+the gap and must fit it with other capacity — but it fixes the prior for
+P1: the mechanism's direct channel is harmful at render time, and any
+training-time benefit on P1 would have to come from capacity
+re-allocation, not from the gate itself. The capped program's evaluation
+(job 56953879) is the §4 number of record; this pre-cap run is kept as
+the diagnostic it was declared to be.
+
+### 4.1 The §4 number of record — capped program (job 56953879, COMPLETED)
+
+Same evaluator, the CAPPED row-ids program (3,326 members; precondition:
+gated rows 3,326 / 599,478, exact absence on frames 160–186, no identical
+render pair):
+
+| endpoint | gated | ungated | Δ |
+|---|---:|---:|---:|
+| P1 ghost 158–187 | 21.861 | 25.253 | **−3.393** |
+| P2 return 190–199 | 34.050 | 33.839 | +0.211 |
+| S1 curated 190–209 | 33.144 | 32.945 | +0.199 |
+| H1 pre-occlusion 140–157 | 33.184 | 33.012 | +0.172 |
+| whole frame, gap 158–187 | 31.544 | 31.934 | −0.391 |
+| whole frame, 140–230 | 32.050 | 32.190 | −0.139 |
+
+The cap changed nothing qualitatively (−3.39 vs −3.55 dB on P1). The
+montage below is GT / ungated / gated in the box at frames 150, 165,
+175, 185, 192, 200: with the gate on, the hand and blade region during
+the gap loses its paint and a dark streak appears where the member rows
+were; outside the gap the two renders are near-identical.
+
+![GT, ungated, gated crops through the occlusion](../assets/realdata-crb-gate-montage-2026-09-09.jpg)
+
+**Render-time verdict on this event: the presence gate has no
+leakage-suppression benefit on a real occlusion at fixed substrate; it
+is a −3.4 dB harm in the occluded box and a −0.14 dB harm over the whole
+window, with +0.2 dB outside the gap attributable to the marginal
+replacement, not to gating.** This is a quantitative real-data result
+with no training-variance problem (one model, deterministic renders,
+paired within the model), and it is negative.
