@@ -758,3 +758,372 @@ def test_parser_accepts_every_top_level_key_of_the_target_config():
                 assert hasattr(args, key), "parser is missing %s" % key
 
     walk(config)
+
+
+# ---------------------------------------------------------------------------
+# 11. the mass harmonisation rule and the --diagnose helpers
+#
+# These were added after the first real-checkpoint run refused at
+# harmonisation: with 1,483 seed rows in a 599,478-row cloud, S never crossed
+# --s_thresh 0.5, so EVERY id read fraction 0.0 and the fraction rule could
+# not fire. `_thin_view` reproduces that regime exactly.
+# ---------------------------------------------------------------------------
+
+
+def _thin_view():
+    """A view in the regime that broke the fraction rule.
+
+    Every S value is far below a 0.5 threshold, so the fraction rule reads
+    0.0 for every id and can never choose one -- yet 0.50 of the view's 0.60
+    total S-mass sits on id 7, 0.02 on id 4, and 0.08 on the unlabelled id 0.
+    """
+    id_map = np.array([
+        [0, 0, 0, 0],
+        [0, 7, 7, 0],
+        [0, 7, 7, 0],
+        [4, 4, 0, 0],
+    ], dtype=np.int64)
+    s_map = np.zeros((4, 4), dtype=np.float64)
+    s_map[1, 1] = 0.20
+    s_map[1, 2] = 0.16
+    s_map[2, 1] = 0.10
+    s_map[2, 2] = 0.04
+    s_map[3, 0] = 0.02
+    s_map[0, 3] = 0.08
+    return id_map, s_map
+
+
+def test_the_fraction_rule_is_blind_in_the_thin_seed_regime():
+    """NEUTER for the whole section: if this ever starts passing, the mass
+    rule has no reason to exist."""
+    id_map, s_map = _thin_view()
+    chosen, stats = rmv.choose_ids_for_view(id_map, s_map, 0.5, 0.5, 1)
+    assert chosen == []
+    assert {row["fraction"] for row in stats} == {0.0}
+
+
+def test_summarise_ids_by_mass_ranks_and_reports_the_shape():
+    id_map, s_map = _thin_view()
+    rows, totals = rmv.summarise_ids_by_mass(id_map, s_map, s_thresh=0.5)
+    assert [row["id"] for row in rows] == [7, 4]
+    assert rows[0]["s_mass"] == pytest.approx(0.50)
+    assert rows[0]["pixels"] == 4
+    assert rows[0]["mass_fraction"] == pytest.approx(0.50 / 0.60)
+    assert rows[0]["fraction"] == 0.0
+    assert totals["s_mass_view"] == pytest.approx(0.60)
+    assert totals["s_mass_labelled"] == pytest.approx(0.52)
+    assert totals["s_mass_ignored_id_fraction"] == pytest.approx(0.08 / 0.60)
+    assert totals["n_ids"] == 2
+
+
+def test_mass_fraction_denominator_includes_the_ignored_id():
+    """NEUTER: normalising by the LABELLED mass instead would report 1.0 here
+    and hide the fact that half the seed's contribution lands on no id at all
+    -- which is the one thing a caller must see before trusting the rule."""
+    id_map = np.array([[0, 0, 5, 5]], dtype=np.int64)
+    s_map = np.array([[0.5, 0.5, 0.5, 0.5]], dtype=np.float64)
+    rows, totals = rmv.summarise_ids_by_mass(id_map, s_map, s_thresh=0.4)
+    assert totals["s_mass_view"] == pytest.approx(2.0)
+    assert totals["s_mass_labelled"] == pytest.approx(1.0)
+    assert totals["s_mass_ignored_id_fraction"] == pytest.approx(0.5)
+    assert rows[0]["mass_fraction"] == pytest.approx(0.5)
+
+
+def test_summarise_ids_by_mass_refuses_a_shape_mismatch():
+    with pytest.raises(ContractError):
+        rmv.summarise_ids_by_mass(np.zeros((2, 2), dtype=np.int64),
+                                  np.zeros((3, 2), dtype=np.float64), 0.5)
+
+
+def test_mass_rule_chooses_the_carrier_id_the_fraction_rule_missed():
+    id_map, s_map = _thin_view()
+    chosen, stats, totals = rmv.choose_ids_by_mass(
+        id_map, s_map, s_thresh=0.5, mass_cover=0.8, id_min_mass_frac=0.05,
+        min_id_pixels=1)
+    assert chosen == [7]
+    assert totals["mass_cover_reached"] is True
+    assert totals["mass_covered_by_chosen"] == pytest.approx(0.50 / 0.60)
+    by_id = {row["id"]: row for row in stats}
+    assert by_id[7]["chosen"] is True
+    assert by_id[4]["chosen"] is False          # the cover target stopped it
+    assert by_id[4]["meets_min_mass_frac"] is False
+
+
+def test_mass_rule_walks_on_when_the_cover_target_is_not_reached():
+    """Not reaching --mass_cover is not a refusal: the rule returns whatever
+    qualified, and `mass_cover_reached` records that it fell short."""
+    id_map, s_map = _thin_view()
+    chosen, _, totals = rmv.choose_ids_by_mass(
+        id_map, s_map, s_thresh=0.5, mass_cover=0.99, id_min_mass_frac=0.01,
+        min_id_pixels=1)
+    assert chosen == [4, 7]
+    assert totals["mass_cover_reached"] is False
+    assert totals["mass_covered_by_chosen"] == pytest.approx(0.52 / 0.60)
+
+
+def test_mass_rule_skips_a_tiny_id_without_stopping_the_walk():
+    """NEUTER: the area bar must SKIP, not terminate. If a failed
+    --min_id_pixels ended the walk, the heavy 1-pixel id 9 would suppress the
+    admissible id 7 and the view would fail closed for the wrong reason."""
+    id_map = np.array([[9, 7, 7, 7, 7]], dtype=np.int64)
+    s_map = np.array([[0.6, 0.1, 0.1, 0.1, 0.1]], dtype=np.float64)
+    chosen, stats, _ = rmv.choose_ids_by_mass(
+        id_map, s_map, s_thresh=0.5, mass_cover=0.3, id_min_mass_frac=0.05,
+        min_id_pixels=2)
+    assert chosen == [7]
+    assert [row["id"] for row in stats] == [9, 7]        # descending by mass
+    by_id = {row["id"]: row for row in stats}
+    assert by_id[9]["meets_min_mass_frac"] is True
+    assert by_id[9]["meets_min_pixels"] is False
+    assert by_id[9]["chosen"] is False
+    assert by_id[7]["chosen"] is True
+
+
+def test_mass_rule_fails_closed_on_the_mass_bar():
+    """Nothing qualifies -> an EMPTY choice, so the caller can raise with its
+    own camera/frame context. The stats are already ranked, so the caller's
+    'top 5 by mass' message is a slice and cannot mis-order."""
+    id_map, s_map = _thin_view()
+    chosen, stats, totals = rmv.choose_ids_by_mass(
+        id_map, s_map, s_thresh=0.5, mass_cover=0.8, id_min_mass_frac=0.9,
+        min_id_pixels=1)
+    assert chosen == []
+    assert totals["mass_cover_reached"] is False
+    assert totals["mass_covered_by_chosen"] == 0.0
+    assert [row["id"] for row in stats[:5]] == [7, 4]
+    assert all(row["chosen"] is False for row in stats)
+
+
+def test_mass_rule_fails_closed_on_the_area_bar():
+    id_map, s_map = _thin_view()
+    chosen, _, _ = rmv.choose_ids_by_mass(
+        id_map, s_map, s_thresh=0.5, mass_cover=0.8, id_min_mass_frac=0.05,
+        min_id_pixels=64)
+    assert chosen == []
+
+
+def test_mass_rule_fails_closed_on_an_all_zero_contribution_map():
+    id_map, _ = _thin_view()
+    chosen, _, totals = rmv.choose_ids_by_mass(
+        id_map, np.zeros((4, 4), dtype=np.float64), s_thresh=0.5,
+        mass_cover=0.8, id_min_mass_frac=0.05, min_id_pixels=1)
+    assert chosen == []
+    assert totals["s_mass_view"] == 0.0
+
+
+def test_mass_rule_refuses_out_of_range_parameters():
+    id_map, s_map = _thin_view()
+    with pytest.raises(ContractError):
+        rmv.choose_ids_by_mass(id_map, s_map, 0.5, 1.5, 0.05, 1)
+    with pytest.raises(ContractError):
+        rmv.choose_ids_by_mass(id_map, s_map, 0.5, 0.8, -0.1, 1)
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2, 3, 4])
+def test_id_rule_fraction_reproduces_the_previous_chooser_exactly(seed):
+    """NEUTER: the dispatcher must DELEGATE to `choose_ids_for_view`, not
+    re-implement it. Any drift in the frozen default shows up here."""
+    rng = np.random.RandomState(seed)
+    id_map = rng.randint(0, 7, size=(23, 31)).astype(np.int64)
+    s_map = rng.rand(23, 31).astype(np.float64)
+    for s_thresh in (0.1, 0.5, 0.9):
+        for overlap in (0.0, 0.3, 0.5, 1.0):
+            for min_px in (1, 10, 400):
+                want = rmv.choose_ids_for_view(
+                    id_map, s_map, s_thresh, overlap, min_px)
+                got = rmv.choose_ids_by_rule(
+                    "fraction", id_map, s_map, s_thresh, overlap, min_px,
+                    # deliberately absurd mass settings: they must not reach
+                    # the fraction rule at all
+                    mass_cover=0.0, id_min_mass_frac=1.0)
+                assert got[0] == want[0]
+                assert got[1] == want[1]
+                assert got[2] == {"rule": "fraction"}
+
+
+def test_id_rule_dispatch_to_mass_and_the_unknown_rule_refusal():
+    id_map, s_map = _thin_view()
+    chosen, stats, info = rmv.choose_ids_by_rule(
+        "mass", id_map, s_map, 0.5, 0.5, 1, 0.8, 0.05)
+    assert chosen == [7]
+    assert info["rule"] == "mass"
+    assert info["s_mass_view"] == pytest.approx(0.60)
+    assert [row["id"] for row in stats] == [7, 4]
+    with pytest.raises(ContractError):
+        rmv.choose_ids_by_rule("majority", id_map, s_map, 0.5, 0.5, 1, 0.8,
+                               0.05)
+
+
+def test_diagnose_view_summary_reports_the_scale_and_the_mass_ranking():
+    id_map, s_map = _thin_view()
+    out = rmv.diagnose_view_summary(id_map, s_map, s_thresh=0.5)
+    assert out["n_pixels"] == 16
+    assert out["s_max"] == pytest.approx(0.20)
+    assert out["s_sum"] == pytest.approx(0.60)
+    assert out["s_mean"] == pytest.approx(0.60 / 16.0)
+    assert out["pixels_over"]["0.02"] == 5      # strict >, so 0.02 is not one
+    assert out["pixels_over"]["0.05"] == 4
+    assert out["pixels_over"]["0.1"] == 2
+    assert out["pixels_over"]["0.2"] == 0
+    assert out["pixels_over"]["0.5"] == 0
+    top = out["top_ids_by_s_mass"]
+    assert [row["id"] for row in top] == [7, 4]
+    assert top[0]["s_mass"] == pytest.approx(0.50)
+    assert top[0]["pixels"] == 4
+    assert top[0]["mass_fraction"] == pytest.approx(0.50 / 0.60)
+    # the FAILING rule's own quantity, carried beside the replacement's
+    assert top[0]["fraction"] == 0.0
+    assert out["id_totals"]["s_mass_ignored_id_fraction"] == pytest.approx(
+        0.08 / 0.60)
+
+
+def test_diagnose_view_summary_truncates_to_top_k():
+    id_map = np.arange(1, 13, dtype=np.int64).reshape(3, 4)
+    s_map = np.arange(12, dtype=np.float64).reshape(3, 4) / 100.0
+    full = rmv.diagnose_view_summary(id_map, s_map, 0.5)
+    assert len(full["top_ids_by_s_mass"]) == 10
+    out = rmv.diagnose_view_summary(id_map, s_map, 0.5, top_k=3)
+    assert [row["id"] for row in out["top_ids_by_s_mass"]] == [12, 11, 10]
+
+
+def test_diagnose_view_summary_survives_a_dead_map():
+    out = rmv.diagnose_view_summary(np.zeros((2, 2), dtype=np.int64),
+                                    np.zeros((2, 2), dtype=np.float64), 0.5)
+    assert out["s_max"] == 0.0 and out["s_sum"] == 0.0
+    assert out["top_ids_by_s_mass"] == []
+    assert out["id_totals"]["s_mass_ignored_id_fraction"] == 0.0
+
+
+def test_scale_to_uint8_clips_rounds_and_survives_a_dead_map():
+    out = rmv.scale_to_uint8(np.array([[-1.0, 0.0, 0.25, 0.5, 1.0, 2.0]]), 1.0)
+    assert out.dtype == np.uint8
+    assert list(out[0]) == [0, 0, 64, 128, 255, 255]
+    # the by-max version: a 0.2-peaked map fills the range
+    by_max = rmv.scale_to_uint8(np.array([[0.0, 0.1, 0.2]]), 0.2)
+    assert list(by_max[0]) == [0, 128, 255]
+    assert list(rmv.scale_to_uint8(np.array([[0.0, 0.0]]), 0.0)[0]) == [0, 0]
+    assert list(rmv.scale_to_uint8(np.array([[1.0]]), float("nan"))[0]) == [0]
+
+
+def test_id_palette_is_deterministic_and_the_marker_cannot_collide():
+    id_map = np.array([[0, 3], [3, 11]], dtype=np.int64)
+    rgb = rmv.id_palette_rgb(id_map)
+    assert rgb.shape == (2, 2, 3) and rgb.dtype == np.uint8
+    assert list(rgb[0, 0]) == [0, 0, 0]                  # the ignored id
+    assert list(rgb[0, 1]) == list(rgb[1, 0])            # one colour per id
+    assert list(rgb[0, 1]) != list(rgb[1, 1])
+    body = rgb[id_map != 0]
+    assert int(body.min()) >= 32 and int(body.max()) <= 223
+    assert list(rmv.DIAG_MARKER_RGB) not in [list(row) for row in body]
+    marked = np.array([[False, True], [False, False]])
+    over = rmv.id_palette_rgb(id_map, marked=marked)
+    assert list(over[0, 1]) == list(rmv.DIAG_MARKER_RGB)
+    assert list(over[1, 0]) == list(rgb[1, 0])
+    with pytest.raises(ContractError):
+        rmv.id_palette_rgb(id_map, marked=np.zeros((3, 3), dtype=bool))
+
+
+def test_count_in_fbox_is_inclusive_rounds_and_honours_validity():
+    fbox = (664, 912, 744, 976)
+    xy = np.array([
+        [664.0, 912.0],     # the inclusive lower corner
+        [744.0, 976.0],     # the inclusive upper corner
+        [663.4, 940.0],     # rounds to 663 -> outside
+        [663.6, 940.0],     # rounds to 664 -> inside
+        [700.0, 950.0],     # inside
+        [700.0, 950.0],     # inside but NOT valid
+    ], dtype=np.float64)
+    valid = np.array([True, True, True, True, True, False])
+    assert rmv.count_in_fbox(xy, valid, fbox) == 4
+    assert rmv.count_in_fbox(xy, np.zeros(6, dtype=bool), fbox) == 0
+
+
+def test_count_in_fbox_refuses_a_bad_box_or_a_length_mismatch():
+    xy = np.array([[1.0, 1.0]])
+    with pytest.raises(ContractError):
+        rmv.count_in_fbox(xy, np.array([True]), (10, 0, 1, 5))
+    with pytest.raises(ContractError):
+        rmv.count_in_fbox(xy, np.array([True]), (0, 10, 5, 1))
+    with pytest.raises(ContractError):
+        rmv.count_in_fbox(xy, np.array([True, True]), (0, 0, 5, 5))
+
+
+def test_projected_bbox_reports_selection_and_an_empty_selection():
+    xy = np.array([[10.0, 20.0], [30.0, 5.0], [-100.0, -100.0]])
+    valid = np.array([True, True, False])
+    box = rmv.projected_bbox(xy, valid)
+    assert box["n_points"] == 3 and box["n_selected"] == 2
+    assert (box["x_min"], box["x_max"]) == (10.0, 30.0)
+    assert (box["y_min"], box["y_max"]) == (5.0, 20.0)
+    every = rmv.projected_bbox(xy, None)
+    assert every["n_selected"] == 3 and every["x_min"] == -100.0
+    empty = rmv.projected_bbox(xy, np.zeros(3, dtype=bool))
+    assert empty["n_selected"] == 0 and empty["x_min"] is None
+    with pytest.raises(ContractError):
+        rmv.projected_bbox(xy, np.array([True]))
+
+
+def test_save_png_round_trips_grey_and_rgb(tmp_path):
+    image_module = pytest.importorskip("PIL.Image")
+    grey = np.array([[0, 128], [255, 7]], dtype=np.uint8)
+    rmv.save_png(tmp_path / "g.png", grey)
+    assert np.array_equal(np.array(image_module.open(tmp_path / "g.png")), grey)
+    rgb = rmv.id_palette_rgb(np.array([[0, 3], [3, 11]], dtype=np.int64))
+    rmv.save_png(tmp_path / "c.png", rgb)
+    assert np.array_equal(np.array(image_module.open(tmp_path / "c.png")), rgb)
+    with pytest.raises(ContractError):
+        rmv.save_png(tmp_path / "bad.png",
+                     np.zeros((2, 2, 2, 2), dtype=np.uint8))
+
+
+def test_parser_declares_the_new_diagnostic_and_mass_flags():
+    """NEUTER: `_merge_config` and the call sites read these off `args`, so a
+    missing declaration would only surface on the GPU node."""
+    parser, _, _, _ = rmv.build_parser()
+    args = parser.parse_args([
+        "--config", "x", "--start_checkpoint", "y", "--out_report", "z",
+        "--mask_root", "m"])
+    assert args.diagnose is False
+    assert args.id_rule == "fraction"
+    assert args.mass_cover == 0.8
+    assert args.id_min_mass_frac == 0.05
+    assert args.fbox == [664, 912, 744, 976]
+    assert args.fbox_frame == 150
+    other = parser.parse_args([
+        "--config", "x", "--start_checkpoint", "y", "--out_report", "z",
+        "--mask_root", "m", "--diagnose", "--id_rule", "mass",
+        "--mass_cover", "0.6", "--id_min_mass_frac", "0.01",
+        "--fbox", "1", "2", "3", "4", "--fbox_frame", "199"])
+    assert other.diagnose is True and other.id_rule == "mass"
+    assert other.fbox == [1, 2, 3, 4] and other.fbox_frame == 199
+    with pytest.raises(SystemExit):
+        parser.parse_args([
+            "--config", "x", "--start_checkpoint", "y", "--out_report", "z",
+            "--mask_root", "m", "--id_rule", "majority"])
+
+
+def test_mains_diagnose_call_binds_to_the_run_diagnostics_signature():
+    """NEUTER: `main` and `run_diagnostics` both need torch, so nothing else
+    in this file executes that call. A reordered or dropped argument would
+    otherwise surface only on the GPU node, after the checkpoint is loaded.
+
+    The check is static: find the `run_diagnostics(...)` call inside `main`,
+    then bind its argument SHAPE against the real signature.
+    """
+    import ast
+    import inspect
+
+    tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8"))
+    calls = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_diagnostics"
+    ]
+    assert len(calls) == 1, "expected exactly one run_diagnostics call site"
+    call = calls[0]
+    assert not any(isinstance(a, ast.Starred) for a in call.args)
+    assert all(kw.arg is not None for kw in call.keywords)
+    signature = inspect.signature(rmv.run_diagnostics)
+    signature.bind(*[object()] * len(call.args),
+                   **{kw.arg: object() for kw in call.keywords})

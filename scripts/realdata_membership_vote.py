@@ -84,6 +84,30 @@ The guard is installed AROUND the measurement stage only, exactly as
 the test split from disk before the guard exists, and the guard then makes
 those objects unreachable.
 
+DIAGNOSTIC MODE AND THE SECOND HARMONISATION RULE
+--------------------------------------------------
+The first real-checkpoint run refused at harmonisation: with a 1,483-row seed
+inside a 599,478-row cloud, `S(p) = sum_{i in seed} alpha_i T_i` almost never
+exceeds `--s_thresh 0.5`, so "the fraction of an id's OWN pixels carrying
+S > s_thresh" cannot reach `--id_overlap` for any id and the instrument fails
+closed with every fraction at ~0. That refusal is correct -- an empty object
+mask would report every row a non-member -- but it says nothing about WHERE
+the seed actually lands.
+
+`--diagnose` answers that question and nothing else: it renders the same S map
+the chooser thresholds, writes it as an image, writes the DEVA id map beside
+it, tabulates the ids by the S-MASS they carry rather than by a threshold
+crossing, projects the seed rows into every camera, and exits 0 without voting
+or emitting anything.
+
+`--id_rule mass` is the alternative chooser that follows from the same
+observation: rank ids by the S-mass they carry and take them in descending
+order until `--mass_cover` of the view's S-mass is covered. It is
+scale-invariant in S, so a seed that deposits a thin, diffuse contribution
+still selects the id it is concentrated on. It is NOT the frozen operating
+point: `--id_rule fraction` remains the default and its behaviour, its chosen
+ids and its emitted program bytes are untouched by this addition.
+
 WHAT THIS SCRIPT DOES NOT DO
 -----------------------------
 It does not score against ground truth (there is none on N3V), it does not
@@ -143,6 +167,34 @@ PARTITION_REL_TOL = 1e-3
 #: Weights are magnitudes. A gradient more negative than this fraction of the
 #: view's own maximum means the binding is wrong, not that a row is negative.
 NEGATIVE_WEIGHT_REL_TOL = 1e-6
+
+#: The two harmonisation rules. `fraction` is the frozen default and is what
+#: every historical invocation of this script used.
+ID_RULES = ("fraction", "mass")
+
+#: `--diagnose` artifacts.
+DIAG_SCHEMA = "adags-realdata-membership-diagnose-v1"
+
+#: The S levels the diagnostic counts pixels at. 0.5 is `--s_thresh`'s default
+#: so the table always contains the level the failing rule actually used.
+DIAG_S_LEVELS = (0.02, 0.05, 0.1, 0.2, 0.5)
+
+#: The overlay marks pixels above this. Deliberately far below `--s_thresh`:
+#: the whole point of the overlay is to show a contribution too weak for the
+#: fraction rule to see.
+DIAG_OVERLAY_S = 0.05
+
+#: The overlay's marker colour. `id_colour` never emits a channel outside
+#: [32, 223], so this can never collide with a DEVA id's colour.
+DIAG_MARKER_RGB = (255, 0, 255)
+
+#: How many ids the diagnostic tabulates per view.
+DIAG_TOP_K = 10
+
+#: The scoring-side frame box, x0 y0 x1 y1 INCLUSIVE. Supplied by the caller;
+#: this script never derives it and never scores against it.
+DEFAULT_FBOX = (664, 912, 744, 976)
+DEFAULT_FBOX_FRAME = 150
 
 
 class LeakageError(RuntimeError):
@@ -389,6 +441,257 @@ def choose_ids_for_view(id_map, s_map, s_thresh, id_overlap, min_id_pixels,
         if take:
             chosen.append(value)
     return sorted(chosen), stats
+
+
+def summarise_ids_by_mass(id_map, s_map, s_thresh, ignore_id=0):
+    """Every DEVA id in ONE view, ranked by the S-MASS it carries.
+
+    `s_mass` is `sum_{p in id} S(p)` -- the total rendered compositing weight
+    the seed deposits inside that id. It is the quantity `choose_ids_for_view`
+    does NOT look at: that rule asks how many of an id's pixels cross an
+    ABSOLUTE level, so a seed of 1,483 rows inside a 599,478-row cloud, whose
+    S is everywhere below `--s_thresh`, reads exactly 0.0 for every id and
+    carries no information at all. S-mass is scale-free in S and still ranks
+    the ids correctly in that regime.
+
+    `mass_fraction` is normalised by the WHOLE VIEW's S-mass, INCLUDING the
+    ignored id, not by the labelled part. That is the honest denominator: if
+    the seed's contribution lands mostly on unlabelled background then no id
+    can cover it, and the caller must be able to see that rather than have it
+    renormalised away. `s_mass_ignored_id_fraction` reports exactly that share.
+
+    Returns `(rows, totals)` with `rows` sorted by descending `s_mass`, ties
+    broken by ascending id so the order is deterministic.
+    """
+    ids_arr = np.asarray(id_map)
+    s_arr = np.asarray(s_map, dtype=np.float64)
+    if ids_arr.shape != s_arr.shape:
+        raise ContractError(
+            "id map %r and contribution map %r disagree on shape"
+            % (tuple(ids_arr.shape), tuple(s_arr.shape)))
+    hot = s_arr > float(s_thresh)
+    total_view = float(s_arr.sum())
+    labelled = 0.0
+    rows = []
+    for raw in np.unique(ids_arr):
+        value = int(raw)
+        if value == int(ignore_id):
+            continue
+        region = ids_arr == value
+        pixels = int(region.sum())
+        mass = float(s_arr[region].sum())
+        labelled += mass
+        covered = int(np.logical_and(region, hot).sum())
+        rows.append({
+            "id": value,
+            "pixels": pixels,
+            "s_mass": mass,
+            "mass_fraction": (mass / total_view) if total_view > 0.0 else 0.0,
+            "pixels_over_s_thresh": covered,
+            "fraction": (float(covered) / float(pixels)) if pixels else 0.0,
+        })
+    rows.sort(key=lambda row: (-row["s_mass"], row["id"]))
+    totals = {
+        "ignore_id": int(ignore_id),
+        "n_ids": len(rows),
+        "s_mass_view": total_view,
+        "s_mass_labelled": labelled,
+        "s_mass_ignored_id_fraction": (
+            (total_view - labelled) / total_view if total_view > 0.0 else 0.0),
+        "mass_fraction_denominator": (
+            "the whole view's S-mass, including the ignored id"),
+    }
+    return rows, totals
+
+
+def choose_ids_by_mass(id_map, s_map, s_thresh, mass_cover, id_min_mass_frac,
+                       min_id_pixels, ignore_id=0):
+    """The `mass` harmonisation rule for ONE view.
+
+    Walk the ids in descending S-mass and take them until `mass_cover` of the
+    view's S-mass is covered by the taken ids. An id is admissible only if it
+    carries at least `id_min_mass_frac` of the view's S-mass AND covers at
+    least `min_id_pixels` pixels.
+
+    `mass_fraction` is monotone decreasing along the walk, so the
+    `id_min_mass_frac` bar truncates it; the `min_id_pixels` bar does not, so
+    an id that is heavy but tiny is SKIPPED and the walk continues rather than
+    stopping. A skipped id contributes nothing to the covered mass, so the
+    cover target is never met by mass the rule refused to admit.
+
+    Returns `(chosen, stats, totals)`. `stats` is every id considered, in the
+    walk's own order, so the report shows the near-misses and the reason each
+    was refused. Fail-closed behaviour is the CALLER's: an empty `chosen` is
+    returned, not an exception, so the caller can raise with its own context.
+    """
+    if not 0.0 <= float(mass_cover) <= 1.0:
+        raise ContractError("--mass_cover %r outside [0, 1]" % (mass_cover,))
+    if not 0.0 <= float(id_min_mass_frac) <= 1.0:
+        raise ContractError(
+            "--id_min_mass_frac %r outside [0, 1]" % (id_min_mass_frac,))
+    rows, totals = summarise_ids_by_mass(id_map, s_map, s_thresh, ignore_id)
+    chosen, stats = [], []
+    covered = 0.0
+    satisfied = False
+    for row in rows:
+        entry = dict(row)
+        big_enough = bool(row["pixels"] >= int(min_id_pixels))
+        heavy_enough = bool(row["mass_fraction"] >= float(id_min_mass_frac))
+        take = bool(big_enough and heavy_enough and not satisfied)
+        if take:
+            covered += float(row["mass_fraction"])
+            chosen.append(int(row["id"]))
+            if covered >= float(mass_cover):
+                satisfied = True
+        entry["meets_min_pixels"] = big_enough
+        entry["meets_min_mass_frac"] = heavy_enough
+        entry["chosen"] = take
+        entry["cumulative_mass_fraction"] = float(covered)
+        stats.append(entry)
+    totals = dict(totals)
+    totals["mass_cover_target"] = float(mass_cover)
+    totals["mass_covered_by_chosen"] = float(covered)
+    totals["mass_cover_reached"] = bool(satisfied)
+    return sorted(chosen), stats, totals
+
+
+def choose_ids_by_rule(rule, id_map, s_map, s_thresh, id_overlap,
+                       min_id_pixels, mass_cover, id_min_mass_frac,
+                       ignore_id=0):
+    """Dispatch to one harmonisation rule; `(chosen, stats, rule_info)`.
+
+    `rule == "fraction"` delegates VERBATIM to `choose_ids_for_view` with the
+    same arguments in the same order, so the frozen default cannot drift: the
+    dispatcher adds a label and nothing else.
+    """
+    name = str(rule)
+    if name == "fraction":
+        chosen, stats = choose_ids_for_view(
+            id_map, s_map, s_thresh, id_overlap, min_id_pixels, ignore_id)
+        return chosen, stats, {"rule": "fraction"}
+    if name == "mass":
+        chosen, stats, totals = choose_ids_by_mass(
+            id_map, s_map, s_thresh, mass_cover, id_min_mass_frac,
+            min_id_pixels, ignore_id)
+        info = {"rule": "mass"}
+        info.update(totals)
+        return chosen, stats, info
+    raise ContractError(
+        "unknown --id_rule %r; expected one of %r" % (rule, list(ID_RULES)))
+
+
+def diagnose_view_summary(id_map, s_map, s_thresh, top_k=DIAG_TOP_K,
+                          ignore_id=0, levels=DIAG_S_LEVELS):
+    """The per-view diagnostic record. Pure numpy; no I/O, no torch.
+
+    Reports the S map's own scale (max, mean, sum), how many pixels clear each
+    level in `levels`, and the `top_k` ids by S-mass with their area, mass,
+    mass fraction and -- so the failing rule's own quantity is visible beside
+    the replacement's -- the fraction of each id's pixels above `s_thresh`.
+    """
+    s_arr = np.asarray(s_map, dtype=np.float64)
+    rows, totals = summarise_ids_by_mass(id_map, s_arr, s_thresh, ignore_id)
+    return {
+        "s_thresh": float(s_thresh),
+        "n_pixels": int(s_arr.size),
+        "s_max": float(s_arr.max()) if s_arr.size else 0.0,
+        "s_mean": float(s_arr.mean()) if s_arr.size else 0.0,
+        "s_sum": float(s_arr.sum()),
+        "pixels_over": {
+            ("%g" % float(level)): int((s_arr > float(level)).sum())
+            for level in levels},
+        "id_totals": totals,
+        "top_ids_by_s_mass": [dict(row) for row in rows[:int(top_k)]],
+    }
+
+
+def scale_to_uint8(values, vmax=1.0):
+    """Clip to `[0, vmax]`, scale to 0-255, round. A non-positive or
+    non-finite `vmax` yields an all-zero image rather than a division error."""
+    arr = np.asarray(values, dtype=np.float64)
+    top = float(vmax)
+    if not np.isfinite(top) or top <= 0.0:
+        return np.zeros(arr.shape, dtype=np.uint8)
+    return np.rint(np.clip(arr, 0.0, top) / top * 255.0).astype(np.uint8)
+
+
+def id_colour(value, ignore_id=0):
+    """A deterministic pseudo-random RGB for one DEVA id.
+
+    Every channel lands in [32, 223], which is what makes `DIAG_MARKER_RGB`
+    unambiguous: no id can ever be drawn in the marker's colour.
+    """
+    if int(value) == int(ignore_id):
+        return (0, 0, 0)
+    h = (int(value) * 2654435761 + 40503) % (1 << 32)
+    return (32 + (h >> 2) % 192, 32 + (h >> 11) % 192, 32 + (h >> 20) % 192)
+
+
+def id_palette_rgb(id_map, marked=None, marker=DIAG_MARKER_RGB, ignore_id=0):
+    """The id map as an RGB image, with `marked` pixels painted `marker`."""
+    ids_arr = np.asarray(id_map)
+    out = np.zeros(tuple(ids_arr.shape) + (3,), dtype=np.uint8)
+    for raw in np.unique(ids_arr):
+        out[ids_arr == raw] = np.asarray(id_colour(int(raw), ignore_id),
+                                         dtype=np.uint8)
+    if marked is not None:
+        flags = np.asarray(marked, dtype=bool)
+        if flags.shape != ids_arr.shape:
+            raise ContractError(
+                "marker mask %r and id map %r disagree on shape"
+                % (tuple(flags.shape), tuple(ids_arr.shape)))
+        out[flags] = np.asarray(marker, dtype=np.uint8)
+    return out
+
+
+def projected_bbox(xy, valid=None):
+    """Axis-aligned pixel bbox of the projected points selected by `valid`."""
+    pts = np.asarray(xy, dtype=np.float64).reshape(-1, 2)
+    if valid is None:
+        sel = np.ones(pts.shape[0], dtype=bool)
+    else:
+        sel = np.asarray(valid, dtype=bool).reshape(-1)
+        if sel.shape[0] != pts.shape[0]:
+            raise ContractError(
+                "validity flags (%d) and projected points (%d) disagree"
+                % (int(sel.shape[0]), int(pts.shape[0])))
+    kept = int(sel.sum())
+    out = {"n_points": int(pts.shape[0]), "n_selected": kept,
+           "x_min": None, "x_max": None, "y_min": None, "y_max": None}
+    if kept:
+        sub = pts[sel]
+        out.update({
+            "x_min": float(sub[:, 0].min()), "x_max": float(sub[:, 0].max()),
+            "y_min": float(sub[:, 1].min()), "y_max": float(sub[:, 1].max()),
+        })
+    return out
+
+
+def count_in_fbox(xy, valid, fbox):
+    """How many projected points land inside `fbox = (x0, y0, x1, y1)`.
+
+    The box is INCLUSIVE on both ends and is applied to the ROUNDED pixel
+    coordinates, which is the same rounding `estimate_episodes.build_footprints`
+    uses to scatter a projected row into a pixel
+    (scripts/estimate_episodes.py:866-868).
+    """
+    pts = np.asarray(xy, dtype=np.float64).reshape(-1, 2)
+    sel = np.asarray(valid, dtype=bool).reshape(-1)
+    if sel.shape[0] != pts.shape[0]:
+        raise ContractError(
+            "validity flags (%d) and projected points (%d) disagree"
+            % (int(sel.shape[0]), int(pts.shape[0])))
+    box = [int(v) for v in fbox]
+    if len(box) != 4:
+        raise ContractError("--fbox needs exactly four integers x0 y0 x1 y1")
+    x0, y0, x1, y1 = box
+    if x1 < x0 or y1 < y0:
+        raise ContractError(
+            "--fbox %r is not x0 y0 x1 y1 with x1 >= x0 and y1 >= y0" % (box,))
+    xs = np.rint(pts[:, 0])
+    ys = np.rint(pts[:, 1])
+    inside = sel & (xs >= x0) & (xs <= x1) & (ys >= y0) & (ys <= y1)
+    return int(inside.sum())
 
 
 def aggregate_chosen_ids(per_frame_chosen, id_min_frames):
@@ -666,6 +969,23 @@ def load_id_map(path):
         raise ContractError(
             "id map %s has shape %r, expected 2-D" % (path, tuple(arr.shape)))
     return arr.astype(np.int64)
+
+
+def save_png(path, array):
+    """Write a uint8 2-D (grey) or 3-D (RGB) array. Same backends as
+    `load_id_map`, in the same order, so the diagnostic never needs a
+    dependency the reader does not already have."""
+    arr = np.ascontiguousarray(np.asarray(array, dtype=np.uint8))
+    if arr.ndim not in (2, 3):
+        raise ContractError(
+            "cannot write a PNG from a %d-D array" % (int(arr.ndim),))
+    try:
+        from PIL import Image
+        Image.fromarray(arr).save(str(path))
+    except ImportError:  # pragma: no cover - environment dependent
+        import imageio.v2 as imageio
+        imageio.imwrite(str(path), arr)
+    return str(path)
 
 
 def sha256_file(path, chunk=1 << 20):
@@ -952,6 +1272,36 @@ def build_parser():
     parser.add_argument("--id_overlap", type=float, default=0.5)
     parser.add_argument("--min_id_pixels", type=int, default=64)
     parser.add_argument("--id_min_frames", type=int, default=1)
+    parser.add_argument(
+        "--id_rule", default="fraction", choices=list(ID_RULES),
+        help="how an anchor view's DEVA ids are harmonized. 'fraction' (the "
+             "frozen default) takes an id when at least --id_overlap of ITS "
+             "OWN pixels carry S > --s_thresh. 'mass' ranks ids by the S-mass "
+             "they carry and takes them in descending order until "
+             "--mass_cover of the view's S-mass is covered; it is scale-free "
+             "in S and therefore still discriminates when a thin seed puts "
+             "every pixel below --s_thresh.")
+    parser.add_argument(
+        "--mass_cover", type=float, default=0.8,
+        help="--id_rule mass only: stop taking ids once they cover this "
+             "fraction of the view's total S-mass")
+    parser.add_argument(
+        "--id_min_mass_frac", type=float, default=0.05,
+        help="--id_rule mass only: an id must carry at least this fraction of "
+             "the view's total S-mass to be admissible")
+    parser.add_argument(
+        "--diagnose", action="store_true",
+        help="write the S maps, the id overlays, a per-view id table and the "
+             "seed's projection into every camera next to --out_report, then "
+             "exit 0 WITHOUT voting and WITHOUT emitting any program")
+    parser.add_argument(
+        "--fbox", nargs=4, type=int, default=list(DEFAULT_FBOX),
+        metavar=("X0", "Y0", "X1", "Y1"),
+        help="--diagnose only: an INCLUSIVE pixel box the caller supplies; "
+             "the diagnostic counts how many seed rows project into it")
+    parser.add_argument(
+        "--fbox_frame", type=int, default=DEFAULT_FBOX_FRAME,
+        help="--diagnose only: the frame at which --fbox is evaluated")
     parser.add_argument("--tau", type=float, default=VOTE_TAU)
     parser.add_argument("--partition_rel_tol", type=float,
                         default=PARTITION_REL_TOL,
@@ -1056,6 +1406,203 @@ def resolve_seed_rows(args, xyz_np, fingerprint):
             "the seed selected zero rows; the contribution map would be "
             "identically zero and every id would be rejected")
     return seed, provenance
+
+
+def run_diagnostics(args, scene, gaussians, pipe, background, flow_leaf,
+                    seed_mask, seed_np, seed_provenance, guard, record,
+                    by_camera, chosen_cameras, anchor_frames, frame_dt,
+                    n_rows, held_out, train_stack,
+                    provenance):  # pragma: no cover - needs torch + a checkpoint
+    """`--diagnose`: describe the S map and the seed's projection, then STOP.
+
+    Two limbs, deliberately separated.
+
+    LIMB 1 runs UNDER the held-out guard and under the leaf binding, on the
+    training anchor views only. It renders exactly the S map
+    `choose_ids_for_view` thresholds and writes it, the DEVA id map and a
+    per-view id table. It never calls a chooser, so the fail-closed refusal
+    that motivated this mode cannot fire and hide the evidence.
+
+    LIMB 2 runs OUTSIDE the guard, on purpose, and projects the seed rows into
+    EVERY camera including the held-out cam00. It is pure geometry -- the same
+    `get_dynamic_xyz` / `project_points_to_screen` pair
+    `estimate_episodes.build_footprints` uses (scripts/estimate_episodes.py:846,
+    :863-864) -- and reads no image, no mask and no rendered pixel of a
+    held-out view. The bypass is structural (the limb sits after the guard's
+    scope) rather than a flag poked into the guard, and `diag.json` says so in
+    a top-level key so no consumer can read a cam00 number as a
+    training-view-only measurement.
+    """
+    import torch
+
+    from utils.motion_prior_utils import project_points_to_screen
+
+    out_dir = Path(args.out_report).parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # ---- limb 1: the S map on the training anchor views ------------------
+    views = []
+    with guard, bind_flow_leaf(flow_leaf, n_rows, record):
+        for cam_id in chosen_cameras:
+            for frame in anchor_frames:
+                camera = by_camera[cam_id][frame]
+                camera_on_device = (camera.cuda() if torch.cuda.is_available()
+                                    else camera)
+                s_map = contribution_map(camera_on_device, gaussians, pipe,
+                                         background, flow_leaf, seed_mask)
+                s_np = s_map.to("cpu", torch.float32).numpy().astype(np.float64)
+                path = mask_path(args.mask_root, cam_id, frame,
+                                 args.mask_camera_format, args.mask_subdir,
+                                 args.mask_frame_format)
+                id_map = load_id_map(path)
+                if id_map.shape != s_np.shape:
+                    raise ContractError(
+                        "id map %s has shape %r but the render is %r"
+                        % (path, tuple(id_map.shape), tuple(s_np.shape)))
+                summary = diagnose_view_summary(id_map, s_np, args.s_thresh)
+                stem = "diag_cam%02d_%04d" % (int(cam_id), int(frame))
+                linear = out_dir / (stem + "_S.png")
+                by_max = out_dir / (stem + "_Smax.png")
+                overlay = out_dir / (stem + "_overlay.png")
+                save_png(linear, scale_to_uint8(s_np, 1.0))
+                save_png(by_max, scale_to_uint8(s_np, summary["s_max"]))
+                save_png(overlay, id_palette_rgb(
+                    id_map, marked=(s_np > DIAG_OVERLAY_S)))
+                summary.update({
+                    "camera": int(cam_id),
+                    "frame": int(frame),
+                    "mask_path": path,
+                    "images": {
+                        "s_clipped_to_unit": linear.name,
+                        "s_scaled_by_view_max": by_max.name,
+                        "id_overlay": overlay.name,
+                        "overlay_marks_s_above": float(DIAG_OVERLAY_S),
+                        "overlay_marker_rgb": list(DIAG_MARKER_RGB),
+                    },
+                })
+                views.append(summary)
+                top = summary["top_ids_by_s_mass"]
+                print("  cam%02d f%04d S max %.4g mean %.4g | >%.2f %d px | "
+                      "top id %s mass_frac %.4f"
+                      % (int(cam_id), int(frame), summary["s_max"],
+                         summary["s_mean"], DIAG_OVERLAY_S,
+                         summary["pixels_over"]["%g" % DIAG_OVERLAY_S],
+                         (top[0]["id"] if top else None),
+                         (top[0]["mass_fraction"] if top else 0.0)))
+
+    # ---- limb 2: pure projection, guard deliberately out of scope --------
+    all_cameras = {}
+    for camera in list(train_stack) + list(scene.test_cameras.get(1.0, []) or []):
+        cam_id = camera_id_of(camera)
+        frame, _ = frame_index_of(camera, frame_dt)
+        all_cameras.setdefault(cam_id, {})[frame] = camera
+    seed_rows = np.nonzero(np.asarray(seed_np, dtype=bool))[0]
+    seed_index = torch.from_numpy(
+        np.ascontiguousarray(seed_rows.astype(np.int64))).to(
+            gaussians._xyz.device)
+    want_frames = sorted(set(int(f) for f in anchor_frames)
+                         | {int(args.fbox_frame)})
+    held_set = set(int(c) for c in held_out)
+    projection_cameras = []
+    for cam_id in sorted(all_cameras):
+        per_frame = []
+        for frame in want_frames:
+            camera = all_cameras[cam_id].get(frame)
+            if camera is None:
+                per_frame.append({"frame": int(frame), "present": False})
+                continue
+            # No `.cuda()` and no dataset indexing: `full_proj_transform`,
+            # `image_width` and `image_height` are all this needs, so not one
+            # byte of a held-out image is touched.
+            with torch.no_grad():
+                points = gaussians.get_dynamic_xyz(
+                    float(camera.timestamp)).detach()
+                xy, valid = project_points_to_screen(points[seed_index], camera)
+            xy_np = xy.to("cpu", torch.float32).numpy().reshape(-1, 2)
+            valid_np = valid.reshape(-1).to("cpu").numpy().astype(bool)
+            per_frame.append({
+                "frame": int(frame),
+                "present": True,
+                "image_width": int(camera.image_width),
+                "image_height": int(camera.image_height),
+                "bbox_on_screen": projected_bbox(xy_np, valid_np),
+                "bbox_all_projected": projected_bbox(xy_np, None),
+                "n_seed_rows_in_fbox": count_in_fbox(xy_np, valid_np, args.fbox),
+            })
+        projection_cameras.append({
+            "camera": int(cam_id),
+            "is_held_out": bool(int(cam_id) in held_set),
+            "frames": per_frame,
+        })
+
+    diagnostic = {
+        "schema": DIAG_SCHEMA,
+        "held_out_projection_is_scoring_side_bookkeeping": True,
+        "held_out_projection_note": (
+            "LOUD: the `projection` block below covers EVERY camera, the "
+            "HELD-OUT cam00 included, with the held-out guard deliberately "
+            "out of scope for that limb. It is pure geometry -- "
+            "get_dynamic_xyz + project_points_to_screen -- and reads no "
+            "image, no DEVA mask and no rendered pixel of any held-out view. "
+            "It exists to locate a caller-supplied frame box on the scoring "
+            "side. NO number in this block may enter a training-view-only "
+            "claim, and nothing in this file is a measurement of anything."),
+        "voted": False,
+        "programs_emitted": False,
+        "provenance": dict(provenance),
+        "settings": {
+            "cameras": [int(c) for c in chosen_cameras],
+            "held_out_cameras": sorted(held_set),
+            "anchor_frames": [int(f) for f in anchor_frames],
+            "s_thresh": float(args.s_thresh),
+            "id_rule": str(args.id_rule),
+            "mass_cover": float(args.mass_cover),
+            "id_min_mass_frac": float(args.id_min_mass_frac),
+            "min_id_pixels": int(args.min_id_pixels),
+            "id_overlap": float(args.id_overlap),
+            "diag_s_levels": [float(v) for v in DIAG_S_LEVELS],
+            "overlay_s": float(DIAG_OVERLAY_S),
+            "top_k": int(DIAG_TOP_K),
+            "fbox": [int(v) for v in args.fbox],
+            "fbox_frame": int(args.fbox_frame),
+        },
+        "seed": dict(seed_provenance),
+        "guard": dict(guard.checks),
+        "rasterizer_intercepts": int(record.get("calls", 0)),
+        "views": views,
+        "projection": {
+            "position_source": (
+                "gaussians.get_dynamic_xyz(camera.timestamp), the same call "
+                "scripts/estimate_episodes.build_footprints makes at "
+                "scripts/estimate_episodes.py:863"),
+            "projection_fn": (
+                "utils.motion_prior_utils.project_points_to_screen; "
+                "`bbox_on_screen` keeps only points whose NDC lies in "
+                "[-1, 1]^2, `bbox_all_projected` keeps every seed row"),
+            "fbox": [int(v) for v in args.fbox],
+            "fbox_convention": "x0 y0 x1 y1, INCLUSIVE, on rounded pixels",
+            "fbox_frame": int(args.fbox_frame),
+            "n_seed_rows": int(seed_rows.size),
+            "cameras": projection_cameras,
+        },
+    }
+    diag_path = out_dir / "diag.json"
+    with open(str(diag_path), "w", encoding="utf-8") as handle:
+        json.dump(diagnostic, handle, indent=1, sort_keys=True)
+
+    for entry in projection_cameras:
+        for frame_entry in entry["frames"]:
+            if frame_entry.get("present") and int(
+                    frame_entry["frame"]) == int(args.fbox_frame):
+                print("cam%02d%s frame %d: %d / %d seed rows in fbox %r"
+                      % (entry["camera"], " (HELD OUT)" if entry["is_held_out"]
+                         else "", frame_entry["frame"],
+                         frame_entry["n_seed_rows_in_fbox"], int(seed_rows.size),
+                         [int(v) for v in args.fbox]))
+    print("diagnose: %d anchor views, %d cameras projected -> %s"
+          % (len(views), len(projection_cameras), diag_path))
+    print("diagnose: NO vote, NO program emitted; exiting 0")
+    return 0
 
 
 def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
@@ -1194,6 +1741,27 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
     check_flow_binding(flow_leaf, n_rows)
     record = {"calls": 0}
 
+    if args.diagnose:
+        print("cameras %s | anchor %s | seed rows %d / %d | DIAGNOSE ONLY"
+              % (chosen_cameras, anchor_frames, int(seed_np.sum()), n_rows))
+        return run_diagnostics(
+            args, scene, gaussians, pipe, background, flow_leaf, seed_mask,
+            seed_np, seed_provenance, guard, record, by_camera,
+            chosen_cameras, anchor_frames, frame_dt, n_rows, held_out,
+            train_stack,
+            provenance={
+                "checkpoint": str(args.start_checkpoint),
+                "config": str(args.config),
+                "source_path": str(getattr(args, "source_path", "")),
+                "model_path": str(args.model_path),
+                "mask_root": str(args.mask_root),
+                "commit": git_commit(),
+                "n_rows": n_rows,
+                "cloud_xyz_sha256": fingerprint,
+                "frame_dt": float(frame_dt),
+                "instrument": REPORT_SCHEMA,
+            })
+
     w_in_by_camera = {}
     w_out_by_camera = {}
     harmonization = []
@@ -1228,13 +1796,28 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
                     raise ContractError(
                         "id map %s has shape %r but the render is %r"
                         % (path, tuple(id_map.shape), tuple(s_np.shape)))
-                chosen, stats = choose_ids_for_view(
-                    id_map, s_np, args.s_thresh, args.id_overlap,
-                    args.min_id_pixels)
+                chosen, stats, rule_info = choose_ids_by_rule(
+                    args.id_rule, id_map, s_np, args.s_thresh, args.id_overlap,
+                    args.min_id_pixels, args.mass_cover, args.id_min_mass_frac)
                 if not chosen:
                     # FAIL CLOSED. A camera/frame with no chosen id has no
                     # object mask, and measuring it against an empty mask
                     # would silently report every row as a non-member.
+                    if args.id_rule == "mass":
+                        raise ContractError(
+                            "no DEVA id met the mass bar for cam%02d frame %d "
+                            "(mass_cover %r, id_min_mass_frac %r, "
+                            "min_id_pixels %r). The view's total S-mass is "
+                            "%.6g, of which %.4f sits on the ignored id. Top "
+                            "5 ids by S-mass (s_mass, mass_fraction, pixels, "
+                            "id): %r"
+                            % (cam_id, frame, args.mass_cover,
+                               args.id_min_mass_frac, args.min_id_pixels,
+                               rule_info.get("s_mass_view", 0.0),
+                               rule_info.get("s_mass_ignored_id_fraction", 0.0),
+                               [(round(s["s_mass"], 6),
+                                 round(s["mass_fraction"], 6),
+                                 s["pixels"], s["id"]) for s in stats[:5]]))
                     raise ContractError(
                         "no DEVA id met the overlap bar for cam%02d frame %d "
                         "(s_thresh %r, id_overlap %r, min_id_pixels %r). "
@@ -1250,6 +1833,7 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
                     "chosen_ids": chosen,
                     "pixels_over_s_thresh": int((s_np > args.s_thresh).sum()),
                     "ids": stats,
+                    "id_rule_info": dict(rule_info),
                 })
             camera_ids_chosen, hit_counts = aggregate_chosen_ids(
                 per_frame_chosen, args.id_min_frames)
@@ -1422,6 +2006,14 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
             "frames": [int(f) for f in measure_frames],
             "tau": float(args.tau),
         }
+        if args.id_rule != "fraction":
+            # The default rule is the one the schema was frozen with, so its
+            # ABSENCE means `fraction` and a default artifact keeps the bytes
+            # -- and therefore the sha256 -- it had before this rule existed.
+            # A non-default rule is stamped into the artifact that carries it.
+            source["id_rule"] = str(args.id_rule)
+            source["mass_cover"] = float(args.mass_cover)
+            source["id_min_mass_frac"] = float(args.id_min_mass_frac)
         row_column = np.where(members, EMITTED_GROUP_ID, -1).astype(np.int64)
 
         emitted = []
@@ -1507,6 +2099,10 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
             "id_overlap": float(args.id_overlap),
             "min_id_pixels": int(args.min_id_pixels),
             "id_min_frames": int(args.id_min_frames),
+            "id_rule": str(args.id_rule),
+            "id_rule_default": "fraction",
+            "mass_cover": float(args.mass_cover),
+            "id_min_mass_frac": float(args.id_min_mass_frac),
             "tau": float(args.tau),
             "tau_default_provenance": (
                 "0.50, the frozen operating point of "
