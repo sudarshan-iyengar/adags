@@ -883,7 +883,8 @@ class TestStructuralSeparation(unittest.TestCase):
             names,
             {"gaussians", "dataset", "views", "frame_dt", "interval_config",
              "schedule", "pipe", "background", "height", "width",
-             "coarse_stride", "n_frames", "frame_range", "verbose"},
+             "coarse_stride", "n_frames", "frame_range", "verbose",
+             "grid_cells", "grid_bounds"},
         )
 
     def test_scoring_is_the_only_stage_that_takes_the_source_path(self):
@@ -899,6 +900,7 @@ class TestStructuralSeparation(unittest.TestCase):
         "_render_error", "_dilate",
         # the measured-window helpers run inside the stage too
         "resolve_frame_range", "coarse_frame_grid", "clamp_fine_window",
+        "percentile_bounds",
         "frames_in_range",
     )
 
