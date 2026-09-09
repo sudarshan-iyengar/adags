@@ -149,6 +149,84 @@ ASSUMED, NOT EXECUTED (each would fail loudly, not silently, if wrong)
       the holes stay visible and are quantified in ``support/`` and
       ``hole_fraction.json`` instead of being cosmetically filled.
 
+ROW-SET NARROWING (``--argmax_only`` / ``--scale_max_factor`` /
+``--box_percentile`` / ``--mask_consistency``)
+-------------------------------------------------------------------------
+The unfiltered selection is not the object. Measured on
+``cut_roasted_beef`` at iteration 14000, ``--cam_view cam15``, ``--ids 95``
+(the dog on a stool): 1,579 rows argmax-only, 1,854 at soft > 0.05, 2,773 at
+soft > 0.001, and the object-only render covered ~236,000 px of cam00 (bbox
+[0, 380, 652, 1013]) as a diffuse smear, against a real dog silhouette of
+roughly 40-60k px. The background-without-object render also lost the stool.
+So the selection carries large diffuse Gaussians and neighbouring content.
+
+Four OPTIONAL narrowing steps are available, applied in this fixed order.
+All four are OFF by default, and with all four absent this script behaves
+exactly as it did before them. Every step's surviving row count is reported
+under ``filters`` in ``preview.json`` / ``rowset.json``.
+
+    1. ``--argmax_only`` -- the base row set is argmax-in-``--ids`` only; the
+       soft limb is not unioned in. The soft SENSITIVITY numbers are still
+       reported, so the cost of dropping it stays visible.
+    2. ``--scale_max_factor F`` -- drop rows whose LARGEST ACTIVATED scale at
+       that timestamp exceeds ``F x median(largest activated scale)`` of the
+       base set. The activated, deformed scale is used because that is what
+       the rasterizer consumed (gaussian_renderer/__init__.py:213-226). The
+       base set's scale distribution (median, p90, p99, max) is reported
+       whether or not the filter is on.
+    3. ``--box_percentile P`` (with ``--box_pad``, default 0.1) -- keep rows
+       inside the per-axis ``[P, 100-P]`` percentile box of the base set's
+       CANONICAL (undeformed ``get_xyz``) positions, each axis grown by
+       ``box_pad`` times that axis's extent on BOTH sides. Canonical, not
+       deformed, so the box does not depend on a timestamp -- the same reason
+       ``points_inside_convex_hull`` is applied to ``get_xyz``.
+    4. ``--mask_consistency <deva_root> --mask_min_cams K --mask_frames L``
+       -- a multi-view DEVA-mask vote. At each anchor frame in ``L`` the base
+       rows (after steps 2 and 3) are deformed to that timestamp and projected
+       into all 19 TRAINING cameras; each camera's DEVA id map is read from
+       ``<deva_root>/camXX/pseudo_label/object_mask/FFFF.png``. Per camera the
+       HARMONISED id is the modal id the projected rows land on -- DEVA ids
+       are per-camera, so cam15's id 95 is not cam07's id 95 and they must be
+       matched by agreement rather than by number. A row is consistent in a
+       camera when its projection lands inside the image on that camera's
+       harmonised id, and survives the anchor frame when it is consistent in
+       at least ``K`` cameras. The final mask keeps rows that survive at least
+       ``--mask_min_frames`` (default 1.0, i.e. EVERY) anchor frame. The
+       resulting row mask is frozen once and intersected into every timestamp,
+       in preview and in build alike.
+
+THE PROJECTION USED BY STEP 4, AND THE PRECONDITION THAT GUARDS IT
+------------------------------------------------------------------
+``project_points`` reproduces the rasterizer's own convention exactly, read
+out of the vendored ``diff-gaussian-rasterization`` in THIS repository:
+
+    p_hom  = [x, y, z, 1] @ full_proj_transform
+             (cuda_rasterizer/auxiliary.h:69-78 -- ``transformPoint4x4``
+             indexes ``matrix[0], matrix[4], matrix[8], matrix[12]`` for the
+             first output, i.e. a ROW-vector times the matrix as stored, and
+             ``full_proj_transform`` is already stored transposed by
+             scene/cameras.py; called at cuda_rasterizer/forward.cu:148)
+    p_proj = p_hom.xyz / (p_hom.w + 1e-7)      (forward.cu:149-150)
+    pixel  = ((p_proj + 1) * S - 1) * 0.5      (auxiliary.h:42-45, applied at
+                                                forward.cu:467)
+    in front of the camera iff  ([x,y,z,1] @ world_view_transform).z > 0.2
+                                               (forward.cu:151-153)
+
+Note this is NOT ``(ndc + 1) * 0.5 * (S - 1)``, which the ADAGS helper
+``utils/motion_prior_utils.py:147-148`` uses; the two differ by up to half a
+pixel at the frame edge and the rasterizer's form is the one used here.
+
+Because a wrong projection would silently make EVERY row inconsistent and
+return a clean, small, entirely fictitious row set, step 4 carries a
+PRECONDITION rather than only a reading rule: on the first (camera, anchor
+frame) pair the analytic projection is compared against the ``points2d`` that
+``render_segmentation`` returns, and a median disagreement above
+``PROJECTION_CHECK_TOL_PX`` ABORTS the run. Whether the check actually ran,
+and its statistics, are recorded in ``filters.mask_consistency.
+projection_check`` -- if ``points2d`` turns out to be unavailable or of an
+unexpected shape the run continues with the analytic projection and says so,
+so an unexercised precondition is never mistaken for a passed one.
+
 DELIBERATE DEVIATIONS FROM THE NOTEBOOKS
     * The notebooks recompute the row set at every timestamp, so the deleted
       set flickers frame to frame. This script's build mode takes a MAJORITY
@@ -196,6 +274,28 @@ SENSITIVITY_SOFT_HIGH = 0.05
 # recycler/ie_cut_roasted_beef.ipynb cell 18.
 RADIUS_STD_FACTOR = 7.0
 IQR_OUTLIER_FACTOR = 1.0
+
+# Fixed reporting thresholds for the object-only alpha footprint. Like the
+# soft-threshold probes above these are NOT tunable: they exist so that every
+# preview reports how sharp the rendered object mask is, and a knob would let
+# that report be tuned.
+ALPHA_REPORT_THRESHOLDS = (0.25, 0.5, 0.75)
+
+# DEVA writes 0 for "no object here". It is excluded from the harmonisation
+# argmax: if most projected rows land on unlabelled pixels the modal id would
+# be 0 and "consistent" would come to mean "agrees about being background",
+# which is the exact opposite of the intended test. The 0 count is still
+# reported per camera.
+DEVA_UNLABELLED_ID = 0
+
+# cuda_rasterizer/forward.cu:149-150 and :151-153.
+HOMOGENEOUS_W_EPS = 1e-7
+NEAR_CLIP_Z = 0.2
+
+# Median |analytic - points2d| above this many pixels aborts the run: it means
+# the projection convention below does not match the rasterizer's, and every
+# mask-consistency number would be fiction.
+PROJECTION_CHECK_TOL_PX = 1.0
 
 
 # --------------------------------------------------------------------------
@@ -365,8 +465,8 @@ def mask_bbox_centroid(mask):
     }
 
 
-def centroid_velocity(previous_centroid, centroid, frame_gap):
-    """Per-frame centroid velocity, or ``None`` when either endpoint is missing."""
+def centroid_velocity_detail(previous_centroid, centroid, frame_gap):
+    """Signed per-frame centroid motion, or ``None`` without two endpoints and a gap."""
     if previous_centroid is None or centroid is None:
         return None
     gap = int(frame_gap)
@@ -380,6 +480,17 @@ def centroid_velocity(previous_centroid, centroid, frame_gap):
         "dy_per_frame": dy,
         "speed_px_per_frame": math.hypot(dx, dy),
     }
+
+
+def centroid_velocity(previous_centroid, centroid, frame_gap):
+    """Centroid speed in px/frame as a FLOAT, or ``None`` on the first frame.
+
+    A scalar, because a consumer that plots "velocity" against frame must not
+    have to know whether this field is a number or a dict. The signed
+    components live in ``centroid_velocity_detail``.
+    """
+    detail = centroid_velocity_detail(previous_centroid, centroid, frame_gap)
+    return None if detail is None else float(detail["speed_px_per_frame"])
 
 
 def majority_rowset(table):
@@ -432,6 +543,240 @@ def rowset_summary(hard, soft_low, soft_high):
         "argmax_or_soft_low": int((hard_a | low_a).sum()),
         "argmax_or_soft_high": int((hard_a | high_a).sum()),
     }
+
+
+def scale_distribution(max_scale):
+    """``count / median / p90 / p99 / max`` of a per-row largest-scale vector."""
+    values = np.asarray(max_scale, dtype=np.float64).reshape(-1)
+    if values.size == 0:
+        return {"count": 0, "median": None, "p90": None, "p99": None, "max": None}
+    return {
+        "count": int(values.size),
+        "median": float(np.median(values)),
+        "p90": float(np.percentile(values, 90.0)),
+        "p99": float(np.percentile(values, 99.0)),
+        "max": float(values.max()),
+    }
+
+
+def scale_max_keep(max_scale, factor):
+    """Keep rows with ``largest scale <= factor * median(largest scale)``.
+
+    Returns ``(sub_keep, stats)`` where ``sub_keep`` is indexed WITHIN the base
+    rows, and ``stats`` always carries the distribution -- including when
+    ``factor is None`` and nothing is dropped, so the number that would have
+    been used is on the record either way.
+    """
+    values = np.asarray(max_scale, dtype=np.float64).reshape(-1)
+    stats = scale_distribution(values)
+    stats["factor"] = None if factor is None else float(factor)
+    stats["threshold"] = None
+    if factor is None:
+        stats["dropped"] = 0
+        return np.ones(values.shape, dtype=bool), stats
+    if float(factor) <= 0.0:
+        raise ValueError("scale_max_factor must be positive, got %r" % (factor,))
+    if values.size == 0:
+        stats["dropped"] = 0
+        return np.zeros(0, dtype=bool), stats
+    threshold = float(factor) * float(stats["median"])
+    stats["threshold"] = threshold
+    keep = values <= threshold
+    stats["dropped"] = int((~keep).sum())
+    return keep, stats
+
+
+def percentile_box(positions, percentile, pad=0.0):
+    """Per-axis ``[P, 100-P]`` box of ``positions``, grown by ``pad * extent`` per side."""
+    points = np.asarray(positions, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError("percentile_box expects [M, 3], got %r" % (points.shape,))
+    if points.shape[0] == 0:
+        raise ValueError("percentile_box over zero points")
+    value = float(percentile)
+    if not 0.0 <= value < 50.0:
+        raise ValueError("box_percentile must be in [0, 50), got %r" % (percentile,))
+    low = np.percentile(points, value, axis=0)
+    high = np.percentile(points, 100.0 - value, axis=0)
+    grow = float(pad) * (high - low)
+    return low - grow, high + grow
+
+
+def inside_box(positions, low, high):
+    """Inclusive per-axis membership test against a box."""
+    points = np.asarray(positions, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError("inside_box expects [M, 3], got %r" % (points.shape,))
+    low_a = np.asarray(low, dtype=np.float64)
+    high_a = np.asarray(high, dtype=np.float64)
+    return np.all((points >= low_a[None, :]) & (points <= high_a[None, :]), axis=1)
+
+
+def project_points(points_xyz, full_proj_transform, world_view_transform, width, height):
+    """World -> pixel with the RASTERIZER's convention. Returns ``(xy[M, 2], valid[M])``.
+
+    See the module docstring for the file:line provenance of each step.
+    ``valid`` means "in front of the near clip and finite"; it does NOT mean
+    "inside the image" -- ``sample_id_map`` applies the bounds test, so the two
+    reasons a row can be unusable stay separable.
+    """
+    points = np.asarray(points_xyz, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError("project_points expects [M, 3], got %r" % (points.shape,))
+    proj = np.asarray(full_proj_transform, dtype=np.float64)
+    if proj.shape != (4, 4):
+        raise ValueError("full_proj_transform must be 4x4, got %r" % (proj.shape,))
+    homogeneous = np.concatenate([points, np.ones((points.shape[0], 1))], axis=1)
+    clip = homogeneous @ proj
+    weight = clip[:, 3] + HOMOGENEOUS_W_EPS
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ndc_x = clip[:, 0] / weight
+        ndc_y = clip[:, 1] / weight
+    x = ((ndc_x + 1.0) * float(width) - 1.0) * 0.5
+    y = ((ndc_y + 1.0) * float(height) - 1.0) * 0.5
+    if world_view_transform is None:
+        in_front = np.ones(points.shape[0], dtype=bool)
+    else:
+        view = np.asarray(world_view_transform, dtype=np.float64)
+        if view.shape != (4, 4):
+            raise ValueError("world_view_transform must be 4x4, got %r" % (view.shape,))
+        in_front = (homogeneous @ view[:, 2]) > NEAR_CLIP_Z
+    valid = in_front & np.isfinite(x) & np.isfinite(y)
+    return np.stack([x, y], axis=1), valid
+
+
+def sample_id_map(id_map, xy, valid):
+    """Nearest-pixel id lookup. Returns ``(ids[M], hit[M])``.
+
+    ``hit`` is ``valid`` further restricted to projections that land inside the
+    image; ``ids`` is 0 wherever ``hit`` is False and must not be read there.
+    """
+    ids = np.asarray(id_map)
+    if ids.ndim != 2:
+        raise ValueError("sample_id_map expects a 2-D id map, got %r" % (ids.shape,))
+    points = np.asarray(xy, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 2:
+        raise ValueError("sample_id_map expects [M, 2] coordinates, got %r" % (points.shape,))
+    height, width = ids.shape
+    finite = np.isfinite(points).all(axis=1)
+    safe = np.where(finite[:, None], points, -1.0)
+    column = np.rint(safe[:, 0]).astype(np.int64)
+    row = np.rint(safe[:, 1]).astype(np.int64)
+    hit = (np.asarray(valid, dtype=bool) & finite
+           & (column >= 0) & (column < width) & (row >= 0) & (row < height))
+    out = np.zeros(points.shape[0], dtype=np.int64)
+    out[hit] = ids[row[hit], column[hit]].astype(np.int64)
+    return out, hit
+
+
+def harmonise_id(sampled_ids, hit, ignore_id=DEVA_UNLABELLED_ID):
+    """Modal non-ignored id among the rows that landed in the image.
+
+    DEVA ids are per-camera, so the id the object carries in the reference
+    camera means nothing in any other camera; the id is recovered from where
+    the projected rows actually land. Ties go to the SMALLEST id so the choice
+    is deterministic. Returns ``(chosen_id_or_None, {id: count})`` with the
+    ignored id present in the counts.
+    """
+    ids = np.asarray(sampled_ids, dtype=np.int64)
+    mask = np.asarray(hit, dtype=bool)
+    if ids.shape != mask.shape:
+        raise ValueError("harmonise_id shape mismatch: %r vs %r" % (ids.shape, mask.shape))
+    counts = {}
+    if mask.any():
+        values, tally = np.unique(ids[mask], return_counts=True)
+        counts = {int(value): int(count) for value, count in zip(values, tally)}
+    ranked = sorted(
+        ((count, -identifier) for identifier, count in counts.items()
+         if identifier != int(ignore_id)),
+        reverse=True,
+    )
+    chosen = None if not ranked else int(-ranked[0][1])
+    return chosen, counts
+
+
+def consistency_counts(per_camera_hits):
+    """``[C, M]`` bool -> per-row count of cameras that agreed."""
+    arr = np.asarray(per_camera_hits, dtype=bool)
+    if arr.ndim != 2:
+        raise ValueError("consistency_counts expects [C, M], got %r" % (arr.shape,))
+    return arr.sum(axis=0).astype(np.int64)
+
+
+def consistency_keep(counts, min_cameras):
+    """Rows agreed on by at least ``min_cameras`` cameras."""
+    return np.asarray(counts, dtype=np.int64) >= int(min_cameras)
+
+
+def count_histogram(counts):
+    """``{"<count>": rows}`` -- JSON-safe, so the vote's shape is auditable."""
+    values, tally = np.unique(np.asarray(counts, dtype=np.int64), return_counts=True)
+    return {str(int(value)): int(count) for value, count in zip(values, tally)}
+
+
+def frame_survivors(per_frame_keep, min_fraction):
+    """``[F, N]`` bool -> rows surviving at least ``min_fraction`` of the anchor frames."""
+    arr = np.asarray(per_frame_keep, dtype=bool)
+    if arr.ndim != 2:
+        raise ValueError("frame_survivors expects [F, N], got %r" % (arr.shape,))
+    frames = arr.shape[0]
+    if frames == 0:
+        raise ValueError("frame_survivors over zero anchor frames")
+    fraction = float(min_fraction)
+    if not 0.0 < fraction <= 1.0:
+        raise ValueError("mask_min_frames must be in (0, 1], got %r" % (min_fraction,))
+    # 1e-12 so that fraction == 1.0 is not defeated by float division.
+    return (arr.sum(axis=0) / float(frames)) >= fraction - 1e-12
+
+
+def alpha_threshold_counts(alpha, thresholds=ALPHA_REPORT_THRESHOLDS):
+    """``{"0.25": px, "0.5": px, "0.75": px}`` for one alpha map."""
+    arr = np.asarray(alpha, dtype=np.float64)
+    return {("%g" % float(t)): int((arr > float(t)).sum()) for t in thresholds}
+
+
+def mask_fit(alpha_obj, id_map, target_id, threshold=0.5):
+    """How well the rendered object mask agrees with the segmenter's mask.
+
+    ``inside_fraction`` is the share of object-mask pixels that land on the
+    camera's harmonised DEVA id -- the number asked for. ``recall_of_deva_id``
+    is its denominator's mirror image and is reported alongside because on its
+    own ``inside_fraction`` cannot tell a small precise blob from a mask that
+    actually covers the object.
+    """
+    obj = binarise(alpha_obj, threshold)
+    ids = np.asarray(id_map)
+    if ids.shape != obj.shape:
+        raise ValueError("mask_fit shape mismatch: %r vs %r" % (ids.shape, obj.shape))
+    object_px = int(obj.sum())
+    if target_id is None:
+        return {"object_px": object_px, "deva_id": None, "deva_id_px": None,
+                "inside_px": None, "inside_fraction": None, "recall_of_deva_id": None}
+    target = int(target_id)
+    deva_px = int((ids == target).sum())
+    if object_px == 0:
+        return {"object_px": 0, "deva_id": target, "deva_id_px": deva_px,
+                "inside_px": 0, "inside_fraction": None, "recall_of_deva_id": None}
+    inside = int((ids[obj] == target).sum())
+    return {
+        "object_px": object_px,
+        "deva_id": target,
+        "deva_id_px": deva_px,
+        "inside_px": inside,
+        "inside_fraction": inside / object_px,
+        "recall_of_deva_id": (inside / deva_px) if deva_px else None,
+    }
+
+
+def modal_value(values):
+    """Most common entry of a list, ties to the smallest; ``None`` if all are ``None``."""
+    present = [int(value) for value in values if value is not None]
+    if not present:
+        return None
+    unique, tally = np.unique(np.asarray(present, dtype=np.int64), return_counts=True)
+    ranked = sorted(((int(count), -int(value)) for value, count in zip(unique, tally)),
+                    reverse=True)
+    return int(-ranked[0][1])
 
 
 def camera_frame_from_image_path(path):
@@ -651,6 +996,308 @@ def _deformed_rows(gaussians, keep_mask, time_value):
     }
 
 
+def _numpy_matrix(tensor):
+    """A torch 4x4 camera matrix as a float64 numpy array."""
+    return np.asarray(tensor.detach().cpu().numpy(), dtype=np.float64)
+
+
+def _load_deva_ids(deva_root, camera_name, frame, height, width, cache=None):
+    """``<root>/camXX/pseudo_label/object_mask/FFFF.png`` as a 2-D id array.
+
+    DEVA writes SHORT IDS, one uint8 per pixel, per camera. A palette ("P")
+    PNG carries those ids as palette INDICES, so it is read with
+    ``np.asarray`` and never through ``convert("L")``, which would map them
+    through the palette and destroy them. An RGB file is a colourised
+    visualisation, not an id map, and is refused rather than silently
+    reinterpreted. Returns ``(ids, was_resized)``.
+    """
+    from PIL import Image
+
+    key = (camera_name, int(frame), int(height), int(width))
+    if cache is not None and key in cache:
+        return cache[key]
+    path = os.path.join(deva_root, camera_name, "pseudo_label", "object_mask",
+                        "%04d.png" % int(frame))
+    if not os.path.isfile(path):
+        raise SystemExit("DEVA id map not found: %s" % (path,))
+    image = Image.open(path)
+    if image.mode not in ("L", "P", "I", "I;16"):
+        raise SystemExit(
+            "DEVA id map %s has mode %s; expected a single-channel id map. An RGB "
+            "file is a colourised visualisation and its ids cannot be recovered."
+            % (path, image.mode))
+    was_resized = False
+    if image.size != (int(width), int(height)):
+        # NEAREST, always: any interpolation between two ids invents a third.
+        image = image.resize((int(width), int(height)), Image.NEAREST)
+        was_resized = True
+    # Kept at the file's own dtype (uint8 for a DEVA short-id map). Upcasting to
+    # int64 here would make the cache eight times larger for no gain: every
+    # consumer either indexes it or compares it against a small integer.
+    result = (np.asarray(image), was_resized)
+    if cache is not None:
+        cache[key] = result
+    return result
+
+
+def _geometry_filters(gaussians, selection, time_value, args):
+    """Narrowing steps 2 (scale) and 3 (canonical percentile box).
+
+    Both are skipped entirely -- no deformation call, no GPU work -- when
+    neither flag is set, so the default path is byte-for-byte the old one.
+    """
+    import torch
+
+    base = int(selection.sum().item())
+    report = {"base": base, "after_scale": base, "after_box": base,
+              "scale": None, "box": None}
+    if base == 0 or (args.scale_max_factor is None and args.box_percentile is None):
+        return selection, report
+
+    keep = selection.bool()
+    state = _deformed_rows(gaussians, keep, time_value)
+    # Only the three SPATIAL axes: a fourth column, where a model carries one,
+    # is a temporal extent and is not a screen footprint.
+    scales = np.asarray(state["scales"], dtype=np.float64)[:, :3]
+    sub_scale, scale_stats = scale_max_keep(scales.max(axis=1), args.scale_max_factor)
+    scale_stats["scale_columns_used"] = int(scales.shape[1])
+    report["scale"] = scale_stats
+    report["after_scale"] = int(sub_scale.sum())
+
+    canonical = gaussians.get_xyz[keep].detach().float().cpu().numpy().astype(np.float64)
+    if args.box_percentile is None:
+        sub = sub_scale
+    else:
+        low, high = percentile_box(canonical, args.box_percentile, args.box_pad)
+        sub_box = inside_box(canonical, low, high)
+        report["box"] = {
+            "percentile": float(args.box_percentile),
+            "pad": float(args.box_pad),
+            "low": [float(value) for value in low],
+            "high": [float(value) for value in high],
+            "dropped_from_base": int((~sub_box).sum()),
+        }
+        sub = sub_scale & sub_box
+    report["after_box"] = int(sub.sum())
+    filtered = apply_subset_filter(keep, torch.from_numpy(sub).to(keep.device))
+    return filtered, report
+
+
+def _selection_bundle(gaussians, ids_tensor, thresholds, args, frame):
+    """``(hard, soft, filtered_after_steps_1_to_3, geometry_report)`` at one frame."""
+    time_value = frame / float(TIME_DIVISOR)
+    hard, soft = _row_sets(gaussians, time_value, ids_tensor, thresholds)
+    base = hard.bool() if args.argmax_only else (hard | soft[float(args.soft_thresh)]).bool()
+    filtered, report = _geometry_filters(gaussians, base, time_value, args)
+    return hard, soft, filtered, report
+
+
+def _projection_check(view, camera_name, frame, gaussians, pipe, background, keep_mask,
+                      row_index, n_rows, expected_xy):
+    """PRECONDITION for step 4: does ``project_points`` match the rasterizer?
+
+    A wrong convention makes every row inconsistent and returns a small, clean,
+    entirely fictitious row set -- a favourable-looking answer an instrument
+    could not have failed to give. So the analytic projection is compared
+    against ``render_segmentation``'s own ``points2d`` and a disagreement above
+    ``PROJECTION_CHECK_TOL_PX`` raises. When ``points2d`` cannot be used the
+    reason is RECORDED and ``ran`` stays False, so an unexercised precondition
+    is never read as a passed one.
+    """
+    from gaussian_renderer import render_segmentation
+
+    report = {
+        "ran": False,
+        "reason": None,
+        "camera": camera_name,
+        "frame": int(frame),
+        "tolerance_px": PROJECTION_CHECK_TOL_PX,
+        "compared_rows": 0,
+        "median_px": None,
+        "p95_px": None,
+        "max_px": None,
+    }
+    try:
+        rendered = render_segmentation(view, gaussians, pipe, background, keep_mask.bool())
+        points2d = rendered.get("points2d", None) if hasattr(rendered, "get") else None
+        if points2d is None:
+            report["reason"] = "render_segmentation returned no usable 'points2d'"
+            return report
+        array = np.asarray(points2d.detach().float().cpu().numpy(), dtype=np.float64)
+    except Exception as exc:
+        # Diagnostic-only limb: the exception is REPORTED, never swallowed, and
+        # the run continues on the analytic projection with `ran` False.
+        report["reason"] = "points2d unavailable: %r" % (exc,)
+        return report
+
+    if array.ndim == 3 and array.shape[0] == 1:
+        array = array[0]
+    if array.ndim != 2 or array.shape[1] < 2:
+        report["reason"] = "points2d has unexpected shape %r" % (array.shape,)
+        return report
+    if array.shape[0] == expected_xy.shape[0]:
+        observed = array[:, :2]
+    elif array.shape[0] == n_rows:
+        observed = array[row_index, :2]
+    else:
+        report["reason"] = ("points2d has %d rows, expected %d (kept) or %d (all)"
+                            % (array.shape[0], expected_xy.shape[0], n_rows))
+        return report
+
+    magnitude = np.abs(observed[np.isfinite(observed).all(axis=1)])
+    if magnitude.size == 0:
+        report["reason"] = "points2d is entirely non-finite"
+        return report
+    if float(np.percentile(magnitude, 90.0)) <= 2.0:
+        # Values confined to about [-1, 1] are NDC, not pixels; comparing them
+        # against pixel coordinates would abort a perfectly good run.
+        report["reason"] = ("points2d is not in pixel units (p90 |value| = %.4f); "
+                            "check skipped" % (float(np.percentile(magnitude, 90.0)),))
+        return report
+
+    distance = np.linalg.norm(observed - expected_xy, axis=1)
+    finite = distance[np.isfinite(distance)]
+    if finite.size == 0:
+        report["reason"] = "no finite row pairs to compare"
+        return report
+    report.update({
+        "ran": True,
+        "compared_rows": int(finite.size),
+        "median_px": float(np.median(finite)),
+        "p95_px": float(np.percentile(finite, 95.0)),
+        "max_px": float(finite.max()),
+    })
+    if report["median_px"] > PROJECTION_CHECK_TOL_PX:
+        raise SystemExit(
+            "projection precondition FAILED: median |analytic - points2d| = %.4f px "
+            "> %.4f px tolerance over %d rows. The mask-consistency vote would be "
+            "meaningless; refusing to run it."
+            % (report["median_px"], PROJECTION_CHECK_TOL_PX, report["compared_rows"]))
+    return report
+
+
+def _mask_consistency(gaussians, pipe, args, index, selection_at, background, deva_cache):
+    """Narrowing step 4. Returns ``(keep[N] bool numpy, report)``."""
+    anchor_frames = parse_frame_list(args.mask_frames)
+    cameras = [name for name in sorted(index) if name != "cam00"]
+    if not cameras:
+        raise SystemExit("--mask_consistency found no training cameras in the dataset")
+    min_cameras = int(args.mask_min_cams)
+    if min_cameras < 1:
+        raise SystemExit("--mask_min_cams must be at least 1")
+    if min_cameras > len(cameras):
+        raise SystemExit("--mask_min_cams %d exceeds the %d training cameras available"
+                         % (min_cameras, len(cameras)))
+
+    n_rows = int(gaussians.get_xyz.shape[0])
+    table = np.zeros((len(anchor_frames), n_rows), dtype=bool)
+    chosen_by_camera = {name: [] for name in cameras}
+    per_frame = []
+    resized = []
+    projection_check = {"ran": False, "reason": "no non-empty anchor frame to check on",
+                        "tolerance_px": PROJECTION_CHECK_TOL_PX}
+    checked = False
+
+    for position, frame in enumerate(anchor_frames):
+        selection, _ = selection_at(frame)
+        base_rows = int(selection.sum().item())
+        if base_rows == 0:
+            per_frame.append({"frame": frame, "base_rows": 0, "survivors": 0,
+                              "consistency_histogram": {}, "cameras": []})
+            continue
+        state = _deformed_rows(gaussians, selection.bool(), frame / float(TIME_DIVISOR))
+        row_index = np.asarray(state["row_index"], dtype=np.int64)
+        xyz = np.asarray(state["xyz"], dtype=np.float64)
+
+        hits = np.zeros((len(cameras), row_index.size), dtype=bool)
+        camera_records = []
+        for slot, camera_name in enumerate(cameras):
+            view = _get_view(index, camera_name, frame)
+            height, width = int(view.image_height), int(view.image_width)
+            id_map, was_resized = _load_deva_ids(
+                args.mask_consistency, camera_name, frame, height, width, deva_cache)
+            if was_resized:
+                resized.append("%s/%04d" % (camera_name, frame))
+            xy, valid = project_points(
+                xyz,
+                _numpy_matrix(view.full_proj_transform),
+                _numpy_matrix(view.world_view_transform),
+                width,
+                height,
+            )
+            if not checked:
+                checked = True
+                projection_check = _projection_check(
+                    view, camera_name, frame, gaussians, pipe, background, selection,
+                    row_index, n_rows, xy)
+            ids_at, hit = sample_id_map(id_map, xy, valid)
+            chosen, counts = harmonise_id(ids_at, hit)
+            chosen_by_camera[camera_name].append(chosen)
+            if chosen is not None:
+                hits[slot] = hit & (ids_at == chosen)
+            camera_records.append({
+                "camera": camera_name,
+                "chosen_id": chosen,
+                "in_front_of_camera": int(valid.sum()),
+                "landed_in_image": int(hit.sum()),
+                "unlabelled_rows": int(counts.get(DEVA_UNLABELLED_ID, 0)),
+                "consistent_rows": int(hits[slot].sum()),
+                "top_ids": dict(sorted(counts.items(),
+                                       key=lambda item: (-item[1], item[0]))[:8]),
+                "deva_resized": bool(was_resized),
+            })
+
+        counts_per_row = consistency_counts(hits)
+        keep_rows = consistency_keep(counts_per_row, min_cameras)
+        table[position, row_index[keep_rows]] = True
+        per_frame.append({
+            "frame": frame,
+            "base_rows": base_rows,
+            "survivors": int(keep_rows.sum()),
+            "consistency_histogram": count_histogram(counts_per_row),
+            "cameras": camera_records,
+        })
+
+    # Precondition, not a reading rule: a vote that never had a row to look at
+    # would return a clean empty mask and say nothing about anything.
+    if not any(record["base_rows"] for record in per_frame):
+        raise SystemExit(
+            "--mask_consistency: every anchor frame (%s) had an EMPTY base row set, so "
+            "the vote was never exercised" % (args.mask_frames,))
+
+    survivors = frame_survivors(table, args.mask_min_frames)
+    report = {
+        "enabled": True,
+        "deva_root": args.mask_consistency,
+        "min_cameras": min_cameras,
+        "min_frames_fraction": float(args.mask_min_frames),
+        "anchor_frames": anchor_frames,
+        "cameras": cameras,
+        "harmonised_id_by_camera": {name: modal_value(values)
+                                    for name, values in chosen_by_camera.items()},
+        "per_frame": per_frame,
+        "survivors": int(survivors.sum()),
+        "deva_maps_resized": sorted(set(resized)),
+        "projection_check": projection_check,
+    }
+    return survivors, report
+
+
+def _filter_config(args):
+    """The narrowing knobs, exactly as given, for the output JSON."""
+    return {
+        "argmax_only": bool(args.argmax_only),
+        "scale_max_factor": None if args.scale_max_factor is None else float(args.scale_max_factor),
+        "box_percentile": None if args.box_percentile is None else float(args.box_percentile),
+        "box_pad": float(args.box_pad),
+        "mask_consistency_root": args.mask_consistency,
+        "mask_min_cams": None if args.mask_consistency is None else int(args.mask_min_cams),
+        "mask_frames": args.mask_frames,
+        "mask_min_frames": float(args.mask_min_frames),
+        "order": ["argmax_only", "scale_max_factor", "box_percentile", "mask_consistency"],
+    }
+
+
 def _provenance(args, sa4d_args, iteration):
     """sha256 of every loaded model file and of every imported SA4D source file."""
     import torch
@@ -756,12 +1403,37 @@ def run_preview(args):
     previous_centroids = {name: (None, None) for name in cameras}
     worst_time_deviation = 0.0
     resized_real = []
+    deva_cache = {}
+    filter_counts = []
 
     with torch.no_grad():
+        # ---- step 4, once, frozen, and intersected into every timestamp -----
+        if args.mask_consistency:
+            consistency_keep_np, consistency_report = _mask_consistency(
+                gaussians,
+                pipe,
+                args,
+                index,
+                lambda frame: _selection_bundle(gaussians, ids_tensor, thresholds, args, frame)[2:],
+                black,
+                deva_cache,
+            )
+            harmonised = consistency_report["harmonised_id_by_camera"]
+        else:
+            consistency_keep_np = None
+            consistency_report = {"enabled": False}
+            harmonised = {}
+
         for frame in frames:
             time_value = frame / float(TIME_DIVISOR)
-            hard, soft = _row_sets(gaussians, time_value, ids_tensor, thresholds)
-            selection = hard | soft[float(args.soft_thresh)]
+            hard, soft, filtered, geometry = _selection_bundle(
+                gaussians, ids_tensor, thresholds, args, frame)
+            if consistency_keep_np is None:
+                selection = filtered
+                geometry["after_mask_consistency"] = geometry["after_box"]
+            else:
+                selection = filtered & torch.from_numpy(consistency_keep_np).to(filtered.device)
+                geometry["after_mask_consistency"] = int(selection.sum().item())
             selection_np = selection.detach().cpu().numpy().astype(bool)
 
             summary = rowset_summary(
@@ -778,6 +1450,14 @@ def run_preview(args):
                 ),
                 "sensitivity": summary,
                 "soft_thresh": float(args.soft_thresh),
+                "filters": geometry,
+            })
+            filter_counts.append({
+                "frame": frame,
+                "base": geometry["base"],
+                "after_scale": geometry["after_scale"],
+                "after_box": geometry["after_box"],
+                "after_mask_consistency": geometry["after_mask_consistency"],
             })
             previous_selection = selection_np
 
@@ -816,23 +1496,35 @@ def run_preview(args):
                 _save_png(os.path.join(args.out, "alpha_obj", stem + ".png"), to_uint8_map(alpha_obj))
                 _save_png(os.path.join(args.out, "support", stem + ".png"), to_uint8_map(alpha_bg))
 
-                geometry = mask_bbox_centroid(binarise(alpha_obj, 0.5))
+                shape = mask_bbox_centroid(binarise(alpha_obj, 0.5))
                 previous_frame, previous_centroid = previous_centroids[camera_name]
-                velocity = centroid_velocity(
-                    previous_centroid,
-                    geometry["centroid"],
-                    0 if previous_frame is None else frame - previous_frame,
-                )
-                previous_centroids[camera_name] = (frame, geometry["centroid"])
+                gap = 0 if previous_frame is None else frame - previous_frame
+                velocity = centroid_velocity(previous_centroid, shape["centroid"], gap)
+                velocity_detail = centroid_velocity_detail(
+                    previous_centroid, shape["centroid"], gap)
+                previous_centroids[camera_name] = (frame, shape["centroid"])
+
+                # How well does the rendered object mask fit the segmenter's?
+                # cam00 is the held-out camera and has no training-time DEVA
+                # harmonisation, so it is skipped by design.
+                if args.mask_consistency and camera_name != "cam00":
+                    id_map, _ = _load_deva_ids(args.mask_consistency, camera_name, frame,
+                                               height, width, deva_cache)
+                    fit = mask_fit(alpha_obj, id_map, harmonised.get(camera_name))
+                else:
+                    fit = None
 
                 per_view.append({
                     "camera": camera_name,
                     "frame": frame,
                     "time": float(view.time),
-                    "object_mask_px": geometry["count"],
-                    "bbox": geometry["bbox"],
-                    "centroid": geometry["centroid"],
+                    "object_mask_px": shape["count"],
+                    "object_alpha_px": alpha_threshold_counts(alpha_obj),
+                    "bbox": shape["bbox"],
+                    "centroid": shape["centroid"],
                     "centroid_velocity": velocity,
+                    "centroid_velocity_detail": velocity_detail,
+                    "deva_mask_fit": fit,
                     "hole": hole_fraction(alpha_obj, alpha_bg),
                 })
 
@@ -846,6 +1538,10 @@ def run_preview(args):
             "soft_low": SENSITIVITY_SOFT_LOW,
             "soft_high": SENSITIVITY_SOFT_HIGH,
         },
+        "filters": dict(_filter_config(args),
+                        per_timestamp_counts=filter_counts,
+                        mask_consistency=consistency_report),
+        "alpha_report_thresholds": list(ALPHA_REPORT_THRESHOLDS),
         "per_timestamp": per_timestamp,
         "per_view": per_view,
         "worst_camera_time_deviation": worst_time_deviation,
@@ -881,14 +1577,35 @@ def run_build(args):
     n_rows = int(gaussians.get_xyz.shape[0])
     per_timestamp = []
     table = np.zeros((len(render_frames), n_rows), dtype=bool)
+    deva_cache = {}
+    filter_counts = []
 
     with torch.no_grad():
+        # ---- 0. step 4, once, frozen (it needs its own anchor frames) -------
+        if args.mask_consistency:
+            consistency_keep_np, consistency_report = _mask_consistency(
+                gaussians,
+                pipe,
+                args,
+                index,
+                lambda frame: _selection_bundle(gaussians, ids_tensor, thresholds, args, frame)[2:],
+                black,
+                deva_cache,
+            )
+        else:
+            consistency_keep_np = None
+            consistency_report = {"enabled": False}
+
         # ---- 1. per-timestamp selections over [A-margin, B+margin] ----------
         for position, frame in enumerate(render_frames):
             time_value = frame / float(TIME_DIVISOR)
-            hard, soft = _row_sets(gaussians, time_value, ids_tensor, thresholds)
-            selection = (hard | soft[float(args.soft_thresh)]).detach().cpu().numpy().astype(bool)
+            hard, soft, filtered, geometry = _selection_bundle(
+                gaussians, ids_tensor, thresholds, args, frame)
+            selection = filtered.detach().cpu().numpy().astype(bool)
             table[position] = selection
+            # Step 4 is NOT recorded per timestamp here: in build mode it is
+            # applied once, to the canonical set, after the majority vote. Its
+            # count is `canonical_counts.after_mask_consistency`.
             per_timestamp.append({
                 "frame": frame,
                 "time": time_value,
@@ -898,9 +1615,16 @@ def run_build(args):
                     soft[SENSITIVITY_SOFT_LOW].detach().cpu().numpy(),
                     soft[SENSITIVITY_SOFT_HIGH].detach().cpu().numpy(),
                 ),
+                "filters": geometry,
+            })
+            filter_counts.append({
+                "frame": frame,
+                "base": geometry["base"],
+                "after_scale": geometry["after_scale"],
+                "after_box": geometry["after_box"],
             })
 
-        # ---- 2. canonical set: majority, then IQR box, then radius ----------
+        # ---- 2. canonical set: majority, consistency, IQR box, radius -------
         canonical_np = majority_rowset(table)
         count_majority = int(canonical_np.sum())
         if count_majority == 0:
@@ -908,6 +1632,12 @@ def run_build(args):
                 "majority vote over frames %d-%d selected zero rows for ids %s"
                 % (render_lo, render_hi, args.ids)
             )
+
+        if consistency_keep_np is not None:
+            canonical_np = canonical_np & consistency_keep_np
+        count_after_consistency = int(canonical_np.sum())
+        if count_after_consistency == 0:
+            raise SystemExit("the DEVA mask-consistency vote emptied the canonical set")
 
         canonical = torch.from_numpy(canonical_np).cuda()
         keep_sub = points_inside_convex_hull(
@@ -1024,9 +1754,14 @@ def run_build(args):
         "window": [window_lo, window_hi],
         "canonical_counts": {
             "majority": count_majority,
+            "after_mask_consistency": count_after_consistency,
             "after_iqr_box": count_after_iqr,
             "after_radius": count_after_radius,
         },
+        "filters": dict(_filter_config(args),
+                        per_timestamp_counts=filter_counts,
+                        mask_consistency=consistency_report,
+                        canonical_after_mask_consistency=count_after_consistency),
         "canonical_filters": {
             "majority_rule": "selected in strictly more than half of the render-window timestamps",
             "iqr_box": {
@@ -1086,6 +1821,31 @@ def build_parser():
     parser.add_argument("--real_images", type=str, default=None,
                         help="directory of camXX_FFFF.png real frames (required for --mode build)")
     parser.add_argument("--out", required=True)
+    # row-set narrowing, applied in this order; every one of them is OFF by
+    # default and the default behaviour is unchanged when they are all absent.
+    parser.add_argument("--argmax_only", action="store_true",
+                        help="base row set is argmax-in-ids only; drop the soft limb")
+    parser.add_argument("--scale_max_factor", type=float, default=None,
+                        help="drop rows whose largest activated scale exceeds F x the "
+                             "base set's median largest scale (default: off)")
+    parser.add_argument("--box_percentile", type=float, default=None,
+                        help="keep rows inside the per-axis [P, 100-P] percentile box of "
+                             "the base set's canonical positions (default: off)")
+    parser.add_argument("--box_pad", type=float, default=0.1,
+                        help="grow each axis of the percentile box by this fraction of "
+                             "its extent, on both sides")
+    parser.add_argument("--mask_consistency", type=str, default=None,
+                        help="DEVA root holding camXX/pseudo_label/object_mask/FFFF.png; "
+                             "enables the multi-view mask vote (default: off)")
+    parser.add_argument("--mask_min_cams", type=int, default=None,
+                        help="rows must agree with the harmonised DEVA id in at least K "
+                             "training cameras (required with --mask_consistency)")
+    parser.add_argument("--mask_frames", type=str, default=None,
+                        help="anchor frames for the mask vote, e.g. 30,60,90 or 30-40 "
+                             "(required with --mask_consistency)")
+    parser.add_argument("--mask_min_frames", type=float, default=1.0,
+                        help="fraction of anchor frames a row must survive (default 1.0, "
+                             "i.e. every anchor frame)")
     # preview only
     parser.add_argument("--cameras", type=int, nargs="+",
                         help="preview: camera numbers, e.g. 0 15 8 (0 is the held-out cam00)")
@@ -1103,8 +1863,36 @@ def build_parser():
     return parser
 
 
+def _validate_filter_args(args):
+    """Reject narrowing knobs that cannot mean anything, before any GPU work."""
+    if args.scale_max_factor is not None and args.scale_max_factor <= 0.0:
+        raise SystemExit("--scale_max_factor must be positive, got %r" % (args.scale_max_factor,))
+    if args.box_percentile is not None and not 0.0 <= args.box_percentile < 50.0:
+        raise SystemExit("--box_percentile must be in [0, 50), got %r" % (args.box_percentile,))
+    if args.box_pad < 0.0:
+        raise SystemExit("--box_pad must be non-negative, got %r" % (args.box_pad,))
+    if not 0.0 < args.mask_min_frames <= 1.0:
+        raise SystemExit("--mask_min_frames must be in (0, 1], got %r" % (args.mask_min_frames,))
+    if args.mask_consistency:
+        # No default is supplied for either: both are load-bearing thresholds
+        # and a silent default would decide the row set on the run's behalf.
+        if args.mask_min_cams is None:
+            raise SystemExit("--mask_consistency needs --mask_min_cams K")
+        if args.mask_min_cams < 1:
+            raise SystemExit("--mask_min_cams must be at least 1")
+        if not args.mask_frames:
+            raise SystemExit("--mask_consistency needs --mask_frames")
+        try:
+            parse_frame_list(args.mask_frames)
+        except ValueError as exc:
+            raise SystemExit("--mask_frames %r: %s" % (args.mask_frames, exc))
+    elif args.mask_min_cams is not None or args.mask_frames:
+        raise SystemExit("--mask_min_cams/--mask_frames need --mask_consistency <deva_root>")
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
+    _validate_filter_args(args)
     if args.mode == "preview":
         if not args.cameras or not args.frames:
             raise SystemExit("--mode preview needs --cameras and --frames")

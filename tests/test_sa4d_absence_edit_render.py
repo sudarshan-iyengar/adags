@@ -208,12 +208,25 @@ def test_mask_bbox_centroid_of_an_empty_mask():
         "count": 0, "bbox": None, "centroid": None}
 
 
-def test_centroid_velocity_divides_by_the_frame_gap():
+def test_centroid_velocity_is_a_bare_float_not_a_dict():
     velocity = sae.centroid_velocity([0.0, 0.0], [6.0, 8.0], 2)
-    assert velocity["dx_per_frame"] == 3.0
-    assert velocity["dy_per_frame"] == 4.0
-    assert math.isclose(velocity["speed_px_per_frame"], 5.0)
-    assert velocity["frame_gap"] == 2
+    assert isinstance(velocity, float)
+    assert not isinstance(velocity, dict)
+    assert math.isclose(velocity, 5.0)
+
+
+def test_centroid_velocity_detail_carries_the_signed_components():
+    detail = sae.centroid_velocity_detail([0.0, 0.0], [6.0, 8.0], 2)
+    assert detail["dx_per_frame"] == 3.0
+    assert detail["dy_per_frame"] == 4.0
+    assert math.isclose(detail["speed_px_per_frame"], 5.0)
+    assert detail["frame_gap"] == 2
+
+
+def test_centroid_velocity_and_its_detail_agree_on_the_speed():
+    previous, current, gap = [3.0, -1.0], [-4.5, 6.0], 3
+    assert sae.centroid_velocity(previous, current, gap) == pytest.approx(
+        sae.centroid_velocity_detail(previous, current, gap)["speed_px_per_frame"])
 
 
 @pytest.mark.parametrize("previous,current,gap", [
@@ -223,6 +236,7 @@ def test_centroid_velocity_divides_by_the_frame_gap():
 ])
 def test_centroid_velocity_is_none_without_two_endpoints_and_a_gap(previous, current, gap):
     assert sae.centroid_velocity(previous, current, gap) is None
+    assert sae.centroid_velocity_detail(previous, current, gap) is None
 
 
 # -------------------------------------------------------------- row-set logic
@@ -280,6 +294,341 @@ def test_rowset_summary_reports_the_three_sensitivity_sizes():
         "argmax_or_soft_low": 2,
         "argmax_or_soft_high": 3,
     }
+
+
+# ------------------------------------------------------- narrowing: scale (2)
+
+
+def test_scale_distribution_reports_the_four_order_statistics():
+    stats = sae.scale_distribution(np.arange(1.0, 101.0))
+    assert stats["count"] == 100
+    assert stats["median"] == pytest.approx(50.5)
+    assert stats["p90"] == pytest.approx(90.1)
+    assert stats["p99"] == pytest.approx(99.01)
+    assert stats["max"] == 100.0
+
+
+def test_scale_distribution_of_an_empty_set_is_undefined_not_zero():
+    assert sae.scale_distribution(np.zeros(0)) == {
+        "count": 0, "median": None, "p90": None, "p99": None, "max": None}
+
+
+def test_scale_max_keep_drops_only_above_the_factor_times_median():
+    values = np.array([1.0, 1.0, 2.0, 3.0, 40.0])      # median 2.0
+    keep, stats = sae.scale_max_keep(values, 1.5)      # threshold 3.0
+    assert keep.tolist() == [True, True, True, True, False]
+    assert stats["threshold"] == pytest.approx(3.0)
+    assert stats["factor"] == 1.5
+    assert stats["dropped"] == 1
+    assert stats["median"] == 2.0
+
+
+def test_scale_max_keep_is_inclusive_at_the_threshold():
+    values = np.array([1.0, 2.0, 3.0])                 # median 2.0, threshold 4.0
+    keep, _ = sae.scale_max_keep(values, 2.0)
+    assert keep.all()
+
+
+def test_scale_max_keep_with_no_factor_keeps_everything_but_still_reports():
+    values = np.array([1.0, 5.0, 900.0])
+    keep, stats = sae.scale_max_keep(values, None)
+    assert keep.all()
+    assert stats["factor"] is None and stats["threshold"] is None
+    assert stats["dropped"] == 0
+    assert stats["max"] == 900.0                       # the distribution is still on record
+
+
+def test_scale_max_keep_rejects_a_non_positive_factor():
+    with pytest.raises(ValueError):
+        sae.scale_max_keep(np.array([1.0]), 0.0)
+
+
+# --------------------------------------------------------- narrowing: box (3)
+
+
+def test_percentile_box_is_per_axis_and_pad_is_a_fraction_of_the_extent():
+    points = np.stack([
+        np.arange(0.0, 101.0),                 # x: 0..100
+        np.arange(0.0, 101.0) * 2.0,           # y: 0..200
+        np.zeros(101),                         # z: degenerate
+    ], axis=1)
+    low, high = sae.percentile_box(points, 10.0, pad=0.0)
+    assert low == pytest.approx([10.0, 20.0, 0.0])
+    assert high == pytest.approx([90.0, 180.0, 0.0])
+    low_pad, high_pad = sae.percentile_box(points, 10.0, pad=0.5)
+    assert low_pad == pytest.approx([-30.0, -60.0, 0.0])   # 0.5 * extent per side
+    assert high_pad == pytest.approx([130.0, 260.0, 0.0])
+
+
+def test_percentile_box_with_zero_percentile_is_the_bounding_box():
+    points = np.array([[-1.0, 0.0, 3.0], [5.0, 2.0, -4.0]])
+    low, high = sae.percentile_box(points, 0.0, pad=0.0)
+    assert low == pytest.approx([-1.0, 0.0, -4.0])
+    assert high == pytest.approx([5.0, 2.0, 3.0])
+
+
+@pytest.mark.parametrize("percentile", [-1.0, 50.0, 60.0])
+def test_percentile_box_rejects_a_percentile_outside_zero_to_fifty(percentile):
+    with pytest.raises(ValueError):
+        sae.percentile_box(np.zeros((4, 3)), percentile)
+
+
+def test_percentile_box_refuses_an_empty_point_set():
+    with pytest.raises(ValueError):
+        sae.percentile_box(np.zeros((0, 3)), 5.0)
+
+
+def test_inside_box_is_inclusive_and_needs_all_three_axes():
+    points = np.array([
+        [0.0, 0.0, 0.0],     # interior
+        [1.0, 1.0, 1.0],     # exactly on the upper corner -> inclusive
+        [1.5, 0.0, 0.0],     # outside on x only
+        [0.0, 0.0, -2.0],    # outside on z only
+    ])
+    keep = sae.inside_box(points, [-1.0, -1.0, -1.0], [1.0, 1.0, 1.0])
+    assert keep.tolist() == [True, True, False, False]
+
+
+def test_the_percentile_box_drops_a_far_outlier_a_scale_filter_would_miss():
+    core = np.random.default_rng(0).normal(scale=0.01, size=(200, 3))
+    points = np.vstack([core, np.array([[8.0, 8.0, 8.0]])])
+    low, high = sae.percentile_box(points, 1.0, pad=0.1)
+    keep = sae.inside_box(points, low, high)
+    assert not keep[-1]
+    assert keep[:-1].mean() > 0.95
+
+
+# -------------------------------------------------- narrowing: projection (4)
+
+
+def _identity4():
+    return np.eye(4, dtype=np.float64)
+
+
+def test_project_points_uses_the_rasterizer_ndc_to_pixel_form():
+    # full_proj = I -> clip = [x, y, z, 1]; ndc = (x, y).
+    xy, valid = sae.project_points(
+        np.array([[0.0, 0.0, 1.0]]), _identity4(), _identity4(), width=100, height=50)
+    # ndc2Pix(0, S) = ((0 + 1) * S - 1) * 0.5
+    assert xy[0, 0] == pytest.approx(49.5)
+    assert xy[0, 1] == pytest.approx(24.5)
+    assert valid.tolist() == [True]
+    # and NOT the (ndc + 1) * 0.5 * (S - 1) form used elsewhere in ADAGS
+    assert xy[0, 0] != pytest.approx(49.5 + 0.5)
+
+
+def test_project_points_treats_the_matrix_as_a_row_vector_multiply():
+    # A translation living in the LAST ROW is what `hom @ proj` picks up; if the
+    # convention were `proj @ hom` this term would be ignored.
+    proj = _identity4()
+    proj[3, 0] = 2.0
+    xy, _ = sae.project_points(
+        np.array([[0.0, 0.0, 1.0]]), proj, _identity4(), width=100, height=100)
+    assert xy[0, 0] == pytest.approx(((2.0 + 1.0) * 100 - 1.0) * 0.5)
+
+
+def test_project_points_applies_the_perspective_divide():
+    proj = _identity4()
+    proj[2, 3] = 1.0        # w = z
+    proj[3, 3] = 0.0
+    xy, valid = sae.project_points(
+        np.array([[0.5, 0.0, 2.0]]), proj, _identity4(), width=100, height=100)
+    assert valid.tolist() == [True]
+    assert xy[0, 0] == pytest.approx(((0.25 + 1.0) * 100 - 1.0) * 0.5, abs=1e-3)
+
+
+def test_project_points_rejects_points_behind_the_near_clip():
+    points = np.array([[0.0, 0.0, 1.0], [0.0, 0.0, 0.1], [0.0, 0.0, -3.0]])
+    _, valid = sae.project_points(points, _identity4(), _identity4(), 64, 64)
+    assert valid.tolist() == [True, False, False]
+
+
+def test_project_points_without_a_view_matrix_skips_the_depth_test():
+    points = np.array([[0.0, 0.0, -3.0]])
+    _, valid = sae.project_points(points, _identity4(), None, 64, 64)
+    assert valid.tolist() == [True]
+
+
+def test_project_points_rejects_a_bad_matrix_shape():
+    with pytest.raises(ValueError):
+        sae.project_points(np.zeros((1, 3)), np.eye(3), None, 10, 10)
+
+
+# ------------------------------------------------- narrowing: the vote (4)
+
+
+def test_sample_id_map_reads_the_nearest_pixel_and_bounds_checks():
+    ids = np.array([[0, 1, 1], [0, 2, 2]], dtype=np.uint8)     # H = 2, W = 3
+    xy = np.array([
+        [1.0, 0.0],      # -> ids[0, 1] = 1
+        [2.4, 1.0],      # rounds to column 2 -> ids[1, 2] = 2
+        [-0.6, 0.0],     # rounds to -1 -> out of bounds
+        [3.0, 0.0],      # out of bounds on the right
+        [0.0, 0.0],      # ids[0, 0] = 0, in bounds but unlabelled
+    ])
+    valid = np.ones(5, dtype=bool)
+    sampled, hit = sae.sample_id_map(ids, xy, valid)
+    assert hit.tolist() == [True, True, False, False, True]
+    assert sampled.tolist() == [1, 2, 0, 0, 0]
+
+
+def test_sample_id_map_never_reads_a_row_the_caller_already_invalidated():
+    ids = np.array([[7, 7], [7, 7]], dtype=np.uint8)
+    sampled, hit = sae.sample_id_map(ids, np.array([[0.0, 0.0], [1.0, 1.0]]),
+                                     np.array([True, False]))
+    assert hit.tolist() == [True, False]
+    assert sampled.tolist() == [7, 0]
+
+
+def test_sample_id_map_survives_non_finite_projections():
+    ids = np.zeros((2, 2), dtype=np.uint8)
+    sampled, hit = sae.sample_id_map(
+        ids, np.array([[np.nan, 0.0], [np.inf, np.inf]]), np.array([True, True]))
+    assert hit.tolist() == [False, False]
+    assert sampled.tolist() == [0, 0]
+
+
+def test_harmonise_id_picks_the_modal_non_zero_id():
+    ids = np.array([0, 0, 0, 0, 9, 9, 9, 4, 4])
+    hit = np.ones(9, dtype=bool)
+    chosen, counts = sae.harmonise_id(ids, hit)
+    assert chosen == 9                       # 0 is unlabelled and never wins
+    assert counts == {0: 4, 4: 2, 9: 3}      # the zero count is still reported
+
+
+def test_harmonise_id_breaks_a_tie_towards_the_smaller_id():
+    chosen, _ = sae.harmonise_id(np.array([12, 12, 5, 5]), np.ones(4, dtype=bool))
+    assert chosen == 5
+
+
+def test_harmonise_id_returns_none_when_only_unlabelled_pixels_were_hit():
+    chosen, counts = sae.harmonise_id(np.array([0, 0, 0]), np.ones(3, dtype=bool))
+    assert chosen is None
+    assert counts == {0: 3}
+
+
+def test_harmonise_id_ignores_rows_that_did_not_land_in_the_image():
+    chosen, counts = sae.harmonise_id(np.array([3, 3, 8, 8, 8]),
+                                      np.array([True, True, False, False, False]))
+    assert chosen == 3
+    assert counts == {3: 2}
+
+
+def test_consistency_vote_counts_cameras_and_applies_the_floor():
+    hits = np.array([
+        [True,  True,  False, False],
+        [True,  True,  False, True],
+        [True,  False, False, False],
+    ])
+    counts = sae.consistency_counts(hits)
+    assert counts.tolist() == [3, 2, 0, 1]
+    assert sae.consistency_keep(counts, 2).tolist() == [True, True, False, False]
+    assert sae.consistency_keep(counts, 1).tolist() == [True, True, False, True]
+    assert sae.count_histogram(counts) == {"0": 1, "1": 1, "2": 1, "3": 1}
+
+
+def test_frame_survivors_requires_every_anchor_frame_by_default():
+    per_frame = np.array([
+        [True, True, False],
+        [True, False, False],
+    ])
+    assert sae.frame_survivors(per_frame, 1.0).tolist() == [True, False, False]
+    assert sae.frame_survivors(per_frame, 0.5).tolist() == [True, True, False]
+
+
+def test_frame_survivors_full_fraction_is_not_defeated_by_float_division():
+    per_frame = np.ones((3, 2), dtype=bool)            # 3 / 3 is not exact in binary
+    assert sae.frame_survivors(per_frame, 1.0).all()
+
+
+def test_frame_survivors_rejects_a_degenerate_input():
+    with pytest.raises(ValueError):
+        sae.frame_survivors(np.zeros((0, 4), dtype=bool), 1.0)
+    with pytest.raises(ValueError):
+        sae.frame_survivors(np.ones((2, 2), dtype=bool), 0.0)
+
+
+def test_the_consistency_vote_end_to_end_on_synthetic_projections_and_id_maps():
+    """Three cameras, six rows: four on the object, one neighbour, one runaway.
+
+    Each camera sees the object under a DIFFERENT DEVA id -- ids are per-camera
+    -- so the harmonisation is what makes the vote possible at all.
+    """
+    height, width = 40, 60
+    object_xy = np.array([[20.0, 20.0], [21.0, 20.0], [20.0, 21.0], [21.0, 21.0]])
+    neighbour_xy = np.array([[45.0, 10.0]])
+    runaway_xy = np.array([[1000.0, 1000.0]])
+
+    camera_ids = [7, 95, 2]
+    hits = np.zeros((3, 6), dtype=bool)
+    chosen_per_camera = []
+    for slot, deva_id in enumerate(camera_ids):
+        id_map = np.zeros((height, width), dtype=np.uint8)
+        id_map[18:24, 18:24] = deva_id            # the object
+        id_map[8:13, 43:48] = 200                 # an unrelated object
+        xy = np.vstack([object_xy, neighbour_xy, runaway_xy])
+        if slot == 2:
+            # camera 2 sees only three of the four object rows on the object
+            xy = xy.copy()
+            xy[3] = [2.0, 2.0]
+        sampled, hit = sae.sample_id_map(id_map, xy, np.ones(6, dtype=bool))
+        chosen, _ = sae.harmonise_id(sampled, hit)
+        chosen_per_camera.append(chosen)
+        hits[slot] = hit & (sampled == chosen)
+
+    assert chosen_per_camera == camera_ids
+    counts = sae.consistency_counts(hits)
+    assert counts.tolist() == [3, 3, 3, 2, 0, 0]
+    assert sae.consistency_keep(counts, 3).tolist() == [True, True, True, False, False, False]
+    assert sae.consistency_keep(counts, 2).tolist() == [True, True, True, True, False, False]
+    # the runaway never landed in any image, so it is unanimously excluded
+    assert counts[5] == 0
+
+
+def test_modal_value_ignores_missing_entries_and_breaks_ties_low():
+    assert sae.modal_value([5, 5, None, 9]) == 5
+    assert sae.modal_value([9, 3]) == 3
+    assert sae.modal_value([None, None]) is None
+
+
+# -------------------------------------------------- preview mask-fit reports
+
+
+def test_alpha_threshold_counts_uses_the_three_fixed_thresholds():
+    alpha = np.array([[0.0, 0.3], [0.6, 0.9]])
+    assert sae.alpha_threshold_counts(alpha) == {"0.25": 3, "0.5": 2, "0.75": 1}
+
+
+def test_mask_fit_measures_both_directions_of_the_overlap():
+    alpha_obj = np.zeros((4, 4))
+    alpha_obj[1:3, 1:3] = 1.0            # 4 object pixels
+    ids = np.zeros((4, 4), dtype=np.uint8)
+    ids[1:3, 1:2] = 95                   # 2 pixels of the DEVA object, both inside
+    ids[3, 3] = 95                       # 1 pixel outside the render's mask
+    fit = sae.mask_fit(alpha_obj, ids, 95)
+    assert fit["object_px"] == 4
+    assert fit["inside_px"] == 2
+    assert fit["inside_fraction"] == 0.5
+    assert fit["deva_id_px"] == 3
+    assert fit["recall_of_deva_id"] == pytest.approx(2.0 / 3.0)
+
+
+def test_mask_fit_without_a_harmonised_id_reports_nothing_rather_than_zero():
+    fit = sae.mask_fit(np.ones((2, 2)), np.zeros((2, 2), dtype=np.uint8), None)
+    assert fit["deva_id"] is None
+    assert fit["inside_fraction"] is None
+
+
+def test_mask_fit_of_an_empty_object_mask_is_undefined_not_zero():
+    fit = sae.mask_fit(np.zeros((2, 2)), np.full((2, 2), 95, dtype=np.uint8), 95)
+    assert fit["object_px"] == 0
+    assert fit["inside_fraction"] is None
+    assert fit["deva_id_px"] == 4
+
+
+def test_mask_fit_rejects_a_mismatched_id_map():
+    with pytest.raises(ValueError):
+        sae.mask_fit(np.zeros((2, 2)), np.zeros((3, 3), dtype=np.uint8), 1)
 
 
 # ------------------------------------------------------------------- naming
@@ -343,3 +692,87 @@ def test_parser_defaults_match_the_documented_cli():
     assert args.dilate == 6
     assert args.feather == 2.0
     assert args.soft_thresh == sae.SENSITIVITY_SOFT_LOW
+
+
+def test_every_narrowing_knob_is_off_by_default():
+    args = sae.build_parser().parse_args([
+        "--mode", "preview", "--model_path", "m", "--cam_view", "cam15",
+        "--ids", "95", "--out", "o", "--cameras", "0", "--frames", "30",
+    ])
+    assert args.argmax_only is False
+    assert args.scale_max_factor is None
+    assert args.box_percentile is None
+    assert args.mask_consistency is None
+    assert args.mask_min_cams is None
+    assert args.mask_frames is None
+    # the two knobs that DO carry a default
+    assert args.box_pad == 0.1
+    assert args.mask_min_frames == 1.0
+    sae._validate_filter_args(args)          # the default CLI must validate
+
+
+def _narrowing_args(**overrides):
+    argv = [
+        "--mode", "preview", "--model_path", "m", "--cam_view", "cam15",
+        "--ids", "95", "--out", "o", "--cameras", "0", "--frames", "30",
+    ]
+    args = sae.build_parser().parse_args(argv)
+    for key, value in overrides.items():
+        setattr(args, key, value)
+    return args
+
+
+def test_mask_consistency_requires_its_two_companions():
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(mask_consistency="d", mask_frames="30"))
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(mask_consistency="d", mask_min_cams=3))
+    sae._validate_filter_args(
+        _narrowing_args(mask_consistency="d", mask_min_cams=3, mask_frames="30,60"))
+
+
+def test_the_mask_companions_are_refused_without_a_deva_root():
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(mask_min_cams=3))
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(mask_frames="30"))
+
+
+@pytest.mark.parametrize("overrides", [
+    {"scale_max_factor": 0.0},
+    {"scale_max_factor": -1.0},
+    {"box_percentile": 50.0},
+    {"box_percentile": -0.5},
+    {"box_pad": -0.1},
+    {"mask_min_frames": 0.0},
+    {"mask_min_frames": 1.5},
+    {"mask_consistency": "d", "mask_min_cams": 0, "mask_frames": "30"},
+    {"mask_consistency": "d", "mask_min_cams": 3, "mask_frames": "40-30"},
+])
+def test_validate_filter_args_rejects_meaningless_knobs(overrides):
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(**overrides))
+
+
+def test_filter_config_records_the_knobs_verbatim_and_their_order():
+    config = sae._filter_config(_narrowing_args(
+        argmax_only=True, scale_max_factor=3.0, box_percentile=2.0, box_pad=0.25,
+        mask_consistency="/deva", mask_min_cams=4, mask_frames="30,60",
+        mask_min_frames=0.5))
+    assert config["argmax_only"] is True
+    assert config["scale_max_factor"] == 3.0
+    assert config["box_percentile"] == 2.0
+    assert config["box_pad"] == 0.25
+    assert config["mask_consistency_root"] == "/deva"
+    assert config["mask_min_cams"] == 4
+    assert config["mask_frames"] == "30,60"
+    assert config["mask_min_frames"] == 0.5
+    assert config["order"] == [
+        "argmax_only", "scale_max_factor", "box_percentile", "mask_consistency"]
+
+
+def test_filter_config_of_a_default_run_carries_no_mask_min_cams():
+    config = sae._filter_config(_narrowing_args())
+    assert config["mask_consistency_root"] is None
+    assert config["mask_min_cams"] is None
+    assert config["scale_max_factor"] is None
