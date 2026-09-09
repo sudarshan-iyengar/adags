@@ -11,8 +11,11 @@ Student-t is cross-checked against scipy where scipy is installed.
 
 from __future__ import annotations
 
+import hashlib
+import importlib.util
 import json
 import math
+import subprocess
 import sys
 from pathlib import Path
 
@@ -50,7 +53,7 @@ def _fill(base, segments):
     return values
 
 
-def write_profile(run_dir, event_values, whole_values):
+def write_profile(run_dir, event_values, whole_values, extra_events=None):
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -73,6 +76,7 @@ def write_profile(run_dir, event_values, whole_values):
             },
         },
     }
+    payload["events"].update(extra_events or {})
     with open(run_dir / rga.SPEC["profile_filename"], "w") as fh:
         json.dump(payload, fh)
     return run_dir
@@ -92,6 +96,7 @@ def make_cell(
     base=30.0,
     precondition=None,
     final_points=None,
+    extra_events=None,
 ):
     """One synthetic cell whose pooled endpoints equal the values passed in."""
     run_dir = Path(root) / f"{arm}_seed{seed}"
@@ -106,7 +111,9 @@ def make_cell(
             (200, 209, s1_tail),
         ],
     )
-    write_profile(run_dir, event_values, [float(whole)] * N_FRAMES)
+    write_profile(
+        run_dir, event_values, [float(whole)] * N_FRAMES, extra_events=extra_events
+    )
     if precondition is not None:
         with open(run_dir / rga.SPEC["precondition_filename"], "w") as fh:
             json.dump(precondition, fh)
@@ -671,3 +678,629 @@ def test_analysis_is_deterministic(tmp_path):
     first = json.dumps(rga.run(manifest_path), sort_keys=True)
     second = json.dumps(rga.run(manifest_path), sort_keys=True)
     assert first == second
+
+
+# ---------------------------------------------------------------------------
+# 9. The default path is byte-identical to the frozen 1.0.0 implementation
+#
+# The reference is pinned by CONTENT: a git blob id whose sha256 is asserted
+# below. A later commit of scripts/realdata_gate_analysis.py therefore cannot
+# turn this test into a comparison of the new code against itself.
+# ---------------------------------------------------------------------------
+
+REFERENCE_BLOB = "8f5103ac103feadc7cf4287c5dadf917f4a25c1c"
+REFERENCE_SHA256 = "a6650b607ad8dc4adcece388dfb9c58189a2fbca1587dc374d72655e35bf5e00"
+
+
+def _frozen_reference(tmp_path):
+    try:
+        blob = subprocess.run(
+            ["git", "cat-file", "blob", REFERENCE_BLOB],
+            cwd=str(REPO_ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:  # pragma: no cover
+        pytest.skip(f"reference blob {REFERENCE_BLOB} unavailable: {exc}")
+    assert hashlib.sha256(blob).hexdigest() == REFERENCE_SHA256, (
+        "the pinned reference blob does not hash to the recorded sha256"
+    )
+    path = Path(tmp_path) / "reference_rga.py"
+    path.write_bytes(blob)
+    spec = importlib.util.spec_from_file_location("reference_rga", str(path))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {},
+        {"g_p1_offset": -1.0},
+        {"g_p1_offset": 0.01},
+        {"g_p1_offset": 0.1, "p1_jitter": BIG_JITTER},
+        {"gmis_c1_offset": 0.0},
+    ],
+)
+def test_default_path_is_byte_identical_to_the_frozen_reference(tmp_path, kwargs):
+    reference = _frozen_reference(tmp_path)
+    manifest_path = str(build_manifest(tmp_path / "cells", **kwargs))
+    for last_wave in (False, True):
+        old = reference.run(manifest_path, last_wave=last_wave)
+        new = rga.run(manifest_path, last_wave=last_wave)
+        assert json.dumps(new, indent=1, sort_keys=True) == json.dumps(
+            old, indent=1, sort_keys=True
+        )
+        assert rga.markdown_report(new) == reference.markdown_report(old)
+
+
+def test_the_frozen_spec_dict_itself_is_unchanged(tmp_path):
+    reference = _frozen_reference(tmp_path)
+    assert json.dumps(rga.SPEC, indent=1, sort_keys=True) == json.dumps(
+        reference.SPEC, indent=1, sort_keys=True
+    )
+    assert rga.SPEC["spec_version"] == "1.0.0"
+
+
+# ---------------------------------------------------------------------------
+# 10. --spec: deep merge, expression resolution, sha256
+# ---------------------------------------------------------------------------
+
+
+def write_spec(path, **overrides):
+    payload = {
+        "spec_id": "test_instance",
+        "A": 100,
+        "B": 110,
+        "CA": 40,
+        "CB": 69,
+        "endpoints": {
+            "P1": {"event": "roi:core", "frames": ["A+1", "B-1"]},
+            "P2": ["B+3", "B+10"],
+            "S1": ["B+11", "B+20"],
+            "H1": ["A-30", "A-3"],
+            "H2": "whole_frame",
+            "C1": ["CA", "CB"],
+        },
+    }
+    payload.update(overrides)
+    Path(path).write_text(json.dumps(payload))
+    return str(path)
+
+
+def test_spec_deep_merges_rather_than_replacing(tmp_path):
+    path = write_spec(tmp_path / "spec.json", SIZING={"DELTA": 0.5})
+    merged, digest = rga.load_spec(path)
+    # the overridden leaf changes; its untouched siblings survive
+    assert merged["SIZING"]["DELTA"] == 0.5
+    assert merged["SIZING"]["K"] == rga.SPEC["SIZING"]["K"]
+    assert merged["SIZING"]["N2_CAP"] == rga.SPEC["SIZING"]["N2_CAP"]
+    # untouched top-level entries survive
+    assert merged["HARM_MARGIN_DB"] == rga.SPEC["HARM_MARGIN_DB"]
+    # the endpoint keeps its default label and role while its window moves
+    assert merged["endpoints"]["P2"]["label"] == "return_clean"
+    assert merged["endpoints"]["P2"]["role"] == "primary"
+    # the frozen SPEC is untouched by the merge
+    assert rga.SPEC["SIZING"]["DELTA"] == 0.30
+    assert rga.SPEC["endpoints"]["P1"]["frames_inclusive"] == [158, 187]
+    assert digest == hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    assert merged["spec_sha256"] == digest
+
+
+def test_spec_version_bumps_only_under_spec(tmp_path):
+    merged, _ = rga.load_spec(write_spec(tmp_path / "spec.json"))
+    assert merged["spec_version"] == "1.1.0"
+    assert rga.SPEC["spec_version"] == "1.0.0"
+    pinned, _ = rga.load_spec(write_spec(tmp_path / "pinned.json", spec_version="9.9.9"))
+    assert pinned["spec_version"] == "9.9.9"
+
+
+def test_window_expressions_resolve_against_the_anchors(tmp_path):
+    merged, _ = rga.load_spec(write_spec(tmp_path / "spec.json"))
+    ep = merged["endpoints"]
+    assert ep["P1"]["frames_inclusive"] == [101, 109]     # A+1 .. B-1
+    assert ep["P2"]["frames_inclusive"] == [113, 120]     # B+3 .. B+10
+    assert ep["S1"]["frames_inclusive"] == [121, 130]
+    assert ep["H1"]["frames_inclusive"] == [70, 97]       # A-30 .. A-3
+    assert ep["C1"]["frames_inclusive"] == [40, 69]       # CA .. CB
+    assert ep["H2"]["source"] == "whole_frame"
+    assert ep["P1"]["event_name"] == "roi:core"
+    assert merged["unresolved_endpoints"] == []
+    assert merged["anchors"] == {"A": 100, "B": 110, "CA": 40, "CB": 69}
+
+
+def test_unresolved_anchors_block_the_run_instead_of_falling_back(tmp_path):
+    path = write_spec(tmp_path / "spec.json", A=None, B=None)
+    merged, _ = rga.load_spec(path)
+    assert merged["unresolved_endpoints"] == ["H1", "P1", "P2", "S1"]
+    # the default window must NOT survive as a silent fallback
+    assert merged["endpoints"]["P1"]["frames_inclusive"] is None
+    manifest = str(build_manifest(tmp_path / "cells"))
+    with pytest.raises(ValueError, match="null anchors"):
+        rga.run(manifest, spec=merged)
+
+
+def test_window_edge_forms_and_their_errors():
+    anchors = {"A": 100, "B": 110, "CA": 40, "CB": 69}
+    assert rga._resolve_token("A+3", anchors) == 103
+    assert rga._resolve_token("B-2", anchors) == 108
+    assert rga._resolve_token("CA", anchors) == 40
+    assert rga._resolve_token("CB+1", anchors) == 70
+    assert rga._resolve_token(158, anchors) == 158
+    assert rga._resolve_token("158", anchors) == 158
+    assert rga._resolve_token("A", {"A": None}) is None
+    with pytest.raises(ValueError, match="neither an integer nor an offset"):
+        rga._resolve_token("Q+1", anchors)
+
+
+def test_endpoint_shorthands_expand():
+    assert rga.normalise_endpoint(["B+3", "B+10"]) == {
+        "frames": ["B+3", "B+10"], "source": "event"
+    }
+    assert rga.normalise_endpoint("whole_frame")["source"] == "whole_frame"
+    out = rga.normalise_endpoint({"event": "roi:core", "frames": ["A", "B"]})
+    assert out["event_name"] == "roi:core" and out["source"] == "event"
+    with pytest.raises(ValueError, match="exactly two entries"):
+        rga.normalise_endpoint([1, 2, 3])
+
+
+def test_the_shipped_spec_instance_is_a_loadable_placeholder():
+    path = REPO_ROOT / "configs" / "n3v" / "absfix_gate_spec_v1.json"
+    merged, digest = rga.load_spec(str(path))
+    assert merged["spec_version"] == "1.1.0"
+    assert merged["PAIRED_MIN_EFFECT_DB"] == 0.5
+    assert merged["arms"] == ["U", "G", "GEST", "GMIS", "GWRONGMEM", "GONES"]
+    assert merged["endpoints"]["P1"]["event_name"] == "roi:core"
+    # placeholders: every anchor is null and every relative window is unresolved
+    assert all(merged["anchors"][k] is None for k in ("A", "B", "CA", "CB"))
+    assert merged["unresolved_endpoints"] == ["C1", "H1", "P1", "P2", "S1"]
+    assert "PLACEBO" in merged and "diagnostic" in merged["PLACEBO"]
+    assert digest == hashlib.sha256(path.read_bytes()).hexdigest()
+
+    # ... and once the anchors are filled in, every window resolves
+    filled = dict(merged, A=158, B=190, CA=118, CB=147)
+    resolved = rga.resolve_spec(filled)
+    assert resolved["unresolved_endpoints"] == []
+    assert resolved["endpoints"]["P1"]["frames_inclusive"] == [161, 188]
+    assert resolved["endpoints"]["P2"]["frames_inclusive"] == [193, 200]
+    assert resolved["endpoints"]["C1"]["frames_inclusive"] == [118, 147]
+
+
+def test_backwards_window_is_rejected(tmp_path):
+    path = write_spec(tmp_path / "spec.json", A=200)
+    with pytest.raises(ValueError, match="empty range"):
+        rga.load_spec(path)
+
+
+# ---------------------------------------------------------------------------
+# 11. Per-frame-mask (roi:) endpoints
+# ---------------------------------------------------------------------------
+
+
+def roi_event(values, pixels):
+    """A `roi:core` event covering all 300 frames."""
+    per_frame = [None] * N_FRAMES
+    per_pixels = [0] * N_FRAMES
+    for frame, value in values.items():
+        per_frame[frame] = value
+    for frame, count in pixels.items():
+        per_pixels[frame] = count
+    return {
+        "roi:core": {
+            "kind": "per_frame_mask",
+            "roi_name": "core",
+            "per_frame_psnr": per_frame,
+            "pixels_per_frame": per_pixels,
+            "n_frames_with_mask": sum(1 for p in per_pixels if p > 0),
+        }
+    }
+
+
+def _weighted_pool(values, weights):
+    mse = [10.0 ** (-v / 10.0) for v in values]
+    total = sum(m * w for m, w in zip(mse, weights))
+    return -10.0 * math.log10(total / sum(weights))
+
+
+def test_per_frame_mask_pooling_is_pixel_weighted(tmp_path):
+    values = {101: 20.0, 102: 30.0}
+    pixels = {101: 900, 102: 100}
+    spec_path = write_spec(tmp_path / "spec.json", B=104)   # P1 = A+1 .. B-1 = 101..103
+    spec, _ = rga.load_spec(spec_path)
+    spec["endpoints"]["P1"]["frames_inclusive"] = [101, 102]
+    entry = make_cell(
+        tmp_path, "U", 0, p1=24.0, p2=26.0, s1_tail=25.0, h1=31.0, c1=32.0,
+        whole=33.0, extra_events=roi_event(values, pixels),
+    )
+    cell = rga.load_cell(entry, spec=spec)
+    expected = _weighted_pool([20.0, 30.0], [900, 100])
+    assert cell["endpoints"]["P1"] == pytest.approx(expected, abs=1e-12)
+    # the unweighted pool is a materially different number, so the weighting is
+    # doing real work rather than being a decorative field
+    assert abs(rga.pooled_psnr([20.0, 30.0]) - expected) > 1.0
+    # the other endpoints still come from the bounding-box event
+    assert cell["endpoints"]["H2"] == pytest.approx(33.0, abs=1e-9)
+
+
+def test_empty_mask_frames_carry_zero_weight(tmp_path):
+    values = {101: 20.0, 102: None, 103: 30.0}
+    pixels = {101: 500, 102: 0, 103: 500}
+    spec, _ = rga.load_spec(write_spec(tmp_path / "spec.json", B=104))
+    entry = make_cell(
+        tmp_path, "U", 0, p1=24.0, p2=26.0, s1_tail=25.0, h1=31.0, c1=32.0,
+        whole=33.0, extra_events=roi_event(values, pixels),
+    )
+    cell = rga.load_cell(entry, spec=spec)
+    assert cell["endpoints"]["P1"] == pytest.approx(
+        _weighted_pool([20.0, 30.0], [500, 500]), abs=1e-12
+    )
+
+
+def test_a_window_of_only_empty_masks_is_an_error(tmp_path):
+    spec, _ = rga.load_spec(write_spec(tmp_path / "spec.json", B=104))
+    entry = make_cell(
+        tmp_path, "U", 0, p1=24.0, p2=26.0, s1_tail=25.0, h1=31.0, c1=32.0,
+        whole=33.0, extra_events=roi_event({}, {}),
+    )
+    with pytest.raises(ValueError, match="every mask is empty"):
+        rga.load_cell(entry, spec=spec)
+
+
+def test_pooled_psnr_weighted_reduces_to_the_unweighted_pool():
+    vals = [24.0, 27.5, 31.0, 22.25]
+    assert rga.pooled_psnr_weighted(vals, [7.0] * 4) == pytest.approx(
+        rga.pooled_psnr(vals), abs=1e-12
+    )
+
+
+def test_a_missing_roi_event_is_named_in_the_error(tmp_path):
+    spec, _ = rga.load_spec(write_spec(tmp_path / "spec.json"))
+    entry = make_cell(tmp_path, "U", 0, p1=24.0, p2=26.0, s1_tail=25.0, h1=31.0,
+                      c1=32.0, whole=33.0)
+    with pytest.raises(ValueError, match="roi:core"):
+        rga.load_cell(entry, spec=spec)
+
+
+# ---------------------------------------------------------------------------
+# 12. --paired: within-prefix contrasts
+# ---------------------------------------------------------------------------
+
+
+def build_paired_manifest(tmp_path, p1_values, name="paired.json"):
+    """p1_values: {arm: {prefix: P1}}; every other endpoint is held constant."""
+    root = Path(tmp_path)
+    root.mkdir(parents=True, exist_ok=True)
+    cells = []
+    for arm, per_prefix in p1_values.items():
+        for prefix, p1 in sorted(per_prefix.items()):
+            entry = make_cell(
+                root, arm, prefix, p1=p1, p2=26.0, s1_tail=25.0, h1=31.0,
+                c1=32.0, whole=33.0,
+                precondition=None if arm == "U" else GOOD_PRECONDITION,
+            )
+            entry["prefix"] = prefix
+            cells.append(entry)
+    path = root / name
+    path.write_text(json.dumps({"cells": cells}))
+    return str(path)
+
+
+U_BY_PREFIX = {0: 24.0, 1: 24.5, 2: 23.5, 3: 24.2}
+
+
+def _shift(base, delta):
+    return {p: v + delta for p, v in base.items()}
+
+
+def paired_case(tmp_path, *, g=1.0, gones=0.1, gmis=0.05, gwrong=-0.5, gest=None,
+                prefixes=None, name="paired.json"):
+    base = U_BY_PREFIX if prefixes is None else {p: U_BY_PREFIX[p] for p in prefixes}
+    values = {"U": dict(base), "G": _shift(base, g)}
+    if gones is not None:
+        values["GONES"] = _shift(base, gones)
+    if gmis is not None:
+        values["GMIS"] = _shift(base, gmis)
+    if gwrong is not None:
+        values["GWRONGMEM"] = _shift(base, gwrong)
+    if gest is not None:
+        values["GEST"] = _shift(base, gest)
+    return build_paired_manifest(tmp_path, values, name=name)
+
+
+def test_paired_contrasts_are_within_prefix(tmp_path):
+    report = rga.run(paired_case(tmp_path), paired=True)
+    block = report["analysis"]["itt"]
+    assert report["paired"] is True
+    assert block["kind"] == "paired"
+    assert block["prefixes"] == [0, 1, 2, 3]
+    assert block["complete_pairs"] == [0, 1, 2, 3]
+    gu = block["contrasts"]["G-U"]["P1"]
+    assert [p["prefix"] for p in gu["pairs"]] == [0, 1, 2, 3]
+    for pair in gu["pairs"]:
+        assert pair["diff"] == pytest.approx(1.0, abs=1e-9)
+        assert pair["b"] == pytest.approx(U_BY_PREFIX[pair["prefix"]], abs=1e-9)
+    assert gu["n_pairs"] == 4
+    assert gu["median"] == pytest.approx(1.0, abs=1e-9)
+    assert gu["min"] == pytest.approx(1.0, abs=1e-9)
+    assert gu["max"] == pytest.approx(1.0, abs=1e-9)
+    assert gu["n_positive"] == 4 and gu["sign_consistent"] is True
+    # the contrast set is the declared one, restricted to the arms present
+    assert set(block["contrasts"]) == {
+        "G-U", "GMIS-U", "GWRONGMEM-U", "GONES-U", "G-GMIS", "G-GWRONGMEM"
+    }
+
+
+def test_paired_pairing_beats_the_unpaired_spread(tmp_path):
+    """The U values differ by up to 1 dB across prefixes; the pairs do not."""
+    report = rga.run(paired_case(tmp_path), paired=True)
+    gu = report["analysis"]["itt"]["contrasts"]["G-U"]["P1"]
+    assert gu["sd"] == pytest.approx(0.0, abs=1e-9)
+    u_values = [c["endpoints"]["P1"] for c in report["cells"] if c["arm"] == "U"]
+    assert float(np.std(u_values, ddof=1)) > 0.3
+
+
+def test_paired_sign_consistency_counts_the_majority_sign(tmp_path):
+    values = {
+        "U": dict(U_BY_PREFIX),
+        "G": {0: 25.0, 1: 25.5, 2: 23.0, 3: 25.2},   # +1, +1, -0.5, +1
+    }
+    report = rga.run(build_paired_manifest(tmp_path, values), paired=True)
+    gu = report["analysis"]["itt"]["contrasts"]["G-U"]["P1"]
+    assert gu["n_positive"] == 3 and gu["n_negative"] == 1
+    assert gu["n_same_sign"] == 3
+    assert gu["sign_consistent"] is False
+    assert gu["median"] == pytest.approx(1.0, abs=1e-9)
+    assert gu["min"] == pytest.approx(-0.5, abs=1e-9)
+
+
+def test_paired_t_interval_matches_the_hand_formula(tmp_path):
+    values = {
+        "U": dict(U_BY_PREFIX),
+        "G": {0: 25.0, 1: 25.3, 2: 24.7, 3: 25.4},   # +1.0, +0.8, +1.2, +1.2
+    }
+    report = rga.run(build_paired_manifest(tmp_path, values), paired=True)
+    gu = report["analysis"]["itt"]["contrasts"]["G-U"]["P1"]
+    diffs = [p["diff"] for p in gu["pairs"]]
+    mean = float(np.mean(diffs))
+    sd = float(np.std(diffs, ddof=1))
+    se = sd / math.sqrt(len(diffs))
+    tcrit = rga.t_ppf(0.9875, 3.0)
+    assert gu["mean"] == pytest.approx(mean, abs=1e-9)
+    assert gu["sd"] == pytest.approx(sd, abs=1e-9)
+    assert gu["df"] == 3.0
+    assert gu["ci_low"] == pytest.approx(mean - tcrit * se, abs=1e-9)
+    assert gu["ci_high"] == pytest.approx(mean + tcrit * se, abs=1e-9)
+    # below six pairs the interval is labelled descriptive, and no p-value exists
+    assert gu["descriptive"] is True
+    assert "p" not in gu
+
+
+def test_paired_interval_is_labelled_reported_at_six_pairs():
+    six = rga.paired_summary([1.0, 1.1, 0.9, 1.2, 1.0, 1.05])
+    assert six["n_pairs"] == 6 and six["descriptive"] is False
+    five = rga.paired_summary([1.0, 1.1, 0.9, 1.2, 1.0])
+    assert five["descriptive"] is True
+
+
+def test_gones_sets_the_within_prefix_replicate_floor(tmp_path):
+    report = rga.run(paired_case(tmp_path, gones=0.1), paired=True)
+    block = report["analysis"]["itt"]
+    floor = block["replicate_floor"]["P1"]
+    assert floor["contrast"] == "|U - GONES|"
+    assert floor["source"] == "GONES"
+    assert floor["n"] == 4
+    for prefix in (0, 1, 2, 3):
+        assert floor["per_prefix"][prefix] == pytest.approx(0.1, abs=1e-9)
+    assert floor["median"] == pytest.approx(0.1, abs=1e-9)
+
+
+def test_paired_claim_conditions_met(tmp_path):
+    report = rga.run(paired_case(tmp_path), paired=True)
+    block = report["analysis"]["itt"]
+    verdict = block["verdicts"]["P1"]
+    assert verdict["every_pair_exceeds_floor"] is True
+    assert verdict["sham_contrasts_clean"] is True
+    assert verdict["floor_source"] == "GONES"
+    assert verdict["verdict"] == "CLAIM_CONDITIONS_MET"
+    assert block["claim"]["verdict"] == "CLAIM_CONDITIONS_MET"
+    assert report["headline"]["P1"]["itt"] == "CLAIM_CONDITIONS_MET"
+
+
+def test_a_sham_arm_over_the_floor_denies_the_claim(tmp_path):
+    report = rga.run(paired_case(tmp_path, gmis=0.8), paired=True)
+    verdict = report["analysis"]["itt"]["verdicts"]["P1"]
+    assert verdict["every_pair_exceeds_floor"] is True   # G still clears the floor
+    assert verdict["sham_contrasts_clean"] is False
+    assert verdict["sham"]["GMIS-U"]["n_exceeding"] == 4
+    assert verdict["verdict"] == "NOT_MET"
+
+
+def test_a_wrong_membership_arm_over_the_floor_denies_the_claim(tmp_path):
+    report = rga.run(paired_case(tmp_path, gwrong=0.9), paired=True)
+    verdict = report["analysis"]["itt"]["verdicts"]["P1"]
+    assert verdict["sham"]["GWRONGMEM-U"]["n_exceeding"] == 4
+    assert verdict["verdict"] == "NOT_MET"
+
+
+def test_a_sham_arm_below_the_floor_in_the_other_direction_is_clean(tmp_path):
+    # -0.9 dB is far larger than the floor in magnitude but the wrong direction
+    report = rga.run(paired_case(tmp_path, gmis=-0.9), paired=True)
+    verdict = report["analysis"]["itt"]["verdicts"]["P1"]
+    assert verdict["sham"]["GMIS-U"]["n_exceeding"] == 0
+    assert verdict["verdict"] == "CLAIM_CONDITIONS_MET"
+
+
+def test_one_pair_below_the_floor_denies_the_claim(tmp_path):
+    values = {
+        "U": dict(U_BY_PREFIX),
+        "G": {0: 25.0, 1: 25.5, 2: 24.5, 3: 24.25},   # the last pair gains 0.05
+        "GONES": _shift(U_BY_PREFIX, 0.1),
+    }
+    report = rga.run(build_paired_manifest(tmp_path, values), paired=True)
+    verdict = report["analysis"]["itt"]["verdicts"]["P1"]
+    assert [p["exceeds_floor"] for p in verdict["per_pair"]] == [True, True, True, False]
+    assert verdict["every_pair_exceeds_floor"] is False
+    assert verdict["verdict"] == "NOT_MET"
+
+
+def test_without_gones_the_floor_falls_back_to_the_frozen_minimum(tmp_path):
+    assert rga.PAIRED_MIN_EFFECT_DB == 0.5
+    small = rga.run(paired_case(tmp_path / "a", g=0.3, gones=None), paired=True)
+    verdict = small["analysis"]["itt"]["verdicts"]["P1"]
+    assert verdict["floor_source"] == "PAIRED_MIN_EFFECT_DB"
+    assert all(p["floor"] == 0.5 for p in verdict["per_pair"])
+    assert verdict["verdict"] == "NOT_MET"
+    big = rga.run(paired_case(tmp_path / "b", g=1.0, gones=None), paired=True)
+    assert big["analysis"]["itt"]["verdicts"]["P1"]["verdict"] == "CLAIM_CONDITIONS_MET"
+
+
+def test_fewer_than_three_pairs_is_design_without_power(tmp_path):
+    report = rga.run(paired_case(tmp_path, prefixes=[0, 1]), paired=True)
+    block = report["analysis"]["itt"]
+    assert block["n_complete_pairs"] == 2
+    assert block["verdicts"]["P1"]["verdict"] == "DESIGN_WITHOUT_POWER"
+    # exactly three pairs is enough
+    three = rga.run(paired_case(tmp_path / "three", prefixes=[0, 1, 2]), paired=True)
+    assert three["analysis"]["itt"]["verdicts"]["P1"]["verdict"] == "CLAIM_CONDITIONS_MET"
+
+
+def test_an_arm_missing_at_one_prefix_drops_only_that_pair(tmp_path):
+    manifest = paired_case(tmp_path)
+    payload = json.loads(Path(manifest).read_text())
+    payload["cells"] = [
+        c for c in payload["cells"] if not (c["arm"] == "G" and c["prefix"] == 2)
+    ]
+    Path(manifest).write_text(json.dumps(payload))
+    block = rga.run(manifest, paired=True)["analysis"]["itt"]
+    assert block["complete_pairs"] == [0, 1, 3]
+    assert block["contrasts"]["G-U"]["P1"]["n_pairs"] == 3
+    assert block["contrasts"]["GMIS-U"]["P1"]["n_pairs"] == 4
+
+
+def test_paired_mode_requires_a_prefix_on_every_cell(tmp_path):
+    manifest = str(build_manifest(tmp_path))     # the unpaired 3-arm fixture
+    with pytest.raises(ValueError, match="no 'prefix'"):
+        rga.run(manifest, paired=True)
+
+
+def test_paired_mode_accepts_the_extended_arm_set(tmp_path):
+    report = rga.run(paired_case(tmp_path, gest=0.4), paired=True)
+    block = report["analysis"]["itt"]
+    assert set(block["arms_present"]) == {"U", "G", "GEST", "GMIS", "GWRONGMEM", "GONES"}
+    assert block["contrasts"]["GEST-U"]["P1"]["median"] == pytest.approx(0.4, abs=1e-9)
+    assert block["contrasts"]["G-GEST"]["P1"]["median"] == pytest.approx(0.6, abs=1e-9)
+    # the unpaired analysis still refuses an arm it does not know
+    with pytest.raises(ValueError, match="unknown arm"):
+        rga.run(paired_case(tmp_path / "unpaired", gest=0.4, name="m.json"))
+
+
+def test_paired_sizing_uses_the_paired_sd(tmp_path):
+    values = {
+        "U": dict(U_BY_PREFIX),
+        "G": {0: 25.0, 1: 25.3, 2: 24.7, 3: 25.4},
+    }
+    report = rga.run(build_paired_manifest(tmp_path, values), paired=True)
+    block = report["analysis"]["itt"]
+    sd = block["contrasts"]["G-U"]["P1"]["sd"]
+    item = block["sizing"]["per_endpoint"]["P1"]
+    assert item["sd_paired"] == pytest.approx(sd, abs=1e-12)
+    assert item["delta_db"] == 0.30
+    assert item["n2_pairs"] == math.ceil(9.5049 * (sd / 0.30) ** 2 + 2.2414 ** 2 / 4)
+    # the paired rule takes ONE sample of differences, so it is the unpaired
+    # per-arm formula without the factor of two
+    assert rga.paired_n2(0.4945) == math.ceil(
+        9.5049 * (0.4945 / 0.30) ** 2 + 2.2414 ** 2 / 4
+    )
+    assert rga.paired_n2(None) is None
+
+
+def test_paired_mode_reports_the_placebo_as_a_diagnostic_only(tmp_path):
+    block = rga.run(paired_case(tmp_path), paired=True)["analysis"]["itt"]
+    assert "diagnostic" in block["placebo_role"]
+    assert block["placebo"]["P1"]["n_splits"] == 3
+    # the placebo is not an input to any verdict, and no verdict carries a test
+    assert not any("placebo" in k for k in block["verdicts"]["P1"])
+    # the prose rule is exempt: it says what the paired mode does NOT do
+    dumped = json.dumps(
+        {k: {f: v for f, v in item.items() if f != "rule"}
+         for k, item in block["verdicts"].items()}
+    )
+    for banned in ("placebo", "tost", "p_value", "p_lower", "equivalen"):
+        assert banned not in dumped.lower()
+    assert "equivalence" not in block and "positive_control" not in block
+
+
+def test_paired_mode_emits_no_equivalence_or_p_value_language(tmp_path):
+    report = rga.run(paired_case(tmp_path), paired=True)
+    md = rga.markdown_report(report)
+    assert "PAIRED" in md and "DESCRIPTIVE" in md
+    assert "| contrast | endpoint | n pairs |" in md
+    assert "CLAIM_CONDITIONS_MET" in md
+    for banned in ("TOST", "Equivalence", "p_lower", "p_upper"):
+        assert banned not in md
+    assert "tost" not in json.dumps(report["analysis"]["itt"]).lower()
+
+
+def test_paired_mode_keeps_the_two_analysis_sets(tmp_path):
+    manifest = paired_case(tmp_path)
+    payload = json.loads(Path(manifest).read_text())
+    for cell in payload["cells"]:
+        if cell["arm"] == "G" and cell["prefix"] == 3:
+            bad = dict(GOOD_PRECONDITION, gated_rows_final=10)
+            (Path(cell["run_dir"]) / "precondition.json").write_text(json.dumps(bad))
+    report = rga.run(manifest, paired=True)
+    assert report["analysis"]["itt"]["n_complete_pairs"] == 4
+    assert report["analysis"]["mechanism_exercised"]["n_complete_pairs"] == 3
+    assert report["headline"]["P1"]["mechanism_exercised"] == "CLAIM_CONDITIONS_MET"
+
+
+# ---------------------------------------------------------------------------
+# 13. CLI surface for the two new flags
+# ---------------------------------------------------------------------------
+
+
+def test_print_spec_with_spec_prints_the_merged_resolved_spec(tmp_path, capsys):
+    path = write_spec(tmp_path / "spec.json")
+    assert rga.main(["--print-spec", "--spec", path]) == 0
+    printed = json.loads(capsys.readouterr().out)
+    assert printed["spec_version"] == "1.1.0"
+    assert printed["spec_id"] == "test_instance"
+    assert printed["endpoints"]["P1"]["frames_inclusive"] == [101, 109]
+    assert printed["endpoints"]["P1"]["event_name"] == "roi:core"
+    assert printed["spec_sha256"] == hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    assert printed["spec_file"] == str(Path(path).resolve())
+    # the frozen default is still what --print-spec alone prints
+    assert rga.main(["--print-spec"]) == 0
+    assert json.loads(capsys.readouterr().out) == json.loads(
+        json.dumps(rga.SPEC, sort_keys=True)
+    )
+
+
+def test_cli_paired_writes_json_and_a_markdown_table(tmp_path, capsys):
+    manifest = paired_case(tmp_path)
+    out = tmp_path / "paired.json"
+    assert rga.main(["--manifest", manifest, "--paired", "--out", str(out)]) == 0
+    printed = capsys.readouterr().out
+    assert "PAIRED" in printed and "| prefix | arm | seed |" in printed
+    saved = json.loads(out.read_text())
+    assert saved["paired"] is True
+    assert saved["spec"]["spec_version"] == "1.0.0"     # no --spec was given
+    assert saved["headline"]["P1"]["itt"] == "CLAIM_CONDITIONS_MET"
+    assert [c["prefix"] for c in saved["cells"] if c["arm"] == "U"] == [0, 1, 2, 3]
+
+
+def test_the_record_carries_the_merged_spec_and_its_sha256(tmp_path):
+    path = write_spec(tmp_path / "spec.json")
+    spec, digest = rga.load_spec(path)
+    spec["endpoints"]["P1"] = dict(rga.SPEC["endpoints"]["P1"])   # back to the bbox event
+    manifest = str(build_manifest(tmp_path / "cells"))
+    report = rga.run(manifest, spec=spec)
+    assert report["spec"]["spec_version"] == "1.1.0"
+    assert report["spec_sha256"] == digest
+    assert report["spec_file"] == str(Path(path).resolve())
+    assert report["spec"]["endpoints"]["C1"]["frames_inclusive"] == [40, 69]
+    # a default run carries neither key
+    plain = rga.run(manifest)
+    assert "spec_sha256" not in plain and "paired" not in plain

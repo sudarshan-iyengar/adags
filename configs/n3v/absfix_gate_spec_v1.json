@@ -1,0 +1,58 @@
+{
+ "spec_id": "absfix_gate_v1",
+ "spec_version": "1.1.0",
+ "note": "Spec instance for scripts/realdata_gate_analysis.py --spec --paired. PLACEHOLDER: A, B, CA and CB are null and MUST be filled in (from the frozen event curation) before any cell is analysed; the loader refuses to run while any endpoint window still resolves through a null anchor. A = the first frame of the absence (the frame on which the surface is fully occluded), B = the first frame of the return (the frame on which it is first revealed again). CA/CB delimit the control window, which must contain no part of the event.",
+ "scene": "cut_roasted_beef",
+ "event_name": "F_blade_over_beef_reveal",
+
+ "A": null,
+ "B": null,
+ "CA": null,
+ "CB": null,
+ "anchor_semantics": {
+  "A": "first frame of the absence",
+  "B": "first frame of the return",
+  "CA": "first frame of the control window",
+  "CB": "last frame of the control window",
+  "expressions": "a window edge is an integer or '<anchor>+<n>' / '<anchor>-<n>', resolved once by the loader"
+ },
+
+ "arms": ["U", "G", "GEST", "GMIS", "GWRONGMEM", "GONES"],
+ "arm_roles": {
+  "U": "ungated baseline",
+  "G": "gated on the oracle absence window (the intervention under test)",
+  "GEST": "gated on the ESTIMATED absence window (non-oracle timing)",
+  "GMIS": "gated on a deliberately shifted window (sham timing)",
+  "GWRONGMEM": "gated on the correct window but the wrong membership (sham membership)",
+  "GONES": "the U configuration re-run with the gate present but vacuous; measures the within-prefix replicate floor"
+ },
+
+ "endpoints": {
+  "P1": {"event": "roi:core", "frames": ["A+3", "B-2"], "label": "ghost_core", "role": "primary"},
+  "P2": ["B+3", "B+10"],
+  "S1": ["B+11", "B+20"],
+  "H1": ["A-30", "A-3"],
+  "H2": "whole_frame",
+  "C1": ["CA", "CB"]
+ },
+ "endpoint_notes": {
+  "P1": "the ghost window, read on the per-frame core ROI: the absence interior, three frames in from A so the occlusion is complete and two frames short of B so the return itself is excluded",
+  "P2": "the clean return on the bounding-box event, three frames after B so the reveal transient is excluded",
+  "S1": "the curated return tail on the bounding-box event, secondary",
+  "H1": "the pre-absence harm guard on the bounding-box event",
+  "H2": "the whole-frame harm guard",
+  "C1": "the control window on the bounding-box event; it must not overlap the event and is where a sham arm is required to show its damage",
+  "profile_requirement": "only P1 is read from roi:core; every other region endpoint is read from the event named by 'event_name', so each cell's f_box_profile.json must be produced with BOTH --masks and --roi_dir"
+ },
+
+ "PAIRED_MIN_EFFECT_DB": 0.5,
+ "PAIRED_MIN_PAIRS": 3,
+ "PAIRED_CLAIM_ENDPOINT": "P1",
+ "PAIRED_CLAIM_RULE": "CLAIM_CONDITIONS_MET iff every G-U pair on P1 exceeds its within-prefix replicate floor (|U - GONES| for that prefix, or PAIRED_MIN_EFFECT_DB where no GONES cell exists) AND no GMIS-U or GWRONGMEM-U pair exceeds the same floor in the same direction; DESIGN_WITHOUT_POWER when fewer than PAIRED_MIN_PAIRS complete U/G pairs exist; NOT_MET otherwise.",
+ "PAIRED_VERDICT_STATUS": "DESCRIPTIVE. The paired analysis reports per-pair differences, their median and range, sign consistency, the mean difference with a paired-t interval, and the replicate floor. It performs NO hypothesis test: there is no p-value, no TOST, and no equivalence claim, and an interval below six pairs is labelled descriptive rather than inferential.",
+ "PLACEBO": "within-run diagnostic only; the balanced-split spread of the U cells is reported to show what the design's own noise looks like and is NOT an input to the paired verdict",
+ "MASK_POOLING_RULE": "an event carrying kind='per_frame_mask' is pooled by MSE weighted by its pixels_per_frame; frames with an empty mask carry zero weight and are dropped, so the unweighted constant-pixel-count pooling used for the bounding-box endpoints is never applied to a per-frame-mask endpoint",
+ "PAIRED_SIZING_RULE": "n2_pairs = ceil(K*(sd_paired/DELTA)^2 + Z_A^2/4) on the paired differences themselves (one sample, not two), at DELTA = 0.30 dB",
+
+ "roi_source": "scripts/event_region_frame_profile.py --roi_dir <dir>, one subdirectory per region (core/, ring/, object/), masks named <frame:05d>.png, uint8 0/255 at the render raster; each becomes an event named roi:<name> with kind='per_frame_mask'"
+}
