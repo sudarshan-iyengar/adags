@@ -1976,6 +1976,11 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
         left_out = w_out_total - w_out_by_camera[cam_id]
         sub_members, _, sub_stats = membership_vote(left_in, left_out,
                                                     tau=args.tau)
+        if distance_cap is not None:
+            # Compare like with like: the full set is capped, so cap the
+            # leave-one-out set by the same rule before the Jaccard.
+            sub_members = np.logical_and(
+                sub_members, dist <= float(args.max_dist_from_seed))
         loco.append({
             "left_out_camera": int(cam_id),
             "n_members": int(sub_members.sum()),
