@@ -216,6 +216,28 @@ def build_rois(silhouette_ids, construction, support):
     return {"core": core, "ring": ring, "object": silhouette}
 
 
+
+def resolve_margin(edit_params):
+    """The editor's frame margin around the window.
+
+    ``sa4d_absence_edit_render.py`` records its CLI under ``args`` (so the
+    margin lives at ``edit_params["args"]["margin"]``) and the rendered range
+    under ``render_frames``; a top-level ``margin`` is honoured first for
+    hand-written params. Reading only the top level silently gave 0 and
+    clipped the evaluation ROIs to the absent window alone.
+    """
+    if "margin" in edit_params:
+        return int(edit_params["margin"])
+    args = edit_params.get("args") or {}
+    if "margin" in args:
+        return int(args["margin"])
+    rf = edit_params.get("render_frames")
+    win = edit_params.get("window")
+    if rf and win:
+        return int(max(int(win[0]) - int(rf[0]), int(rf[1]) - int(win[1])))
+    return 0
+
+
 def mask_bbox(mask):
     """``[x0, y0, x1, y1]`` half-open on the far edge, or ``None`` when empty."""
     m = np.asarray(mask, dtype=bool)
@@ -552,7 +574,7 @@ def main(argv=None):
 
     edit_params = json.loads((edit / "edit_params.json").read_text(encoding="utf-8"))
     window = [int(edit_params["window"][0]), int(edit_params["window"][1])]
-    margin = int(edit_params.get("margin", 0))
+    margin = resolve_margin(edit_params)
     a, b = window
     if a > b:
         sys.exit("edit_params window is empty: %r" % (window,))

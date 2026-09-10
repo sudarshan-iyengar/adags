@@ -611,3 +611,11 @@ class EndToEndTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_resolve_margin_reads_the_editor_args_layout():
+    from scripts.build_absence_fixture_scene import resolve_margin
+    assert resolve_margin({"margin": 7}) == 7
+    assert resolve_margin({"args": {"margin": 20}, "window": [60, 89]}) == 20
+    assert resolve_margin({"window": [60, 89], "render_frames": [40, 109]}) == 20
+    assert resolve_margin({"window": [60, 89]}) == 0
