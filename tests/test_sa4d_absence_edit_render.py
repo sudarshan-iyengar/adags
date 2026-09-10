@@ -585,6 +585,134 @@ def test_the_consistency_vote_end_to_end_on_synthetic_projections_and_id_maps():
     assert counts[5] == 0
 
 
+# ------------------------------------- narrowing: the visible-only depth test
+
+
+def test_camera_depth_is_the_row_vector_z_the_near_clip_test_uses():
+    view = _identity4()
+    depth = sae.camera_depth(np.array([[0.0, 0.0, 3.0], [1.0, 2.0, -4.0]]), view)
+    assert depth.tolist() == [3.0, -4.0]
+    # a translation in the LAST ROW is what `hom @ view` picks up
+    view[3, 2] = 10.0
+    assert sae.camera_depth(np.array([[0.0, 0.0, 3.0]]), view).tolist() == [13.0]
+
+
+def test_camera_depth_agrees_with_the_near_clip_limb_of_project_points():
+    view = _identity4()
+    points = np.array([[0.0, 0.0, 1.0], [0.0, 0.0, 0.1], [0.0, 0.0, -3.0]])
+    _, valid = sae.project_points(points, _identity4(), view, 64, 64)
+    assert valid.tolist() == (sae.camera_depth(points, view) > sae.NEAR_CLIP_Z).tolist()
+
+
+def test_camera_depth_rejects_bad_shapes():
+    with pytest.raises(ValueError):
+        sae.camera_depth(np.zeros((2, 2)), _identity4())
+    with pytest.raises(ValueError):
+        sae.camera_depth(np.zeros((2, 3)), np.eye(3))
+
+
+def test_depth_consistent_keeps_only_rows_near_the_median_of_the_first_pass():
+    # Four rows on the surface at depth ~5, one occluder at 2 that the FIRST pass
+    # wrongly called consistent, one row behind at 9, one the first pass rejected.
+    depth = np.array([5.0, 5.1, 4.9, 5.05, 2.0, 9.0, 5.0])
+    first = np.array([True, True, True, True, True, True, False])
+    keep, stats = sae.depth_consistent(depth, first, 0.15)
+    assert keep.tolist() == [True, True, True, True, False, False, False]
+    assert stats["evaluated"] is True
+    assert stats["median_depth"] == pytest.approx(5.025)
+    assert stats["reference_rows"] == 6
+    assert stats["dropped"] == 2
+    assert stats["kept"] == 4
+
+
+def test_depth_consistent_can_only_shrink_the_first_pass():
+    rng = np.random.default_rng(11)
+    depth = rng.normal(size=64)
+    first = rng.random(64) > 0.5
+    keep, _ = sae.depth_consistent(depth, first, 0.3)
+    assert (keep & ~first).sum() == 0
+
+
+def test_depth_consistent_is_two_sided_about_the_median():
+    depth = np.array([0.0, 0.0, 0.0, 0.5, -0.5])
+    first = np.ones(5, dtype=bool)
+    keep, stats = sae.depth_consistent(depth, first, 0.2)
+    assert stats["median_depth"] == pytest.approx(0.0)
+    assert keep.tolist() == [True, True, True, False, False]   # in front drops too
+
+
+def test_depth_consistent_is_inclusive_at_the_slack():
+    keep, _ = sae.depth_consistent(np.array([0.0, 0.0, 0.15, -0.15]),
+                                   np.ones(4, dtype=bool), 0.15)
+    assert keep.all()
+
+
+def test_depth_consistent_without_a_reference_row_does_not_invent_one():
+    """No first-pass row means no surface to measure: nothing is dropped."""
+    keep, stats = sae.depth_consistent(np.array([1.0, 2.0]), np.zeros(2, dtype=bool), 0.1)
+    assert keep.tolist() == [False, False]
+    assert stats["evaluated"] is False
+    assert stats["median_depth"] is None
+    assert stats["dropped"] == 0
+
+
+def test_depth_consistent_drops_non_finite_depths_and_never_medians_them():
+    depth = np.array([4.0, 4.0, np.nan, np.inf])
+    first = np.ones(4, dtype=bool)
+    keep, stats = sae.depth_consistent(depth, first, 0.5)
+    assert keep.tolist() == [True, True, False, False]
+    assert stats["median_depth"] == pytest.approx(4.0)
+    assert stats["reference_rows"] == 2
+    assert stats["dropped"] == 2
+
+
+def test_depth_consistent_rejects_a_non_positive_slack_and_a_shape_mismatch():
+    with pytest.raises(ValueError):
+        sae.depth_consistent(np.zeros(3), np.ones(3, dtype=bool), 0.0)
+    with pytest.raises(ValueError):
+        sae.depth_consistent(np.zeros(3), np.ones(4, dtype=bool), 0.1)
+
+
+def test_the_two_pass_vote_removes_a_row_that_hides_behind_the_object():
+    """Two cameras, four rows. One row projects ONTO the object in both cameras
+    but sits well behind it, which is exactly what the single-pass vote cannot
+    see: without the depth test it survives a 2-of-2 vote, and with it, it does
+    not."""
+    height, width = 30, 30
+    # rows: 3 on the object surface, 1 behind it but on the same pixels
+    xy = np.array([[15.0, 15.0], [16.0, 15.0], [15.0, 16.0], [15.5, 15.5]])
+    depths = np.array([5.0, 5.02, 4.98, 8.0])
+
+    hits_single = np.zeros((2, 4), dtype=bool)
+    hits_two_pass = np.zeros((2, 4), dtype=bool)
+    for slot, deva_id in enumerate([7, 95]):
+        id_map = np.zeros((height, width), dtype=np.uint8)
+        id_map[13:19, 13:19] = deva_id
+        sampled, hit = sae.sample_id_map(id_map, xy, np.ones(4, dtype=bool))
+        chosen, _ = sae.harmonise_id(sampled, hit)
+        first = hit & (sampled == chosen)
+        hits_single[slot] = first
+        hits_two_pass[slot], stats = sae.depth_consistent(depths, first, 0.15)
+        assert stats["evaluated"] is True
+
+    assert sae.consistency_keep(sae.consistency_counts(hits_single), 2).tolist() == [
+        True, True, True, True]
+    assert sae.consistency_keep(sae.consistency_counts(hits_two_pass), 2).tolist() == [
+        True, True, True, False]
+
+
+# ------------------------------------------------------------- filter ordering
+
+
+def test_filter_order_puts_the_mask_vote_first_only_for_base_rows_all():
+    assert sae.filter_order("ids") == [
+        "argmax_only", "scale_max_factor", "box_percentile", "mask_consistency"]
+    assert sae.filter_order("all") == [
+        "mask_consistency", "scale_max_factor", "box_percentile"]
+    # `all` drops argmax_only entirely: it names a limb of the identity selection
+    assert "argmax_only" not in sae.filter_order("all")
+
+
 def test_modal_value_ignores_missing_entries_and_breaks_ties_low():
     assert sae.modal_value([5, 5, None, 9]) == 5
     assert sae.modal_value([9, 3]) == 3
@@ -1015,6 +1143,70 @@ def test_filter_config_of_a_default_run_carries_no_mask_min_cams():
     assert config["mask_consistency_root"] is None
     assert config["mask_min_cams"] is None
     assert config["scale_max_factor"] is None
+
+
+# ------------------------------------------ CLI: --base_rows and the depth test
+
+
+def test_the_base_row_set_and_the_depth_test_are_off_by_default():
+    args = _narrowing_args()
+    assert args.base_rows == "ids"
+    assert args.mask_visible_only is False
+    assert args.mask_depth_slack == sae.MASK_DEPTH_SLACK_DEFAULT == 0.15
+    sae._validate_filter_args(args)                     # the default CLI must validate
+    config = sae._filter_config(args)
+    assert config["base_rows"] == "ids"
+    assert config["mask_visible_only"] is False
+    assert config["order"] == sae.filter_order("ids")   # unchanged by the new flags
+
+
+def test_base_rows_all_is_refused_without_the_mask_vote_that_defines_it():
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(base_rows="all"))
+
+
+def test_base_rows_all_refuses_argmax_only_rather_than_ignoring_it():
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(
+            base_rows="all", argmax_only=True,
+            mask_consistency="/deva", mask_min_cams=8, mask_frames="40,60"))
+
+
+def test_base_rows_all_with_the_mask_vote_validates_and_reorders_the_filters():
+    args = _narrowing_args(base_rows="all", mask_consistency="/deva",
+                           mask_min_cams=8, mask_frames="40,60,89,240",
+                           mask_visible_only=True)
+    sae._validate_filter_args(args)
+    config = sae._filter_config(args)
+    assert config["base_rows"] == "all"
+    assert config["order"][0] == "mask_consistency"
+    assert config["order"] == ["mask_consistency", "scale_max_factor", "box_percentile"]
+    assert config["mask_visible_only"] is True
+    assert config["mask_depth_slack"] == 0.15
+    assert config["mask_min_cams"] == 8
+    assert config["mask_frames"] == "40,60,89,240"
+
+
+def test_the_depth_test_is_refused_without_the_vote_it_is_a_second_pass_over():
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(mask_visible_only=True))
+
+
+def test_a_tuned_depth_slack_is_refused_rather_than_silently_ignored():
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(mask_depth_slack=0.4))
+    # ... and accepted once the test it belongs to is switched on
+    sae._validate_filter_args(_narrowing_args(
+        mask_visible_only=True, mask_depth_slack=0.4,
+        mask_consistency="/deva", mask_min_cams=8, mask_frames="40"))
+
+
+@pytest.mark.parametrize("slack", [0.0, -0.1])
+def test_a_non_positive_depth_slack_is_refused(slack):
+    with pytest.raises(SystemExit):
+        sae._validate_filter_args(_narrowing_args(
+            mask_visible_only=True, mask_depth_slack=slack,
+            mask_consistency="/deva", mask_min_cams=8, mask_frames="40"))
 
 
 # ------------------------------------------------------ CLI: the edit region

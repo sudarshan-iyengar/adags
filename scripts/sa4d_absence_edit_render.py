@@ -160,10 +160,11 @@ soft > 0.001, and the object-only render covered ~236,000 px of cam00 (bbox
 roughly 40-60k px. The background-without-object render also lost the stool.
 So the selection carries large diffuse Gaussians and neighbouring content.
 
-Four OPTIONAL narrowing steps are available, applied in this fixed order.
-All four are OFF by default, and with all four absent this script behaves
-exactly as it did before them. Every step's surviving row count is reported
-under ``filters`` in ``preview.json`` / ``rowset.json``.
+Four OPTIONAL narrowing steps are available, applied in the order below (see
+``--base_rows all``, further down, which moves step 4 to the front and makes it
+mandatory). All four are OFF by default, and with all four absent this script
+behaves exactly as it did before them. Every step's surviving row count is
+reported under ``filters`` in ``preview.json`` / ``rowset.json``.
 
     1. ``--argmax_only`` -- the base row set is argmax-in-``--ids`` only; the
        soft limb is not unioned in. The soft SENSITIVITY numbers are still
@@ -194,6 +195,73 @@ under ``filters`` in ``preview.json`` / ``rowset.json``.
        ``--mask_min_frames`` (default 1.0, i.e. EVERY) anchor frame. The
        resulting row mask is frozen once and intersected into every timestamp,
        in preview and in build alike.
+
+IGNORING IDENTITY ENTIRELY (``--base_rows all``)
+------------------------------------------------
+SA4D's identity field labels only about HALF of the dog on this scene: even
+with the soft limb on, the selected rows cover 0.52 of the segmenter's
+silhouette on the reference camera (``alpha_cover_of_silhouette``), so an
+identity-based removal leaves a white haze where the unlabelled half of the
+object still renders.
+
+``--base_rows all`` drops identity from the ROW SET and keeps it only as a
+naming device: the base set is EVERY Gaussian in the model, and ``--ids`` then
+serves only to harmonise the per-camera DEVA ids and to build the silhouettes.
+What defines the object is then the multi-view hull of the segmenter's masks
+alone, so ``--mask_consistency`` is MANDATORY in this mode and the run is
+REFUSED without it -- with identity ignored and no vote there would be no row
+set at all, only the whole model. ``--argmax_only`` is refused with it for the
+same reason: it names a limb of the identity selection, which is not in use.
+
+The filter ORDER changes with it, and the order in force is recorded in
+``filters.order``:
+
+    ids  (default)  argmax_only -> scale_max_factor -> box_percentile ->
+                    mask_consistency
+    all             mask_consistency -> scale_max_factor -> box_percentile
+
+In ``all`` the scale cap and the percentile box are computed on the VOTE'S
+SURVIVORS, never on the whole model: a percentile box over every Gaussian in
+the scene is the scene's own bounding box and would filter nothing, and a
+scale median over every Gaussian is the scene's median rather than the
+object's. In ``build`` the majority vote over timestamps, the IQR box and the
+radius filter still follow, unchanged and in that order, and the canonical
+set's second intersection with the vote is a no-op in this mode because every
+timestamp was already intersected with it.
+
+HARMONISATION IS STILL DONE FROM THE IDENTITY ROWS, in both modes. The modal
+id beneath a projection of the WHOLE model is the largest object in the scene,
+not the object being edited, so in ``all`` mode the per-camera id is harmonised
+from the identity-selected rows (steps 1-3 applied to them) and only the VOTE
+runs over every row. ``filters.mask_consistency.harmonised_from`` records which
+row set supplied the id, and each camera's record carries both the harmonised
+id and the modal id the vote rows themselves landed on, so the difference
+between the two is visible rather than assumed away.
+
+``--mask_visible_only`` -- OCCLUSION, APPROXIMATELY
+---------------------------------------------------
+The vote asks only whether a row's projection LANDS on the object's pixels; a
+row on the far side of the object, or behind it entirely, projects onto the
+same pixels and votes the same way. ``--mask_visible_only`` adds a SECOND PASS
+per (camera, anchor frame): the median camera-space depth of the rows the first
+pass called consistent is taken as the object's depth in that camera, and a row
+survives only if its own depth is within ``--mask_depth_slack`` (default 0.15,
+MODEL UNITS, not metres) of that median.
+
+This is an approximation and is labelled as one. It is a slab test about a
+single median, not a visibility computation: it cannot see the object's own
+thickness, it is TWO-SIDED (a row well in FRONT of the median is dropped too),
+and its reference median comes from the first pass, so a camera whose first
+pass is mostly occluders would centre the slab on them. The median rather than
+the mean is what keeps a minority of such rows from moving it. The cost is
+measured, not assumed: the vote is tallied twice, with and without the depth
+test, and ``filters.mask_consistency.depth_test`` reports
+``survivors_without_depth_test``, ``rows_removed_by_depth_test``, and per
+camera and frame the median depth, the reference-row count and the number
+dropped. The test also carries a PRECONDITION: if no (camera, anchor frame)
+pair ever had a consistent row to take a median from, the depth test was never
+exercised and the run ABORTS rather than reporting a null it could not have
+avoided.
 
 THE PROJECTION USED BY STEP 4, AND THE PRECONDITION THAT GUARDS IT
 ------------------------------------------------------------------
@@ -336,6 +404,12 @@ DEVA_UNLABELLED_ID = 0
 # cuda_rasterizer/forward.cu:149-150 and :151-153.
 HOMOGENEOUS_W_EPS = 1e-7
 NEAR_CLIP_Z = 0.2
+
+# Default half-width of the ``--mask_visible_only`` depth slab, in MODEL UNITS.
+# It is a knob and not a fixed constant because the right value is a property of
+# the scene's scale, not of this code; the value in force is recorded in
+# ``filters.mask_depth_slack``.
+MASK_DEPTH_SLACK_DEFAULT = 0.15
 
 # Median |analytic - points2d| above this many pixels aborts the run: it means
 # the projection convention below does not match the rasterizer's, and every
@@ -697,6 +771,77 @@ def project_points(points_xyz, full_proj_transform, world_view_transform, width,
         in_front = (homogeneous @ view[:, 2]) > NEAR_CLIP_Z
     valid = in_front & np.isfinite(x) & np.isfinite(y)
     return np.stack([x, y], axis=1), valid
+
+
+def camera_depth(points_xyz, world_view_transform):
+    """Camera-space z of each point, in the RASTERIZER's row-vector convention.
+
+    ``([x, y, z, 1] @ world_view_transform).z`` -- the very quantity
+    :func:`project_points` compares against :data:`NEAR_CLIP_Z`
+    (cuda_rasterizer/forward.cu:151-153), and the one the rasterizer depth-sorts
+    by. MODEL UNITS, not metres. Rows behind the camera come back negative and
+    are left as they are: the caller's ``valid`` mask, not this function, decides
+    what to do with them.
+    """
+    points = np.asarray(points_xyz, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError("camera_depth expects [M, 3], got %r" % (points.shape,))
+    view = np.asarray(world_view_transform, dtype=np.float64)
+    if view.shape != (4, 4):
+        raise ValueError("world_view_transform must be 4x4, got %r" % (view.shape,))
+    homogeneous = np.concatenate([points, np.ones((points.shape[0], 1))], axis=1)
+    return homogeneous @ view[:, 2]
+
+
+def depth_consistent(depth, consistent, slack):
+    """Second pass of the mask vote: keep only rows near the object's own depth.
+
+    ``consistent`` is the FIRST pass -- the rows whose projection landed on the
+    camera's harmonised id. Their MEDIAN depth stands in for the object's depth
+    in this camera, and a row survives only if its own depth is within ``slack``
+    of it. Returns ``(keep[M], stats)``; ``keep`` is always a subset of
+    ``consistent``.
+
+    With no first-pass row there is no reference surface, so NOTHING is dropped
+    and ``evaluated`` stays False -- an occlusion test that never had a surface
+    to measure must not be read as one that ran and found nothing. Non-finite
+    depths never enter the median and never survive the test.
+    """
+    values = np.asarray(depth, dtype=np.float64).reshape(-1)
+    first = np.asarray(consistent, dtype=bool).reshape(-1)
+    if values.shape != first.shape:
+        raise ValueError("depth_consistent shape mismatch: %r vs %r"
+                         % (values.shape, first.shape))
+    if float(slack) <= 0.0:
+        raise ValueError("mask_depth_slack must be positive, got %r" % (slack,))
+    stats = {"evaluated": False, "slack": float(slack), "reference_rows": 0,
+             "median_depth": None, "kept": int(first.sum()), "dropped": 0}
+    usable = first & np.isfinite(values)
+    if not usable.any():
+        return first.copy(), stats
+    median = float(np.median(values[usable]))
+    within = np.isfinite(values) & (np.abs(values - median) <= float(slack))
+    keep = first & within
+    stats.update({
+        "evaluated": True,
+        "reference_rows": int(usable.sum()),
+        "median_depth": median,
+        "kept": int(keep.sum()),
+        "dropped": int(first.sum()) - int(keep.sum()),
+    })
+    return keep, stats
+
+
+def filter_order(base_rows):
+    """The order the narrowing steps run in, for the run's own record.
+
+    ``--base_rows all`` moves the mask vote to the FRONT: with identity ignored
+    it is the only thing that defines a row set, and the scale cap and the
+    percentile box are then properties of its survivors.
+    """
+    if str(base_rows) == "all":
+        return ["mask_consistency", "scale_max_factor", "box_percentile"]
+    return ["argmax_only", "scale_max_factor", "box_percentile", "mask_consistency"]
 
 
 def sample_id_map(id_map, xy, valid):
@@ -1341,13 +1486,66 @@ def _geometry_filters(gaussians, selection, time_value, args):
     return filtered, report
 
 
+def _identity_base(hard, soft, args):
+    """Step 1: the IDENTITY row set, with or without the soft limb."""
+    return hard.bool() if args.argmax_only else (hard | soft[float(args.soft_thresh)]).bool()
+
+
 def _selection_bundle(gaussians, ids_tensor, thresholds, args, frame):
-    """``(hard, soft, filtered_after_steps_1_to_3, geometry_report)`` at one frame."""
+    """``(hard, soft, selection, geometry_report)`` at one frame.
+
+    With ``--base_rows ids`` the selection has narrowing steps 1-3 applied, as
+    before. With ``--base_rows all`` it is EVERY row and steps 2-3 are DEFERRED
+    to :func:`_post_consistency_filters`, because in that mode they are defined
+    on the mask vote's survivors and not on the whole model.
+    """
+    import torch
+
     time_value = frame / float(TIME_DIVISOR)
     hard, soft = _row_sets(gaussians, time_value, ids_tensor, thresholds)
-    base = hard.bool() if args.argmax_only else (hard | soft[float(args.soft_thresh)]).bool()
-    filtered, report = _geometry_filters(gaussians, base, time_value, args)
+    if args.base_rows == "all":
+        base = torch.ones_like(hard.bool())
+        return hard, soft, base, {
+            "base": int(base.sum().item()),
+            "after_scale": None,
+            "after_box": None,
+            "scale": None,
+            "box": None,
+            "geometry_after_mask_consistency": True,
+        }
+    filtered, report = _geometry_filters(
+        gaussians, _identity_base(hard, soft, args), time_value, args)
     return hard, soft, filtered, report
+
+
+def _identity_selection(gaussians, ids_tensor, thresholds, args, frame):
+    """The IDENTITY row set with steps 1-3 applied, whatever ``--base_rows`` says.
+
+    Used ONLY to harmonise the per-camera DEVA ids. Under ``--base_rows all`` the
+    vote runs over every Gaussian, and the modal id beneath a projection of the
+    whole model is the biggest object in the scene rather than this one.
+    """
+    time_value = frame / float(TIME_DIVISOR)
+    hard, soft = _row_sets(gaussians, time_value, ids_tensor, thresholds)
+    return _geometry_filters(
+        gaussians, _identity_base(hard, soft, args), time_value, args)
+
+
+def _post_consistency_filters(gaussians, selection, frame, args, report):
+    """Steps 2-3 on the mask vote's SURVIVORS -- the ``--base_rows all`` order.
+
+    Both are properties of a row set, so in ``all`` mode they can only be taken
+    after the vote: over the whole model the percentile box is the scene's own
+    bounding box and the scale median is the scene's median.
+    """
+    filtered, geometry = _geometry_filters(
+        gaussians, selection.bool(), frame / float(TIME_DIVISOR), args)
+    report["survivors_before_geometry"] = geometry["base"]
+    report["after_scale"] = geometry["after_scale"]
+    report["after_box"] = geometry["after_box"]
+    report["scale"] = geometry["scale"]
+    report["box"] = geometry["box"]
+    return filtered
 
 
 def _projection_check(view, camera_name, frame, gaussians, pipe, background, keep_mask,
@@ -1434,8 +1632,16 @@ def _projection_check(view, camera_name, frame, gaussians, pipe, background, kee
     return report
 
 
-def _mask_consistency(gaussians, pipe, args, index, selection_at, background, deva_cache):
-    """Narrowing step 4. Returns ``(keep[N] bool numpy, report)``."""
+def _mask_consistency(gaussians, pipe, args, index, selection_at, background, deva_cache,
+                      harmonise_at=None):
+    """Narrowing step 4. Returns ``(keep[N] bool numpy, report)``.
+
+    ``harmonise_at`` supplies the rows the per-camera DEVA id is harmonised
+    FROM. It is ``None`` in the default mode, where the vote rows are the
+    identity selection and harmonise themselves; under ``--base_rows all`` it is
+    the identity selection, because the modal id under a projection of the whole
+    model names the largest object in the scene rather than this one.
+    """
     anchor_frames = parse_frame_list(args.mask_frames)
     cameras = [name for name in sorted(index) if name != "cam00"]
     if not cameras:
@@ -1449,9 +1655,14 @@ def _mask_consistency(gaussians, pipe, args, index, selection_at, background, de
 
     n_rows = int(gaussians.get_xyz.shape[0])
     table = np.zeros((len(anchor_frames), n_rows), dtype=bool)
+    # The same vote WITHOUT the depth test, so the cost of --mask_visible_only is
+    # measured on the final row set instead of inferred from per-camera drops.
+    table_nodepth = np.zeros((len(anchor_frames), n_rows), dtype=bool)
     chosen_by_camera = {name: [] for name in cameras}
     per_frame = []
     resized = []
+    depth_pairs_evaluated = 0
+    depth_rows_dropped = 0
     projection_check = {"ran": False, "reason": "no non-empty anchor frame to check on",
                         "tolerance_px": PROJECTION_CHECK_TOL_PX}
     checked = False
@@ -1467,7 +1678,20 @@ def _mask_consistency(gaussians, pipe, args, index, selection_at, background, de
         row_index = np.asarray(state["row_index"], dtype=np.int64)
         xyz = np.asarray(state["xyz"], dtype=np.float64)
 
+        harmony_xyz = None
+        if harmonise_at is not None:
+            harmony_selection, _ = harmonise_at(frame)
+            if int(harmony_selection.sum().item()) == 0:
+                raise SystemExit(
+                    "--mask_consistency: the identity row set is EMPTY at anchor frame %d, "
+                    "so the per-camera DEVA ids cannot be harmonised. Name them with "
+                    "--deva_ids_by_camera or choose another anchor frame." % (frame,))
+            harmony_state = _deformed_rows(
+                gaussians, harmony_selection.bool(), frame / float(TIME_DIVISOR))
+            harmony_xyz = np.asarray(harmony_state["xyz"], dtype=np.float64)
+
         hits = np.zeros((len(cameras), row_index.size), dtype=bool)
+        hits_nodepth = np.zeros((len(cameras), row_index.size), dtype=bool)
         camera_records = []
         for slot, camera_name in enumerate(cameras):
             view = _get_view(index, camera_name, frame)
@@ -1476,42 +1700,78 @@ def _mask_consistency(gaussians, pipe, args, index, selection_at, background, de
                 args.mask_consistency, camera_name, frame, height, width, deva_cache)
             if was_resized:
                 resized.append("%s/%04d" % (camera_name, frame))
-            xy, valid = project_points(
-                xyz,
-                _numpy_matrix(view.full_proj_transform),
-                _numpy_matrix(view.world_view_transform),
-                width,
-                height,
-            )
+            projection_matrix = _numpy_matrix(view.full_proj_transform)
+            view_matrix = _numpy_matrix(view.world_view_transform)
+            xy, valid = project_points(xyz, projection_matrix, view_matrix, width, height)
             if not checked:
                 checked = True
                 projection_check = _projection_check(
                     view, camera_name, frame, gaussians, pipe, background, selection,
                     row_index, n_rows, xy)
             ids_at, hit = sample_id_map(id_map, xy, valid)
-            chosen, counts = harmonise_id(ids_at, hit)
+            vote_choice, counts = harmonise_id(ids_at, hit)
+            if harmony_xyz is None:
+                chosen = vote_choice
+                harmony_rows = None
+                harmony_counts = None
+            else:
+                harmony_xy, harmony_valid = project_points(
+                    harmony_xyz, projection_matrix, view_matrix, width, height)
+                harmony_ids, harmony_hit = sample_id_map(id_map, harmony_xy, harmony_valid)
+                chosen, harmony_counts = harmonise_id(harmony_ids, harmony_hit)
+                harmony_rows = int(harmony_hit.sum())
             chosen_by_camera[camera_name].append(chosen)
+
+            first_pass = np.zeros(row_index.size, dtype=bool)
             if chosen is not None:
-                hits[slot] = hit & (ids_at == chosen)
-            camera_records.append({
+                first_pass = hit & (ids_at == chosen)
+            hits_nodepth[slot] = first_pass
+            depth_stats = None
+            if args.mask_visible_only:
+                depth = camera_depth(xyz, view_matrix)
+                hits[slot], depth_stats = depth_consistent(
+                    depth, first_pass, args.mask_depth_slack)
+                if depth_stats["evaluated"]:
+                    depth_pairs_evaluated += 1
+                depth_rows_dropped += int(depth_stats["dropped"])
+            else:
+                hits[slot] = first_pass
+
+            record = {
                 "camera": camera_name,
                 "chosen_id": chosen,
                 "in_front_of_camera": int(valid.sum()),
                 "landed_in_image": int(hit.sum()),
                 "unlabelled_rows": int(counts.get(DEVA_UNLABELLED_ID, 0)),
                 "consistent_rows": int(hits[slot].sum()),
+                "consistent_rows_before_depth_test": int(first_pass.sum()),
                 "top_ids": dict(sorted(counts.items(),
                                        key=lambda item: (-item[1], item[0]))[:8]),
                 "deva_resized": bool(was_resized),
-            })
+                "visible_only": depth_stats,
+            }
+            if harmony_xyz is not None:
+                # The id the VOTE rows would have chosen on their own is kept on
+                # the record: with identity ignored it is the largest object in
+                # the scene, and the gap between the two is the reason
+                # harmonisation does not run on them.
+                record["vote_modal_id"] = vote_choice
+                record["harmonisation_rows_landed"] = harmony_rows
+                record["harmonisation_top_ids"] = dict(
+                    sorted((harmony_counts or {}).items(),
+                           key=lambda item: (-item[1], item[0]))[:8])
+            camera_records.append(record)
 
         counts_per_row = consistency_counts(hits)
         keep_rows = consistency_keep(counts_per_row, min_cameras)
         table[position, row_index[keep_rows]] = True
+        keep_nodepth = consistency_keep(consistency_counts(hits_nodepth), min_cameras)
+        table_nodepth[position, row_index[keep_nodepth]] = True
         per_frame.append({
             "frame": frame,
             "base_rows": base_rows,
             "survivors": int(keep_rows.sum()),
+            "survivors_before_depth_test": int(keep_nodepth.sum()),
             "consistency_histogram": count_histogram(counts_per_row),
             "cameras": camera_records,
         })
@@ -1523,18 +1783,46 @@ def _mask_consistency(gaussians, pipe, args, index, selection_at, background, de
             "--mask_consistency: every anchor frame (%s) had an EMPTY base row set, so "
             "the vote was never exercised" % (args.mask_frames,))
 
+    # Precondition, not a reading rule: a depth test that never found a surface
+    # to measure would silently degrade to "no test at all" while still being
+    # reported as enabled.
+    if args.mask_visible_only and depth_pairs_evaluated == 0:
+        raise SystemExit(
+            "--mask_visible_only: no (camera, anchor frame) pair had a consistent row "
+            "to take a median depth from, so the depth test was never exercised")
+
     survivors = frame_survivors(table, args.mask_min_frames)
+    survivors_nodepth = frame_survivors(table_nodepth, args.mask_min_frames)
+
+    # With --base_rows all the vote is the ONLY thing defining the row set, so an
+    # empty survivor set is not a narrow answer, it is no answer.
+    if args.base_rows == "all" and not survivors.any():
+        raise SystemExit(
+            "--base_rows all: the mask-consistency vote kept ZERO rows (%d before the "
+            "depth test). Lower --mask_min_cams, widen --mask_depth_slack, or check the "
+            "harmonised ids in the report." % (int(survivors_nodepth.sum()),))
+
     report = {
         "enabled": True,
         "deva_root": args.mask_consistency,
+        "base_rows": args.base_rows,
         "min_cameras": min_cameras,
         "min_frames_fraction": float(args.mask_min_frames),
         "anchor_frames": anchor_frames,
         "cameras": cameras,
+        "harmonised_from": "identity_rows" if harmonise_at is not None else "vote_rows",
         "harmonised_id_by_camera": {name: modal_value(values)
                                     for name, values in chosen_by_camera.items()},
         "per_frame": per_frame,
         "survivors": int(survivors.sum()),
+        "depth_test": {
+            "enabled": bool(args.mask_visible_only),
+            "slack": float(args.mask_depth_slack),
+            "camera_frame_pairs_evaluated": depth_pairs_evaluated,
+            "camera_frame_rows_dropped": depth_rows_dropped,
+            "survivors_without_depth_test": int(survivors_nodepth.sum()),
+            "rows_removed_by_depth_test": int(survivors_nodepth.sum()) - int(survivors.sum()),
+        },
         "deva_maps_resized": sorted(set(resized)),
         "projection_check": projection_check,
     }
@@ -1544,6 +1832,7 @@ def _mask_consistency(gaussians, pipe, args, index, selection_at, background, de
 def _filter_config(args):
     """The narrowing knobs, exactly as given, for the output JSON."""
     return {
+        "base_rows": args.base_rows,
         "argmax_only": bool(args.argmax_only),
         "scale_max_factor": None if args.scale_max_factor is None else float(args.scale_max_factor),
         "box_percentile": None if args.box_percentile is None else float(args.box_percentile),
@@ -1552,7 +1841,9 @@ def _filter_config(args):
         "mask_min_cams": None if args.mask_consistency is None else int(args.mask_min_cams),
         "mask_frames": args.mask_frames,
         "mask_min_frames": float(args.mask_min_frames),
-        "order": ["argmax_only", "scale_max_factor", "box_percentile", "mask_consistency"],
+        "mask_visible_only": bool(args.mask_visible_only),
+        "mask_depth_slack": float(args.mask_depth_slack),
+        "order": filter_order(args.base_rows),
     }
 
 
@@ -1700,6 +1991,10 @@ def run_preview(args):
                 lambda frame: _selection_bundle(gaussians, ids_tensor, thresholds, args, frame)[2:],
                 black,
                 deva_cache,
+                harmonise_at=(
+                    None if args.base_rows != "all"
+                    else lambda frame: _identity_selection(
+                        gaussians, ids_tensor, thresholds, args, frame)),
             )
             harmonised = consistency_report["harmonised_id_by_camera"]
         else:
@@ -1725,6 +2020,10 @@ def run_preview(args):
             else:
                 selection = filtered & torch.from_numpy(consistency_keep_np).to(filtered.device)
                 geometry["after_mask_consistency"] = int(selection.sum().item())
+                if args.base_rows == "all":
+                    # Steps 2-3 run HERE, on the vote's survivors, not on the model.
+                    selection = _post_consistency_filters(
+                        gaussians, selection, frame, args, geometry)
             selection_np = selection.detach().cpu().numpy().astype(bool)
 
             summary = rowset_summary(
@@ -1911,6 +2210,10 @@ def run_build(args):
                 lambda frame: _selection_bundle(gaussians, ids_tensor, thresholds, args, frame)[2:],
                 black,
                 deva_cache,
+                harmonise_at=(
+                    None if args.base_rows != "all"
+                    else lambda frame: _identity_selection(
+                        gaussians, ids_tensor, thresholds, args, frame)),
             )
             harmonised = consistency_report["harmonised_id_by_camera"]
         else:
@@ -1930,6 +2233,14 @@ def run_build(args):
             time_value = frame / float(TIME_DIVISOR)
             hard, soft, filtered, geometry = _selection_bundle(
                 gaussians, ids_tensor, thresholds, args, frame)
+            if args.base_rows == "all":
+                # `all` orders the vote FIRST, so it is intersected per timestamp
+                # and steps 2-3 then run on its survivors; the majority vote, the
+                # IQR box and the radius filter still follow, unchanged.
+                filtered = filtered & torch.from_numpy(consistency_keep_np).to(filtered.device)
+                geometry["after_mask_consistency"] = int(filtered.sum().item())
+                filtered = _post_consistency_filters(
+                    gaussians, filtered, frame, args, geometry)
             selection = filtered.detach().cpu().numpy().astype(bool)
             table[position] = selection
             # Step 4 is NOT recorded per timestamp here: in build mode it is
@@ -1946,12 +2257,15 @@ def run_build(args):
                 ),
                 "filters": geometry,
             })
-            filter_counts.append({
+            entry = {
                 "frame": frame,
                 "base": geometry["base"],
                 "after_scale": geometry["after_scale"],
                 "after_box": geometry["after_box"],
-            })
+            }
+            if args.base_rows == "all":
+                entry["after_mask_consistency"] = geometry["after_mask_consistency"]
+            filter_counts.append(entry)
 
         # ---- 2. canonical set: majority, consistency, IQR box, radius -------
         canonical_np = majority_rowset(table)
@@ -1963,6 +2277,10 @@ def run_build(args):
             )
 
         if consistency_keep_np is not None:
+            # Under --base_rows all every timestamp was already intersected with the
+            # vote, so this is a no-op there; it stays unconditional so that
+            # `canonical_counts.after_mask_consistency` means the same thing in both
+            # modes.
             canonical_np = canonical_np & consistency_keep_np
         count_after_consistency = int(canonical_np.sum())
         if count_after_consistency == 0:
@@ -2175,6 +2493,12 @@ def build_parser():
     parser.add_argument("--out", required=True)
     # row-set narrowing, applied in this order; every one of them is OFF by
     # default and the default behaviour is unchanged when they are all absent.
+    parser.add_argument("--base_rows", choices=["ids", "all"], default="ids",
+                        help="what the narrowing acts on: SA4D's identity selection "
+                             "(default 'ids'), or EVERY Gaussian with identity ignored "
+                             "('all'), in which case --mask_consistency is REQUIRED, "
+                             "defines the row set, and runs FIRST -- --ids then only "
+                             "names the DEVA ids for harmonisation and silhouettes")
     parser.add_argument("--argmax_only", action="store_true",
                         help="base row set is argmax-in-ids only; drop the soft limb")
     parser.add_argument("--scale_max_factor", type=float, default=None,
@@ -2198,6 +2522,13 @@ def build_parser():
     parser.add_argument("--mask_min_frames", type=float, default=1.0,
                         help="fraction of anchor frames a row must survive (default 1.0, "
                              "i.e. every anchor frame)")
+    parser.add_argument("--mask_visible_only", action="store_true",
+                        help="second pass: a row counts as consistent in a camera only if "
+                             "its camera-space depth is within --mask_depth_slack of the "
+                             "median depth of that camera's consistent rows (default off)")
+    parser.add_argument("--mask_depth_slack", type=float, default=MASK_DEPTH_SLACK_DEFAULT,
+                        help="half-width of the --mask_visible_only depth slab, in MODEL "
+                             "UNITS (default %g)" % MASK_DEPTH_SLACK_DEFAULT)
     # what defines the EDIT REGION. `alpha` is the default and is the behaviour
     # this script had before these flags existed.
     parser.add_argument("--edit_region", choices=["alpha", "deva"], default="alpha",
@@ -2243,6 +2574,25 @@ def _validate_filter_args(args):
         raise SystemExit("--box_pad must be non-negative, got %r" % (args.box_pad,))
     if not 0.0 < args.mask_min_frames <= 1.0:
         raise SystemExit("--mask_min_frames must be in (0, 1], got %r" % (args.mask_min_frames,))
+    if args.mask_depth_slack <= 0.0:
+        raise SystemExit("--mask_depth_slack must be positive, got %r" % (args.mask_depth_slack,))
+    if args.base_rows == "all":
+        # With identity ignored the vote is the ONLY thing that can define a row
+        # set; without it the "object" would be the whole model.
+        if not args.mask_consistency:
+            raise SystemExit("--base_rows all needs --mask_consistency <deva_root>: with "
+                             "identity ignored the multi-view mask vote is the only thing "
+                             "that defines the row set")
+        if args.argmax_only:
+            raise SystemExit("--argmax_only names a limb of the IDENTITY selection, which "
+                             "--base_rows all does not use")
+    if args.mask_visible_only and not args.mask_consistency:
+        raise SystemExit("--mask_visible_only needs --mask_consistency <deva_root>: it is a "
+                         "second pass over that vote")
+    if not args.mask_visible_only and float(args.mask_depth_slack) != MASK_DEPTH_SLACK_DEFAULT:
+        # Refused rather than ignored: a tuned slack means the caller believes the
+        # depth test is running, and it is not.
+        raise SystemExit("--mask_depth_slack has no effect without --mask_visible_only")
     if args.mask_consistency:
         # No default is supplied for either: both are load-bearing thresholds
         # and a silent default would decide the row set on the run's behalf.
