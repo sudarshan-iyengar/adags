@@ -631,6 +631,245 @@ def test_mask_fit_rejects_a_mismatched_id_map():
         sae.mask_fit(np.zeros((2, 2)), np.zeros((3, 3), dtype=np.uint8), 1)
 
 
+# --------------------------------------------- edit region: DEVA silhouette
+
+
+def test_silhouette_unions_every_listed_id():
+    ids = np.array([
+        [0, 1, 1, 2],
+        [0, 1, 3, 2],
+        [4, 4, 3, 0],
+    ], dtype=np.uint8)
+    single = sae.silhouette_from_id_map(ids, [1])
+    assert single.sum() == 3
+    both = sae.silhouette_from_id_map(ids, [1, 2])
+    assert both.sum() == 5
+    assert both[0, 3] and both[1, 3] and both[0, 1]
+    assert not both[2, 0]                      # id 4 was not asked for
+    # the union is exactly the two singles, and order does not matter
+    assert np.array_equal(both, single | sae.silhouette_from_id_map(ids, [2]))
+    assert np.array_equal(both, sae.silhouette_from_id_map(ids, [2, 1]))
+
+
+def test_silhouette_of_an_absent_id_is_empty_not_an_error():
+    ids = np.array([[0, 7], [7, 0]], dtype=np.uint8)
+    assert sae.silhouette_from_id_map(ids, [95]).sum() == 0
+
+
+def test_silhouette_refuses_the_unlabelled_id_and_an_empty_id_list():
+    ids = np.zeros((3, 3), dtype=np.uint8)
+    with pytest.raises(ValueError):
+        sae.silhouette_from_id_map(ids, [0])
+    with pytest.raises(ValueError):
+        sae.silhouette_from_id_map(ids, [95, 0])
+    with pytest.raises(ValueError):
+        sae.silhouette_from_id_map(ids, [])
+
+
+def test_silhouette_rejects_a_non_2d_id_map():
+    with pytest.raises(ValueError):
+        sae.silhouette_from_id_map(np.zeros((2, 2, 3), dtype=np.uint8), [1])
+
+
+# ------------------------------------------------------- the alpha guard
+
+
+def test_alpha_guard_off_returns_the_silhouette_untouched():
+    sil = np.zeros((5, 5), dtype=bool)
+    sil[2, 2] = True
+    alpha = np.zeros((5, 5))                   # alpha covers NOTHING
+    kept, stats = sae.guard_silhouette(sil, alpha, 0)
+    assert np.array_equal(kept, sil)           # guard 0 is OFF, not "radius 0"
+    assert stats["enabled"] is False
+    assert stats["dropped_px"] == 0
+    assert stats["guard_px_count"] is None
+
+
+def test_alpha_guard_intersects_with_the_dilated_alpha():
+    sil = np.zeros((11, 11), dtype=bool)
+    sil[5, 5] = True                            # inside the alpha
+    sil[5, 8] = True                            # 3 px away: inside a radius-3 guard
+    sil[0, 0] = True                            # a leak far from the alpha
+    alpha = np.zeros((11, 11))
+    alpha[5, 5] = 0.9
+    kept, stats = sae.guard_silhouette(sil, alpha, 3)
+    assert kept[5, 5] and kept[5, 8]
+    assert not kept[0, 0]
+    assert stats["enabled"] is True
+    assert stats["silhouette_px"] == 3 and stats["kept_px"] == 2 and stats["dropped_px"] == 1
+    assert stats["guard_px_count"] == int(sae.dilate_binary(alpha > 0.5, 3).sum())
+
+
+def test_alpha_guard_can_only_shrink_the_silhouette():
+    rng = np.random.default_rng(3)
+    sil = rng.random((12, 12)) > 0.5
+    alpha = rng.random((12, 12))
+    kept, _ = sae.guard_silhouette(sil, alpha, 2)
+    assert (kept & ~sil).sum() == 0            # never adds a pixel DEVA did not label
+
+
+def test_alpha_guard_rejects_a_mismatched_alpha():
+    with pytest.raises(ValueError):
+        sae.guard_silhouette(np.zeros((4, 4), dtype=bool), np.zeros((5, 5)), 1)
+
+
+# -------------------------------------------------- support ON the silhouette
+
+
+def test_silhouette_report_measures_support_and_holes_on_S_not_on_the_alpha():
+    sil = np.array([[True, True], [True, False]])
+    # alpha_bg: two supported pixels, one hole, and one pixel OUTSIDE S that
+    # would change the answer if the report leaked past the silhouette.
+    alpha_bg = np.array([[0.8, 0.6], [0.1, 0.0]])
+    alpha_obj = np.array([[0.9, 0.2], [0.9, 1.0]])
+    report = sae.silhouette_report(sil, alpha_obj, alpha_bg)
+    assert report["silhouette_px"] == 3
+    assert report["hole_px"] == 1
+    assert report["hole_fraction"] == pytest.approx(1.0 / 3.0)
+    assert report["support_inside_silhouette"] == pytest.approx((0.8 + 0.6 + 0.1) / 3.0)
+    # 2 of the 3 silhouette pixels are covered by the object alpha
+    assert report["alpha_cover_of_silhouette"] == pytest.approx(2.0 / 3.0)
+
+
+def test_silhouette_report_disagrees_with_the_alpha_based_hole_number():
+    """The whole point of the flag: the two regions give different answers."""
+    sil = np.zeros((4, 4), dtype=bool)
+    sil[0, :] = True                     # the segmenter's row
+    alpha_obj = np.zeros((4, 4))
+    alpha_obj[:, 0] = 1.0                # the smear: a different column
+    alpha_bg = np.zeros((4, 4))
+    alpha_bg[0, :] = 1.0                 # support exists exactly under S
+    on_silhouette = sae.silhouette_report(sil, alpha_obj, alpha_bg)
+    on_alpha = sae.hole_fraction(alpha_obj, alpha_bg)
+    assert on_silhouette["hole_fraction"] == 0.0
+    assert on_alpha["hole_fraction"] == pytest.approx(0.75)
+
+
+def test_silhouette_report_of_an_empty_silhouette_is_undefined_not_zero():
+    report = sae.silhouette_report(np.zeros((3, 3), dtype=bool), np.ones((3, 3)),
+                                   np.ones((3, 3)))
+    assert report["silhouette_px"] == 0
+    assert report["hole_fraction"] is None
+    assert report["support_inside_silhouette"] is None
+    assert report["alpha_cover_of_silhouette"] is None
+
+
+def test_silhouette_report_rejects_mismatched_maps():
+    with pytest.raises(ValueError):
+        sae.silhouette_report(np.zeros((2, 2), dtype=bool), np.zeros((2, 2)), np.zeros((3, 3)))
+
+
+# ------------------------------------------ the composite region derived from S
+
+
+def test_edit_alpha_from_mask_dilates_then_feathers_a_binary_region():
+    sil = np.zeros((15, 15), dtype=bool)
+    sil[7, 7] = True
+    weight = sae.edit_alpha_from_mask(sil, dilate=2, feather=0.0)
+    assert weight[7, 7] == 1.0
+    assert weight[7, 5] == 1.0                     # dilated
+    assert weight[7, 4] == 0.0
+    assert weight.sum() == 13                      # the exact disk of radius 2
+
+
+def test_edit_alpha_from_mask_does_not_rethreshold_the_silhouette():
+    """S is already binary: every labelled pixel must survive, none must be added."""
+    sil = np.zeros((7, 7), dtype=bool)
+    sil[3, 3] = True
+    weight = sae.edit_alpha_from_mask(sil, dilate=0, feather=0.0)
+    assert weight[3, 3] == 1.0
+    assert weight.sum() == 1.0
+
+
+def test_edit_alpha_delegates_to_the_mask_form_so_alpha_mode_is_unchanged():
+    alpha = np.zeros((13, 13))
+    alpha[6, 6] = 0.9
+    alpha[6, 9] = 0.2                               # below threshold
+    assert np.array_equal(
+        sae.edit_alpha(alpha, 0.5, 3, 1.5),
+        sae.edit_alpha_from_mask(sae.binarise(alpha, 0.5), 3, 1.5))
+
+
+def test_the_composite_region_from_S_replaces_exactly_the_silhouette():
+    sil = np.zeros((5, 5), dtype=bool)
+    sil[2, 1:4] = True
+    weight = sae.edit_alpha_from_mask(sil, dilate=0, feather=0.0)
+    real = np.zeros((5, 5, 3))
+    replacement = np.ones((5, 5, 3))
+    edited = sae.composite_alpha(real, replacement, weight)
+    assert edited[2, 2].tolist() == [255, 255, 255]     # inside S -> background render
+    assert edited[0, 0].tolist() == [0, 0, 0]           # outside S -> the real image
+
+
+# --------------------------------------------------------- silhouette outline
+
+
+def test_mask_outline_is_the_inner_boundary():
+    sil = np.zeros((7, 7), dtype=bool)
+    sil[2:5, 2:5] = True
+    outline = sae.mask_outline(sil)
+    assert (outline & ~sil).sum() == 0          # never outside the silhouette
+    assert not outline[3, 3]                    # the interior pixel is not an edge
+    assert outline.sum() == 8                   # the 3x3 ring
+
+
+def test_overlay_outline_paints_only_the_outline():
+    image = np.zeros((3, 3, 3))
+    edge = np.zeros((3, 3), dtype=bool)
+    edge[1, 1] = True
+    out = sae.overlay_outline(image, edge, colour=(1.0, 0.0, 0.0))
+    assert out[1, 1].tolist() == [255, 0, 0]
+    assert out[0, 0].tolist() == [0, 0, 0]
+
+
+def test_overlay_outline_rejects_a_mismatched_outline():
+    with pytest.raises(ValueError):
+        sae.overlay_outline(np.zeros((2, 2, 3)), np.zeros((3, 3), dtype=bool))
+
+
+# ------------------------------------------------------ per-camera DEVA ids
+
+
+def test_parse_ids_by_camera_accepts_scalars_and_lists():
+    parsed = sae.parse_ids_by_camera('{"cam00": [125], "cam15": 95, "cam07": [3, 3, 1]}')
+    assert parsed == {"cam00": [125], "cam15": [95], "cam07": [1, 3]}
+
+
+def test_parse_ids_by_camera_reads_a_file_as_well_as_inline_json(tmp_path):
+    target = tmp_path / "ids.json"
+    target.write_text('{"cam00": [125]}', encoding="utf-8")
+    assert sae.parse_ids_by_camera(str(target)) == {"cam00": [125]}
+
+
+@pytest.mark.parametrize("text", [
+    "not json",
+    "[95]",                       # not an object
+    '{"cam00": []}',              # no ids
+    '{"cam00": [0]}',             # DEVA's unlabelled id
+    '{"cam00": ["95"]}',          # not an integer
+    '{"cam00": [1.5]}',
+])
+def test_parse_ids_by_camera_refuses_a_mapping_that_cannot_mean_anything(text):
+    with pytest.raises(ValueError):
+        sae.parse_ids_by_camera(text)
+
+
+def test_resolve_deva_ids_prefers_the_explicit_mapping():
+    assert sae.resolve_deva_ids({"cam15": [95]}, "cam15", {"cam15": 7}) == [95]
+
+
+def test_resolve_deva_ids_falls_back_to_the_harmonised_id():
+    assert sae.resolve_deva_ids({"cam00": [125]}, "cam07", {"cam07": 42}) == [42]
+
+
+def test_resolve_deva_ids_refuses_a_camera_with_no_id_at_all():
+    # cam00 is held out, so it is never harmonised and must be given explicitly.
+    with pytest.raises(ValueError):
+        sae.resolve_deva_ids({"cam15": [95]}, "cam00", {"cam15": 95})
+    with pytest.raises(ValueError):
+        sae.resolve_deva_ids({}, "cam07", None)
+
+
 # ------------------------------------------------------------------- naming
 
 
@@ -776,3 +1015,74 @@ def test_filter_config_of_a_default_run_carries_no_mask_min_cams():
     assert config["mask_consistency_root"] is None
     assert config["mask_min_cams"] is None
     assert config["scale_max_factor"] is None
+
+
+# ------------------------------------------------------ CLI: the edit region
+
+
+def test_the_edit_region_defaults_to_the_old_alpha_behaviour():
+    args = _narrowing_args()
+    assert args.edit_region == "alpha"
+    assert args.deva_root is None
+    assert args.deva_ids_by_camera is None
+    assert args.alpha_guard_px == 0
+    sae._validate_edit_region_args(args)          # the default CLI must validate
+
+
+def test_deva_mode_needs_a_root_and_a_source_of_ids():
+    with pytest.raises(SystemExit):
+        sae._validate_edit_region_args(_narrowing_args(edit_region="deva"))
+    with pytest.raises(SystemExit):
+        # a root, but nothing that can name an id
+        sae._validate_edit_region_args(_narrowing_args(edit_region="deva", deva_root="/deva"))
+    sae._validate_edit_region_args(_narrowing_args(
+        edit_region="deva", deva_root="/deva", deva_ids_by_camera='{"cam00": [125]}'))
+    # harmonisation alone is an acceptable id source
+    sae._validate_edit_region_args(_narrowing_args(
+        edit_region="deva", deva_root="/deva", mask_consistency="/deva"))
+
+
+def test_deva_knobs_are_refused_rather_than_ignored_in_alpha_mode():
+    for overrides in ({"deva_root": "/deva"},
+                      {"deva_ids_by_camera": '{"cam00": [125]}'},
+                      {"alpha_guard_px": 4}):
+        with pytest.raises(SystemExit):
+            sae._validate_edit_region_args(_narrowing_args(**overrides))
+
+
+def test_a_malformed_id_mapping_is_rejected_before_any_gpu_work():
+    with pytest.raises(SystemExit):
+        sae._validate_edit_region_args(_narrowing_args(
+            edit_region="deva", deva_root="/deva", deva_ids_by_camera='{"cam00": [0]}'))
+
+
+def test_a_negative_alpha_guard_is_refused():
+    with pytest.raises(SystemExit):
+        sae._validate_edit_region_args(_narrowing_args(
+            edit_region="deva", deva_root="/deva",
+            deva_ids_by_camera='{"cam00": [125]}', alpha_guard_px=-1))
+
+
+def test_edit_region_config_records_the_mode_the_ids_and_their_source():
+    args = _narrowing_args(edit_region="deva", deva_root="/deva", alpha_guard_px=3,
+                           deva_ids_by_camera='{"cam00": [125]}')
+    config = sae._edit_region_config(
+        args,
+        {"cam00": [125]},
+        {"cam00": [125], "cam07": [42]},
+        {"cam00": {"0030": 51234}},
+    )
+    assert config["mode"] == "deva"
+    assert config["deva_root"] == "/deva"
+    assert config["alpha_guard_px"] == 3
+    assert config["ids_by_camera"] == {"cam00": [125], "cam07": [42]}
+    assert config["ids_source"] == {"cam00": "explicit",
+                                    "cam07": "mask_consistency_harmonised"}
+    assert config["silhouette_px"] == {"cam00": {"0030": 51234}}
+
+
+def test_edit_region_config_of_an_alpha_run_carries_no_silhouette_keys():
+    config = sae._edit_region_config(_narrowing_args(), {}, {}, {})
+    assert config["mode"] == "alpha"
+    assert "silhouette_px" not in config
+    assert "ids_by_camera" not in config

@@ -227,6 +227,51 @@ projection_check`` -- if ``points2d`` turns out to be unavailable or of an
 unexpected shape the run continues with the analytic projection and says so,
 so an unexercised precondition is never mistaken for a passed one.
 
+WHAT DEFINES THE EDIT REGION (``--edit_region``)
+------------------------------------------------
+``alpha`` (the default, and the behaviour this script had before the flag
+existed) takes the edit region from the object-only render's own alpha. On
+``cut_roasted_beef`` id 95 that region is NOT the dog: it is a diffuse smear of
+roughly 236,000 px -- about a quarter of the frame -- against a real dog
+silhouette of some 40-60k px. An alpha that wide cannot define an absence edit;
+it defines a hole in the picture.
+
+``deva`` takes the edit region from the SEGMENTER instead. For each camera and
+frame the silhouette ``S`` is the union of the listed DEVA ids' pixels in
+``<deva_root>/camXX/pseudo_label/object_mask/FFFF.png``, read with the same
+palette-safe, NEAREST-resized reader the mask vote uses. DEVA ids are
+PER-CAMERA -- id 95 is the dog on cam15 and id 125 is the dog on cam00 -- so the
+ids come from ``--deva_ids_by_camera``, and where a camera is absent from that
+mapping the id harmonised by ``--mask_consistency`` is used instead. cam00 is
+held out and never harmonised, so cam00 must always be named explicitly.
+
+``--alpha_guard_px P`` (default 0, off) additionally intersects ``S`` with the
+object alpha dilated by ``P`` px. It guards against a DEVA leak -- a frame where
+the segmenter's id spills onto something else -- at the cost of reintroducing a
+dependence on the alpha it was introduced to escape, so it is off unless asked
+for and its effect is reported per camera and frame.
+
+In ``deva`` mode ``S`` replaces the alpha-derived mask everywhere the region is
+used: ``construction_masks/`` is ``S`` undilated, ``visible_object/`` is ``S``
+outside the absence window, and the composite weight is ``S`` dilated by
+``--dilate`` and feathered by ``--feather``. The numbers change with it, and
+BOTH are reported, under names that cannot be confused:
+
+    * ``hole`` / ``object_px`` / ``hole_px`` / ``hole_fraction`` -- the OLD,
+      alpha-based numbers, unchanged, still present in both modes.
+    * ``silhouette`` -- ``silhouette_px``, the hole count and fraction ON ``S``,
+      ``support_inside_silhouette`` (the MEAN ``alpha_bg`` over ``S``, which is
+      the quantity that decides whether the model has anything to show once the
+      object is removed), and ``alpha_cover_of_silhouette`` (the share of ``S``
+      that SA4D's own rows cover). A low ``alpha_cover_of_silhouette`` is a
+      disagreement between the segmenter and the selected rows, and it is
+      reported rather than hidden precisely because the two need not agree.
+
+The per-frame ``hole_fraction.json`` entry is a FLAT dict in ``alpha`` mode
+(exactly as before) and a two-key ``{"alpha": ..., "silhouette": ...}`` dict in
+``deva`` mode; ``edit_params.json`` records which, along with the mode, the ids
+used per camera, and the ``S`` pixel count for every camera and frame.
+
 DELIBERATE DEVIATIONS FROM THE NOTEBOOKS
     * The notebooks recompute the row set at every timestamp, so the deleted
       set flickers frame to frame. This script's build mode takes a MAJORITY
@@ -405,11 +450,20 @@ def gaussian_feather(mask, sigma):
     return np.clip(out, 0.0, 1.0)
 
 
+def edit_alpha_from_mask(mask, dilate=0, feather=0.0):
+    """The composite's alpha from an ALREADY BINARY region: dilate, then feather.
+
+    This is the second half of ``edit_alpha``, split out because in
+    ``--edit_region deva`` the region arrives as a segmenter silhouette rather
+    than as a soft alpha and must not be re-thresholded.
+    """
+    grown = dilate_binary(np.asarray(mask, dtype=bool), dilate)
+    return gaussian_feather(grown.astype(np.float64), feather)
+
+
 def edit_alpha(alpha_obj, threshold=0.5, dilate=0, feather=0.0):
     """The composite's alpha: binarise, dilate, feather. Returns float [0, 1]."""
-    hard = binarise(alpha_obj, threshold)
-    grown = dilate_binary(hard, dilate)
-    return gaussian_feather(grown.astype(np.float64), feather)
+    return edit_alpha_from_mask(binarise(alpha_obj, threshold), dilate, feather)
 
 
 def composite_alpha(real_rgb, replacement_rgb, alpha):
@@ -768,6 +822,167 @@ def mask_fit(alpha_obj, id_map, target_id, threshold=0.5):
     }
 
 
+def parse_ids_by_camera(text):
+    """Parse ``--deva_ids_by_camera``: ``{"cam00": [125], "cam15": [95]}``.
+
+    Accepts either the JSON text itself or a path to a file containing it -- the
+    inline form is unquotable in some shells and a mapping that silently parsed
+    as a filename, or the reverse, would pick the wrong ids without saying so.
+    Values may be a single id or a list of ids. ``0`` is refused: it is DEVA's
+    "no object here" label (:data:`DEVA_UNLABELLED_ID`), so a silhouette
+    containing it would be most of the frame.
+    """
+    raw = str(text)
+    if os.path.isfile(raw):
+        with open(raw, "r", encoding="utf-8") as handle:
+            raw = handle.read()
+    try:
+        parsed = json.loads(raw)
+    except ValueError as exc:
+        raise ValueError("--deva_ids_by_camera is neither a readable file nor valid "
+                         "JSON: %s" % (exc,))
+    if not isinstance(parsed, dict):
+        raise ValueError("--deva_ids_by_camera must be a JSON object mapping "
+                         '"camXX" -> [ids], got %r' % (type(parsed).__name__,))
+    out = {}
+    for camera_name, value in parsed.items():
+        if not str(camera_name).strip():
+            raise ValueError("--deva_ids_by_camera has an empty camera name")
+        entries = value if isinstance(value, (list, tuple)) else [value]
+        if not entries:
+            raise ValueError("--deva_ids_by_camera gives camera %r no ids" % (camera_name,))
+        ids = []
+        for entry in entries:
+            if isinstance(entry, bool) or not isinstance(entry, int):
+                raise ValueError("--deva_ids_by_camera id %r for camera %r is not an integer"
+                                 % (entry, camera_name))
+            if entry == DEVA_UNLABELLED_ID:
+                raise ValueError(
+                    "--deva_ids_by_camera lists id %d for camera %r, which is DEVA's "
+                    "UNLABELLED label; its silhouette would be the background"
+                    % (DEVA_UNLABELLED_ID, camera_name))
+            ids.append(int(entry))
+        out[str(camera_name)] = sorted(set(ids))
+    return out
+
+
+def resolve_deva_ids(ids_by_camera, camera_name, harmonised_by_camera=None):
+    """The DEVA ids to use for one camera: explicit mapping first, harmonised second.
+
+    Raises ``ValueError`` when neither source supplies an id -- a camera whose
+    silhouette cannot be built must stop the run, not contribute an empty mask
+    that would read as "the object is not visible here".
+    """
+    explicit = (ids_by_camera or {}).get(camera_name)
+    if explicit:
+        return list(explicit)
+    harmonised = (harmonised_by_camera or {}).get(camera_name)
+    if harmonised is not None:
+        return [int(harmonised)]
+    raise ValueError(
+        "no DEVA id for camera %s: name it in --deva_ids_by_camera, or let "
+        "--mask_consistency harmonise it (cam00 is held out and is never "
+        "harmonised, so cam00 must always be named explicitly)" % (camera_name,))
+
+
+def silhouette_from_id_map(id_map, ids):
+    """Union of the listed ids' pixels in a DEVA id map, as a bool mask."""
+    values = [int(value) for value in ids]
+    if not values:
+        raise ValueError("silhouette_from_id_map needs at least one id")
+    if any(value == DEVA_UNLABELLED_ID for value in values):
+        raise ValueError("id %d is DEVA's UNLABELLED label and cannot form a silhouette"
+                         % (DEVA_UNLABELLED_ID,))
+    array = np.asarray(id_map)
+    if array.ndim != 2:
+        raise ValueError("silhouette_from_id_map expects a 2-D id map, got %r" % (array.shape,))
+    out = np.zeros(array.shape, dtype=bool)
+    for value in values:
+        out |= (array == value)
+    return out
+
+
+def guard_silhouette(silhouette, alpha_obj, guard_px, threshold=0.5):
+    """Optionally intersect ``S`` with the object alpha dilated by ``guard_px``.
+
+    ``guard_px <= 0`` is OFF and returns ``S`` untouched -- note that 0 means
+    "no intersection at all", not "intersect with the undilated alpha", because
+    an unrequested intersection would silently reintroduce the very alpha the
+    silhouette exists to replace. Returns ``(mask, stats)``; ``stats`` always
+    records whether the guard ran and what it cost.
+    """
+    sil = np.asarray(silhouette, dtype=bool)
+    radius = int(guard_px)
+    stats = {"enabled": radius > 0, "guard_px": radius, "alpha_threshold": float(threshold),
+             "silhouette_px": int(sil.sum()), "guard_px_count": None, "kept_px": int(sil.sum()),
+             "dropped_px": 0}
+    if radius <= 0:
+        return sil.copy(), stats
+    alpha = np.asarray(alpha_obj, dtype=np.float64)
+    if alpha.shape != sil.shape:
+        raise ValueError("guard_silhouette shape mismatch: %r vs %r" % (alpha.shape, sil.shape))
+    guard = dilate_binary(binarise(alpha, threshold), radius)
+    kept = sil & guard
+    stats["guard_px_count"] = int(guard.sum())
+    stats["kept_px"] = int(kept.sum())
+    stats["dropped_px"] = int(sil.sum()) - int(kept.sum())
+    return kept, stats
+
+
+def silhouette_report(silhouette, alpha_obj, alpha_bg, support_threshold=0.5,
+                      alpha_threshold=0.5):
+    """Support and coverage ON the silhouette -- the numbers the edit turns on.
+
+    ``support_inside_silhouette`` is the MEAN ``alpha_bg`` over ``S``: what the
+    model actually has to show once the object is removed.
+    ``alpha_cover_of_silhouette`` is the share of ``S`` that SA4D's own selected
+    rows cover, so a disagreement between the segmenter and the row set is
+    visible rather than absorbed. Every fraction is ``None`` on an empty ``S``.
+    """
+    sil = np.asarray(silhouette, dtype=bool)
+    count = int(sil.sum())
+    support = np.asarray(alpha_bg, dtype=np.float64)
+    alpha = np.asarray(alpha_obj, dtype=np.float64)
+    if support.shape != sil.shape or alpha.shape != sil.shape:
+        raise ValueError("silhouette_report shape mismatch: S %r, alpha_obj %r, alpha_bg %r"
+                         % (sil.shape, alpha.shape, support.shape))
+    if count == 0:
+        return {"silhouette_px": 0, "hole_px": 0, "hole_fraction": None,
+                "support_inside_silhouette": None, "alpha_cover_of_silhouette": None}
+    holes = int((support[sil] < float(support_threshold)).sum())
+    return {
+        "silhouette_px": count,
+        "hole_px": holes,
+        "hole_fraction": holes / count,
+        "support_inside_silhouette": float(support[sil].mean()),
+        "alpha_cover_of_silhouette": float((alpha[sil] > float(alpha_threshold)).mean()),
+    }
+
+
+def mask_outline(mask, width=1):
+    """The INNER boundary of a mask: pixels of the mask adjacent to its outside.
+
+    Inner, not outer, so the outline drawn on a preview marks the silhouette's
+    own extent and never claims a pixel the segmenter did not.
+    """
+    src = np.asarray(mask, dtype=bool)
+    thickness = max(1, int(width))
+    return src & dilate_binary(~src, thickness)
+
+
+def overlay_outline(image_rgb, outline, colour=(1.0, 0.0, 0.0)):
+    """Draw a boolean outline over an HWC float image. Returns HWC uint8."""
+    image = np.asarray(image_rgb, dtype=np.float64)
+    if image.ndim != 3 or image.shape[2] != 3:
+        raise ValueError("overlay_outline expects HWC RGB, got %r" % (image.shape,))
+    edge = np.asarray(outline, dtype=bool)
+    if edge.shape != image.shape[:2]:
+        raise ValueError("outline shape %r does not match image %r" % (edge.shape, image.shape))
+    out = image.copy()
+    out[edge] = np.asarray(colour, dtype=np.float64)
+    return to_uint8_map(out)
+
+
 def modal_value(values):
     """Most common entry of a list, ties to the smallest; ``None`` if all are ``None``."""
     present = [int(value) for value in values if value is not None]
@@ -1013,7 +1228,10 @@ def _load_deva_ids(deva_root, camera_name, frame, height, width, cache=None):
     """
     from PIL import Image
 
-    key = (camera_name, int(frame), int(height), int(width))
+    # The root is part of the key: --mask_consistency and --deva_root may point
+    # at DIFFERENT id-map trees in the same run, and a root-blind cache would
+    # serve one root's map for the other's request without saying so.
+    key = (str(deva_root), camera_name, int(frame), int(height), int(width))
     if cache is not None and key in cache:
         return cache[key]
     path = os.path.join(deva_root, camera_name, "pseudo_label", "object_mask",
@@ -1038,6 +1256,46 @@ def _load_deva_ids(deva_root, camera_name, frame, height, width, cache=None):
     if cache is not None:
         cache[key] = result
     return result
+
+
+def _resolve_ids_for_cameras(args, camera_names, harmonised, known_cameras=None):
+    """``{camera: [deva ids]}`` for every camera that will be rendered.
+
+    Resolved ONCE, up front, before any rendering: a camera with no id is a
+    stop, and finding that out after a full rig build would waste the build.
+    ``known_cameras`` is every camera in the DATASET, not only the ones being
+    rendered, so that one mapping serves a preview of two cameras and a build of
+    the whole rig -- while a name that is in neither is still a typo and stops
+    the run rather than falling through to a harmonised id for some other camera.
+    """
+    mapping = parse_ids_by_camera(args.deva_ids_by_camera) if args.deva_ids_by_camera else {}
+    unknown = sorted(set(mapping) - set(known_cameras if known_cameras is not None else camera_names))
+    if unknown:
+        raise SystemExit("--deva_ids_by_camera names cameras that are not in the dataset: %s"
+                         % (", ".join(unknown),))
+    resolved = {}
+    for name in camera_names:
+        try:
+            resolved[name] = resolve_deva_ids(mapping, name, harmonised)
+        except ValueError as exc:
+            raise SystemExit("--edit_region deva: %s" % (exc,))
+    return mapping, resolved
+
+
+def _silhouette_for_view(args, camera_name, frame, height, width, alpha_obj, ids_for_camera,
+                         cache=None):
+    """The segmenter's silhouette ``S`` for one (camera, frame), optionally guarded."""
+    id_map, was_resized = _load_deva_ids(args.deva_root, camera_name, frame, height, width, cache)
+    raw = silhouette_from_id_map(id_map, ids_for_camera)
+    mask, guard = guard_silhouette(raw, alpha_obj, args.alpha_guard_px)
+    info = {
+        "deva_ids": list(ids_for_camera),
+        "deva_silhouette_px": int(mask.sum()),
+        "deva_silhouette_px_before_guard": int(raw.sum()),
+        "deva_resized": bool(was_resized),
+        "alpha_guard": guard,
+    }
+    return mask, info
 
 
 def _geometry_filters(gaussians, selection, time_value, args):
@@ -1298,6 +1556,31 @@ def _filter_config(args):
     }
 
 
+def _edit_region_config(args, ids_mapping, ids_by_camera, silhouette_px):
+    """What defined the edit region, and -- in ``deva`` mode -- what it measured."""
+    config = {
+        "mode": args.edit_region,
+        "deva_root": args.deva_root,
+        "alpha_guard_px": int(args.alpha_guard_px),
+        "dilate_px": int(args.dilate),
+        "feather_sigma_px": float(args.feather),
+        "object_alpha_threshold": 0.5,
+    }
+    if args.edit_region != "deva":
+        return config
+    config.update({
+        "ids_explicit": {name: list(value) for name, value in sorted(ids_mapping.items())},
+        "ids_by_camera": {name: list(value) for name, value in sorted(ids_by_camera.items())},
+        "ids_source": {
+            name: ("explicit" if name in ids_mapping else "mask_consistency_harmonised")
+            for name in sorted(ids_by_camera)
+        },
+        "silhouette_px": {name: dict(sorted(frames.items()))
+                          for name, frames in sorted(silhouette_px.items())},
+    })
+    return config
+
+
 def _provenance(args, sa4d_args, iteration):
     """sha256 of every loaded model file and of every imported SA4D source file."""
     import torch
@@ -1424,6 +1707,14 @@ def run_preview(args):
             consistency_report = {"enabled": False}
             harmonised = {}
 
+        # ---- the edit region, resolved before any rendering -----------------
+        if args.edit_region == "deva":
+            ids_mapping, ids_by_camera = _resolve_ids_for_cameras(
+                args, cameras, harmonised, sorted(index))
+        else:
+            ids_mapping, ids_by_camera = {}, {}
+        silhouette_px = {}
+
         for frame in frames:
             time_value = frame / float(TIME_DIVISOR)
             hard, soft, filtered, geometry = _selection_bundle(
@@ -1487,6 +1778,18 @@ def run_preview(args):
                     real = np.clip(real.astype(np.float64), 0.0, 1.0)
 
                 stem = frame_name(camera_name, frame)
+
+                # ---- the edit region for this view ----------------------
+                if args.edit_region == "deva":
+                    region, region_info = _silhouette_for_view(
+                        args, camera_name, frame, height, width, alpha_obj,
+                        ids_by_camera[camera_name], deva_cache)
+                    silhouette_px.setdefault(camera_name, {})["%04d" % frame] = \
+                        region_info["deva_silhouette_px"]
+                    silhouette = silhouette_report(region, alpha_obj, alpha_bg)
+                else:
+                    region, region_info, silhouette = None, None, None
+
                 # The black-background render IS the premultiplied colour C, so
                 # `real * (1 - a) + C` is a correct over-composite.
                 _save_png(os.path.join(args.out, "preview", stem + "_obj.png"),
@@ -1495,6 +1798,16 @@ def run_preview(args):
                           to_uint8_map(real * (1.0 - alpha_bg[..., None]) + _chw_to_hwc_float(bg_b)))
                 _save_png(os.path.join(args.out, "alpha_obj", stem + ".png"), to_uint8_map(alpha_obj))
                 _save_png(os.path.join(args.out, "support", stem + ".png"), to_uint8_map(alpha_bg))
+
+                if region is not None:
+                    # The actual composite, so the edit can be judged BY EYE and
+                    # not only through a table of fractions: real outside `a`,
+                    # the object-free render inside it.
+                    weight = edit_alpha_from_mask(region, args.dilate, args.feather)
+                    _save_png(os.path.join(args.out, "preview", stem + "_edit.png"),
+                              composite_alpha(real, _chw_to_hwc_float(bg_b), weight))
+                    _save_png(os.path.join(args.out, "preview", stem + "_sil.png"),
+                              overlay_outline(real, mask_outline(region)))
 
                 shape = mask_bbox_centroid(binarise(alpha_obj, 0.5))
                 previous_frame, previous_centroid = previous_centroids[camera_name]
@@ -1514,7 +1827,7 @@ def run_preview(args):
                 else:
                     fit = None
 
-                per_view.append({
+                record = {
                     "camera": camera_name,
                     "frame": frame,
                     "time": float(view.time),
@@ -1525,8 +1838,14 @@ def run_preview(args):
                     "centroid_velocity": velocity,
                     "centroid_velocity_detail": velocity_detail,
                     "deva_mask_fit": fit,
+                    # `hole` is the OLD, alpha-based number, in both modes; the
+                    # silhouette numbers live under `silhouette` and never
+                    # overwrite it.
                     "hole": hole_fraction(alpha_obj, alpha_bg),
-                })
+                }
+                if region is not None:
+                    record["silhouette"] = dict(region_info, **silhouette)
+                per_view.append(record)
 
     _write_json(os.path.join(args.out, "preview.json"), {
         "mode": "preview",
@@ -1541,6 +1860,7 @@ def run_preview(args):
         "filters": dict(_filter_config(args),
                         per_timestamp_counts=filter_counts,
                         mask_consistency=consistency_report),
+        "edit_region": _edit_region_config(args, ids_mapping, ids_by_camera, silhouette_px),
         "alpha_report_thresholds": list(ALPHA_REPORT_THRESHOLDS),
         "per_timestamp": per_timestamp,
         "per_view": per_view,
@@ -1592,9 +1912,18 @@ def run_build(args):
                 black,
                 deva_cache,
             )
+            harmonised = consistency_report["harmonised_id_by_camera"]
         else:
             consistency_keep_np = None
             consistency_report = {"enabled": False}
+            harmonised = {}
+
+        # ---- 0b. the edit region, resolved before any rendering -------------
+        if args.edit_region == "deva":
+            ids_mapping, ids_by_camera = _resolve_ids_for_cameras(args, camera_names, harmonised)
+        else:
+            ids_mapping, ids_by_camera = {}, {}
+        silhouette_px = {}
 
         # ---- 1. per-timestamp selections over [A-margin, B+margin] ----------
         for position, frame in enumerate(render_frames):
@@ -1711,7 +2040,27 @@ def run_build(args):
                 _save_png(os.path.join(args.out, "alpha_obj", stem + ".png"), to_uint8_map(alpha_obj))
                 _save_png(os.path.join(args.out, "support", stem + ".png"), to_uint8_map(alpha_bg))
 
-                construction = binarise(alpha_obj, 0.5)
+                # The edit region: the object alpha, or -- in `deva` mode -- the
+                # segmenter's silhouette for THIS camera at THIS frame.
+                alpha_hole = hole_fraction(alpha_obj, alpha_bg)
+                if args.edit_region == "deva":
+                    # No id-map cache here: a full rig build touches every
+                    # camera x every frame exactly once, and caching them all
+                    # would hold the whole DEVA window in memory for no reuse.
+                    construction, region_info = _silhouette_for_view(
+                        args, camera_name, frame, height, width, alpha_obj,
+                        ids_by_camera[camera_name], None)
+                    silhouette_px.setdefault(camera_name, {})["%04d" % frame] = \
+                        region_info["deva_silhouette_px"]
+                    holes[camera_name]["%04d" % frame] = {
+                        "alpha": alpha_hole,
+                        "silhouette": dict(
+                            region_info,
+                            **silhouette_report(construction, alpha_obj, alpha_bg)),
+                    }
+                else:
+                    construction = binarise(alpha_obj, 0.5)
+                    holes[camera_name]["%04d" % frame] = alpha_hole
                 if not construction.any():
                     empty_construction.append(stem)
                 _save_png(os.path.join(args.out, "construction_masks", stem + ".png"),
@@ -1720,15 +2069,13 @@ def run_build(args):
                 _save_png(os.path.join(args.out, "visible_object", stem + ".png"),
                           (visible.astype(np.uint8) * 255))
 
-                holes[camera_name]["%04d" % frame] = hole_fraction(alpha_obj, alpha_bg)
-
                 if in_window:
                     real, resized = _load_real_image(
                         args.real_images, camera_name, frame, height, width
                     )
                     if resized:
                         resized_real.append(stem)
-                    weight = edit_alpha(alpha_obj, 0.5, args.dilate, args.feather)
+                    weight = edit_alpha_from_mask(construction, args.dilate, args.feather)
                     _save_png(os.path.join(args.out, "images_edited", stem + ".png"),
                               composite_alpha(real, _chw_to_hwc_float(bg_b), weight))
                     if camera_name == "cam00":
@@ -1796,6 +2143,11 @@ def run_build(args):
         "support_threshold": 0.5,
         "composite_source": "black-background SA4D render (premultiplied colour)",
         "cameras": camera_names,
+        "edit_region": _edit_region_config(args, ids_mapping, ids_by_camera, silhouette_px),
+        "hole_fraction_json_shape": (
+            "per camera/frame: {alpha: {...}, silhouette: {...}}"
+            if args.edit_region == "deva"
+            else "per camera/frame: the flat alpha-based hole record"),
     })
     _write_json(os.path.join(args.out, "sa4d_provenance.json"),
                 _provenance(args, sa4d_args, int(scene.loaded_iter)))
@@ -1846,6 +2198,22 @@ def build_parser():
     parser.add_argument("--mask_min_frames", type=float, default=1.0,
                         help="fraction of anchor frames a row must survive (default 1.0, "
                              "i.e. every anchor frame)")
+    # what defines the EDIT REGION. `alpha` is the default and is the behaviour
+    # this script had before these flags existed.
+    parser.add_argument("--edit_region", choices=["alpha", "deva"], default="alpha",
+                        help="region edited: the object-only render's alpha (default), or "
+                             "the DEVA silhouette of --deva_ids_by_camera")
+    parser.add_argument("--deva_root", type=str, default=None,
+                        help="DEVA root holding camXX/pseudo_label/object_mask/FFFF.png for "
+                             "the silhouette (required with --edit_region deva)")
+    parser.add_argument("--deva_ids_by_camera", type=str, default=None,
+                        help='JSON (inline or a file) mapping "camXX" -> [deva ids], e.g. '
+                             '\'{"cam00": [125], "cam15": [95]}\'. Cameras left out fall back '
+                             "to the id harmonised by --mask_consistency; cam00 is never "
+                             "harmonised and must always be named here")
+    parser.add_argument("--alpha_guard_px", type=int, default=0,
+                        help="intersect the DEVA silhouette with the object alpha dilated by "
+                             "this many pixels (default 0 = no intersection at all)")
     # preview only
     parser.add_argument("--cameras", type=int, nargs="+",
                         help="preview: camera numbers, e.g. 0 15 8 (0 is the held-out cam00)")
@@ -1857,9 +2225,11 @@ def build_parser():
     parser.add_argument("--margin", type=int, default=20,
                         help="build: frames rendered either side of the window")
     parser.add_argument("--dilate", type=int, default=6,
-                        help="build: composite mask dilation radius in pixels")
+                        help="composite mask dilation radius in pixels (build, and the "
+                             "--edit_region deva preview composite)")
     parser.add_argument("--feather", type=float, default=2.0,
-                        help="build: composite mask Gaussian feather sigma in pixels")
+                        help="composite mask Gaussian feather sigma in pixels (build, and "
+                             "the --edit_region deva preview composite)")
     return parser
 
 
@@ -1890,9 +2260,33 @@ def _validate_filter_args(args):
         raise SystemExit("--mask_min_cams/--mask_frames need --mask_consistency <deva_root>")
 
 
+def _validate_edit_region_args(args):
+    """Reject an edit region that cannot be built, before any GPU work."""
+    if args.alpha_guard_px < 0:
+        raise SystemExit("--alpha_guard_px must be non-negative, got %r" % (args.alpha_guard_px,))
+    if args.edit_region != "deva":
+        # Refused rather than ignored: a deva knob on an alpha run means the
+        # caller believes the silhouette is in use, and it is not.
+        if args.deva_root or args.deva_ids_by_camera or args.alpha_guard_px:
+            raise SystemExit("--deva_root/--deva_ids_by_camera/--alpha_guard_px need "
+                             "--edit_region deva")
+        return
+    if not args.deva_root:
+        raise SystemExit("--edit_region deva needs --deva_root <dir>")
+    if not args.deva_ids_by_camera and not args.mask_consistency:
+        raise SystemExit("--edit_region deva needs --deva_ids_by_camera, or "
+                         "--mask_consistency to harmonise the ids")
+    if args.deva_ids_by_camera:
+        try:
+            parse_ids_by_camera(args.deva_ids_by_camera)
+        except ValueError as exc:
+            raise SystemExit(str(exc))
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     _validate_filter_args(args)
+    _validate_edit_region_args(args)
     if args.mode == "preview":
         if not args.cameras or not args.frames:
             raise SystemExit("--mode preview needs --cameras and --frames")
