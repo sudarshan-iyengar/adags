@@ -287,3 +287,84 @@ truth/mis/ones from the construction masks, est from the DEVA ids with
 the T1 gap, wrongmem = a count-matched random row set with the authored
 gap) and render-time gate evals on prefix 0 with the oracle and the
 estimated program (57150914/15).
+
+## 5. Membership votes, the render-time diagnostic, the review, the freeze (08:20 CEST)
+
+**Votes (jobs 57150910–13, per prefix).** Seed = T1's two cells; anchors
+50–57 and return frames 92–99; all 19 training cameras; `--id_rule mass`,
+cap 0.5. Truth (construction masks) and estimated (DEVA ids) membership:
+**7,004 / 6,981 / 6,858 / 6,813 rows, identical row sets in every prefix
+(precision = recall = 1.0)**. This is by construction, not an achievement:
+the edit region was the DEVA silhouette (`--edit_region deva`), so the
+construction masks ARE the DEVA masks (8,806 px on cam01 frame 50 in
+both trees) and the two votes see the same pixels. **G-est therefore
+differs from G-oracle only by the gap (60–91 vs 60–89); the membership
+leg of estimand (ii) is not tested by this fixture.** The T1-independent
+membership number is T1's own cells against the truth set: precision
+0.771, recall 0.737, Jaccard 0.605 (prefix 0). G-wrongmem = a
+count-matched random row set (overlap with the truth set 1.0–1.3%),
+authored gap. G-ones = truth rows, gap 286–297. Scores under
+`runs/realdata/absfix/membership_scores/`.
+
+**Render-time gate on prefix 0 (jobs 57150914/15, `eval_n3v_gated.py`,
+frames 30–110, cam00).** Precondition block: 7,004 gated rows
+(1.17% of the cloud), exact absence on 28 of 30 declared gap frames
+(the two edge frames carry the ramp). Readings (pooled PSNR, dB):
+
+| arm | P1 core [63,87] | box gap [63,87] | P2 [92,99] | S1 [100,109] | H1 [30,57] | whole [30,110] |
+|---|---|---|---|---|---|---|
+| ungated 6k model | 31.22 | 33.12 | 27.34 | 31.00 | 29.80 | 32.75 |
+| + gate (oracle program) | 25.32 | 28.29 | **30.50** | 31.22 | **30.63** | 32.74 |
+| + gate (estimated program) | 25.32 | 28.29 | 30.50 | 31.22 | 30.63 | 32.73 |
+
+Two readings. (i) **The ungated 6k model already renders the authored
+absence** (31.2 dB on the core during the gap, above its own pre-gap
+box), and switching the bottle rows off at render time costs 5.9 dB
+there: the same rows paint the counterfactual background in the gap
+(4D colour) — the shared-row mechanism of 2026-09-09 again, now on a
+genuine absence. (ii) **The gate repairs the return at render time:
++3.2 dB on P2 and +0.8 dB on H1.** The learned temporal marginal of the
+bottle rows has been dragged down around the gap (the ungated return
+sits 3.7 dB below its settled value), and forcing full presence in the
+two episodes restores it. Nothing was trained here; the comparison
+below asks whether training WITH the gate keeps (ii) and removes (i).
+
+**Codex adversarial review of the frozen spec** (default model,
+reasoning high, read-only; 15 items). Accepted and folded into
+`configs/n3v/absfix_gate_spec_v1.json` v1.2.0 (sha256
+`0d58b32c…d810`) and `scripts/realdata_gate_analysis.py` (commit
+6b368d2; every new behaviour sits behind a spec key so the frozen
+2026-09-09 output is unchanged, 100 tests): event name
+`BOTTLE_absence_gap` (was the F event); anchors frozen A=60, B=89,
+CA=230, CB=259 with **B redefined as the last absent frame** (the 1.1.0
+prose said "first frame of the return", which would have shifted every
+window by one); the claim floor is the fixed 0.5 dB, `|U−GONES|` and
+`|U−GMIS|` are reported descriptively (G-ones is a late-gap sham with a
+real code-path cost, not a null arm); only P1 carries a verdict; the
+operative verdict is read from the mechanism-exercised set; GMIS,
+GWRONGMEM and GEST pairs are required on every G-U prefix; every P1
+frame must carry a non-empty core mask (a missing ROI is no longer a
+silently dropped frame); per-frame MSE diagnostics (fraction of frames
+with lower G MSE, count of exact-zero frames, max PSNR, pooled ΔMSE);
+reserved units required from every cell; the mechanism predicate now
+requires zero-presence frames inside [63,87] (G, G-est, G-wrongmem) and
+the bottle box [964,748,1034,952] at frame 75 (the extractor is run with
+`--fbox … --fbox_frame 75`); G-wrongmem/G-ones passing is labelled "gate
+code path exercised"; sizing informational and P1-only; PAIRED_MIN_PAIRS
+4; the membership scorer labels its envelope IoU and lists per-group
+gaps. Not adopted: a GEST direction condition in the claim (GEST is
+reported against G as the estimator's share; it cannot fail
+independently here since its rows equal G's). The provenance concern
+(a mislabelled run directory) is already enforced upstream: the
+extractor refuses a program the cell did not train with, which is
+exactly what tripped the Lane A post-steps.
+
+**Freeze** (`runs/realdata/absfix/freeze_v1.txt`, sha256
+`02516960…8b678`, written before the first continuation was submitted):
+commit 6b368d2, spec, seven scripts, three base configs and the 20
+derived per-prefix configs, the 20 programs, the T1 artefacts, the four
+prefix checkpoints, the fixture manifests, the per-kind ROI digests.
+
+**Continuations submitted 08:23 CEST:** prefixes 0–2 × {U, G-oracle,
+G-est, G-mis, G-wrongmem, G-ones} = jobs 57153546–57153568; prefix 3's
+six follow when the 20-job cap allows.
