@@ -1,17 +1,18 @@
 {
  "spec_id": "absfix_gate_v1",
- "spec_version": "1.1.0",
- "note": "Spec instance for scripts/realdata_gate_analysis.py --spec --paired. PLACEHOLDER: A, B, CA and CB are null and MUST be filled in (from the frozen event curation) before any cell is analysed; the loader refuses to run while any endpoint window still resolves through a null anchor. A = the first frame of the absence (the frame on which the surface is fully occluded), B = the first frame of the return (the frame on which it is first revealed again). CA/CB delimit the control window, which must contain no part of the event.",
+ "spec_version": "1.2.0",
+ "note": "Spec instance for scripts/realdata_gate_analysis.py --spec --paired on the counterfactual-absence fixture cut_roasted_beef_absfix_60_89. Version 1.2.0 freezes the anchors (A=60, B=89, CA=230, CB=259) and folds in the 2026-09-10 Codex review (research-wiki/operations/absence-fixture-lane-2026-09-10.md, section 5): B is the LAST ABSENT frame; the claim floor is the fixed PAIRED_MIN_EFFECT_DB rather than |U - GONES| (G-ones is a late-gap sham with a real code-path cost, not a null arm); only P1 carries a verdict; the operative verdict is read from the mechanism-exercised set; sham and G-est pairs are required on every G-U prefix; every P1 frame must carry a non-empty core mask; reserved units must be reported by every cell; the mechanism predicate requires zero-presence frames inside the P1 window and the bottle box at frame 75; sizing is informational. The comparison remains DESCRIPTIVE at n = 4 pairs.",
  "scene": "cut_roasted_beef",
- "event_name": "F_blade_over_beef_reveal",
+ "event_name": "BOTTLE_absence_gap",
+ "event_bbox_note": "every BOTTLE_* event in absfix/absence_event_masks.json carries the same cam00 box [964, 748, 1035, 953] (half-open), the union silhouette over the gap padded by 8 px; per-frame PSNR on that box is available on every frame, so the endpoints below read their windows from BOTTLE_absence_gap",
 
- "A": null,
- "B": null,
- "CA": null,
- "CB": null,
+ "A": 60,
+ "B": 89,
+ "CA": 230,
+ "CB": 259,
  "anchor_semantics": {
-  "A": "first frame of the absence",
-  "B": "first frame of the return",
+  "A": "first absent frame (the first frame on which the object is gone from the imagery)",
+  "B": "LAST absent frame (the object is back on frame B+1). Version 1.1.0 wrote 'first frame of the return'; with that reading B would be 90 and every window would shift by one. The expressions below assume B = last absent frame.",
   "CA": "first frame of the control window",
   "CB": "last frame of the control window",
   "expressions": "a window edge is an integer or '<anchor>+<n>' / '<anchor>-<n>', resolved once by the loader"
@@ -19,12 +20,12 @@
 
  "arms": ["U", "G", "GEST", "GMIS", "GWRONGMEM", "GONES"],
  "arm_roles": {
-  "U": "ungated baseline",
-  "G": "gated on the oracle absence window (the intervention under test)",
-  "GEST": "gated on the ESTIMATED absence window (non-oracle timing)",
-  "GMIS": "gated on a deliberately shifted window (sham timing)",
-  "GWRONGMEM": "gated on the correct window but the wrong membership (sham membership)",
-  "GONES": "the U configuration re-run with the gate present but vacuous; measures the within-prefix replicate floor"
+  "U": "ungated baseline (reserved parity)",
+  "G": "gated on the truth membership (construction masks) with the authored gap [60, 89] (the intervention under test)",
+  "GEST": "gated on the ESTIMATED membership (DEVA ids) with T1's frozen gap [60, 91]. On this fixture the construction masks were derived from the same DEVA silhouettes, so the estimated and truth row sets coincide exactly and G-est differs from G only by the gap",
+  "GMIS": "truth membership, gap moved to the control window [230, 259] (sham timing)",
+  "GWRONGMEM": "a count-matched RANDOM row set with the authored gap (sham membership; about 1% overlap with the truth set)",
+  "GONES": "truth membership with a 12-frame gap at [286, 297], outside every scored window. An all-present program cannot be emitted (the emitter refuses gaps below 0.1667 s), so this is a LATE-GAP SHAM that exercises the gate code path, NOT a null arm: Lane A measured it as the worst arm on the return windows. Its spread against U is reported descriptively and is not the claim floor."
  },
 
  "endpoints": {
@@ -36,23 +37,39 @@
   "C1": ["CA", "CB"]
  },
  "endpoint_notes": {
-  "P1": "the ghost window, read on the per-frame core ROI: the absence interior, three frames in from A so the occlusion is complete and two frames short of B so the return itself is excluded",
-  "P2": "the clean return on the bounding-box event, three frames after B so the reveal transient is excluded",
-  "S1": "the curated return tail on the bounding-box event, secondary",
-  "H1": "the pre-absence harm guard on the bounding-box event",
+  "P1": "the ghost window [63, 87], read on the per-frame cam00 core ROI (supported, eroded silhouette): the absence interior, three frames in from A and two frames short of B",
+  "P2": "the clean return [92, 99] on the bounding-box event; excludes the estimator's late onset (T1 gap ends at 91), so G and G-est are compared on the same frames",
+  "S1": "the settled return [100, 109] on the bounding-box event, secondary",
+  "H1": "the pre-absence harm guard [30, 57] on the bounding-box event",
   "H2": "the whole-frame harm guard",
-  "C1": "the control window on the bounding-box event; it must not overlap the event and is where a sham arm is required to show its damage",
+  "C1": "the control window [230, 259] on the bounding-box event; no edit there; G-mis gates inside it",
   "profile_requirement": "only P1 is read from roi:core; every other region endpoint is read from the event named by 'event_name', so each cell's f_box_profile.json must be produced with BOTH --masks and --roi_dir"
  },
 
  "PAIRED_MIN_EFFECT_DB": 0.5,
- "PAIRED_MIN_PAIRS": 3,
+ "PAIRED_FLOOR_SOURCE": "fixed",
+ "PAIRED_FLOOR_NOTE": "the claim floor is the constant 0.5 dB (the frozen floor of the synthetic-fixture positive, +1.05 dB measured); |U - GONES| and |U - GMIS| per prefix are reported under descriptive_floors and are not verdict inputs",
+ "PAIRED_MIN_PAIRS": 4,
+ "PAIRED_REQUIRE_SHAMS": true,
+ "PAIRED_REQUIRE_GEST": true,
  "PAIRED_CLAIM_ENDPOINT": "P1",
- "PAIRED_CLAIM_RULE": "CLAIM_CONDITIONS_MET iff every G-U pair on P1 exceeds its within-prefix replicate floor (|U - GONES| for that prefix, or PAIRED_MIN_EFFECT_DB where no GONES cell exists) AND no GMIS-U or GWRONGMEM-U pair exceeds the same floor in the same direction; DESIGN_WITHOUT_POWER when fewer than PAIRED_MIN_PAIRS complete U/G pairs exist; NOT_MET otherwise.",
- "PAIRED_VERDICT_STATUS": "DESCRIPTIVE. The paired analysis reports per-pair differences, their median and range, sign consistency, the mean difference with a paired-t interval, and the replicate floor. It performs NO hypothesis test: there is no p-value, no TOST, and no equivalence claim, and an interval below six pairs is labelled descriptive rather than inferential.",
- "PLACEBO": "within-run diagnostic only; the balanced-split spread of the U cells is reported to show what the design's own noise looks like and is NOT an input to the paired verdict",
- "MASK_POOLING_RULE": "an event carrying kind='per_frame_mask' is pooled by MSE weighted by its pixels_per_frame; frames with an empty mask carry zero weight and are dropped, so the unweighted constant-pixel-count pooling used for the bounding-box endpoints is never applied to a per-frame-mask endpoint",
- "PAIRED_SIZING_RULE": "n2_pairs = ceil(K*(sd_paired/DELTA)^2 + Z_A^2/4) on the paired differences themselves (one sample, not two), at DELTA = 0.30 dB",
+ "PAIRED_CLAIM_ENDPOINT_ONLY": true,
+ "PAIRED_CLAIM_SET": "mechanism_exercised",
+ "PAIRED_CLAIM_RULE": "CLAIM_CONDITIONS_MET iff, on the mechanism-exercised set, all four G-U pairs on P1 exceed +0.5 dB AND no GMIS-U or GWRONGMEM-U pair on P1 exceeds +0.5 dB; DESIGN_WITHOUT_POWER when fewer than 4 complete U/G pairs exist or any G-U prefix lacks its GMIS, GWRONGMEM or GEST pair; NOT_MET otherwise. P2, S1, H1, H2 and C1 are descriptive. This is a pattern criterion on four pairs, not a hypothesis test.",
+ "PAIRED_VERDICT_STATUS": "DESCRIPTIVE. Per-pair differences, median and range, sign consistency, the mean with a paired-t interval labelled descriptive below six pairs; no p-value, no TOST, no equivalence claim.",
+ "PAIRED_SIZING_STATUS": "informational",
+ "PAIRED_SIZING_RULE": "n2_pairs = ceil(K*(sd_paired/DELTA)^2 + Z_A^2/4) on the P1 paired differences at DELTA = 0.30 dB; reported only, it does not decide a wave 2",
+ "PLACEBO": "within-run diagnostic only; not an input to the paired verdict",
+ "MASK_POOLING_RULE": "an event carrying kind='per_frame_mask' is pooled by MSE weighted by its pixels_per_frame; under PER_FRAME_MASK_REQUIRE_ALL_FRAMES every frame of the window must carry a non-empty mask, so no frame is ever dropped from P1",
+ "PER_FRAME_MASK_REQUIRE_ALL_FRAMES": true,
+ "PER_FRAME_MASK_DIAGNOSTICS": "for the claim endpoint the analysis also reports, per pair: the fraction of frames on which the first arm's masked MSE is lower, the count of frames with exactly zero masked error (infinite PSNR) per arm, the per-arm maximum per-frame PSNR, and the pooled MSE difference; descriptive",
+ "RESERVED_UNITS_REQUIRED": true,
+
+ "MECHANISM_ZERO_FRAMES_WINDOW": [63, 87],
+ "MECHANISM_ZERO_FRAMES_EXEMPT_ARMS": ["GMIS", "GONES"],
+ "MECHANISM_FBOX": [964, 748, 1034, 952],
+ "MECHANISM_FBOX_FRAME": 75,
+ "MECHANISM_NOTE": "gate_cell_precondition.py is run with --fbox 964 748 1034 952 --fbox_frame 75 (the bottle box, inclusive, at a P1 frame); the historical field name gated_rows_fbox_frame150 then counts gated rows projecting into the bottle box at frame 75. A G, GEST or GWRONGMEM cell passes only if at least MIN_FRAMES_PRESENCE_ZERO of its zero-presence frames fall inside [63, 87]; GMIS and GONES gate elsewhere by design and are exempt from the window test but not from the count and box tests. GWRONGMEM and GONES passing means 'gate code path exercised', not 'target membership exercised'.",
 
  "roi_source": "scripts/event_region_frame_profile.py --roi_dir <dir>, one subdirectory per region (core/, ring/, object/), masks named <frame:05d>.png, uint8 0/255 at the render raster; each becomes an event named roi:<name> with kind='per_frame_mask'"
 }

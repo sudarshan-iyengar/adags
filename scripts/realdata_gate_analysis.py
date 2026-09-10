@@ -627,7 +627,22 @@ def read_precondition(run_dir, spec=None):
         data = json.load(fh)
     if not isinstance(data, dict):
         raise ValueError(f"{path}: expected a JSON object")
-    return {k: data.get(k) for k in S["PRECONDITION_FIELDS"] if k in data}
+    out = {k: data.get(k) for k in S["PRECONDITION_FIELDS"] if k in data}
+    detail = data.get("detail") if isinstance(data.get("detail"), dict) else {}
+    presence = (
+        detail.get("presence") if isinstance(detail.get("presence"), dict) else {}
+    )
+    fbox = detail.get("fbox") if isinstance(detail.get("fbox"), dict) else {}
+    if isinstance(presence.get("frames_presence_zero"), list):
+        out["frames_presence_zero_list"] = [
+            int(f) for f in presence["frames_presence_zero"]
+        ]
+    if fbox:
+        out["fbox_frame"] = fbox.get("frame")
+        out["fbox_box"] = fbox.get("box_x0_y0_x1_y1_inclusive")
+    if data.get("arm_kind") is not None:
+        out["arm_kind"] = data.get("arm_kind")
+    return out
 
 
 def mechanism_exercised(arm, precondition, spec=None):
@@ -650,8 +665,34 @@ def mechanism_exercised(arm, precondition, spec=None):
         failures.append(f"gated_rows_fbox_frame150={fbox} < {min_fbox}")
     if zeros is None or zeros < min_zeros:
         failures.append(f"frames_presence_zero={zeros} < {min_zeros}")
+    window = S.get("MECHANISM_ZERO_FRAMES_WINDOW")
+    if window and arm not in S.get("MECHANISM_ZERO_FRAMES_EXEMPT_ARMS", []):
+        zl = precondition.get("frames_presence_zero_list")
+        if zl is None:
+            failures.append("precondition carries no zero-presence frame list")
+        else:
+            inside = [f for f in zl if int(window[0]) <= int(f) <= int(window[1])]
+            if len(inside) < min_zeros:
+                failures.append(
+                    "zero-presence frames inside %r: %d < %d"
+                    % (list(window), len(inside), min_zeros)
+                )
+    want_frame = S.get("MECHANISM_FBOX_FRAME")
+    if want_frame is not None:
+        got = precondition.get("fbox_frame")
+        if got is None or int(got) != int(want_frame):
+            failures.append(
+                "fbox measured at frame %r, spec requires %r" % (got, want_frame)
+            )
+    want_box = S.get("MECHANISM_FBOX")
+    if want_box is not None:
+        got = precondition.get("fbox_box")
+        if got is None or [int(v) for v in got] != [int(v) for v in want_box]:
+            failures.append("fbox %r differs from the spec box %r" % (got, list(want_box)))
     if failures:
         return False, "; ".join(failures)
+    if arm in ("GWRONGMEM", "GONES"):
+        return True, "gate code path exercised (not the target membership/window)"
     return True, "precondition satisfied"
 
 
@@ -752,10 +793,25 @@ def load_cell(entry, spec=None, arms=None, require_prefix=False):
                         f"{profile_path}: per-frame-mask event "
                         f"{ep.get('event_name')!r} has no aligned 'pixels_per_frame'"
                     )
-                cell["endpoints"][key] = pooled_psnr_weighted(
-                    select_window(frames, per_frame, lo, hi, what),
-                    select_window(frames, weights, lo, hi, what),
-                )
+                window_psnr = select_window(frames, per_frame, lo, hi, what)
+                window_w = select_window(frames, weights, lo, hi, what)
+                if S.get("PER_FRAME_MASK_REQUIRE_ALL_FRAMES", False):
+                    empty = [
+                        f for f, w in zip(range(lo, hi + 1), window_w)
+                        if w is None or float(w) <= 0.0
+                    ]
+                    if empty:
+                        raise ValueError(
+                            f"{what}: per-frame-mask event {ep.get('event_name')!r} "
+                            f"has an empty or missing mask on frames {empty}; "
+                            "PER_FRAME_MASK_REQUIRE_ALL_FRAMES forbids pooling a subset"
+                        )
+                cell.setdefault("per_frame", {})[key] = {
+                    "frames": list(range(lo, hi + 1)),
+                    "psnr": window_psnr,
+                    "weights": window_w,
+                }
+                cell["endpoints"][key] = pooled_psnr_weighted(window_psnr, window_w)
             else:
                 cell["endpoints"][key] = pooled_psnr(
                     select_window(frames, per_frame, lo, hi, what)
@@ -1222,28 +1278,107 @@ def _pairs(cells, arm_a, arm_b, endpoint):
     return out
 
 
-def replicate_floor(cells, endpoint, spec=None):
-    """Within-prefix replicate floor |U - GONES|, per prefix."""
-    fallback = _spec(spec).get("PAIRED_MIN_EFFECT_DB", PAIRED_MIN_EFFECT_DB)
-    pairs = _pairs(cells, "U", PAIRED_FLOOR_ARM, endpoint)
+def replicate_floor(cells, endpoint, spec=None, arm=None):
+    """Within-prefix replicate floor |U - <arm>|, per prefix.
+
+    `arm` defaults to PAIRED_FLOOR_ARM (GONES). A spec may instead declare
+    `PAIRED_FLOOR_SOURCE: "fixed"`, in which case the claim floor is the
+    constant PAIRED_MIN_EFFECT_DB for every prefix and the arm-derived
+    spreads are reported descriptively only (see `descriptive_floors`).
+    """
+    S = _spec(spec)
+    fallback = S.get("PAIRED_MIN_EFFECT_DB", PAIRED_MIN_EFFECT_DB)
+    source_kind = S.get("PAIRED_FLOOR_SOURCE", PAIRED_FLOOR_ARM)
+    arm = arm or (PAIRED_FLOOR_ARM if source_kind == "fixed" else source_kind)
+    pairs = _pairs(cells, "U", arm, endpoint)
     per_prefix = {p["prefix"]: abs(p["diff"]) for p in pairs}
     values = sorted(per_prefix.values())
-    return {
-        "contrast": "|U - %s|" % PAIRED_FLOOR_ARM,
+    block = {
+        "contrast": "|U - %s|" % arm,
+        "arm": arm,
         "per_prefix": per_prefix,
         "n": len(values),
         "median": float(np.median(values)) if values else None,
         "max": float(max(values)) if values else None,
         "fallback_db": fallback,
-        "source": PAIRED_FLOOR_ARM if values else "PAIRED_MIN_EFFECT_DB",
+        "source": arm if values else "PAIRED_MIN_EFFECT_DB",
     }
+    if source_kind == "fixed":
+        block["claim_floor"] = "fixed"
+        block["source"] = "PAIRED_MIN_EFFECT_DB"
+    return block
 
 
 def _floor_for(floor_block, prefix):
+    if floor_block.get("claim_floor") == "fixed":
+        return float(floor_block["fallback_db"]), "PAIRED_MIN_EFFECT_DB"
     value = floor_block["per_prefix"].get(prefix)
     if value is None:
         return float(floor_block["fallback_db"]), "PAIRED_MIN_EFFECT_DB"
-    return float(value), PAIRED_FLOOR_ARM
+    return float(value), floor_block.get("arm", PAIRED_FLOOR_ARM)
+
+
+def _mse_from_psnr(value):
+    if value is None:
+        return None
+    if math.isinf(value):
+        return 0.0
+    return float(10.0 ** (-float(value) / 10.0))
+
+
+def per_frame_mask_diagnostics(cells, endpoint, spec=None):
+    """Descriptive per-frame readings for a per-frame-mask claim endpoint.
+
+    For every G-U, GEST-U and G-GEST pair on `endpoint` (when the cells carry
+    the per-frame series, i.e. the endpoint reads a `per_frame_mask` event):
+    the fraction of window frames on which the first arm's masked MSE is lower,
+    the count of frames with an exactly-zero masked error (infinite PSNR) per
+    arm, the per-arm maximum per-frame PSNR, and the pooled MSE difference.
+    Pure reporting; no verdict reads it.
+    """
+    S = _spec(spec)
+    ep = S["endpoints"].get(endpoint)
+    if not ep or ep.get("source") != "event" or ep.get("frames_inclusive") is None:
+        return None
+    out = {"endpoint": endpoint, "contrasts": {}}
+    for arm_a, arm_b in (("G", "U"), ("GEST", "U"), ("G", "GEST")):
+        idx_a, _ = _prefix_index(cells, arm_a)
+        idx_b, _ = _prefix_index(cells, arm_b)
+        pairs = []
+        for prefix in sorted(set(idx_a) & set(idx_b)):
+            sa = (idx_a[prefix].get("per_frame") or {}).get(endpoint)
+            sb = (idx_b[prefix].get("per_frame") or {}).get(endpoint)
+            if not sa or not sb:
+                continue
+            wa = sa["weights"]
+            ma = [_mse_from_psnr(v) for v in sa["psnr"]]
+            mb = [_mse_from_psnr(v) for v in sb["psnr"]]
+            valid = [
+                i for i, w in enumerate(wa)
+                if w and ma[i] is not None and mb[i] is not None
+            ]
+            if not valid:
+                continue
+            lower = sum(1 for i in valid if ma[i] < mb[i])
+            wsum = sum(wa[i] for i in valid)
+            pooled_a = sum(ma[i] * wa[i] for i in valid) / wsum
+            pooled_b = sum(mb[i] * wa[i] for i in valid) / wsum
+            pairs.append({
+                "prefix": prefix,
+                "n_frames": len(valid),
+                "frames_a_lower_mse": lower,
+                "fraction_a_lower_mse": lower / float(len(valid)),
+                "n_inf_a": sum(1 for i in valid if math.isinf(sa["psnr"][i])),
+                "n_inf_b": sum(1 for i in valid if math.isinf(sb["psnr"][i])),
+                "max_psnr_a": max(sa["psnr"][i] for i in valid),
+                "max_psnr_b": max(sb["psnr"][i] for i in valid),
+                "pooled_mse_a": pooled_a,
+                "pooled_mse_b": pooled_b,
+                "pooled_mse_diff_a_minus_b": pooled_a - pooled_b,
+            })
+        if pairs:
+            out["contrasts"]["%s-%s" % (arm_a, arm_b)] = pairs
+    return out
 
 
 def analyse_paired(cells, set_name, spec=None):
@@ -1278,6 +1413,14 @@ def analyse_paired(cells, set_name, spec=None):
         contrasts[name] = block
 
     floors = {key: replicate_floor(cells, key, spec=S) for key in endpoints}
+    descriptive_floors = {
+        arm: {key: replicate_floor(cells, key, spec=S, arm=arm) for key in endpoints}
+        for arm in ("GONES", "GMIS")
+        if arm in arms
+    }
+    claim_only = bool(S.get("PAIRED_CLAIM_ENDPOINT_ONLY", False))
+    require_shams = bool(S.get("PAIRED_REQUIRE_SHAMS", False))
+    require_gest = bool(S.get("PAIRED_REQUIRE_GEST", False))
 
     # Placebo: within-run diagnostic only, never a verdict input in paired mode.
     placebo = {
@@ -1291,8 +1434,16 @@ def analyse_paired(cells, set_name, spec=None):
     )
     underpowered = len(complete_pairs) < min_pairs
 
-    sizing = {"per_endpoint": {}, "n_pairs_current": len(complete_pairs)}
-    for key in S["primary_endpoints"]:
+    sizing = {
+        "per_endpoint": {},
+        "n_pairs_current": len(complete_pairs),
+        "status": S.get("PAIRED_SIZING_STATUS", "operative"),
+    }
+    sizing_keys = (
+        [claim_endpoint] if claim_only and claim_endpoint in S["primary_endpoints"]
+        else S["primary_endpoints"]
+    )
+    for key in sizing_keys:
         entry = contrasts.get("G-U", {}).get(key)
         sd = entry["sd"] if entry else None
         sizing["per_endpoint"][key] = {
@@ -1316,6 +1467,15 @@ def analyse_paired(cells, set_name, spec=None):
     verdicts = {}
     for key in S["primary_endpoints"]:
         if key not in endpoints:
+            continue
+        if claim_only and key != claim_endpoint:
+            verdicts[key] = {
+                "verdict": "DESCRIPTIVE_ONLY",
+                "endpoint": key,
+                "reason": "PAIRED_CLAIM_ENDPOINT_ONLY: only %s carries a verdict"
+                % claim_endpoint,
+                "n_complete_pairs": len(complete_pairs),
+            }
             continue
         floor_block = floors[key]
         gu = contrasts.get("G-U", {}).get(key, {}).get("pairs", [])
@@ -1349,7 +1509,28 @@ def analyse_paired(cells, set_name, spec=None):
                 "offenders": offenders,
             }
             sham_clean = sham_clean and not offenders
+        gu_prefixes = [p["prefix"] for p in gu]
+        missing_controls = {}
+        if require_shams:
+            for name in PAIRED_SHAM_CONTRASTS:
+                have = {
+                    p["prefix"]
+                    for p in contrasts.get(name, {}).get(key, {}).get("pairs", [])
+                }
+                lacking = [p for p in gu_prefixes if p not in have]
+                if lacking:
+                    missing_controls[name] = lacking
+        if require_gest:
+            have = {
+                p["prefix"]
+                for p in contrasts.get("GEST-U", {}).get(key, {}).get("pairs", [])
+            }
+            lacking = [p for p in gu_prefixes if p not in have]
+            if lacking:
+                missing_controls["GEST-U"] = lacking
         if underpowered:
+            verdict = "DESIGN_WITHOUT_POWER"
+        elif missing_controls:
             verdict = "DESIGN_WITHOUT_POWER"
         elif all_exceed and sham_clean:
             verdict = "CLAIM_CONDITIONS_MET"
@@ -1362,6 +1543,7 @@ def analyse_paired(cells, set_name, spec=None):
             "every_pair_exceeds_floor": all_exceed,
             "sham_contrasts_clean": bool(sham_clean),
             "sham": sham,
+            "missing_control_pairs": missing_controls,
             "floor_source": floor_block["source"],
             "n_complete_pairs": len(complete_pairs),
             "rule": claim_rule,
@@ -1377,6 +1559,10 @@ def analyse_paired(cells, set_name, spec=None):
         "n_complete_pairs": len(complete_pairs),
         "contrasts": contrasts,
         "replicate_floor": floors,
+        "descriptive_floors": descriptive_floors,
+        "per_frame_mask_diagnostics": per_frame_mask_diagnostics(
+            cells, claim_endpoint, spec=S
+        ),
         "placebo": placebo,
         "placebo_role": placebo_role,
         "sizing": sizing,
@@ -1797,6 +1983,18 @@ def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
     ru = reserved_unit_check(complete)
     if not ru["consistent"]:
         blocking.append(ru.get("message", "reserved-unit check failed"))
+    if S.get("RESERVED_UNITS_REQUIRED", False):
+        lacking = [
+            "%s/seed%s" % (c["arm"], c["seed"]) for c in complete
+            if not c.get("precondition")
+            or c["precondition"].get("reserved_units") is None
+            or c["precondition"].get("training_units_total") is None
+        ]
+        if lacking:
+            blocking.append(
+                "RESERVED_UNITS_REQUIRED: cells without reserved_units/"
+                "training_units_total: %s" % ", ".join(lacking)
+            )
 
     me_cells = [c for c in complete if c["mechanism_exercised"]]
     if paired:
@@ -1856,6 +2054,13 @@ def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
     if paired:
         report["paired"] = True
         report["design"] = "within-prefix paired, descriptive"
+        operative = S.get("PAIRED_CLAIM_SET", "itt")
+        report["operative_set"] = operative
+        for row in report["headline"].values():
+            row["operative"] = row.get(operative, "DESIGN_WITHOUT_POWER")
+        if blocking:
+            for row in report["headline"].values():
+                row["operative"] = "BLOCKED"
     if S.get("spec_sha256"):
         report["spec_file"] = S.get("spec_file")
         report["spec_sha256"] = S["spec_sha256"]

@@ -846,26 +846,22 @@ def test_endpoint_shorthands_expand():
         rga.normalise_endpoint([1, 2, 3])
 
 
-def test_the_shipped_spec_instance_is_a_loadable_placeholder():
+def test_the_shipped_spec_instance_is_frozen_and_loadable():
     path = REPO_ROOT / "configs" / "n3v" / "absfix_gate_spec_v1.json"
     merged, digest = rga.load_spec(str(path))
-    assert merged["spec_version"] == "1.1.0"
+    assert merged["spec_version"] == "1.2.0"
     assert merged["PAIRED_MIN_EFFECT_DB"] == 0.5
     assert merged["arms"] == ["U", "G", "GEST", "GMIS", "GWRONGMEM", "GONES"]
     assert merged["endpoints"]["P1"]["event_name"] == "roi:core"
-    # placeholders: every anchor is null and every relative window is unresolved
-    assert all(merged["anchors"][k] is None for k in ("A", "B", "CA", "CB"))
-    assert merged["unresolved_endpoints"] == ["C1", "H1", "P1", "P2", "S1"]
+    # v1.2.0 froze the anchors, so every relative window resolves
+    assert {k: merged["anchors"][k] for k in ("A", "B", "CA", "CB")} == {
+        "A": 60, "B": 89, "CA": 230, "CB": 259}
+    assert merged["unresolved_endpoints"] == []
     assert "PLACEBO" in merged and "diagnostic" in merged["PLACEBO"]
     assert digest == hashlib.sha256(path.read_bytes()).hexdigest()
-
-    # ... and once the anchors are filled in, every window resolves
-    filled = dict(merged, A=158, B=190, CA=118, CB=147)
-    resolved = rga.resolve_spec(filled)
-    assert resolved["unresolved_endpoints"] == []
-    assert resolved["endpoints"]["P1"]["frames_inclusive"] == [161, 188]
-    assert resolved["endpoints"]["P2"]["frames_inclusive"] == [193, 200]
-    assert resolved["endpoints"]["C1"]["frames_inclusive"] == [118, 147]
+    # a null anchor still leaves its windows unresolved (the placeholder path)
+    blank = rga.resolve_spec(dict(merged, A=None, B=None, CA=None, CB=None))
+    assert blank["unresolved_endpoints"] == ["C1", "H1", "P1", "P2", "S1"]
 
 
 def test_backwards_window_is_rejected(tmp_path):
@@ -1304,3 +1300,187 @@ def test_the_record_carries_the_merged_spec_and_its_sha256(tmp_path):
     # a default run carries neither key
     plain = rga.run(manifest)
     assert "spec_sha256" not in plain and "paired" not in plain
+
+
+# ---------------------------------------------------------------------------
+# 13. spec keys added for the absence fixture (defaults above stay untouched)
+# ---------------------------------------------------------------------------
+
+
+def _fixture_spec(tmp_path, **extra):
+    """A paired spec instance on the default windows with the fixture's keys."""
+    payload = {
+        "spec_id": "fixture_test",
+        "PAIRED_FLOOR_SOURCE": "fixed",
+        "PAIRED_MIN_PAIRS": 4,
+        "PAIRED_REQUIRE_SHAMS": True,
+        "PAIRED_REQUIRE_GEST": True,
+        "PAIRED_CLAIM_ENDPOINT_ONLY": True,
+        "PAIRED_CLAIM_SET": "mechanism_exercised",
+        "PAIRED_SIZING_STATUS": "informational",
+    }
+    payload.update(extra)
+    path = Path(tmp_path) / "fixture_spec.json"
+    path.write_text(json.dumps(payload))
+    return rga.load_spec(str(path))[0]
+
+
+def test_fixed_floor_ignores_the_gones_spread(tmp_path):
+    # GONES sits 0.9 dB from U (a code-path cost); under a fixed floor the claim
+    # still reads against 0.5 dB and GONES is only reported descriptively
+    spec = _fixture_spec(tmp_path)
+    report = rga.run(paired_case(tmp_path, g=1.0, gones=-0.9, gest=0.9),
+                     spec=spec, paired=True)
+    block = report["analysis"]["mechanism_exercised"]
+    verdict = block["verdicts"]["P1"]
+    assert verdict["verdict"] == "CLAIM_CONDITIONS_MET"
+    assert all(p["floor"] == 0.5 and p["floor_source"] == "PAIRED_MIN_EFFECT_DB"
+               for p in verdict["per_pair"])
+    assert block["replicate_floor"]["P1"]["claim_floor"] == "fixed"
+    assert block["descriptive_floors"]["GONES"]["P1"]["median"] == pytest.approx(0.9)
+    assert block["descriptive_floors"]["GMIS"]["P1"]["median"] == pytest.approx(0.05)
+    assert report["operative_set"] == "mechanism_exercised"
+    assert report["headline"]["P1"]["operative"] == "CLAIM_CONDITIONS_MET"
+    # only P1 carries a verdict; sizing is informational and P1-only
+    assert block["verdicts"]["P2"]["verdict"] == "DESCRIPTIVE_ONLY"
+    assert block["sizing"]["status"] == "informational"
+    assert list(block["sizing"]["per_endpoint"]) == ["P1"]
+
+
+def test_missing_sham_or_gest_pairs_deny_power(tmp_path):
+    spec = _fixture_spec(tmp_path)
+    # no GEST arm at all
+    report = rga.run(paired_case(tmp_path, g=1.0), spec=spec, paired=True)
+    verdict = report["analysis"]["mechanism_exercised"]["verdicts"]["P1"]
+    assert verdict["verdict"] == "DESIGN_WITHOUT_POWER"
+    assert verdict["missing_control_pairs"] == {"GEST-U": [0, 1, 2, 3]}
+    # GMIS present on three prefixes only
+    values = {
+        "U": dict(U_BY_PREFIX), "G": _shift(U_BY_PREFIX, 1.0),
+        "GEST": _shift(U_BY_PREFIX, 0.9), "GWRONGMEM": _shift(U_BY_PREFIX, -0.5),
+        "GONES": _shift(U_BY_PREFIX, 0.1),
+        "GMIS": {p: v + 0.05 for p, v in U_BY_PREFIX.items() if p != 3},
+    }
+    report = rga.run(build_paired_manifest(tmp_path, values, name="m2.json"),
+                     spec=spec, paired=True)
+    verdict = report["analysis"]["mechanism_exercised"]["verdicts"]["P1"]
+    assert verdict["verdict"] == "DESIGN_WITHOUT_POWER"
+    assert verdict["missing_control_pairs"] == {"GMIS-U": [3]}
+    # three complete pairs are below PAIRED_MIN_PAIRS = 4
+    report = rga.run(paired_case(tmp_path, g=1.0, gest=0.9, prefixes=[0, 1, 2],
+                                 name="m3.json"), spec=spec, paired=True)
+    assert report["analysis"]["mechanism_exercised"]["verdicts"]["P1"]["verdict"] \
+        == "DESIGN_WITHOUT_POWER"
+
+
+def test_operative_verdict_reads_the_mechanism_set_not_itt(tmp_path):
+    spec = _fixture_spec(tmp_path)
+    manifest = paired_case(tmp_path, g=1.0, gest=0.9)
+    cells = json.loads(Path(manifest).read_text())["cells"]
+    # strip the precondition from one G cell: ITT still "met", the operative set is not
+    for c in cells:
+        if c["arm"] == "G" and c["prefix"] == 2:
+            (Path(c["run_dir"]) / rga.SPEC["precondition_filename"]).unlink()
+    report = rga.run(manifest, spec=spec, paired=True)
+    assert report["headline"]["P1"]["itt"] == "CLAIM_CONDITIONS_MET"
+    assert report["headline"]["P1"]["operative"] == "DESIGN_WITHOUT_POWER"
+
+
+def test_require_all_frames_refuses_a_gap_in_the_core_masks(tmp_path):
+    spec, _ = rga.load_spec(write_spec(
+        tmp_path / "spec.json", B=104, PER_FRAME_MASK_REQUIRE_ALL_FRAMES=True))
+    entry = make_cell(
+        tmp_path, "U", 0, p1=24.0, p2=26.0, s1_tail=25.0, h1=31.0, c1=32.0,
+        whole=33.0, extra_events=roi_event({101: 20.0, 103: 30.0},
+                                           {101: 500, 102: 0, 103: 500}),
+    )
+    with pytest.raises(ValueError, match=r"frames \[102\]"):
+        rga.load_cell(entry, spec=spec)
+    # the default keeps the drop-empty-frames rule
+    plain, _ = rga.load_spec(write_spec(tmp_path / "spec2.json", B=104))
+    assert rga.load_cell(entry, spec=plain)["endpoints"]["P1"] == pytest.approx(
+        _weighted_pool([20.0, 30.0], [500, 500]), abs=1e-12)
+
+
+def test_per_frame_mask_diagnostics_count_frames_and_infinities(tmp_path):
+    spec, _ = rga.load_spec(write_spec(tmp_path / "spec.json", B=105))  # P1 = 101..104
+    pixels = {f: 100 for f in range(101, 105)}
+    u = make_cell(tmp_path, "U", 0, p1=24.0, p2=26.0, s1_tail=25.0, h1=31.0, c1=32.0,
+                  whole=33.0, extra_events=roi_event(
+                      {101: 20.0, 102: 20.0, 103: 20.0, 104: 40.0}, pixels))
+    g = make_cell(tmp_path, "G", 0, p1=24.0, p2=26.0, s1_tail=25.0, h1=31.0, c1=32.0,
+                  whole=33.0, precondition=GOOD_PRECONDITION, extra_events=roi_event(
+                      {101: float("inf"), 102: float("inf"), 103: 30.0, 104: 35.0}, pixels))
+    cells = []
+    for entry in (u, g):
+        entry["prefix"] = 0
+        cells.append(rga.load_cell(entry, spec=spec))
+    diag = rga.per_frame_mask_diagnostics(cells, "P1", spec=spec)
+    pair = diag["contrasts"]["G-U"][0]
+    assert pair["n_frames"] == 4
+    assert pair["frames_a_lower_mse"] == 3 and pair["fraction_a_lower_mse"] == 0.75
+    assert pair["n_inf_a"] == 2 and pair["n_inf_b"] == 0
+    assert pair["max_psnr_b"] == 40.0 and math.isinf(pair["max_psnr_a"])
+    assert pair["pooled_mse_diff_a_minus_b"] < 0
+
+
+def test_mechanism_window_and_box_checks(tmp_path):
+    base = dict(GOOD_PRECONDITION)
+    spec = _fixture_spec(tmp_path, MECHANISM_ZERO_FRAMES_WINDOW=[63, 87],
+                         MECHANISM_ZERO_FRAMES_EXEMPT_ARMS=["GMIS", "GONES"],
+                         MECHANISM_FBOX=[964, 748, 1034, 952], MECHANISM_FBOX_FRAME=75)
+    # without the detail block the list is absent -> fails closed
+    ok, reason = rga.mechanism_exercised("G", base, spec=spec)
+    assert not ok and "zero-presence frame list" in reason
+    detailed = dict(base, frames_presence_zero_list=list(range(230, 257)),
+                    fbox_frame=75, fbox_box=[964, 748, 1034, 952])
+    ok, reason = rga.mechanism_exercised("G", detailed, spec=spec)
+    assert not ok and "inside [63, 87]: 0" in reason
+    ok, reason = rga.mechanism_exercised("GMIS", detailed, spec=spec)   # exempt
+    assert ok
+    good = dict(detailed, frames_presence_zero_list=list(range(63, 90)))
+    assert rga.mechanism_exercised("G", good, spec=spec)[0]
+    ok, reason = rga.mechanism_exercised("GWRONGMEM", good, spec=spec)
+    assert ok and "code path" in reason
+    wrong_frame = dict(good, fbox_frame=150)
+    ok, reason = rga.mechanism_exercised("G", wrong_frame, spec=spec)
+    assert not ok and "frame 150" in reason
+    wrong_box = dict(good, fbox_box=[664, 912, 744, 976])
+    assert not rga.mechanism_exercised("G", wrong_box, spec=spec)[0]
+
+
+def test_read_precondition_lifts_the_detail_fields(tmp_path):
+    run_dir = Path(tmp_path) / "cell"
+    run_dir.mkdir()
+    payload = dict(GOOD_PRECONDITION, arm_kind="elgs", detail={
+        "presence": {"frames_presence_zero": [63, 64, 65]},
+        "fbox": {"frame": 75, "box_x0_y0_x1_y1_inclusive": [1, 2, 3, 4]},
+    })
+    (run_dir / rga.SPEC["precondition_filename"]).write_text(json.dumps(payload))
+    pre = rga.read_precondition(str(run_dir))
+    assert pre["frames_presence_zero_list"] == [63, 64, 65]
+    assert pre["fbox_frame"] == 75 and pre["fbox_box"] == [1, 2, 3, 4]
+    assert pre["arm_kind"] == "elgs"
+
+
+def test_reserved_units_required_blocks_on_a_silent_cell(tmp_path):
+    spec = _fixture_spec(tmp_path, RESERVED_UNITS_REQUIRED=True)
+    report = rga.run(paired_case(tmp_path, g=1.0, gest=0.9), spec=spec, paired=True)
+    # U cells carry no precondition file in the synthetic manifest
+    assert any("RESERVED_UNITS_REQUIRED" in msg for msg in report["blocking_errors"])
+    assert report["headline"]["P1"]["operative"] == "BLOCKED"
+
+
+def test_the_shipped_fixture_spec_is_frozen_and_resolves():
+    spec, digest = rga.load_spec("configs/n3v/absfix_gate_spec_v1.json")
+    assert spec["spec_version"] == "1.2.0"
+    assert spec["unresolved_endpoints"] == []
+    assert spec["endpoints"]["P1"]["frames_inclusive"] == [63, 87]
+    assert spec["endpoints"]["P2"]["frames_inclusive"] == [92, 99]
+    assert spec["endpoints"]["S1"]["frames_inclusive"] == [100, 109]
+    assert spec["endpoints"]["H1"]["frames_inclusive"] == [30, 57]
+    assert spec["endpoints"]["C1"]["frames_inclusive"] == [230, 259]
+    assert spec["event_name"] == "BOTTLE_absence_gap"
+    assert spec["PAIRED_FLOOR_SOURCE"] == "fixed" and spec["PAIRED_MIN_PAIRS"] == 4
+    assert spec["PAIRED_CLAIM_SET"] == "mechanism_exercised"
+    assert spec["MECHANISM_FBOX"] == [964, 748, 1034, 952]

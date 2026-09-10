@@ -71,6 +71,8 @@ def test_score_end_to_end(tmp_path):
     assert r["gap"]["estimated_absent_frames"] == [59, 89]
     assert r["gap"]["offset_error_frames"] == -1
     assert r["gap"]["temporal_iou"] == pytest.approx(30 / 31)
+    assert r["gap"]["method"].startswith("envelope")
+    assert r["gap"]["per_group"][0]["absent_frames"] == [59, 89]
     pe, pt, out = tmp_path / "e.json", tmp_path / "t.json", tmp_path / "s.json"
     pe.write_text(json.dumps(est))
     pt.write_text(json.dumps(truth))

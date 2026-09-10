@@ -117,6 +117,14 @@ def score(est_payload, truth_payload, authored_gap, weights=None):
         out["weighted"] = set_scores(est, truth, weights)
     eg = gap_frames(est_payload)
     out["gap"] = {
+        "method": "envelope: min offset .. max onset over every estimated group",
+        "per_group": [
+            {"group": g.get("group"),
+             "absent_frames": [int(g["offset_frame"]), int(g["onset_frame"]) - 1],
+             "temporal_iou": temporal_iou(
+                 (int(g["offset_frame"]), int(g["onset_frame"]) - 1), authored_gap)}
+            for g in (est_payload.get("groups") or [])
+        ],
         "estimated_absent_frames": list(eg) if eg else None,
         "authored_absent_frames": [int(authored_gap[0]), int(authored_gap[1])],
         "temporal_iou": temporal_iou(eg, authored_gap),
