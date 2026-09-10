@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import random
 import sys
@@ -187,7 +188,12 @@ def main(argv=None):
     margin_lo, margin_hi = manifest["margin_range"]
     raster = manifest.get("raster", [1352, 1014])
     params = manifest.get("edit_params", {})
-    slack = int(params.get("dilate", 0)) + int(params.get("feather", 0)) + 2
+    # The renderer records its CLI under ``args`` (``dilate`` in px and
+    # ``feather`` as a Gaussian sigma in px); a flat layout is accepted too.
+    src = params.get("args", params) if isinstance(params, dict) else {}
+    dilate_px = int(float(src.get("dilate", params.get("dilate", 0)) or 0))
+    feather_sigma = float(src.get("feather", params.get("feather", 0)) or 0)
+    slack = dilate_px + int(math.ceil(3.0 * feather_sigma)) + 2
 
     if not out_images.is_dir():
         fail.add("derived scene has no images/: %s" % out_images)
