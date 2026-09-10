@@ -1908,13 +1908,39 @@ def markdown_report_paired(report):
         lines.append("| endpoint | every G-U pair over floor | sham contrasts clean | verdict |")
         lines.append("|---|---|---|---|")
         for key, item in block["verdicts"].items():
+            if "every_pair_exceeds_floor" not in item:
+                lines.append("| %s | - | - | **%s** |" % (key, item["verdict"]))
+                continue
             lines.append("| %s | %s | %s | **%s** |" % (
                 key,
                 "yes" if item["every_pair_exceeds_floor"] else "no",
                 "yes" if item["sham_contrasts_clean"] else "no",
                 item["verdict"],
             ))
+            if item.get("missing_control_pairs"):
+                lines.append("| | missing control pairs: %s | | |"
+                             % json.dumps(item["missing_control_pairs"]))
         lines.append("")
+        if block.get("descriptive_floors"):
+            lines.append("descriptive floors (median |U - arm| per endpoint): %s" % json.dumps({
+                arm: {k: (round(v["median"], 4) if v["median"] is not None else None)
+                      for k, v in per.items()}
+                for arm, per in block["descriptive_floors"].items()}))
+            lines.append("")
+        diag = block.get("per_frame_mask_diagnostics")
+        if diag and diag.get("contrasts"):
+            lines.append("### Per-frame diagnostics on %s (descriptive)" % diag["endpoint"])
+            lines.append("")
+            lines.append("| contrast | prefix | frames | frames first-arm lower MSE | inf frames (a/b) | max PSNR (a/b) | pooled MSE diff |")
+            lines.append("|---|---|---|---|---|---|---|")
+            for name, pairs in diag["contrasts"].items():
+                for pr in pairs:
+                    lines.append("| %s | %s | %d | %d (%.2f) | %d/%d | %s/%s | %.3e |" % (
+                        name, pr["prefix"], pr["n_frames"], pr["frames_a_lower_mse"],
+                        pr["fraction_a_lower_mse"], pr["n_inf_a"], pr["n_inf_b"],
+                        _fmt(pr["max_psnr_a"]), _fmt(pr["max_psnr_b"]),
+                        pr["pooled_mse_diff_a_minus_b"]))
+            lines.append("")
         lines.append("placebo split: %s" % block["placebo_role"])
         lines.append("")
 
@@ -1928,8 +1954,10 @@ def markdown_report_paired(report):
     lines.append("")
     for key in sorted(report["headline"]):
         row = report["headline"][key]
-        lines.append("- %s: ITT **%s**; mechanism-exercised %s"
-                     % (key, row["itt"], row["mechanism_exercised"]))
+        lines.append("- %s: ITT **%s**; mechanism-exercised %s%s"
+                     % (key, row["itt"], row["mechanism_exercised"],
+                        ("; OPERATIVE (%s) **%s**" % (report.get("operative_set"), row["operative"]))
+                        if "operative" in row else ""))
     if report["blocking_errors"]:
         lines.append("")
         lines.append("## BLOCKING ERRORS")

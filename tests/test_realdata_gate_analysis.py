@@ -1484,3 +1484,22 @@ def test_the_shipped_fixture_spec_is_frozen_and_resolves():
     assert spec["PAIRED_FLOOR_SOURCE"] == "fixed" and spec["PAIRED_MIN_PAIRS"] == 4
     assert spec["PAIRED_CLAIM_SET"] == "mechanism_exercised"
     assert spec["MECHANISM_FBOX"] == [964, 748, 1034, 952]
+
+
+def test_paired_markdown_renders_under_the_fixture_keys(tmp_path, capsys):
+    spec_path = Path(tmp_path) / "fixture_spec.json"
+    spec_path.write_text(json.dumps({
+        "spec_id": "fixture_md", "PAIRED_FLOOR_SOURCE": "fixed",
+        "PAIRED_MIN_PAIRS": 4, "PAIRED_REQUIRE_SHAMS": True,
+        "PAIRED_REQUIRE_GEST": True, "PAIRED_CLAIM_ENDPOINT_ONLY": True,
+        "PAIRED_CLAIM_SET": "mechanism_exercised",
+    }))
+    manifest = paired_case(tmp_path, g=1.0, gest=0.9)
+    out = Path(tmp_path) / "out.json"
+    rc = rga.main(["--manifest", manifest, "--spec", str(spec_path), "--paired",
+                   "--out", str(out)])
+    text = capsys.readouterr().out
+    assert rc == 0
+    assert "| P2 | - | - | **DESCRIPTIVE_ONLY** |" in text
+    assert "descriptive floors" in text
+    assert "OPERATIVE (mechanism_exercised) **CLAIM_CONDITIONS_MET**" in text
