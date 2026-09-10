@@ -368,3 +368,53 @@ prefix checkpoints, the fixture manifests, the per-kind ROI digests.
 **Continuations submitted 08:23 CEST:** prefixes 0–2 × {U, G-oracle,
 G-est, G-mis, G-wrongmem, G-ones} = jobs 57153546–57153568; prefix 3's
 six follow when the 20-job cap allows.
+
+## 6. INSTRUMENT DEFECT FOUND AT THE READING STAGE: `--val` renders every EL-GS cell with its gate OFF (11:30 CEST)
+
+The first look at the fixture cells was a montage of the cam00 bottle crop
+(`research-wiki/assets/absfix-prefix0-cam00-montage.jpg`: rows GT, U,
+G-oracle, G-est, G-wrongmem, G-mis, G-ones of prefix 0; columns frames 45,
+62, 75, 88, 95, 105). Inside the gap the G-oracle and G-est rows show a
+**full, sharp bottle** — sharper than the faint ghost U renders — although
+their gated rows are exactly the bottle rows the gate drives to zero.
+Read in code: `main.py validation()` restores the checkpoint and renders
+with `render` **without calling `setup_elgs`**; `gaussians.restore` only
+stashes `_pending_elgs_state`, the runtime is attached nowhere else
+(`elgs/trainer_hooks.py:302` is the only assignment), so `elgs_active`
+is False in the renderer and every row goes through the ordinary temporal
+marginal. **Every `--val` metric of every EL-GS cell in this project on
+N3V — the 2026-09-09 lane, Lane A above, and the interim fixture numbers
+— was rendered with the gate off.** The synthetic Lane B positive is
+unaffected (`scripts/eval_lrv1_event.py` calls `setup_elgs`), and so are
+the preconditions (`gate_cell_precondition.py` attaches the runtime and
+reads presence from it). The U cells are unaffected. What the gated
+cells' `--val` numbers measured is a model rendered in a configuration
+it was not trained in: under the total gate the gated rows' presence is
+the episode function, so their temporal-marginal parameters are
+unexercised from 6k onward, and at `--val` those stale marginals decide
+what the bottle rows paint.
+
+Interim fixture reading under the defect (prefixes 0–2, kept as an
+append-only record, NOT a result): P1 core G−U −10.7 dB, G-est−U −12.5,
+G-mis−U −1.9, G-ones−U −2.1, G-wrongmem−U −12.2; P2 G−U −3.4, G-mis/
+G-ones −7.3; H1 G-mis/G-ones −6.0. These numbers describe the gate-off
+render of gated models and are superseded by §7.
+
+Repair (commit fbf4693): `scripts/eval_n3v_gated.py --restore_state`
+takes `setup_elgs`'s restore branch (the checkpoint's own `elgs_state`),
+proves the restored intervals equal `--program` by lineage key (the same
+check the precondition extractor uses), and scores the model gate-on
+and gate-off over frames 0–299 on cam00. Re-evaluation template
+`agent-control/realdata/reeval_gated.sbatch`: per cell the gate-off
+`--val` profile is preserved as `f_box_profile_val_nogate.json`, the
+gate-on profile becomes `f_box_profile.json`, and the evaluator's own
+gate-off render is profiled to `f_box_profile_gateoff_check.json` (it
+must reproduce the `--val` numbers). Jobs 57178206/07 (Lane A, 12 gated
+cells), 57178209/10 (fixture prefixes 0–2, 15 gated cells); prefix 3's
+five follow. Both paired analyses are re-run afterwards; §3's Lane A
+table is superseded by §7 as well.
+
+Carry as METHOD: a montage of the scored region on every arm is not
+optional decoration; it is the cheapest precondition there is. Here it
+caught in one glance what the per-cell precondition (which reads the
+live runtime, not the rendered pixels) could not.

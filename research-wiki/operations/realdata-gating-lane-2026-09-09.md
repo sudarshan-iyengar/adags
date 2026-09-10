@@ -758,3 +758,17 @@ that on an occlusion the gate would then remove the occluder's paint. A
 true leave-and-return event (ImViD, or a curated N3V segment where an
 object exits the frame) is where the fixture's claim could be tested on
 real footage; this scene does not contain one.
+
+## Append-only correction (2026-09-10 11:30 CEST): the G/G-mis `--val` renders were gate-off
+
+`main.py validation()` never calls `setup_elgs`, so the `--val` renders
+and every endpoint of the G and G-mis cells in this lane were produced
+with the EL-GS gate OFF (the gated rows rendered through their untrained
+temporal marginal). The verdict DESIGN_WITHOUT_POWER stands on its own
+grounds (the seeding precondition failed on every gated cell) and the U
+numbers, the sham estimate and the sizing on U are unaffected, but no G
+or G-mis endpoint in §7 may be read as a measurement of the gated model.
+The render-time gate diagnostic (§4, `eval_n3v_gated.py`) attached the
+runtime explicitly and is unaffected. Details and the repair
+(`--restore_state`, commit fbf4693) in
+[[absence-fixture-lane-2026-09-10]] §6.
