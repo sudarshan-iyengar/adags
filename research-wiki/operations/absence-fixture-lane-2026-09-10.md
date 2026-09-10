@@ -418,3 +418,40 @@ Carry as METHOD: a montage of the scored region on every arm is not
 optional decoration; it is the cheapest precondition there is. Here it
 caught in one glance what the per-cell precondition (which reads the
 live runtime, not the rendered pixels) could not.
+
+## 7. Gate-faithful results (re-evaluation jobs 57178206/07/09/10, 57194307; every cell re-rendered with its own gate over frames 0–299 on cam00)
+
+**Reproduction check passed for all 27 re-evaluated cells:** the
+evaluator's gate-off render reproduces the `--val` profile to four
+decimals (e.g. Lane A G s0 whole-frame 32.9608 / 32.9608; box [161,185]
+35.857 / 35.857), so the §6 diagnosis is exact. Every Lane A re-eval ran
+in restore mode with the gate live: 2,994–3,219 gated rows, 27 exact-
+absence frames (9 for G-ones), `program_match` confirmed by lineage key.
+
+### 7A. Lane A corrected: the gate is a NULL on the real occlusion, not a harm
+
+`runs/realdata/laneA_analysis_gateon/wave1_paired.json` (sha256
+`3213b69a…42a9c`, same manifest as §3). Paired medians over 4 prefixes
+(dB; sign consistency):
+
+| contrast | P1 gap [161,185] | P2 return [190,197] | S1 | H1 pre | H2 whole | C1 [230,259] |
+|---|---|---|---|---|---|---|
+| G − U | −0.074 (4/4) | +0.050 (3/4) | +0.018 | +0.044 (4/4) | +0.006 | +0.042 (4/4) |
+| G-mis − U | −0.036 | −0.016 | −0.031 | −0.146 (4/4) | +0.005 | −0.235 (4/4) |
+| G-ones − U | −0.021 | −0.068 (4/4) | −0.074 (4/4) | −0.040 | −0.006 | −0.016 |
+| G − G-mis | −0.066 | +0.073 | +0.049 | +0.187 (4/4) | +0.004 | +0.276 (4/4) |
+
+Within-prefix `|U − G-ones|` floor: 0.040 (P1) / 0.068 (P2) dB; paired
+sd 0.066 / 0.032 dB. Verdict NOT_MET on both primaries (no G−U pair
+reaches +0.5 dB; on P1 the sham is not "clean" only because G-mis−U is
+also slightly negative). Reading: the §3 harms (−0.22 / −0.46 dB) were
+entirely the gate-off artefact. With the gate applied, G and U agree
+inside ~0.1 dB everywhere, and the one sham signal is where it should be:
+G-mis, which gates the beef rows while the beef is visible, loses 0.24
+dB in its own window (C1) and 0.15 dB pre-occlusion, in all four pairs.
+On the beef box during the occlusion the gated rows are behind the hand,
+so gating them changes the render by nothing measurable (the gate-on and
+gate-off box values coincide to three decimals on every G cell). Lane
+A's answer to "can the gate act on the occlusion return once membership
+is bound?" is therefore **no effect either way**: a real occlusion offers
+the presence gate nothing to remove and nothing to restore.
