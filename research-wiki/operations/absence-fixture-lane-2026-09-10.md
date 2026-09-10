@@ -455,3 +455,120 @@ gate-off box values coincide to three decimals on every G cell). Lane
 A's answer to "can the gate act on the occlusion return once membership
 is bound?" is therefore **no effect either way**: a real occlusion offers
 the presence gate nothing to remove and nothing to restore.
+
+
+### 7B. The fixture comparison, gate-faithful (24 cells, 4 prefixes × 6 arms, 12k; analysis at 17:10 CEST)
+
+`runs/realdata/absfix/analysis_wave1/wave1_paired.json` sha256
+`64a32d41…98b3`, manifest `a0e69d9a…9a40`, spec v1.2.0 `0d58b32c…d810`,
+analysis code at commit f954603; every cell complete, every gated cell
+passes the mechanism predicate with the bottle box at frame 75 and its
+zero-presence frames inside [63,87] (G-mis/G-ones exempt by design);
+no blocking error, no warning.
+
+Per-cell pooled PSNR (dB), cam00:
+
+| prefix | arm | P1 core [63,87] | P2 return [92,99] | S1 [100,109] | H1 pre [30,57] | H2 whole | C1 [230,259] |
+|---|---|---|---|---|---|---|---|
+| 0 | U | 31.09 | 29.11 | 31.71 | 30.77 | 33.36 | 32.29 |
+| 0 | G-oracle | 34.24 | 32.34 | 32.77 | 32.04 | 33.38 | 32.00 |
+| 0 | G-est | 34.08 | 32.39 | 32.73 | 32.02 | 33.26 | 31.97 |
+| 0 | G-mis | 26.71 | 27.36 | 31.22 | 29.58 | 33.34 | 32.21 |
+| 0 | G-wrongmem | 31.86 | 29.35 | 31.82 | 30.95 | 33.38 | 32.25 |
+| 0 | G-ones | 26.71 | 27.42 | 31.28 | 29.54 | 33.38 | 32.29 |
+| 1 | U | 31.36 | 29.06 | 32.44 | 31.50 | 33.73 | 32.08 |
+| 1 | G-oracle | 36.28 | 32.10 | 32.88 | 32.35 | 33.72 | 31.86 |
+| 1 | G-est | 36.29 | 32.13 | 32.87 | 32.37 | 33.72 | 31.86 |
+| 1 | G-mis | 27.12 | 26.96 | 31.42 | 30.15 | 33.71 | 31.70 |
+| 1 | G-wrongmem | 32.08 | 29.96 | 32.42 | 31.73 | 33.72 | 32.04 |
+| 1 | G-ones | 26.95 | 27.06 | 31.50 | 30.20 | 33.70 | 31.98 |
+| 2 | U | 30.77 | 30.00 | 32.67 | 31.27 | 33.19 | 31.91 |
+| 2 | G-oracle | 35.02 | 32.61 | 32.97 | 32.45 | 33.13 | 31.76 |
+| 2 | G-est | 34.92 | 32.65 | 33.00 | 32.48 | 33.18 | 31.79 |
+| 2 | G-mis | 24.80 | 28.27 | 31.72 | 30.92 | 33.12 | 32.26 |
+| 2 | G-wrongmem | 31.35 | 30.32 | 32.71 | 31.47 | 33.22 | 32.01 |
+| 2 | G-ones | 24.75 | 28.45 | 31.81 | 31.00 | 33.15 | 31.91 |
+| 3 | U | 30.91 | 29.90 | 32.20 | 31.57 | 33.23 | 32.11 |
+| 3 | G-oracle | 34.98 | 32.58 | 32.91 | 32.79 | 33.21 | 31.88 |
+| 3 | G-est | 35.09 | 32.37 | 32.83 | 32.75 | 33.21 | 31.93 |
+| 3 | G-mis | 26.13 | 28.67 | 31.07 | 30.53 | 33.20 | 31.56 |
+| 3 | G-wrongmem | 31.09 | 30.23 | 32.20 | 31.53 | 33.21 | 31.98 |
+| 3 | G-ones | 26.19 | 28.80 | 31.23 | 30.66 | 33.22 | 32.18 |
+
+Paired within-prefix contrasts (dB; median, min..max over the 4 pairs,
+sign consistency):
+
+| contrast | P1 ghost core | P2 return | S1 | H1 pre | H2 whole | C1 control |
+|---|---|---|---|---|---|---|
+| G-oracle − U | **+4.16 (3.16..4.92) 4/4** | **+2.86 (2.61..3.24) 4/4** | +0.58 (0.30..1.07) 4/4 | +1.20 (0.84..1.27) 4/4 | −0.01 | −0.22 (−0.28..−0.16) 4/4 |
+| G-est − U | +4.16 (3.00..4.93) 4/4 | +2.86 (2.47..3.28) 4/4 | +0.53 4/4 | +1.20 4/4 | −0.01 | −0.20 4/4 |
+| G-mis − U | −4.58 (−5.98..−4.24) 4/4 | −1.73 4/4 | −0.99 4/4 | −1.12 4/4 | −0.02 | −0.23 3/4 |
+| G-ones − U | −4.57 (−6.03..−4.38) 4/4 | −1.61 4/4 | −0.90 4/4 | −1.07 4/4 | −0.02 | 0.00 |
+| G-wrongmem − U | **+0.65 (0.17..0.78) 4/4** | +0.33 (0.25..0.90) 4/4 | +0.02 | +0.19 | +0.01 | −0.04 |
+| G-oracle − G-est | +0.04 (−0.11..0.16) | −0.04 | +0.03 | 0.00 | 0.00 | −0.02 |
+| G-oracle − G-wrongmem | +3.78 (2.38..4.20) 4/4 | +2.32 (2.14..2.99) 4/4 | +0.59 4/4 | +1.04 4/4 | 0.00 | −0.21 4/4 |
+| G-oracle − G-mis | +9.01 (7.53..10.22) 4/4 | +4.66 4/4 | +1.51 4/4 | +2.23 4/4 | +0.01 | −0.02 |
+
+Per-frame diagnostics on P1 (descriptive): G-oracle has the lower core
+MSE than U on **25 of 25 frames in every pair**; no frame reaches exact
+zero error in any arm (the teacher background is never rendered
+bit-exactly); max per-frame core PSNR 34.4 / 36.5 / 35.2 / 35.0 (G)
+against 32.5 / 32.2 / 31.9 / 32.2 (U).
+
+**Frozen verdict: NOT_MET.** Every G−U pair on P1 clears the 0.5 dB
+floor by a factor of six or more, but the pre-registered claim also
+requires no sham pair to clear it, and G-wrongmem − U exceeds +0.5 dB
+on P1 in three of four pairs (0.77, 0.72, 0.58; the fourth 0.17). The
+rule was frozen before any 12k number existed and is applied as
+written. Sizing (informational): paired sd 0.73 dB on P1, n2 = 58 pairs
+at δ = 0.30; irrelevant at this effect size.
+
+Reading, in order of weight.
+
+1. **The training-time gate delivers the method's claim on real
+   footage under an authored absence**: exact absence in the ghost
+   window (+4.2 dB on the supported core, 25/25 frames in 4/4 pairs)
+   AND a faithful return (+2.9 dB on [92,99], +0.6 dB settled) AND a
+   better pre-gap object (+1.2 dB), with whole-frame unchanged. The
+   render-time diagnostic of §5 (P1 −5.9 dB on the 6k ungated model)
+   is reversed by training with the gate on: the rows behind the
+   bottle learn the counterfactual background when the bottle rows
+   cannot paint it. The two timing shams (same rows, gap moved) lose
+   4.6 dB in the ghost window and 1.7 dB at the return in every pair,
+   so the effect is the window, not the code path or the row set.
+2. **The random-membership sham is not a null either**, and it is what
+   the frozen rule trips on: gating 7,000 random rows (≈1% of them
+   bottle rows) during [60,89] gains 0.17–0.77 dB on the core and
+   0.25–0.90 dB at the return. The magnitude-matched control shows
+   that part of the effect is generic (any 7,000 rows removed during
+   the gap take some ghost with them, and the ~70 true bottle rows in
+   the random set are not nothing), and the membership-specific share
+   is the G − G-wrongmem contrast: **+3.8 dB (2.4..4.2) on P1 and
+   +2.3 dB (2.1..3.0) on P2, 4/4.** The rule asked the sham to be
+   quiet; it was audible. That is the correct outcome of a control,
+   and the verdict stands as NOT_MET under this spec. A wave-2 spec
+   could re-declare the claim on the membership-specific contrast, but
+   that is a new frozen spec, not a re-reading of this one.
+3. **Estimated timing costs nothing here:** G-est (T1's gap [60,91]
+   plus the same rows) matches G-oracle to 0.04 dB on P1 and −0.04 on
+   P2 in every pair; the two extra gap frames (90, 91) cost 0.2 dB at
+   most on the return in one pair. Membership estimation was NOT
+   tested (§5: the construction masks are the DEVA silhouettes).
+4. **Costs outside the event:** C1 (the untouched control window)
+   loses 0.16–0.28 dB in every G and G-est pair; whole-frame is
+   unchanged. That is the price of forcing full presence on 7,000 rows
+   for 270 frames under the total gate (their temporal marginal is
+   overridden), and it is the same size as the G-mis harm there.
+5. **Scope, restated:** an oracle-controlled diagnostic on a
+   teacher-rendered counterfactual absence (`evidence_bearing:
+   false`); the ground truth inside [60,89] is SA4D's background
+   render, the red cap was left floating by the edit, and the object
+   was hand-selected. Nothing here is evidence about the physical
+   world, and the 2026-09-09 render-time negative on the real
+   occlusion (−3.4 dB) and Lane A's null (§7A) stay in front of it:
+   the gate helps exactly when the object is absent from every camera
+   and does nothing when it is merely occluded.
+
+Cost of the fixture lane: 4 prefixes × 2.0 h + T1 2.0 h + votes 4 ×
+0.13 h + gate evals 0.5 h + 24 continuations × ~2.5 h + re-evaluation
+32 × 0.27 h ≈ 78 A100-h; Lane A ≈ 50 A100-h plus 3.3 h re-evaluation.

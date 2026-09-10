@@ -1,5 +1,77 @@
 # Query Pack
 
+## 2026-09-10 BLOCK — a gate-off evaluation defect found by a montage; Lane A is a NULL on the real occlusion; the SA4D-edited absence fixture is the first real-footage POSITIVE (+4.2 dB ghost, +2.9 dB return, 4/4 pairs), NOT_MET under its own frozen rule because the random-membership sham also clears the floor
+
+Full record: [[operations/absence-fixture-lane-2026-09-10]]. ~135 A100-h.
+Plan approved by the user; six arms × four prefixes, paired by prefix.
+
+**(1) THE INSTRUMENT DEFECT, and it outranks every number this block
+produced.** `main.py validation()` restores a checkpoint and renders
+WITHOUT `setup_elgs`, so every `--val` metric of every EL-GS cell on N3V
+(the 2026-09-09 lane, Lane A, and the first fixture reading) was
+rendered with the gate OFF. It was caught by a montage of the scored
+crop across arms — a full bottle inside the gap on the arms whose gated
+rows are the bottle — after two frozen preconditions (which read the
+live runtime, not the pixels) had passed. Repair: `eval_n3v_gated.py
+--restore_state` (the checkpoint's own state, intervals proved equal to
+the program by lineage key); 32 cells re-rendered; the evaluator's
+gate-off render reproduces every `--val` profile to four decimals.
+**CARRY AS METHOD: look at the pixels of the scored region on every arm
+before reading a table; a precondition on the model is not a
+precondition on the render.**
+
+**(2) LANE A (deferred seeding on the real occlusion) IS A NULL.**
+Seeding at 6k binds ~3,100 rows per prefix (389 before), and with the
+gate applied every paired contrast sits inside ~0.1 dB (G−U P1 −0.07,
+P2 +0.05; floor |U−G-ones| 0.04/0.07 dB). The gate-off reading had said
+−0.22/−0.46 dB harm. The only sham signal is where it belongs: G-mis
+loses 0.24 dB in its own window. **A real occlusion offers the presence
+gate nothing to remove and nothing to restore**; the gated rows are
+behind the hand and the box render is identical to three decimals with
+the gate on or off.
+
+**(3) THE FIXTURE: an SA4D-edited wine bottle absent for frames 60–89
+on `cut_roasted_beef` (all 20 cameras; hull row selection after the dog
+proved unremovable; derived scene verified byte-for-byte outside the
+edit).** Blind T1 gated 2 of 1,245 cells, both at the authored offset
+frame 60, onsets 90/92, zero false activations (temporal IoU 0.94).
+Gate-faithful, 4 prefixes × 6 arms at 12k: **G-oracle − U = +4.16 dB
+(3.16..4.92) on the supported ghost core and +2.86 dB (2.61..3.24) on
+the return, 4/4 pairs, 25/25 frames each; +1.2 dB pre-gap; whole-frame
+unchanged; −0.22 dB in the untouched control window.** G-est (T1's
+gap) equals G-oracle to 0.04 dB. Timing shams (same rows, gap moved):
+−4.6 dB ghost, −1.7 dB return, 4/4. **The verdict under the frozen spec
+v1.2.0 is NOT_MET**: the count-matched RANDOM-membership sham also
+gains +0.65 dB (0.17..0.78) on the core, over the 0.5 dB floor in 3 of
+4 pairs, and the rule required the shams silent. The
+membership-specific share is G − G-wrongmem: **+3.8 dB ghost, +2.3 dB
+return, 4/4.** Not tested: membership estimation (the construction
+masks ARE the DEVA silhouettes, so estimated = truth by construction).
+Scope: oracle-controlled diagnostic on a teacher-rendered
+counterfactual absence, `evidence_bearing: false`; the real-occlusion
+negatives stay in front of it.
+
+**(4) THE RENDER-TIME DIAGNOSTIC WAS THE OPPOSITE OF THE TRAINING
+RESULT** on the same rows: on the ungated 6k model the gate cost 5.9 dB
+in the ghost core (the bottle rows also paint the counterfactual
+background) and gained 3.2 dB at the return; trained with the gate on,
+the other rows learn the background and both windows gain. A gate must
+be trained with, not applied after.
+
+**(5) REVIEW AND FREEZE.** A Codex adversarial review of the spec
+(15 items) was folded in before submission: anchors frozen with B = the
+LAST absent frame (the 1.1.0 prose would have shifted every window by
+one), event name corrected, fixed 0.5 dB claim floor (G-ones is a
+late-gap sham with a real code-path cost, not a null: an all-present
+program cannot be emitted), P1-only verdict on the mechanism-exercised
+set, shams and G-est required on every prefix, fail-closed per-frame
+masks, per-frame MSE diagnostics, zero-presence frames required inside
+the P1 window and the bottle box at frame 75. Two smaller defects fixed
+on the way: the fixture assembler read the editor's margin from the
+wrong layout (ROIs clipped to the window; regenerated, 30 existing
+frames byte-identical), and Lane A's chain passed the wrong program to
+the precondition extractor for the sham arms (it refused, correctly).
+
 ## 2026-09-09 BLOCK — real-data gating lane on Leonardo: the six-step programme ran end to end; the gate is NEGATIVE at render time on a real occlusion, the training comparison is DESIGN_WITHOUT_POWER, and two estimators produced PSNR-free real-data results
 
 Full record: [[operations/realdata-gating-lane-2026-09-09]]. ~130 A100-h.
