@@ -182,3 +182,67 @@ from the wrong layout and used a 2 px slack; the correct slack is dilate 6
 
 Fixture prefixes (four ungated 6k cells on the edited scene, seeds 0–3,
 `b0c_crb300_6k_rp_prefix.yaml`, label `absfix`): jobs 57111855–57111858.
+
+## 3. Lane A RESULT — deferred seeding binds membership, and the gate still harms the occlusion return (16 cells, 07:40 CEST)
+
+Cells: four ungated 6k prefixes (jobs 57085931/37/38/42; held-out 6k PSNR
+33.186 / 33.688 / 33.660 / 33.181) and, from each prefix, four
+continuations to 12k — U (`b0c_crb300_12k_rp.yaml`), G, G-mis, G-ones
+(`elgs_local_crb300_12k.yaml` with the per-prefix program). Jobs
+57108428–31 (s0), 57108433/38/41/42 (s1), 57108450/51/56/57 (s2),
+57109619/23/27/28 (s3). Every cell trained, evaluated and profiled;
+eight cells (all G-mis and G-ones) reported FAILED only because the chain
+passed the G program as the precondition reference and the extractor
+fails closed on a program mismatch — re-run with the program each cell
+trained with (job 57136959, all rc=0). Analysis:
+`scripts/realdata_gate_analysis.py --paired --wave 1` (default spec
+v1.0.0, F-box windows) → `runs/realdata/laneA_analysis/wave1_paired.json`
+(sha256 `d3d6d11f…a509a`), manifest sha256 `d0b000b9…4ae83`.
+
+**Membership is bound this time.** Seeding on the restored 6k cloud gated
+3,017–3,234 rows per prefix (2026-09-09 lane: 389 on the sparse initial
+cloud); 2,994–3,219 survive to 12k; 637–662 of them lie in the F-box at
+frame 150; `frames_presence_zero` 27 for G and G-mis, 9 for G-ones.
+Every arm passes the mechanism precondition (`ME = yes`, 16/16).
+
+**The gate harms the occlusion event in every pair.** Paired
+within-prefix contrasts (dB, median over 4 pairs; min..max; sign
+consistency):
+
+| contrast | P1 gap [161,185] | P2 return [190,197] | S1 [198,207] | H1 pre [128,155] | H2 whole | C1 [230,259] |
+|---|---|---|---|---|---|---|
+| G − U | −0.222 (−0.320..−0.053) 4/4 | −0.464 (−0.778..−0.227) 4/4 | −0.356 4/4 | −0.135 4/4 | +0.004 3/4 | −0.143 4/4 |
+| G-mis − U | −0.082 4/4 | −0.363 4/4 | −0.308 4/4 | −0.166 3/4 | +0.004 3/4 | −0.279 3/4 |
+| G-ones − U | −0.122 4/4 | −0.774 (−1.246..−0.405) 4/4 | −0.631 4/4 | −0.385 4/4 | −0.014 4/4 | −0.344 4/4 |
+| G − G-mis | −0.140 (−0.205..−0.045) 4/4 | −0.101 2/4 | −0.047 2/4 | +0.031 3/4 | +0.003 3/4 | +0.136 3/4 |
+
+Verdict: **CLAIM_CONDITIONS_NOT_MET on P1 and P2** (no G−U pair is over
+the floor in the right direction; the sham contrasts are "clean" only
+because everything is negative). Paired sd 0.11 dB (P1) / 0.23 dB (P2);
+the sizing rule asks for 8 pairs at δ = 0.30, which is moot given the
+sign.
+
+Reading. (i) Whole-frame is unchanged (|G−U| ≤ 0.008 dB), so the cost is
+confined to the ~3,000 gated rows' box, as designed. (ii) The G−G-mis
+contrast on P1 is the decisive one: gating the SAME rows at the CORRECT
+time is 0.14 dB worse in the gap window than gating them at a shifted
+time, in all four pairs — the occlusion window is where the rows are
+needed to paint the hand and blade, and switching them off there exposes
+what is behind. This is the training-time version of the −3.4 dB
+render-time result of 2026-09-09: binding membership at 6k does not
+separate the roles, because the rows the vote finds under the beef are
+the rows the occluder also uses. (iii) **G-ones is not a null arm.** Its
+program has a 12-frame gap at 286–297 (the emitter refuses gaps below
+0.1667 s, so an all-present program cannot be written); the rows it
+gates lose their learned temporal marginal for the rest of the sequence
+and it is the WORST arm on P2/S1/H1/C1 (−0.77 dB on P2). So the
+"replicate floor |U − G-ones|" the paired analysis reports (0.12 / 0.77
+dB) is a code-path effect, not chaos; the G-mis − U contrast (−0.08 on
+P1) is the better floor estimate here. (iv) Lane A's question — "can the
+gate act on the occlusion return once membership is bound?" — is
+answered **no** on this event: P2 is harmed by 0.23–0.78 dB in every
+pair. The absence fixture (§4) is the only remaining route to a positive
+number on real footage.
+
+Cost: 4 × 2.1 h prefixes + 16 × ~2.5 h continuations + 8 × 9 min
+preconditions ≈ 50 A100-h.
