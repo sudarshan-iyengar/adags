@@ -246,3 +246,44 @@ number on real footage.
 
 Cost: 4 × 2.1 h prefixes + 16 × ~2.5 h continuations + 8 × 9 min
 preconditions ≈ 50 A100-h.
+
+## 4. Fixture Phase 3 — prefixes, blind T1 (jobs 57111855–58, 57132256)
+
+Prefixes on the edited scene (`b0c_crb300_6k_rp_prefix.yaml`, seeds 0–3,
+label `absfix`): held-out 6k PSNR **33.083 / 33.506 / 33.376 / 32.924**
+against 33.186 / 33.688 / 33.660 / 33.181 on the un-edited scene at the
+same seeds — the edit costs the substrate 0.10–0.28 dB whole-frame (the
+bottle's counterfactual background is teacher-rendered, so cam00 has a
+harder target there). The four cells reported FAILED only in their
+post-step: the assembler writes `absence_event_masks.json` under
+`absfix/`, the cell template looked for it at the scene root; training,
+eval and checkpoints are intact (templates fixed; the 6k profiles are
+produced by the vote jobs instead).
+
+**Assembler defect found and fixed (commit aa7c97e).** It read the
+editor's margin from the top level of `edit_params.json` (0) instead of
+`edit_params.args.margin` (20), so the cam00 evaluation ROIs covered only
+[60,89]. Regenerated for the full render range [40,109] with the same
+`build_rois` (the 30 existing frames matched byte-for-byte; 120 files
+added; recorded in `absfix/MANIFEST.rois_regen.json`). Core ROI ≈ 5,100
+px, ring ≈ 5,050 px, object ≈ 7,000 px on every frame.
+
+**Blind T1 on prefix 0** (`estimate_episodes.py`, frames 35–114, 4 cameras,
+16 cells over the [1,99] percentile box → 1,245 groups, `--skip-scoring`;
+job 57132256, 2.0 h; program sha256 `2a491638…dafcc`, report
+`b5399abf…3dc20`): **2 of 1,245 groups gated, both with offset frame 60 =
+the authored A; onsets 90 (= authored B+1, exact) and 92 (two frames
+late); zero false activations.** The two cells (keys 2482, 2737) are
+adjacent (x 9–10, y 11, z 1–2 of 16), together 6,692 rows at estimation.
+Frozen parse (declared before the run): seed bbox = the union of the
+gated cells, `[-1.0604, 1.7081, -2.5094] .. [-0.4000, 2.4219, -1.6656]`;
+estimated gap = min offset .. max onset − 1 = **[60, 91]**, temporal IoU
+with the authored [60,89] = 30/32 = **0.9375**. Estimand (ii)'s timing leg
+therefore survives on real footage (the 2026-09-09 real-occlusion T1 was
+159/188 against a curated 158–187; here the authored truth is exact).
+
+Votes chained on the T1 seed for every prefix (jobs 57150910–13:
+truth/mis/ones from the construction masks, est from the DEVA ids with
+the T1 gap, wrongmem = a count-matched random row set with the authored
+gap) and render-time gate evals on prefix 0 with the oracle and the
+estimated program (57150914/15).
