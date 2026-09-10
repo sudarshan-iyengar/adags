@@ -86,6 +86,37 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 SCHEMA_VERSION = "n3v-gated-eval-v1"
+
+# --restore_state: the SECOND mode, added 2026-09-10 after the montage of the
+# absence-fixture cells showed a full bottle inside the gap on every gated
+# arm. main.py's `validation()` restores a checkpoint and renders WITHOUT
+# calling setup_elgs, so every `--val` metric of an EL-GS cell is rendered
+# through the ordinary temporal marginal, gate off. In restore mode this
+# script takes setup_elgs's RESTORE branch (the checkpoint's own elgs_state),
+# PROVES the restored intervals are the supplied --program (the same lineage-
+# key match gate_cell_precondition.py uses), and then scores the model with
+# its gate on and off exactly as the fresh mode does.
+
+
+def resolve_seeding_mode(has_pending_state, restore_flag):
+    """'fresh' or 'restore', or raise: the two modes never fall through."""
+    from depth_visibility.errors import ContractError
+
+    if restore_flag:
+        if not has_pending_state:
+            raise ContractError(
+                "--restore_state was given but the checkpoint carries no "
+                "elgs_state; this is an ungated checkpoint, use the fresh mode"
+            )
+        return "restore"
+    if has_pending_state:
+        raise ContractError(
+            "the checkpoint carries elgs_state; setup_elgs would restore that "
+            "program and skip seeding, so --program would have no effect. This "
+            "evaluator is for checkpoints trained WITHOUT EL-GS; score an "
+            "EL-GS checkpoint with its own state via --restore_state"
+        )
+    return "fresh"
 # Mirrored from elgs.trainer_hooks so the pure-python helpers below stay
 # importable without torch. Checked against the real constant at runtime.
 EPISODE_PROGRAM_SCHEMA_V2 = "adags-episode-program-v2"
@@ -482,6 +513,10 @@ def main(argv=None):
                         metavar=("A", "B"),
                         help="absolute held-out frames to render, inclusive")
     parser.add_argument("--out_dir", required=True)
+    parser.add_argument("--restore_state", action="store_true",
+                        help="score an EL-GS checkpoint with the gate it "
+                             "trained with (setup_elgs restore branch); "
+                             "--program must match the restored intervals")
     # Top-level YAML keys, mirroring scripts/eval_lrv1_event.py:135-143. They
     # must exist as attributes or _merge_config's hasattr assert fires.
     parser.add_argument("--gaussian_dim", type=int, default=4)
@@ -583,13 +618,10 @@ def main(argv=None):
     # restore branch (trainer_hooks.py:155-169), which sets seeded=True and
     # SKIPS seed_families entirely -- `--program` would be read for nothing and
     # the rendered gate would be the checkpoint's own.
-    if getattr(gaussians, "_pending_elgs_state", None) is not None:
-        raise ContractError(
-            "the checkpoint carries elgs_state; setup_elgs would restore that "
-            "program and skip seeding, so --program would have no effect. This "
-            "evaluator is for checkpoints trained WITHOUT EL-GS; score an "
-            "EL-GS checkpoint with its own state instead"
-        )
+    seeding_mode = resolve_seeding_mode(
+        getattr(gaussians, "_pending_elgs_state", None) is not None,
+        bool(args.restore_state),
+    )
 
     state = setup_elgs(gaussians, scene, dataset_params, opt)
     if state is None or getattr(gaussians, "elgs_runtime", None) is None:
@@ -600,7 +632,14 @@ def main(argv=None):
             "apply a GLOBAL presence to every row (gaussian_renderer/"
             "__init__.py:225) instead of the localized gate"
         )
-    assert_gate_is_program_only(opt, state, str(args.program))
+    program_match = None
+    if seeding_mode == "restore":
+        from scripts.gate_cell_precondition import check_program_matches_runtime
+
+        assert_gate_is_program_only(opt, state, str(state.oracle_episodes))
+        program_match = check_program_matches_runtime(state, program, ContractError)
+    else:
+        assert_gate_is_program_only(opt, state, str(args.program))
 
     train_stack = scene.train_cameras[1.0]
     test_stack = scene.test_cameras[1.0]
@@ -647,6 +686,8 @@ def main(argv=None):
         "model_path": str(dataset_params.model_path),
         "out_dir": str(out_dir),
         "git": git_provenance(repo_root),
+        "seeding_mode": seeding_mode,
+        "program_match": program_match,
         "elgs": {
             "rounds_enabled": state.rounds_enabled,
             "a_lr": state.a_lr,

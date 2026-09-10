@@ -1,3 +1,4 @@
+import pytest
 """Static admission of scripts/eval_n3v_gated.py and its gated N3V config.
 
 CPU only. The script keeps every heavy import (torch, scene, renderer) inside
@@ -480,3 +481,15 @@ class TorchBackedTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_resolve_seeding_mode_never_falls_through():
+    from depth_visibility.errors import ContractError
+    from scripts.eval_n3v_gated import resolve_seeding_mode
+
+    assert resolve_seeding_mode(False, False) == "fresh"
+    assert resolve_seeding_mode(True, True) == "restore"
+    with pytest.raises(ContractError, match="carries elgs_state"):
+        resolve_seeding_mode(True, False)
+    with pytest.raises(ContractError, match="carries no elgs_state"):
+        resolve_seeding_mode(False, True)
