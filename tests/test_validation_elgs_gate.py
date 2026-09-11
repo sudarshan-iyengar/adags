@@ -304,6 +304,11 @@ class ValidationGateProfileIntegrationTests(unittest.TestCase):
             self.inputs["profile"].read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as work:
             model_path = Path(work) / "val"
+            # `Scene.__init__` copies the input cloud into `<model_path>/input.ply`
+            # (scene/__init__.py:63) and does not create the directory; every
+            # caller does (`mkdir -p $OUT` in agent-control/realdata/
+            # reeval_gated.sbatch), so the test must too.
+            model_path.mkdir(parents=True, exist_ok=True)
             subprocess.run(
                 [sys.executable, str(REPO_ROOT / "main.py"), "--val",
                  "--config", str(self.inputs["config"]),
