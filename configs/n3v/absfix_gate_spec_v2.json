@@ -1,0 +1,440 @@
+{
+ "spec_id": "absfix_gate_v2",
+ "spec_version": "2.0.0",
+ "status": "TEXT FROZEN 2026-09-11, amended 2026-09-12 (page section 13); freeze list open (section 11.7); no cell may be submitted while any freeze-list line is pending",
+ "supersedes": "configs/n3v/absfix_gate_spec_v1.json (1.2.0), whose wave-1 verdict NOT_MET stands unchanged",
+ "note": "Machine-readable instance of spec v2.0.0 for a spec-driven reducer in scripts/realdata_gate_analysis.py. Section 11 of the wiki page is the binding text; where this file and the page disagree the page rules. Keys marked pending are filled BEFORE the first prefix trains on the scene they concern; filling a pending key is the only permitted edit and is recorded append-only on the page.",
+ "scenes": {
+  "cut_roasted_beef": {
+   "role": "calibration",
+   "object": "wine bottle",
+   "construction_id_cam15": 117,
+   "evaluation_id_cam00": 136,
+   "evaluation_id_job": 57085944,
+   "A": 60,
+   "B": 89,
+   "CA": 230,
+   "CB": 259,
+   "margins": [
+    40,
+    109
+   ],
+   "MECHANISM_FBOX": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "MECHANISM_FBOX_FRAME": 75,
+   "derived_scene": "data_derived/absfix/cut_roasted_beef_absfix_60_89",
+   "reuse_wave1_cells": [
+    "U",
+    "G",
+    "GEST",
+    "GMIS",
+    "GONES"
+   ],
+   "wave1_GWRONGMEM": "retired from the verdict (1.0-1.3% truth overlap); reported as history",
+   "CONSTRUCTION": {
+    "base_rows": "all",
+    "mask_min_cams": 8,
+    "mask_cams_total": 19,
+    "mask_frames": [
+     45,
+     60,
+     75,
+     89,
+     104
+    ],
+    "mask_source": "DEVA harmonised cam15 id 117; no extra id",
+    "edit_region": "deva",
+    "dilate": 6,
+    "feather": 2,
+    "rows_removed": 1720,
+    "build_dir": "runs/realdata/absfix/build_id117_60_89",
+    "derived_root": "data_derived/absfix/cut_roasted_beef_absfix_60_89",
+    "preview_evidence": "preview 57098650; build 57102816; cap remnant declared as a calibration-fixture limitation"
+   }
+  },
+  "flame_steak": {
+   "role": "confirmatory",
+   "object": "wine bottle",
+   "construction_id_cam15": 79,
+   "evaluation_id_cam00": "pending",
+   "evaluation_id_job": "pending",
+   "A": 60,
+   "B": 89,
+   "CA": "pending",
+   "CB": "pending",
+   "margins": [
+    40,
+    109
+   ],
+   "MECHANISM_FBOX": "pending",
+   "MECHANISM_FBOX_FRAME": 75,
+   "admission": "pending (section 11.1 rule on Lane B's per-camera silhouette-area table)",
+   "CONSTRUCTION": {
+    "base_rows": "all",
+    "mask_min_cams": "pending (Lane B1 repair)",
+    "mask_cams_total": "pending",
+    "mask_frames": [
+     45,
+     60,
+     75,
+     89,
+     104
+    ],
+    "mask_source": "pending (DEVA harmonised cam15 id 79; extra cap id if used)",
+    "edit_region": "deva",
+    "dilate": 6,
+    "feather": 2,
+    "rows_removed": "pending",
+    "build_dir": "pending (_v2)",
+    "derived_root": "pending (_v2)",
+    "preview_evidence": "pending",
+    "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on"
+   }
+  },
+  "sear_steak": {
+   "role": "confirmatory",
+   "object": "wine bottle",
+   "construction_id_cam15": 114,
+   "evaluation_id_cam00": "pending",
+   "evaluation_id_job": "pending",
+   "A": 60,
+   "B": 89,
+   "CA": "pending",
+   "CB": "pending",
+   "margins": [
+    40,
+    109
+   ],
+   "MECHANISM_FBOX": "pending",
+   "MECHANISM_FBOX_FRAME": 75,
+   "admission": "pending (section 11.1 rule on Lane B's per-camera silhouette-area table)",
+   "CONSTRUCTION": {
+    "base_rows": "all",
+    "mask_min_cams": "pending (Lane B1 repair)",
+    "mask_cams_total": "pending",
+    "mask_frames": [
+     45,
+     60,
+     75,
+     89,
+     104
+    ],
+    "mask_source": "pending (DEVA harmonised cam15 id 114; extra cap id if used)",
+    "edit_region": "deva",
+    "dilate": 6,
+    "feather": 2,
+    "rows_removed": "pending",
+    "build_dir": "pending (_v2)",
+    "derived_root": "pending (_v2)",
+    "preview_evidence": "pending",
+    "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on"
+   }
+  }
+ },
+ "ADMISSION_RULE": {
+  "silhouette_area_min_fraction_of_camera_median": 0.6,
+  "silhouette_area_min_px": 2000,
+  "frames": [
+   40,
+   109
+  ],
+  "cameras": "all 20",
+  "unique_component_frames": [
+   50,
+   75,
+   100
+  ],
+  "on_failure": "scene not admitted -> overall verdict DESIGN_WITHOUT_POWER; no substitute object or window under this spec"
+ },
+ "CONTROL_WINDOW_RULE": "[230,259] if it satisfies the admission criterion on every camera; otherwise the LATEST 30-frame window ending <= 299 and starting >= 130 that does",
+ "MECHANISM_FBOX_RULE": "union of the cam00 evaluation silhouette over frames 63-87, padded 8 px, half-open [x0,y0,x1,y1) in render-raster pixels",
+ "anchor_semantics": {
+  "A": "first absent frame",
+  "B": "LAST absent frame (object back on B+1)",
+  "CA": "first frame of the control window",
+  "CB": "last frame of the control window"
+ },
+ "endpoints": {
+  "P1": {
+   "event": "roi:core",
+   "frames": [
+    "A+3",
+    "B-2"
+   ],
+   "label": "ghost_core",
+   "role": "primary"
+  },
+  "P2": {
+   "frames": [
+    "B+3",
+    "B+10"
+   ],
+   "role": "primary"
+  },
+  "S1": [
+   "B+11",
+   "B+20"
+  ],
+  "H1": [
+   "A-30",
+   "A-3"
+  ],
+  "H2": "whole_frame",
+  "C1": [
+   "CA",
+   "CB"
+  ]
+ },
+ "PER_FRAME_MASK_REQUIRE_ALL_FRAMES": true,
+ "RESERVED_UNITS_REQUIRED": true,
+ "arms": [
+  "U",
+  "G",
+  "GEST",
+  "GESTMEM",
+  "GMIS",
+  "GWRONGMEM_A",
+  "GWRONGMEM_B",
+  "GWRONGMEM_L",
+  "GONES"
+ ],
+ "arm_roles": {
+  "U": "ungated comparator (elgs_reserved_parity: true)",
+  "G": "construction-derived membership (rendered-contribution vote against the construction masks), authored gap",
+  "GEST": "construction-derived membership, T1 estimated gap",
+  "GESTMEM": "S2 (SAM2) membership vote, T1 estimated gap; the fully estimated arm",
+  "GMIS": "construction-derived membership, gap moved to the control window (timing sham)",
+  "GWRONGMEM_A": "count-matched uniform draw over rows OUTSIDE the construction-derived set, zero overlap, seed 1000+prefix_seed",
+  "GWRONGMEM_B": "second independent draw, seed 2000+prefix_seed",
+  "GWRONGMEM_L": "local contribution-matched sham: rows outside the construction-derived set projecting inside the +20 px construction silhouette on >= 8 of 19 cameras at frames 50 and 95, greedy by contribution until total contribution mass at frame 50 on cam15 is within +-10% of the construction-derived set's",
+  "GONES": "construction-derived membership, late gap [286,297] (code-path sham, not a null)"
+ },
+ "WRONGMEM_OVERLAP_MAX": 0,
+ "T1_PRECONDITION": {
+  "intervals": 1,
+  "temporal_iou_min": 0.8,
+  "onset_error_max_frames": 3,
+  "offset_error_max_frames": 3,
+  "on_failure": "GEST and GESTMEM legs of that prefix DESIGN_WITHOUT_POWER"
+ },
+ "S2": {
+  "model": "SAM2",
+  "checkpoint_sha256": "pending",
+  "config": "pending",
+  "code_commit": "pending",
+  "propagation": [
+   [
+    50,
+    109
+   ],
+   [
+    92,
+    99
+   ]
+  ],
+  "click_rule": "TWO positive clicks per training camera, one at frame 50 (seeds propagation 50->109) and one at frame 92 (seeds propagation 92->99), placed by the user from the RAW frames (click packet), coordinates recorded here BEFORE inference, no retries",
+  "clicks": {
+   "flame_steak": "pending",
+   "sear_steak": "pending",
+   "cut_roasted_beef": "pending"
+  },
+  "camera_drop_rule": "applied at EACH seed frame separately: mask area at the seed frame < 500 px or > 5x the median over cameras -> camera dropped from the vote and listed; vote requires >= 12 remaining cameras"
+ },
+ "MEMBERSHIP_PRECONDITION": {
+  "precision_min": 0.8,
+  "recall_min": 0.7,
+  "size_ratio": [
+   0.5,
+   2.0
+  ],
+  "mask_iou_cam15_min": 0.7,
+  "mask_iou_frames": [
+   50,
+   95
+  ],
+  "counts_required": [
+   "TP",
+   "FP",
+   "FN",
+   "truth_n",
+   "pred_n",
+   "pixel_intersection",
+   "pixel_union"
+  ],
+  "on_failure": "prefix trains; its GESTMEM pair excluded from the mechanism-exercised set; counts toward Claim B DWP"
+ },
+ "CELL_PRECONDITION": {
+  "gated_rows_at_12k_min": 1000,
+  "gated_rows_in_fbox_min": 100,
+  "fbox_frame_rule": "frame 75 for arms gating [60,89]; the midpoint of the arm's own gap for GMIS and GONES",
+  "zero_presence_frames_min": 1,
+  "zero_presence_window": "the arm's OWN gap interior (edges excluded), for every gated arm including GMIS and GONES",
+  "reserved_units_equal_within_prefix": true,
+  "program_match_required": true,
+  "on_failure": "reported, in ITT tables, excluded from the mechanism-exercised set"
+ },
+ "EVALUATOR": {
+  "script": "scripts/eval_n3v_gated.py",
+  "mode": "--restore_state",
+  "frames": [
+   0,
+   299
+  ],
+  "camera": "cam00",
+  "sha256": "pending",
+  "note": "the only evaluator for wave-2 scoring; main.py --val is not used"
+ },
+ "PAIRED_MIN_EFFECT_DB": 0.5,
+ "PAIRED_FLOOR_SOURCE": "fixed",
+ "PAIRED_MIN_PAIRS": 4,
+ "PAIRED_CLAIM_ENDPOINTS": [
+  "P1",
+  "P2"
+ ],
+ "PAIRED_CLAIM_SET": "mechanism_exercised",
+ "CLAIM_A": {
+  "name": "membership- and window-specific benefit with construction-derived membership",
+  "required_contrasts_every_pair_both_endpoints": [
+   [
+    "G",
+    "U"
+   ],
+   [
+    "G",
+    "GWRONGMEM_A"
+   ],
+   [
+    "G",
+    "GWRONGMEM_B"
+   ],
+   [
+    "G",
+    "GWRONGMEM_L"
+   ],
+   [
+    "G",
+    "GMIS"
+   ]
+  ],
+  "harm_guards_every_pair": {
+   "H1": {
+    "contrast": [
+     "U",
+     "G"
+    ],
+    "max_db": 0.15
+   },
+   "H2": {
+    "contrast": [
+     "U",
+     "G"
+    ],
+    "max_db": 0.15
+   },
+   "C1": {
+    "contrast": [
+     "U",
+     "G"
+    ],
+    "max_db": 0.35,
+    "note": "predeclared accepted cost; no general no-harm claim while C1 > 0"
+   }
+  }
+ },
+ "CLAIM_B": {
+  "name": "the fully estimated gate (S2 membership, T1 gap)",
+  "admission": "all 4 prefixes pass MEMBERSHIP_PRECONDITION and T1_PRECONDITION",
+  "required_contrasts_every_pair_both_endpoints": [
+   [
+    "GESTMEM",
+    "U"
+   ],
+   [
+    "GESTMEM",
+    "GWRONGMEM_A"
+   ],
+   [
+    "GESTMEM",
+    "GWRONGMEM_L"
+   ]
+  ],
+  "harm_guards_every_pair": "as CLAIM_A with GESTMEM in place of G",
+  "on_fewer_admitted": "DESIGN_WITHOUT_POWER, reported as 'membership instrument not admitted'"
+ },
+ "SCENE_RULE": {
+  "confirmatory": [
+   "flame_steak",
+   "sear_steak"
+  ],
+  "calibration": [
+   "cut_roasted_beef"
+  ],
+  "verdict_over": "confirmatory scenes only"
+ },
+ "VERDICT_PRECEDENCE": [
+  "DESIGN_WITHOUT_POWER",
+  "CLAIM_CONDITIONS_MET",
+  "PARTIAL",
+  "NOT_MET"
+ ],
+ "VERDICT_RULE": "per claim: any required-scene non-admission, incomplete pair set, or precondition failure leaving < 4 pairs -> DESIGN_WITHOUT_POWER; else both confirmatory scenes MET -> CLAIM_CONDITIONS_MET; else one MET -> PARTIAL (reported, not claimed); else NOT_MET. The calibration scene receives the same per-scene reading labelled CALIBRATION.",
+ "DESCRIPTIVE_CONTRASTS": [
+  [
+   "GWRONGMEM_A",
+   "U"
+  ],
+  [
+   "GWRONGMEM_B",
+   "U"
+  ],
+  [
+   "GWRONGMEM_L",
+   "U"
+  ],
+  [
+   "G",
+   "GEST"
+  ],
+  [
+   "G",
+   "GESTMEM"
+  ],
+  [
+   "GONES",
+   "U"
+  ]
+ ],
+ "PAIRED_VERDICT_STATUS": "DESCRIPTIVE at n = 4 pairs per scene: median, range, sign consistency, paired-t interval labelled descriptive; no p-value, no equivalence claim; sizing informational",
+ "WORDING": {
+  "estimator": "visibility-gap estimator",
+  "fixture_absence": "exact-zero presence (zero-error frames are a reported count, never a fixture claim)",
+  "sham_sentence": "G provides at least 0.5 dB incremental benefit over each sham"
+ },
+ "OUT_OF_SCOPE": [
+  "physical absence discovery in unedited footage",
+  "absence-versus-occlusion classification",
+  "competitiveness against external methods (X is descriptive)",
+  "any dataset not trained here"
+ ],
+ "EXTERNAL_BASELINE": {
+  "method": "FreeTimeGS",
+  "seeds_per_scene": 2,
+  "status": "pending admission; NOT RUN with reason if not admitted"
+ },
+ "COST_ESTIMATE_A100H": {
+  "per_confirmatory_scene": 105,
+  "calibration_additions": 45,
+  "external_baseline": "30-60 unvalidated",
+  "total": "260-320 plus SAM2 integration"
+ },
+ "CONSTRUCTION_RULE": "frozen per-scene field; the two confirmatory scenes share one rule; cut_roasted_beef keeps its wave-1 rule (calibration); any later change is a new derived root and a new section-13 entry",
+ "DEFERRED_ABLATIONS_POST_WAVE2": [
+  "deferred-seeding sweep: seeding iteration in {0, 2k, 4k, 6k, 8k} vs bound rows and gate effect on one confirmatory scene",
+  "dense initialisation: VGGT or Depth Anything 3 dense cloud replacing the COLMAP sparse init on the same protocol"
+ ],
+ "FOLLOWUP_RECORDED_ONLY": "absence-vs-occlusion separation via the EL-GS v8 model-transmittance idea (renderer-conditioned censored evidence); design note only, no cell authorised"
+}
