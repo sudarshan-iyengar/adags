@@ -244,6 +244,15 @@ class GaussianModel:
         # sizes it lazily at the first event.
         self._packet_ids = torch.empty(0, dtype=torch.long)
 
+        # CCR v3 payload edit (scene.appearance_edit): the val-only pointer
+        # column, initialized HERE so the render-time reads in get_features /
+        # get_opacity are plain attribute loads rather than a `getattr` on
+        # every rendered frame. None means "no edit installed", which is
+        # every training lane; apply_appearance_edit installs a pointer and
+        # clear_appearance_edit resets it to an empty tensor.
+        self._appearance_source_idx = None
+        self._appearance_share_mode = "dc"
+
         self.setup_functions()
 
     def get_elgs_presence(self, timestamp):
@@ -661,14 +670,14 @@ class GaussianModel:
         # property, so a tie applies to the static twin too. A pointer
         # installed for a NON-appearance payload (mode "opacity") leaves
         # appearance exactly alone — one column, one payload.
-        source_idx = getattr(self, "_appearance_source_idx", None)
+        source_idx = self._appearance_source_idx
         if source_idx is not None and source_idx.numel() == features_dc.shape[0]:
             from scene.appearance_edit import (
                 compose_shared_features,
                 redirects_features,
             )
 
-            mode = getattr(self, "_appearance_share_mode", "dc")
+            mode = self._appearance_share_mode
             if redirects_features(mode):
                 features_dc, features_rest = compose_shared_features(
                     features_dc, features_rest, source_idx, mode,
@@ -690,14 +699,14 @@ class GaussianModel:
         # :202 -> :210 dynamic, :351 soft-routing static twin), so a tie
         # applies to the static twin too.
         opacity = self._opacity
-        source_idx = getattr(self, "_appearance_source_idx", None)
+        source_idx = self._appearance_source_idx
         if source_idx is not None and source_idx.numel() == opacity.shape[0]:
             from scene.appearance_edit import (
                 compose_shared_opacity,
                 redirects_opacity,
             )
 
-            mode = getattr(self, "_appearance_share_mode", "dc")
+            mode = self._appearance_share_mode
             if redirects_opacity(mode):
                 opacity = compose_shared_opacity(opacity, source_idx, mode)
         return self.opacity_activation(opacity)

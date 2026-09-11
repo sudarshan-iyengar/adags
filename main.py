@@ -1041,10 +1041,48 @@ def validation(dataset, opt, pipe, checkpoint, gaussian_dim, time_duration, rot_
     scene = Scene(dataset, gaussians, shuffle=False, num_pts=num_pts, num_pts_ratio=num_pts_ratio, time_duration=time_duration)
     scene.motion_prior_cache = MotionPriorCache(dataset.source_path, opt, device="cuda")
 
+    # An EL-GS checkpoint carries its own presence program, and the renderer
+    # reads it from `gaussians.elgs_runtime`, which nothing but `setup_elgs`
+    # attaches (elgs/trainer_hooks.py:302). Until 2026-09-11 this function
+    # never called it: `restore` only stashes `_pending_elgs_state`, so
+    # `elgs_active` stayed False (gaussian_renderer/__init__.py:224) and
+    # every `--val` metric of every EL-GS cell was rendered through the
+    # ordinary temporal marginal with the presence gate OFF. The sequence
+    # below is the one `scripts/eval_n3v_gated.py --restore_state`
+    # (:610-634) proved: the optimizer must exist BEFORE setup_elgs, because
+    # its restore branch re-installs the a-logit parameter group
+    # (elgs/trainer_hooks.py:334, :1044-1045). A non-EL-GS lane keeps the
+    # `restore(model_params, None)` path it always had, and NOTHING here
+    # filters the evaluated frames: the reserved pool setup_elgs builds is
+    # a training-side object (filter_elgs_reserved is a trainer call).
+    elgs_enabled = bool(getattr(opt, "elgs_enable", False))
+    if elgs_enabled:
+        gaussians.training_setup(opt)
+
     (model_params, first_iter) = torch.load(checkpoint)
     train_dir = os.path.join(dataset.model_path, 'train', f"ours_{first_iter}")
     test_dir = os.path.join(dataset.model_path, 'test', f"ours_{first_iter}")
-    gaussians.restore(model_params, None)
+    gaussians.restore(model_params, opt if elgs_enabled else None)
+    if elgs_enabled:
+        from elgs.trainer_hooks import setup_elgs
+        from scripts.eval_n3v_gated import resolve_seeding_mode
+
+        # The same refusal the evaluator makes: with no `elgs_state` in the
+        # checkpoint, setup_elgs would take the FRESH branch and seed a
+        # program out of the config, which is not this checkpoint's gate.
+        resolve_seeding_mode(
+            getattr(gaussians, "_pending_elgs_state", None) is not None, True
+        )
+        elgs_trainer_state = setup_elgs(gaussians, scene, dataset, opt)
+        if elgs_trainer_state is None or getattr(gaussians, "elgs_runtime", None) is None:
+            raise ContractError(
+                "the EL-GS runtime is not live after setup_elgs; this render "
+                "would score the model with the presence gate OFF"
+            )
+        print(json.dumps({"validation_elgs_gate": {
+            "gated_rows": int(gaussians.get_elgs_gated_row_mask().sum()),
+            "local_presence": bool(getattr(gaussians, "_elgs_local_presence", False)),
+        }}, sort_keys=True))
     if appearance_edit:
         from scene.appearance_edit import apply_appearance_edit, load_edit_payload
 

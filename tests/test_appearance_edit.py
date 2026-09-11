@@ -461,6 +461,10 @@ class PropertyRedirectTests(unittest.TestCase):
             _features_dc=torch.rand(rows, 1, 3, generator=gen),
             _features_rest=torch.rand(rows, 15, 3, generator=gen),
             opacity_activation=torch.sigmoid,
+            # `GaussianModel.__init__` initializes both, so the properties
+            # read them directly rather than through a per-render getattr.
+            _appearance_source_idx=None,
+            _appearance_share_mode="dc",
         )
         if pointer is not None:
             model._appearance_source_idx = pointer
@@ -531,6 +535,10 @@ class PropertySourceRedirectTests(unittest.TestCase):
         model._features_dc = torch.rand(rows, 1, 3, generator=gen)
         model._features_rest = torch.rand(rows, 15, 3, generator=gen)
         model.opacity_activation = torch.sigmoid
+        # As above: the real model initializes the pointer column in
+        # `__init__`, so the stand-in host must carry it too.
+        model._appearance_source_idx = None
+        model._appearance_share_mode = "dc"
         if pointer is not None:
             model._appearance_source_idx = pointer
             model._appearance_share_mode = mode
@@ -592,6 +600,36 @@ class PropertySourceRedirectTests(unittest.TestCase):
         with _scene_module_shim():
             with self.assertRaises(ContractError):
                 model.get_opacity
+
+    def test_the_pointer_column_is_read_without_a_per_render_getattr(self):
+        """The render reads the column as a plain attribute.
+
+        `get_features` / `get_opacity` are evaluated for every rendered
+        frame (both branches), so the pointer lookup must not pay for an
+        attribute-missing fallback; `GaussianModel.__init__` declares the
+        column instead.
+        """
+        sources = _class_member_sources(
+            REPO_ROOT / "scene" / "gaussian_model.py", "GaussianModel",
+            ("__init__", "get_features", "get_opacity"))
+        for name in ("get_features", "get_opacity"):
+            body = sources[name]
+            self.assertIn("self._appearance_source_idx", body)
+            self.assertNotIn('getattr(self, "_appearance_source_idx"', body)
+            self.assertNotIn('getattr(self, "_appearance_share_mode"', body)
+        self.assertIn("self._appearance_source_idx = None", sources["__init__"])
+        self.assertIn('self._appearance_share_mode = "dc"', sources["__init__"])
+
+    def test_a_constructed_model_declares_the_pointer_column(self):
+        try:
+            from scene.gaussian_model import GaussianModel
+        except Exception as exc:                    # pragma: no cover
+            raise unittest.SkipTest(
+                "scene.gaussian_model unavailable ({}: {})".format(
+                    type(exc).__name__, exc))
+        model = GaussianModel(3)
+        self.assertIsNone(model._appearance_source_idx)
+        self.assertEqual(model._appearance_share_mode, "dc")
 
     def test_the_extracted_bodies_are_the_repository_properties(self):
         sources = _class_member_sources(
