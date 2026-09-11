@@ -521,3 +521,4 @@ a further §13 line with the new JSON hash.
 |---|---|
 | this page, sections 0-13.5 (before this record) | `492bffb285d536b8902fe625efdaf3105ab64b250aa0f9c3fb5da9f1cb315a5d` |
 | `configs/n3v/absfix_gate_spec_v2.json` after the section-13 edits | `6f39916ed550e53546039d12a8a71374ab6865deec727225e69550b6f98377c6` |
+| `configs/n3v/absfix_gate_spec_v2.json` after line-ending normalisation to LF (content unchanged; the previous line hashed a CRLF working copy) | `735ec3060e5899f25f941a2dd512fb2abf7dfe83745cbff218c118cae0e64195` |
