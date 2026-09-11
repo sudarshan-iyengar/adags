@@ -1310,6 +1310,16 @@ def build_parser():
                              "this relative amount")
     parser.add_argument("--emit_program_rows", default="")
     parser.add_argument("--emit_program_spatial", default="")
+    parser.add_argument(
+        "--emit_row_weights", default="",
+        help="OPTIONAL .npz of the per-row compositing weights measured on ONE "
+             "(camera, frame) view, for scripts/draw_membership_shams.py. Off "
+             "by default; writing it changes no other output.")
+    parser.add_argument(
+        "--row_weights_view", nargs=2, type=int, default=[15, 50],
+        metavar=("CAMERA", "FRAME"),
+        help="the view --emit_row_weights records (default cam15 frame 50, "
+             "spec v2.0.0 section 11.2). It must be one of the measured views.")
     parser.add_argument("--fine_cells", type=int, default=64)
     parser.add_argument("--pad", type=float, default=0.05)
     parser.add_argument(
@@ -1773,6 +1783,7 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
     counters = {"forward_renders": 0, "backward_passes": 0, "masks_loaded": 0}
     max_partition_rel_dev = 0.0
     empty_mask_views = []
+    row_weights_view = None
     started = time.perf_counter()
 
     print("cameras %s | anchor %s | frames %s | seed rows %d / %d"
@@ -1901,6 +1912,15 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
                                    float(w_out.min())))
                 acc_in += w_in.clamp_min(0).to(torch.float64)
                 acc_out += w_out.clamp_min(0).to(torch.float64)
+                if (args.emit_row_weights
+                        and [int(cam_id), int(frame)]
+                        == [int(v) for v in args.row_weights_view]):
+                    row_weights_view = {
+                        "w_in": w_in.detach().to("cpu", torch.float64).numpy(),
+                        "w_out": w_out.detach().to("cpu", torch.float64).numpy(),
+                        "w_total": w_total.detach().to(
+                            "cpu", torch.float64).numpy(),
+                    }
                 per_view.append({
                     "camera": int(cam_id), "frame": int(frame),
                     "mask_pixels": mask_pixels,
@@ -2166,6 +2186,28 @@ def main(argv=None):  # pragma: no cover - requires torch + CUDA + a checkpoint
         },
         "programs": programs,
     }
+    if args.emit_row_weights:
+        # Fail closed: a missing view would otherwise write an empty file and
+        # the sham draw would rank rows by nothing.
+        if row_weights_view is None:
+            raise ContractError(
+                "--emit_row_weights asked for cam%02d frame %d, which is not "
+                "among the measured views (cameras %r, frames %r)"
+                % (int(args.row_weights_view[0]), int(args.row_weights_view[1]),
+                   chosen_cameras, measure_frames))
+        np.savez(
+            args.emit_row_weights,
+            camera=np.int64(args.row_weights_view[0]),
+            frame=np.int64(args.row_weights_view[1]),
+            n_rows=np.int64(n_rows),
+            xyz_sha256=np.array(fingerprint, dtype="U64"),
+            members=members.astype(np.bool_),
+            **row_weights_view,
+        )
+        print("row weights %s (cam%02d frame %d)"
+              % (args.emit_row_weights, int(args.row_weights_view[0]),
+                 int(args.row_weights_view[1])))
+
     with open(args.out_report, "w", encoding="utf-8") as handle:
         json.dump(report, handle, indent=1, sort_keys=True)
 
