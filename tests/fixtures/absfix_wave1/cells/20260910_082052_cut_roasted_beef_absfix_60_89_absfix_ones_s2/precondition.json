@@ -1,0 +1,46 @@
+{
+ "gated_rows_seeding": 6858,
+ "n_rows_seeding": 599582,
+ "gated_rows_final": 7146,
+ "n_rows_final": 599487,
+ "gated_rows_fbox_frame150": 7146,
+ "frames_presence_zero": 9,
+ "reserved_units": 1425,
+ "training_units_total": 5700,
+ "arm_kind": "gated",
+ "detail": {
+  "presence": {
+   "frames_presence_zero": [
+    288,
+    289,
+    290,
+    291,
+    292,
+    293,
+    294,
+    295,
+    296
+   ]
+  },
+  "fbox": {
+   "all_rows_in_box": 11883,
+   "box_x0_y0_x1_y1_inclusive": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "camera_id": 0,
+   "frame": 75,
+   "frame_dt_seconds": 0.033333333333333215,
+   "gated_rows_in_box": 7146,
+   "gated_rows_on_screen": 7146,
+   "image_height": 1014,
+   "image_name": "cam00_0075",
+   "image_width": 1352,
+   "projection": "utils.motion_prior_utils.project_points_to_screen on gaussians.get_dynamic_xyz(camera.timestamp), pixels rounded as scripts/estimate_episodes.build_footprints rounds them; rows failing the projector's `valid` test are excluded",
+   "timestamp_nominal_seconds": 2.499999999999991,
+   "timestamp_seconds": 2.5
+  }
+ }
+}

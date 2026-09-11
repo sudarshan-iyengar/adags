@@ -1,0 +1,172 @@
+{
+ "cells": [
+  {
+   "arm": "G",
+   "seed": 0,
+   "prefix": 0,
+   "run_dir": "20260910_081945_cut_roasted_beef_absfix_60_89_absfix_oracle_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 0,
+   "prefix": 0,
+   "run_dir": "20260910_081945_cut_roasted_beef_absfix_60_89_absfix_est_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 0,
+   "prefix": 0,
+   "run_dir": "20260910_081945_cut_roasted_beef_absfix_60_89_absfix_mis_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 0,
+   "prefix": 0,
+   "run_dir": "20260910_081945_cut_roasted_beef_absfix_60_89_absfix_ones_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM",
+   "seed": 0,
+   "prefix": 0,
+   "run_dir": "20260910_081945_cut_roasted_beef_absfix_60_89_absfix_wrongmem_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 0,
+   "prefix": 0,
+   "run_dir": "20260910_081945_cut_roasted_beef_absfix_60_89_absfix_u_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 1,
+   "prefix": 1,
+   "run_dir": "20260910_081945_cut_roasted_beef_absfix_60_89_absfix_oracle_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 1,
+   "prefix": 1,
+   "run_dir": "20260910_081946_cut_roasted_beef_absfix_60_89_absfix_est_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 1,
+   "prefix": 1,
+   "run_dir": "20260910_081946_cut_roasted_beef_absfix_60_89_absfix_mis_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 1,
+   "prefix": 1,
+   "run_dir": "20260910_081946_cut_roasted_beef_absfix_60_89_absfix_ones_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM",
+   "seed": 1,
+   "prefix": 1,
+   "run_dir": "20260910_081955_cut_roasted_beef_absfix_60_89_absfix_wrongmem_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 1,
+   "prefix": 1,
+   "run_dir": "20260910_081946_cut_roasted_beef_absfix_60_89_absfix_u_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 2,
+   "prefix": 2,
+   "run_dir": "20260910_082052_cut_roasted_beef_absfix_60_89_absfix_oracle_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 2,
+   "prefix": 2,
+   "run_dir": "20260910_082052_cut_roasted_beef_absfix_60_89_absfix_est_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 2,
+   "prefix": 2,
+   "run_dir": "20260910_082052_cut_roasted_beef_absfix_60_89_absfix_mis_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 2,
+   "prefix": 2,
+   "run_dir": "20260910_082052_cut_roasted_beef_absfix_60_89_absfix_ones_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM",
+   "seed": 2,
+   "prefix": 2,
+   "run_dir": "20260910_082052_cut_roasted_beef_absfix_60_89_absfix_wrongmem_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 2,
+   "prefix": 2,
+   "run_dir": "20260910_082052_cut_roasted_beef_absfix_60_89_absfix_u_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 3,
+   "prefix": 3,
+   "run_dir": "20260910_105727_cut_roasted_beef_absfix_60_89_absfix_oracle_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 3,
+   "prefix": 3,
+   "run_dir": "20260910_105920_cut_roasted_beef_absfix_60_89_absfix_est_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 3,
+   "prefix": 3,
+   "run_dir": "20260910_110240_cut_roasted_beef_absfix_60_89_absfix_mis_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 3,
+   "prefix": 3,
+   "run_dir": "20260910_110737_cut_roasted_beef_absfix_60_89_absfix_ones_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM",
+   "seed": 3,
+   "prefix": 3,
+   "run_dir": "20260910_110238_cut_roasted_beef_absfix_60_89_absfix_wrongmem_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 3,
+   "prefix": 3,
+   "run_dir": "20260910_105614_cut_roasted_beef_absfix_60_89_absfix_u_s3",
+   "status": "complete"
+  }
+ ]
+}

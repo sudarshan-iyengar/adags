@@ -289,6 +289,61 @@ MASK_POOLING_RULE = (
 )
 
 
+# --------------------------------------------------------------------------
+# SPEC v2.0.0 (research-wiki/operations/absfix-wave2-spec-v2-2026-09-11.md
+# section 11) -- per-scene manifests, two named claims, instrument
+# preconditions read from sidecars, and a fail-closed verdict.
+#
+# EVERY v2 behaviour is reached only through `is_spec_v2`, which is true only
+# when the active spec carries BOTH `CLAIM_A` and a `scenes` object. The frozen
+# SPEC and the v1.2.0 instance carry neither, so their records are unchanged.
+# --------------------------------------------------------------------------
+
+SPEC_V2_MARKER_KEYS = ("CLAIM_A", "scenes")
+SPEC_V2_CLAIMS = ("CLAIM_A", "CLAIM_B")
+SPEC_V2_SCENE_ANCHORS = ("A", "B", "CA", "CB")
+SPEC_V2_PRECEDENCE_DEFAULT = [
+    "DESIGN_WITHOUT_POWER", "CLAIM_CONDITIONS_MET", "PARTIAL", "NOT_MET",
+]
+# G-mis and G-ones gate OUTSIDE the absence window by design, so the
+# zero-presence-inside-the-gap test and the mechanism-box FRAME test would be a
+# contradiction for them. Section 11.4 takes both readings in the arm's OWN gap
+# instead, which only the precondition extractor (which holds the arm's own
+# program) can do; the reducer records the exemption rather than hiding it.
+SPEC_V2_GAP_EXEMPT_ARMS = ("GMIS", "GONES")
+SPEC_V2_GAP_EXEMPT_NOTE = (
+    "gate code path exercised; the zero-presence reading is taken in the arm's "
+    "own gap by scripts/gate_cell_precondition.py, not here"
+)
+SPEC_V2_PREFIX_SEPARATOR = ":"
+SPEC_V2_WRONGMEM_ARMS = ("GWRONGMEM_A", "GWRONGMEM_B", "GWRONGMEM_L")
+
+
+def is_spec_v2(spec=None):
+    """True iff the active spec is a v2.0.0 instance (scenes + named claims)."""
+    S = _spec(spec)
+    return bool(
+        isinstance(S.get("scenes"), dict)
+        and S.get("scenes")
+        and isinstance(S.get("CLAIM_A"), dict)
+    )
+
+
+def ratio(numerator, denominator):
+    """A ratio that carries the two integers it came from (section 11.1).
+
+    `value` is None when the denominator is zero; the counts are always there,
+    so no ratio in the record can be read without its n.
+    """
+    num = int(numerator)
+    den = int(denominator)
+    return {
+        "numerator": num,
+        "denominator": den,
+        "value": (float(num) / float(den)) if den else None,
+    }
+
+
 def _spec(spec=None):
     """The active spec: the frozen SPEC unless a merged instance is supplied."""
     return SPEC if spec is None else spec
@@ -642,12 +697,110 @@ def read_precondition(run_dir, spec=None):
         out["fbox_box"] = fbox.get("box_x0_y0_x1_y1_inclusive")
     if data.get("arm_kind") is not None:
         out["arm_kind"] = data.get("arm_kind")
+    if is_spec_v2(S):
+        out["program_match"] = _program_match_flag(data)
     return out
+
+
+def _program_match_flag(data):
+    """True / False / None for `program_match`, from either place it is written.
+
+    `scripts/eval_n3v_gated.py:690` writes a top-level `program_match`;
+    `scripts/gate_cell_precondition.py:1005` writes the same proof under
+    `provenance.program_family_match`. Absent in both places is None, never
+    False, so the reducer can say "not recorded" rather than "refuted".
+    """
+    value = data.get("program_match")
+    if value is None:
+        provenance = data.get("provenance")
+        if isinstance(provenance, dict):
+            value = provenance.get("program_family_match")
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    return bool(value)
+
+
+def mechanism_exercised_v2(arm, precondition, spec=None):
+    """(passes, reason) under the spec v2.0.0 per-cell precondition (11.4).
+
+    The thresholds come from `CELL_PRECONDITION`; the box and the gap window
+    come from the SCENE-specialised spec, so this must be called with the
+    scene's spec, not the global one.
+    """
+    S = _spec(spec)
+    rules = S.get("CELL_PRECONDITION") or {}
+    if arm == "U":
+        return True, "U arm passes by construction"
+    if precondition is None:
+        return False, "no %s" % S["precondition_filename"]
+    min_rows = int(rules.get("gated_rows_at_12k_min", S["MIN_GATED_SURVIVING"]))
+    min_fbox = int(rules.get("gated_rows_in_fbox_min", S["MIN_GATED_FBOX"]))
+    min_zeros = int(
+        rules.get("zero_presence_frames_min", S["MIN_FRAMES_PRESENCE_ZERO"])
+    )
+    exempt = arm in SPEC_V2_GAP_EXEMPT_ARMS
+    failures = []
+
+    surviving = precondition.get("gated_rows_final")
+    total = precondition.get("n_rows_final")
+    if surviving is None or surviving < min_rows:
+        failures.append(
+            "gated_rows_final=%s < %d (of n_rows_final=%s)"
+            % (surviving, min_rows, total)
+        )
+    fbox = precondition.get("gated_rows_fbox_frame150")
+    if fbox is None or fbox < min_fbox:
+        failures.append("gated_rows_fbox_frame150=%s < %d" % (fbox, min_fbox))
+    zeros = precondition.get("frames_presence_zero")
+    if zeros is None or zeros < min_zeros:
+        failures.append("frames_presence_zero=%s < %d" % (zeros, min_zeros))
+
+    want_box = S.get("MECHANISM_FBOX")
+    if want_box is not None:
+        got = precondition.get("fbox_box")
+        if got is None or [int(v) for v in got] != [int(v) for v in want_box]:
+            failures.append(
+                "fbox %r differs from the scene box %r" % (got, list(want_box))
+            )
+    want_frame = S.get("MECHANISM_FBOX_FRAME")
+    if want_frame is not None and not exempt:
+        got = precondition.get("fbox_frame")
+        if got is None or int(got) != int(want_frame):
+            failures.append(
+                "fbox measured at frame %r, the scene requires %r" % (got, want_frame)
+            )
+    window = S.get("MECHANISM_ZERO_FRAMES_WINDOW")
+    if window and not exempt:
+        zl = precondition.get("frames_presence_zero_list")
+        if zl is None:
+            failures.append("precondition carries no zero-presence frame list")
+        else:
+            inside = [f for f in zl if int(window[0]) <= int(f) <= int(window[1])]
+            if len(inside) < min_zeros:
+                failures.append(
+                    "zero-presence frames inside %r: %d < %d"
+                    % (list(window), len(inside), min_zeros)
+                )
+    if rules.get("program_match_required"):
+        if precondition.get("program_match") is not True:
+            failures.append(
+                "program_match is %r, not recorded true by the extractor"
+                % (precondition.get("program_match"),)
+            )
+    if failures:
+        return False, "; ".join(failures)
+    if exempt:
+        return True, SPEC_V2_GAP_EXEMPT_NOTE
+    return True, "precondition satisfied"
 
 
 def mechanism_exercised(arm, precondition, spec=None):
     """(passes, reason) for the mechanism-exercised analysis set."""
     S = _spec(spec)
+    if is_spec_v2(S):
+        return mechanism_exercised_v2(arm, precondition, spec=S)
     if arm == "U":
         return True, "U arm passes by construction"
     if precondition is None:
@@ -710,6 +863,8 @@ def load_cell(entry, spec=None, arms=None, require_prefix=False):
         raise ValueError(
             f"paired mode: cell {arm}/seed {entry['seed']} carries no 'prefix'"
         )
+    if is_spec_v2(S):
+        validate_scene_v2(entry, S)
     status = entry["status"]
     if status not in ("complete", "failed"):
         raise ValueError(f"unknown status {status!r} for {arm}/seed {entry['seed']}")
@@ -728,6 +883,14 @@ def load_cell(entry, spec=None, arms=None, require_prefix=False):
     }
     if entry.get("prefix") is not None:
         cell["prefix"] = entry["prefix"]
+        if is_spec_v2(S):
+            # Two scenes may both number their prefixes 0..3; pairing must never
+            # cross a scene, so the pair key carries the scene.
+            cell["scene"] = entry["scene"]
+            cell["scene_prefix"] = entry["prefix"]
+            cell["prefix"] = "%s%s%s" % (
+                entry["scene"], SPEC_V2_PREFIX_SEPARATOR, entry["prefix"]
+            )
     if status == "failed":
         return cell
 
@@ -1387,7 +1550,7 @@ def analyse_paired(cells, set_name, spec=None):
     min_pairs = S.get("PAIRED_MIN_PAIRS", PAIRED_MIN_PAIRS)
     claim_endpoint = S.get("PAIRED_CLAIM_ENDPOINT", PAIRED_CLAIM_ENDPOINT)
     claim_rule = S.get("PAIRED_CLAIM_RULE", PAIRED_CLAIM_RULE)
-    arms = [a for a in PAIRED_ARMS if any(c["arm"] == a for c in cells)]
+    arms = [a for a in paired_arms(S) if any(c["arm"] == a for c in cells)]
     endpoints = [k for k in S["psnr_endpoints"] if k in S["endpoints"]]
     n_per_arm = {a: sum(1 for c in cells if c["arm"] == a) for a in arms}
     prefixes = sorted({c["prefix"] for c in cells if c.get("prefix") is not None})
@@ -1399,7 +1562,7 @@ def analyse_paired(cells, set_name, spec=None):
             duplicates[arm] = dupes
 
     contrasts = {}
-    for arm_a, arm_b in PAIRED_CONTRASTS:
+    for arm_a, arm_b in paired_contrasts(S):
         if arm_a not in arms or arm_b not in arms:
             continue
         name = "%s-%s" % (arm_a, arm_b)
@@ -1589,6 +1752,667 @@ def analyse_paired(cells, set_name, spec=None):
             }
             for a in arms
         },
+    }
+
+
+# --------------------------------------------------------------------------
+# Spec v2.0.0 reducer
+#
+# Nothing below runs unless `is_spec_v2` is true. Every path that cannot be
+# evaluated -- a missing arm, a missing or malformed sidecar, a scene whose
+# anchors are still "pending", fewer than PAIRED_MIN_PAIRS complete pairs --
+# yields DESIGN_WITHOUT_POWER with the reason recorded, never a silent skip.
+# --------------------------------------------------------------------------
+
+
+def validate_scene_v2(entry, spec=None):
+    """Every v2 manifest cell names a scene the spec declares."""
+    S = _spec(spec)
+    scene = entry.get("scene")
+    if scene is None:
+        raise ValueError(
+            "spec v2: cell %s/seed %s carries no 'scene'"
+            % (entry.get("arm"), entry.get("seed"))
+        )
+    if scene not in S["scenes"]:
+        raise ValueError(
+            "spec v2: cell %s/seed %s names scene %r, which the spec does not "
+            "declare (declared: %s)"
+            % (entry.get("arm"), entry.get("seed"), scene, sorted(S["scenes"]))
+        )
+
+
+def scene_spec(spec, scene_name):
+    """(spec specialised to one scene, admission problems).
+
+    The v2 instance holds the anchors, the mechanism box and the box frame
+    per scene, and leaves them "pending" until the scene's Lane B evidence
+    lands. A pending field is an admission failure, not an exception: the
+    scene is reported not admitted and its claims read DESIGN_WITHOUT_POWER.
+    """
+    S = _spec(spec)
+    block = S["scenes"].get(scene_name)
+    if not isinstance(block, dict):
+        return None, ["scene %s is not declared in the spec" % scene_name]
+    problems = []
+    override = {}
+    for key in SPEC_V2_SCENE_ANCHORS:
+        value = block.get(key)
+        if isinstance(value, bool) or not isinstance(value, int):
+            problems.append(
+                "scene %s: anchor %s is %r, not an integer (pending)"
+                % (scene_name, key, value)
+            )
+        else:
+            override[key] = int(value)
+    box = block.get("MECHANISM_FBOX")
+    if not (
+        isinstance(box, (list, tuple))
+        and len(box) == 4
+        and all(isinstance(v, int) and not isinstance(v, bool) for v in box)
+    ):
+        problems.append(
+            "scene %s: MECHANISM_FBOX is %r, not four integers (pending)"
+            % (scene_name, box)
+        )
+    else:
+        override["MECHANISM_FBOX"] = [int(v) for v in box]
+    frame = block.get("MECHANISM_FBOX_FRAME")
+    if isinstance(frame, bool) or not isinstance(frame, int):
+        problems.append(
+            "scene %s: MECHANISM_FBOX_FRAME is %r, not an integer (pending)"
+            % (scene_name, frame)
+        )
+    else:
+        override["MECHANISM_FBOX_FRAME"] = int(frame)
+    if problems:
+        return None, problems
+    merged = resolve_spec(deep_merge(S, override))
+    if merged["unresolved_endpoints"]:
+        return None, [
+            "scene %s: endpoints %s do not resolve against its anchors"
+            % (scene_name, ", ".join(merged["unresolved_endpoints"]))
+        ]
+    p1 = merged["endpoints"].get("P1", {}).get("frames_inclusive")
+    if p1:
+        merged["MECHANISM_ZERO_FRAMES_WINDOW"] = list(p1)
+    merged["MECHANISM_ZERO_FRAMES_EXEMPT_ARMS"] = list(SPEC_V2_GAP_EXEMPT_ARMS)
+    merged["scene"] = scene_name
+    merged["scene_role"] = block.get("role")
+    return merged, []
+
+
+def paired_arms(spec=None):
+    """The arm set: the spec's under v2, the module default otherwise."""
+    S = _spec(spec)
+    if not is_spec_v2(S):
+        return list(PAIRED_ARMS)
+    return [str(a) for a in S.get("arms", PAIRED_ARMS)]
+
+
+def paired_contrasts(spec=None):
+    """The contrasts to tabulate: under v2, the claims' plus the descriptive."""
+    S = _spec(spec)
+    if not is_spec_v2(S):
+        return list(PAIRED_CONTRASTS)
+    out = []
+    for claim in SPEC_V2_CLAIMS:
+        block = S.get(claim)
+        if not isinstance(block, dict):
+            continue
+        for pair in block.get(
+            "required_contrasts_every_pair_both_endpoints", []
+        ):
+            if tuple(pair) not in out:
+                out.append(tuple(pair))
+    for pair in S.get("DESCRIPTIVE_CONTRASTS", []):
+        if tuple(pair) not in out:
+            out.append(tuple(pair))
+    return out
+
+
+def claim_endpoints(spec=None):
+    S = _spec(spec)
+    declared = S.get("PAIRED_CLAIM_ENDPOINTS")
+    if declared:
+        return [str(k) for k in declared]
+    return [S.get("PAIRED_CLAIM_ENDPOINT", PAIRED_CLAIM_ENDPOINT)]
+
+
+def _read_sidecar(path, what, problems):
+    """A JSON object from `path`, or None with the reason recorded."""
+    if not path:
+        problems.append("%s: the manifest names no sidecar" % what)
+        return None
+    if not os.path.isfile(path):
+        problems.append("%s: sidecar %s does not exist" % (what, path))
+        return None
+    try:
+        with open(path) as fh:
+            data = json.load(fh)
+    except (ValueError, OSError) as exc:
+        problems.append("%s: sidecar %s is not readable JSON (%s)" % (what, path, exc))
+        return None
+    if not isinstance(data, dict):
+        problems.append("%s: sidecar %s is not a JSON object" % (what, path))
+        return None
+    return data
+
+
+def _int_field(data, key, what, problems):
+    value = data.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        problems.append(
+            "%s: %r must be an integer count, got %r" % (what, key, value)
+        )
+        return None
+    return int(value)
+
+
+def membership_precondition(path, spec=None):
+    """Section 11.3's S2 membership precondition, from its own sidecar.
+
+    Everything is computed from integer counts the sidecar carries; nothing is
+    read back from a ratio the sidecar might have precomputed.
+    """
+    S = _spec(spec)
+    rules = S.get("MEMBERSHIP_PRECONDITION") or {}
+    reasons = []
+    out = {"path": path, "passes": False, "reasons": reasons}
+    what = "membership precondition"
+    data = _read_sidecar(path, what, reasons)
+    if data is None:
+        return out
+    tp = _int_field(data, "TP", what, reasons)
+    fp = _int_field(data, "FP", what, reasons)
+    fn = _int_field(data, "FN", what, reasons)
+    truth_n = _int_field(data, "truth_n", what, reasons)
+    pred_n = _int_field(data, "pred_n", what, reasons)
+    out["counts"] = {"TP": tp, "FP": fp, "FN": fn,
+                     "truth_n": truth_n, "pred_n": pred_n}
+    if None not in (tp, fp):
+        out["precision"] = ratio(tp, tp + fp)
+        floor = float(rules.get("precision_min", 0.0))
+        value = out["precision"]["value"]
+        if value is None or value < floor:
+            reasons.append("precision %s < %.2f (TP %s of TP+FP %s)"
+                           % (_fmt(value), floor, tp, tp + fp))
+    if None not in (tp, fn):
+        out["recall"] = ratio(tp, tp + fn)
+        floor = float(rules.get("recall_min", 0.0))
+        value = out["recall"]["value"]
+        if value is None or value < floor:
+            reasons.append("recall %s < %.2f (TP %s of TP+FN %s)"
+                           % (_fmt(value), floor, tp, tp + fn))
+    if None not in (pred_n, truth_n):
+        out["size_ratio"] = ratio(pred_n, truth_n)
+        lo, hi = rules.get("size_ratio", [0.0, float("inf")])
+        value = out["size_ratio"]["value"]
+        if value is None or not (float(lo) <= value <= float(hi)):
+            reasons.append("size_ratio %s outside [%s, %s] (pred_n %s / truth_n %s)"
+                           % (_fmt(value), lo, hi, pred_n, truth_n))
+    iou_floor = float(rules.get("mask_iou_cam15_min", 0.0))
+    frames = [str(f) for f in rules.get("mask_iou_frames", [])]
+    masks = data.get("mask_iou_cam15")
+    out["mask_iou_cam15"] = {}
+    if not isinstance(masks, dict):
+        reasons.append("%s: 'mask_iou_cam15' must be an object keyed by frame, "
+                       "got %r" % (what, masks))
+    else:
+        for frame in frames:
+            entry = masks.get(frame)
+            if not isinstance(entry, dict):
+                reasons.append("mask_iou_cam15: no pixel counts at frame %s" % frame)
+                continue
+            inter = _int_field(entry, "pixel_intersection",
+                               "mask_iou_cam15 frame %s" % frame, reasons)
+            union = _int_field(entry, "pixel_union",
+                               "mask_iou_cam15 frame %s" % frame, reasons)
+            if None in (inter, union):
+                continue
+            out["mask_iou_cam15"][frame] = ratio(inter, union)
+            value = out["mask_iou_cam15"][frame]["value"]
+            if value is None or value < iou_floor:
+                reasons.append("mask_iou_cam15 at frame %s: %s < %.2f"
+                               % (frame, _fmt(value), iou_floor))
+    out["passes"] = not reasons
+    return out
+
+
+def t1_precondition(path, scene_block, spec=None):
+    """Section 11.3's visibility-gap precondition, from its own sidecar.
+
+    `scene_block` supplies the scene's authored [A, B]; the interval count,
+    temporal IoU and the two boundary errors are computed here from the
+    sidecar's own frame intervals.
+    """
+    S = _spec(spec)
+    rules = S.get("T1_PRECONDITION") or {}
+    reasons = []
+    out = {"path": path, "passes": False, "reasons": reasons,
+           "interval_count": None}
+    what = "T1 precondition"
+    data = _read_sidecar(path, what, reasons)
+    if data is None:
+        return out
+    intervals = data.get("intervals")
+    if not isinstance(intervals, list) or not intervals:
+        reasons.append("%s: 'intervals' must be a non-empty list of "
+                       "[first_absent, last_absent] frames, got %r"
+                       % (what, intervals))
+        return out
+    parsed = []
+    for item in intervals:
+        if (not isinstance(item, (list, tuple)) or len(item) != 2
+                or any(isinstance(v, bool) or not isinstance(v, int)
+                       for v in item)):
+            reasons.append("%s: interval %r is not two integer frames"
+                           % (what, item))
+            return out
+        parsed.append([int(item[0]), int(item[1])])
+    out["interval_count"] = len(parsed)
+    out["intervals"] = parsed
+    want_count = int(rules.get("intervals", 1))
+    if len(parsed) != want_count:
+        reasons.append("%s: interval count %d, the spec requires exactly %d"
+                       % (what, len(parsed), want_count))
+    lo, hi = parsed[0]
+    a = int(scene_block["A"])
+    b = int(scene_block["B"])
+    out["truth"] = [a, b]
+    intersection = max(0, min(hi, b) - max(lo, a) + 1)
+    union = max(hi, b) - min(lo, a) + 1
+    out["temporal_iou"] = ratio(intersection, union)
+    floor = float(rules.get("temporal_iou_min", 0.0))
+    if out["temporal_iou"]["value"] is None or out["temporal_iou"]["value"] < floor:
+        reasons.append("temporal_iou %s < %.2f (%d frames of %d)"
+                       % (_fmt(out["temporal_iou"]["value"]), floor,
+                          intersection, union))
+    out["onset_error_frames"] = lo - a
+    out["offset_error_frames"] = hi - b
+    max_onset = int(rules.get("onset_error_max_frames", 0))
+    max_offset = int(rules.get("offset_error_max_frames", 0))
+    if abs(out["onset_error_frames"]) > max_onset:
+        reasons.append("onset error %d frames > %d"
+                       % (out["onset_error_frames"], max_onset))
+    if abs(out["offset_error_frames"]) > max_offset:
+        reasons.append("offset error %d frames > %d"
+                       % (out["offset_error_frames"], max_offset))
+    out["passes"] = not reasons
+    return out
+
+
+def wrongmem_program_check(path, arm, spec=None):
+    """The zero-overlap assertion on one sham row set (section 11.2)."""
+    S = _spec(spec)
+    want = int(S.get("WRONGMEM_OVERLAP_MAX", 0))
+    reasons = []
+    out = {"path": path, "arm": arm, "passes": False, "reasons": reasons,
+           "overlap_n": None, "overlap_max": want}
+    what = "%s program sidecar" % arm
+    data = _read_sidecar(path, what, reasons)
+    if data is None:
+        return out
+    overlap = _int_field(data, "overlap_n", what, reasons)
+    truth_n = _int_field(data, "truth_n", what, reasons)
+    draw_n = _int_field(data, "draw_n", what, reasons)
+    if overlap is not None:
+        out["overlap_n"] = overlap
+        if overlap != want:
+            reasons.append(
+                "%s: overlap with the construction-derived set is %d, "
+                "WRONGMEM_OVERLAP_MAX is %d" % (what, overlap, want))
+    if None not in (truth_n, draw_n):
+        out["count_match"] = ratio(draw_n, truth_n)
+        if draw_n != truth_n:
+            reasons.append("%s: draw_n %d is not count-matched to truth_n %d"
+                           % (what, draw_n, truth_n))
+    if data.get("row_ids_sha256"):
+        out["row_ids_sha256"] = str(data["row_ids_sha256"])
+    out["passes"] = not reasons
+    return out
+
+
+def _scene_sidecars(manifest, scene):
+    block = manifest.get("sidecars")
+    if not isinstance(block, dict):
+        return {}
+    per_scene = block.get(scene)
+    return per_scene if isinstance(per_scene, dict) else {}
+
+
+def analyse_scene_v2(cells, scene, sc_spec, sidecars, spec=None):
+    """Per-scene preconditions and descriptive contrasts.
+
+    `cells` are already restricted to this scene. Returns the scene block; its
+    `reasons` list is the set of refusals that make BOTH claims
+    DESIGN_WITHOUT_POWER on this scene.
+    """
+    S = _spec(spec)
+    role = (S["scenes"].get(scene) or {}).get("role")
+    block = {
+        "scene": scene,
+        "role": role,
+        "admitted": sc_spec is not None,
+        "reasons": [],
+        "prefixes": {},
+        "descriptive": {},
+        "n_cells": len(cells),
+    }
+    if sc_spec is None:
+        return block
+    block["anchors"] = {k: sc_spec.get(k) for k in SPEC_V2_SCENE_ANCHORS}
+    block["mechanism_fbox"] = sc_spec.get("MECHANISM_FBOX")
+    block["mechanism_fbox_frame"] = sc_spec.get("MECHANISM_FBOX_FRAME")
+    block["gap_window"] = sc_spec.get("MECHANISM_ZERO_FRAMES_WINDOW")
+
+    prefixes = sorted({c["scene_prefix"] for c in cells
+                       if c.get("scene_prefix") is not None}, key=str)
+    scene_block = S["scenes"].get(scene) or {}
+    for prefix in prefixes:
+        key = str(prefix)
+        entry = sidecars.get(key) if isinstance(sidecars, dict) else None
+        entry = entry if isinstance(entry, dict) else {}
+        row = {"prefix": key}
+        row["membership"] = membership_precondition(entry.get("membership"), spec=S)
+        row["t1"] = t1_precondition(entry.get("t1"), scene_block, spec=S)
+        programs = entry.get("programs")
+        programs = programs if isinstance(programs, dict) else {}
+        row["programs"] = {}
+        present_arms = {c["arm"] for c in cells
+                        if str(c.get("scene_prefix")) == key}
+        for arm in SPEC_V2_WRONGMEM_ARMS:
+            if arm not in present_arms:
+                continue                      # a missing arm is caught by the pair count
+            check = wrongmem_program_check(programs.get(arm), arm, spec=S)
+            row["programs"][arm] = check
+            if not check["passes"]:
+                block["reasons"].extend(
+                    "%s prefix %s: %s" % (scene, key, r) for r in check["reasons"]
+                )
+        # Reserved units must be reported and equal across the arms of a prefix.
+        reserved = {}
+        for cell in cells:
+            if str(cell.get("scene_prefix")) != key:
+                continue
+            value = (cell.get("precondition") or {}).get("reserved_units")
+            reserved.setdefault(value, []).append(cell["arm"])
+        row["reserved_units"] = {
+            str(k): sorted(v) for k, v in reserved.items()
+        }
+        if len(reserved) > 1 or None in reserved:
+            block["reasons"].append(
+                "%s prefix %s: reserved units are not reported equal across "
+                "arms: %s" % (scene, key, json.dumps(row["reserved_units"],
+                                                     sort_keys=True))
+            )
+        block["prefixes"][key] = row
+
+    me_cells = [c for c in cells if c["mechanism_exercised"]]
+    endpoints = [k for k in sc_spec["psnr_endpoints"] if k in sc_spec["endpoints"]]
+    for arm_a, arm_b in S.get("DESCRIPTIVE_CONTRASTS", []):
+        name = "%s-%s" % (arm_a, arm_b)
+        per_endpoint = {}
+        for endpoint in endpoints:
+            pairs = _pairs(me_cells, arm_a, arm_b, endpoint)
+            summary = paired_summary([p["diff"] for p in pairs], spec=sc_spec)
+            summary["prefixes"] = [p["prefix"] for p in pairs]
+            per_endpoint[endpoint] = summary
+        block["descriptive"][name] = per_endpoint
+    block["mechanism_exercised_cells"] = ratio(len(me_cells), len(cells))
+    return block
+
+
+def _claim_treatment_arm(claim):
+    contrasts = claim.get("required_contrasts_every_pair_both_endpoints") or []
+    return contrasts[0][0] if contrasts else None
+
+
+def _harm_guard_rules(claim_name, claim, spec):
+    """(rules, note): CLAIM_B inherits CLAIM_A's guards with its own arm."""
+    declared = claim.get("harm_guards_every_pair")
+    if isinstance(declared, dict):
+        return copy.deepcopy(declared), None
+    base = (_spec(spec).get("CLAIM_A") or {}).get("harm_guards_every_pair") or {}
+    rules = copy.deepcopy(base)
+    treatment = _claim_treatment_arm(claim)
+    for rule in rules.values():
+        rule["contrast"] = [
+            treatment if arm == "G" else arm for arm in rule.get("contrast", [])
+        ]
+    return rules, (declared if isinstance(declared, str) else None)
+
+
+def evaluate_claim_v2(claim_name, cells, scene, sc_spec, scene_block, spec=None):
+    """One claim on one scene, under the section 11.5 rule."""
+    S = _spec(spec)
+    claim = S.get(claim_name) or {}
+    floor = float(S.get("PAIRED_MIN_EFFECT_DB", PAIRED_MIN_EFFECT_DB))
+    min_pairs = int(S.get("PAIRED_MIN_PAIRS", PAIRED_MIN_PAIRS))
+    endpoints = claim_endpoints(S)
+    out = {
+        "claim": claim_name,
+        "name": claim.get("name"),
+        "scene": scene,
+        "role": scene_block.get("role"),
+        "floor_db": floor,
+        "min_pairs": min_pairs,
+        "endpoints": endpoints,
+        "contrasts": {},
+        "harm_guards": {},
+        "dwp_reasons": [],
+        "not_met_reasons": [],
+    }
+    if not scene_block.get("admitted"):
+        out["dwp_reasons"].extend(
+            scene_block.get("reasons")
+            or ["scene %s is not admitted" % scene]
+        )
+        out["reasons"] = out["dwp_reasons"]
+        out["verdict"] = "DESIGN_WITHOUT_POWER"
+        return out
+    out["dwp_reasons"].extend(scene_block.get("reasons", []))
+
+    # Claim B additionally needs every prefix's membership and T1 instruments.
+    if claim_name == "CLAIM_B":
+        admitted = []
+        for key, row in sorted(scene_block["prefixes"].items()):
+            if not row["membership"]["passes"]:
+                out["dwp_reasons"].append(
+                    "membership instrument not admitted on %s prefix %s: %s"
+                    % (scene, key, "; ".join(row["membership"]["reasons"]))
+                )
+                continue
+            if not row["t1"]["passes"]:
+                out["dwp_reasons"].append(
+                    "visibility-gap instrument not admitted on %s prefix %s: %s"
+                    % (scene, key, "; ".join(row["t1"]["reasons"]))
+                )
+                continue
+            admitted.append(key)
+        out["admitted_prefixes"] = ratio(len(admitted), min_pairs)
+        if len(admitted) < min_pairs:
+            out["dwp_reasons"].append(
+                "%s: %d prefixes admitted of the %d required"
+                % (scene, len(admitted), min_pairs)
+            )
+        cells = [c for c in cells if str(c.get("scene_prefix")) in admitted]
+
+    me_cells = [c for c in cells if c["mechanism_exercised"]]
+    for arm_a, arm_b in claim.get(
+        "required_contrasts_every_pair_both_endpoints", []
+    ):
+        name = "%s-%s" % (arm_a, arm_b)
+        out["contrasts"][name] = {}
+        for endpoint in endpoints:
+            pairs = _pairs(me_cells, arm_a, arm_b, endpoint)
+            rows = [
+                {
+                    "prefix": p["prefix"],
+                    "a": p["a"],
+                    "b": p["b"],
+                    "diff": p["diff"],
+                    "over_floor": bool(p["diff"] > floor),
+                }
+                for p in pairs
+            ]
+            entry = {
+                "contrast": name,
+                "endpoint": endpoint,
+                "floor_db": floor,
+                "n_pairs": ratio(len(rows), min_pairs),
+                "pairs": rows,
+                "all_pairs_over_floor": bool(rows)
+                and all(r["over_floor"] for r in rows),
+                "complete": len(rows) >= min_pairs,
+            }
+            out["contrasts"][name][endpoint] = entry
+            if not entry["complete"]:
+                out["dwp_reasons"].append(
+                    "%s on %s: %d complete pairs of the %d required "
+                    "(mechanism-exercised set)"
+                    % (name, endpoint, len(rows), min_pairs)
+                )
+            elif not entry["all_pairs_over_floor"]:
+                offenders = [r["prefix"] for r in rows if not r["over_floor"]]
+                out["not_met_reasons"].append(
+                    "%s on %s does not exceed %.2f dB in %s"
+                    % (name, endpoint, floor, ", ".join(offenders))
+                )
+
+    rules, inherited = _harm_guard_rules(claim_name, claim, S)
+    if inherited:
+        out["harm_guard_note"] = inherited
+    for key in sorted(rules):
+        rule = rules[key]
+        arm_a, arm_b = rule["contrast"]
+        max_db = float(rule["max_db"])
+        pairs = _pairs(me_cells, arm_a, arm_b, key)
+        offenders = [
+            {"prefix": p["prefix"], "diff": p["diff"], "max_db": max_db}
+            for p in pairs
+            if p["diff"] > max_db
+        ]
+        guard = {
+            "endpoint": key,
+            "contrast": "%s-%s" % (arm_a, arm_b),
+            "max_db": max_db,
+            "n_pairs": ratio(len(pairs), min_pairs),
+            "pairs": [{"prefix": p["prefix"], "diff": p["diff"]} for p in pairs],
+            "offenders": offenders,
+            "passes": len(pairs) >= min_pairs and not offenders,
+        }
+        if rule.get("note"):
+            guard["note"] = rule["note"]
+        out["harm_guards"][key] = guard
+        if len(pairs) < min_pairs:
+            out["dwp_reasons"].append(
+                "harm guard %s (%s): %d pairs of the %d required"
+                % (key, guard["contrast"], len(pairs), min_pairs)
+            )
+        elif offenders:
+            out["not_met_reasons"].append(
+                "harm guard %s (%s) exceeds %.2f dB in %s"
+                % (key, guard["contrast"], max_db,
+                   ", ".join(o["prefix"] for o in offenders))
+            )
+
+    out["reasons"] = out["dwp_reasons"] + out["not_met_reasons"]
+    if out["dwp_reasons"]:
+        out["verdict"] = "DESIGN_WITHOUT_POWER"
+    elif out["not_met_reasons"]:
+        out["verdict"] = "NOT_MET"
+    elif not out["contrasts"]:
+        out["dwp_reasons"].append("%s names no required contrast" % claim_name)
+        out["reasons"] = out["dwp_reasons"]
+        out["verdict"] = "DESIGN_WITHOUT_POWER"
+    else:
+        out["verdict"] = "CLAIM_CONDITIONS_MET"
+    return out
+
+
+def combine_scene_verdicts_v2(per_scene, required, spec=None):
+    """Section 11.5 precedence over the confirmatory scenes."""
+    S = _spec(spec)
+    order = S.get("VERDICT_PRECEDENCE") or SPEC_V2_PRECEDENCE_DEFAULT
+    verdicts = [per_scene[name]["verdict"] for name in required]
+    if not verdicts or "DESIGN_WITHOUT_POWER" in verdicts:
+        return "DESIGN_WITHOUT_POWER", order
+    if all(v == "CLAIM_CONDITIONS_MET" for v in verdicts):
+        return "CLAIM_CONDITIONS_MET", order
+    if any(v == "CLAIM_CONDITIONS_MET" for v in verdicts):
+        return "PARTIAL", order
+    return "NOT_MET", order
+
+
+def analyse_v2(cells, manifest, scene_specs, scene_problems, spec=None):
+    """The whole v2 block: per-scene preconditions, per-claim verdicts."""
+    S = _spec(spec)
+    rule = S.get("SCENE_RULE") or {}
+    confirmatory = [str(s) for s in rule.get("confirmatory", [])]
+    calibration = [str(s) for s in rule.get("calibration", [])]
+    by_scene = {}
+    for cell in cells:
+        by_scene.setdefault(cell.get("scene"), []).append(cell)
+
+    scenes = {}
+    for name in sorted(set(list(S["scenes"]) + confirmatory + calibration)):
+        scenes[name] = analyse_scene_v2(
+            by_scene.get(name, []),
+            name,
+            scene_specs.get(name),
+            _scene_sidecars(manifest, name),
+            spec=S,
+        )
+        if scene_specs.get(name) is None:
+            scenes[name]["reasons"] = list(scene_problems.get(name, [])) + \
+                scenes[name]["reasons"]
+        if not by_scene.get(name):
+            scenes[name]["admitted"] = False
+            scenes[name]["reasons"].append(
+                "scene %s: no cell in the manifest" % name)
+
+    claims = {}
+    for claim_name in SPEC_V2_CLAIMS:
+        if not isinstance(S.get(claim_name), dict):
+            continue
+        per_scene = {}
+        for name in confirmatory:
+            per_scene[name] = evaluate_claim_v2(
+                claim_name, by_scene.get(name, []), name,
+                scene_specs.get(name), scenes[name], spec=S,
+            )
+        calib = {}
+        for name in calibration:
+            entry = evaluate_claim_v2(
+                claim_name, by_scene.get(name, []), name,
+                scene_specs.get(name), scenes[name], spec=S,
+            )
+            entry["role"] = "CALIBRATION"
+            calib[name] = entry
+        verdict, order = combine_scene_verdicts_v2(per_scene, confirmatory, spec=S)
+        claims[claim_name] = {
+            "claim": claim_name,
+            "name": (S[claim_name] or {}).get("name"),
+            "verdict": verdict,
+            "precedence": order,
+            "verdict_rule": S.get("VERDICT_RULE"),
+            "confirmatory_scenes": confirmatory,
+            "per_scene": per_scene,
+            "calibration": calib,
+        }
+
+    return {
+        "spec_version": S.get("spec_version"),
+        "scene_rule": rule,
+        "floor_db": float(S.get("PAIRED_MIN_EFFECT_DB", PAIRED_MIN_EFFECT_DB)),
+        "min_pairs": int(S.get("PAIRED_MIN_PAIRS", PAIRED_MIN_PAIRS)),
+        "claim_endpoints": claim_endpoints(S),
+        "claim_set": S.get("PAIRED_CLAIM_SET", "mechanism_exercised"),
+        "wrongmem_overlap_max": int(S.get("WRONGMEM_OVERLAP_MAX", 0)),
+        "verdict_status": S.get("PAIRED_VERDICT_STATUS"),
+        "scenes": scenes,
+        "claims": claims,
     }
 
 
@@ -1958,6 +2782,12 @@ def markdown_report_paired(report):
                      % (key, row["itt"], row["mechanism_exercised"],
                         ("; OPERATIVE (%s) **%s**" % (report.get("operative_set"), row["operative"]))
                         if "operative" in row else ""))
+    if report.get("v2"):
+        lines.append("")
+        lines.append("The verdict of record for a spec v2.0.0 run is the claim "
+                     "table below, not the per-endpoint headline above.")
+        lines.append("")
+        lines.extend(markdown_section_v2(report["v2"]))
     if report["blocking_errors"]:
         lines.append("")
         lines.append("## BLOCKING ERRORS")
@@ -1967,6 +2797,101 @@ def markdown_report_paired(report):
     return "\n".join(lines)
 
 
+def _ratio_text(block):
+    if not isinstance(block, dict):
+        return "-"
+    return "%s (%s/%s)" % (
+        _fmt(block.get("value")), block.get("numerator"), block.get("denominator"),
+    )
+
+
+def markdown_section_v2(v2):
+    """The spec v2.0.0 section: the verdict of record, per claim and scene."""
+    lines = ["## Spec v2 scene verdicts", ""]
+    lines.append(
+        "spec v%s | floor %.2f dB | %d pairs required | endpoints %s | "
+        "set %s | confirmatory %s, calibration %s"
+        % (
+            v2.get("spec_version"), v2["floor_db"], v2["min_pairs"],
+            ", ".join(v2["claim_endpoints"]), v2.get("claim_set"),
+            ", ".join(v2["scene_rule"].get("confirmatory", [])) or "-",
+            ", ".join(v2["scene_rule"].get("calibration", [])) or "-",
+        )
+    )
+    lines.append("")
+    lines.append("| claim | scene | role | verdict |")
+    lines.append("|---|---|---|---|")
+    for claim_name, claim in sorted(v2["claims"].items()):
+        for scene in claim["confirmatory_scenes"]:
+            entry = claim["per_scene"][scene]
+            lines.append("| %s | %s | CONFIRMATORY | **%s** |"
+                         % (claim_name, scene, entry["verdict"]))
+        for scene, entry in sorted(claim["calibration"].items()):
+            lines.append("| %s | %s | CALIBRATION | %s |"
+                         % (claim_name, scene, entry["verdict"]))
+        lines.append("| %s | (over the confirmatory scenes) | | **%s** |"
+                     % (claim_name, claim["verdict"]))
+    lines.append("")
+
+    for claim_name, claim in sorted(v2["claims"].items()):
+        lines.append("### %s -- %s" % (claim_name, claim.get("name")))
+        lines.append("")
+        blocks = [(s, claim["per_scene"][s]) for s in claim["confirmatory_scenes"]]
+        blocks += sorted(claim["calibration"].items())
+        lines.append("| scene | contrast | endpoint | pairs | all over floor | "
+                     "median diff |")
+        lines.append("|---|---|---|---|---|---|")
+        for scene, entry in blocks:
+            for name, per_endpoint in sorted(entry.get("contrasts", {}).items()):
+                for endpoint, block in sorted(per_endpoint.items()):
+                    diffs = [p["diff"] for p in block["pairs"]]
+                    lines.append("| %s | %s | %s | %s | %s | %s |" % (
+                        scene, name, endpoint, _ratio_text(block["n_pairs"]),
+                        "yes" if block["all_pairs_over_floor"] else "no",
+                        _fmt(float(np.median(diffs)) if diffs else None),
+                    ))
+        lines.append("")
+        lines.append("| scene | harm guard | contrast | max dB | passes | offenders |")
+        lines.append("|---|---|---|---|---|---|")
+        for scene, entry in blocks:
+            for endpoint, guard in sorted(entry.get("harm_guards", {}).items()):
+                lines.append("| %s | %s | %s | %.2f | %s | %d |" % (
+                    scene, endpoint, guard["contrast"], guard["max_db"],
+                    "yes" if guard["passes"] else "no", len(guard["offenders"]),
+                ))
+        lines.append("")
+        for scene, entry in blocks:
+            for reason in entry.get("reasons", []):
+                lines.append("- %s (%s): %s" % (claim_name, scene, reason))
+        lines.append("")
+
+    lines.append("### Scene preconditions")
+    lines.append("")
+    lines.append("| scene | admitted | prefix | membership | T1 | sham programs |")
+    lines.append("|---|---|---|---|---|---|")
+    for scene, block in sorted(v2["scenes"].items()):
+        if not block["prefixes"]:
+            lines.append("| %s | %s | - | - | - | - |"
+                         % (scene, "yes" if block["admitted"] else "no"))
+            continue
+        for prefix, row in sorted(block["prefixes"].items()):
+            programs = row.get("programs", {})
+            lines.append("| %s | %s | %s | %s | %s | %s |" % (
+                scene, "yes" if block["admitted"] else "no", prefix,
+                "pass" if row["membership"]["passes"] else "FAIL",
+                "pass" if row["t1"]["passes"] else "FAIL",
+                ", ".join(
+                    "%s overlap %s" % (arm, check.get("overlap_n"))
+                    for arm, check in sorted(programs.items())
+                ) or "-",
+            ))
+    lines.append("")
+    for scene, block in sorted(v2["scenes"].items()):
+        for reason in block.get("reasons", []):
+            lines.append("- scene refusal: %s" % reason)
+    return lines
+
+
 # --------------------------------------------------------------------------
 # Driver
 # --------------------------------------------------------------------------
@@ -1974,7 +2899,8 @@ def markdown_report_paired(report):
 
 def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
     S = _spec(spec)
-    if S.get("unresolved_endpoints"):
+    v2 = is_spec_v2(S)
+    if S.get("unresolved_endpoints") and not v2:
         raise ValueError(
             "spec endpoints %s still reference null anchors; set %s in the spec file"
             % (", ".join(S["unresolved_endpoints"]), "/".join(ANCHOR_KEYS))
@@ -1986,10 +2912,31 @@ def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
     allowed_arms = (
         sorted(set(S["arms"]) | set(PAIRED_ARMS)) if paired else None
     )
-    cells = [
-        load_cell(entry, spec=S, arms=allowed_arms, require_prefix=paired)
-        for entry in manifest["cells"]
-    ]
+    scene_specs, scene_problems, skipped_scene_cells = {}, {}, {}
+    if v2:
+        # Every scene carries its own anchors and mechanism box, so each cell is
+        # loaded against its OWN scene's spec. A scene whose fields are still
+        # "pending" has no resolvable window: its cells cannot be scored, so they
+        # are not loaded and the scene is reported not admitted.
+        for name in S["scenes"]:
+            scene_specs[name], scene_problems[name] = scene_spec(S, name)
+        cells = []
+        for entry in manifest["cells"]:
+            validate_scene_v2(entry, S)
+            sub = scene_specs.get(entry["scene"])
+            if sub is None:
+                skipped_scene_cells[entry["scene"]] = (
+                    skipped_scene_cells.get(entry["scene"], 0) + 1
+                )
+                continue
+            cells.append(
+                load_cell(entry, spec=sub, arms=allowed_arms, require_prefix=True)
+            )
+    else:
+        cells = [
+            load_cell(entry, spec=S, arms=allowed_arms, require_prefix=paired)
+            for entry in manifest["cells"]
+        ]
 
     blocking = []
     warnings = []
@@ -2059,6 +3006,8 @@ def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
                     "mechanism_reason": c["mechanism_reason"],
                 },
                 **({"prefix": c["prefix"]} if c.get("prefix") is not None else {}),
+                **({"scene": c["scene"], "scene_prefix": c["scene_prefix"]}
+                   if c.get("scene") is not None else {}),
             )
             for c in cells
         ],
@@ -2079,6 +3028,16 @@ def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
             if key in itt["verdicts"]
         },
     }
+    if v2:
+        for scene, count in sorted(skipped_scene_cells.items()):
+            warnings.append(
+                "scene %s: %d cell(s) not loaded because the scene's spec block "
+                "is still pending" % (scene, count)
+            )
+        report["v2"] = analyse_v2(
+            complete, manifest, scene_specs, scene_problems, spec=S
+        )
+        report["v2"]["cells_not_loaded"] = dict(sorted(skipped_scene_cells.items()))
     if paired:
         report["paired"] = True
         report["design"] = "within-prefix paired, descriptive"
