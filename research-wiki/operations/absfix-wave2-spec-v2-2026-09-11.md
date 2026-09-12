@@ -710,3 +710,11 @@ All clicks placed by the primary under 13.9(a) from the box-free sheets `researc
 | item | sha256 |
 |---|---|
 | `configs/n3v/absfix_gate_spec_v2.json` with the S2 clicks | `b333a914a8727360f3b270efcc033b7f4ec96f481e0a8b9b9bca8bed94c9668b` |
+
+### 13.11 S2 run 1 and the bounded re-seed (2026-09-13)
+
+Run 1 (jobs 57485941/42/43, driver on the recorded clicks): kept 19/20, 19/20, 19/19 cameras; cam19 dropped by the area rule on both _v3 scenes (55,670 / 55,986 px: the click had landed on the wall left of the bottle). By-eye check under 13.9(b) on the raw-frame sheets `s2-<scene>-run1-check-f{50,92}.jpg`, criterion "cap to base": failures = flame_steak cam19, sear_steak cam19 and cam09 (neck and shoulder only, 1,770 px), cut_roasted_beef cam17 (neck only, 1,997 px); every other camera passes at both seed frames. Second clicks (one per camera per seed frame, recorded in `S2.reseeds` and substituted in `S2.clicks` with the first click kept beside them): cam19 → [1058,822] on both scenes; sear cam09 → [805,908]; crb cam17 → [906,766]. Re-seed counts: flame_steak 1 camera × 2 frames, sear_steak 2 × 2, cut_roasted_beef 1 × 2. No third attempt exists.
+
+| item | sha256 |
+|---|---|
+| `configs/n3v/absfix_gate_spec_v2.json` after the re-seed record | `54bf5ae0f223d0607ef5efd762acd34357b338892de77cb61174339a4ae30adc` |

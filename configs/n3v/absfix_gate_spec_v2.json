@@ -530,10 +530,19 @@
      },
      "cam19": {
       "f50": [
+       1058,
+       822
+      ],
+      "f92": [
+       1058,
+       822
+      ],
+      "reseed": true,
+      "f50_first": [
        1010,
        825
       ],
-      "f92": [
+      "f92_first": [
        1010,
        825
       ]
@@ -646,9 +655,18 @@
      "cam09": {
       "f50": [
        805,
-       797
+       908
       ],
       "f92": [
+       805,
+       908
+      ],
+      "reseed": true,
+      "f50_first": [
+       805,
+       797
+      ],
+      "f92_first": [
        805,
        797
       ]
@@ -745,10 +763,19 @@
      },
      "cam19": {
       "f50": [
+       1058,
+       822
+      ],
+      "f92": [
+       1058,
+       822
+      ],
+      "reseed": true,
+      "f50_first": [
        1010,
        825
       ],
-      "f92": [
+      "f92_first": [
        1010,
        825
       ]
@@ -931,9 +958,18 @@
      "cam17": {
       "f50": [
        906,
-       742
+       766
       ],
       "f92": [
+       906,
+       766
+      ],
+      "reseed": true,
+      "f50_first": [
+       906,
+       742
+      ],
+      "f92_first": [
        906,
        742
       ]
@@ -980,11 +1016,135 @@
   "click_guidance_from_probe": "cam15 f50 throwaway probe: shoulder click [996,735] -> whole bottle 7152 px; label click -> label only 3517 px (would fail the 0.70 IoU precondition); low-body click -> the wine glass in front. Guidance only; the user's clicks are not chosen by the probe.",
   "reseed_rule": "Section 13.9(b): after the first run each camera's mask is checked ONCE by eye against the RAW frame only, criterion 'mask covers the bottle from cap to base'; a failing camera gets exactly ONE second click at that seed frame (replaces the first; re-run for that camera only); no third attempt; per-scene per-frame re-seed counts and both coordinates in the manifest and reported; precondition thresholds unchanged",
   "reseeds": {
-   "flame_steak": "pending",
-   "sear_steak": "pending",
-   "cut_roasted_beef": "pending"
+   "flame_steak": {
+    "checked_by": "primary, by eye, against the raw-frame check sheets s2-<scene>-run1-check-f{50,92}.jpg only (no DEVA/SA4D mask viewed)",
+    "criterion": "mask covers the bottle from cap to base",
+    "n_reseeds_f50": 1,
+    "n_reseeds_f92": 1,
+    "cameras": {
+     "cam19": {
+      "f50_first": [
+       1010,
+       825
+      ],
+      "f50_second": [
+       1058,
+       822
+      ],
+      "f92_first": [
+       1010,
+       825
+      ],
+      "f92_second": [
+       1058,
+       822
+      ],
+      "reason": "first click landed on the wall left of the bottle (grid misread); run-1 mask = shelf/wall, 55670 px, dropped by the area rule"
+     }
+    }
+   },
+   "sear_steak": {
+    "checked_by": "primary, by eye, against the raw-frame check sheets s2-<scene>-run1-check-f{50,92}.jpg only (no DEVA/SA4D mask viewed)",
+    "criterion": "mask covers the bottle from cap to base",
+    "n_reseeds_f50": 2,
+    "n_reseeds_f92": 2,
+    "cameras": {
+     "cam19": {
+      "f50_first": [
+       1010,
+       825
+      ],
+      "f50_second": [
+       1058,
+       822
+      ],
+      "f92_first": [
+       1010,
+       825
+      ],
+      "f92_second": [
+       1058,
+       822
+      ],
+      "reason": "as flame_steak cam19 (same rig)"
+     },
+     "cam09": {
+      "f50_first": [
+       805,
+       797
+      ],
+      "f50_second": [
+       805,
+       908
+      ],
+      "f92_first": [
+       805,
+       797
+      ],
+      "f92_second": [
+       805,
+       908
+      ],
+      "reason": "run-1 mask covered neck and shoulder only (1770 px); second click on the dark glass below the label"
+     }
+    }
+   },
+   "cut_roasted_beef": {
+    "checked_by": "primary, by eye, against the raw-frame check sheets s2-<scene>-run1-check-f{50,92}.jpg only (no DEVA/SA4D mask viewed)",
+    "criterion": "mask covers the bottle from cap to base",
+    "n_reseeds_f50": 1,
+    "n_reseeds_f92": 1,
+    "cameras": {
+     "cam17": {
+      "f50_first": [
+       906,
+       742
+      ],
+      "f50_second": [
+       906,
+       766
+      ],
+      "f92_first": [
+       906,
+       742
+      ],
+      "f92_second": [
+       906,
+       766
+      ],
+      "reason": "run-1 mask covered the neck only (1997 px); second click 24 px lower on the shoulder"
+     }
+    }
+   }
   },
-  "clicks_sha256": "3c273e223cb81637300fd23080c9ced9e0114e0bbf670cdffce53fc702756ee7"
+  "clicks_sha256": "3c273e223cb81637300fd23080c9ced9e0114e0bbf670cdffce53fc702756ee7",
+  "run1": {
+   "jobs": {
+    "flame_steak": 57485941,
+    "sear_steak": 57485942,
+    "cut_roasted_beef": 57485943
+   },
+   "manifest_sha256": {
+    "flame_steak": "7c7ee4d212ff970a830ea8cd2ad3b2f4c8c58d1f3adcf4ef5a490819b2c21d00",
+    "sear_steak": "c57b43d338b638979ecd3532df6701ad2955e5ab539b131f6055134e5fb74c8d",
+    "cut_roasted_beef": "355c4bf5d7993e08e20ad06858f181aa4271f8707b278098fb5dd077e80bd84b"
+   },
+   "dropped_by_area_rule": {
+    "flame_steak": [
+     "cam19"
+    ],
+    "sear_steak": [
+     "cam19"
+    ],
+    "cut_roasted_beef": []
+   },
+   "kept": {
+    "flame_steak": 19,
+    "sear_steak": 19,
+    "cut_roasted_beef": 19
+   }
+  },
+  "clicks_sha256_after_reseed": "71260e0295afa71f43a2de7d054930e4cfc817ee7a82f8ead1a35aec92f687e3"
  },
  "MEMBERSHIP_PRECONDITION": {
   "precision_min": 0.8,
