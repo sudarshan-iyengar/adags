@@ -1278,3 +1278,37 @@ def test_edit_region_config_of_an_alpha_run_carries_no_silhouette_keys():
     assert config["mode"] == "alpha"
     assert "silhouette_px" not in config
     assert "ids_by_camera" not in config
+
+
+# --- the build's post-vote IQR box (2026-09-12) --------------------------------
+# The box dropped the bottle cap's rows on flame_steak (240 of 2,230 voted rows)
+# while the preview, which has no box, was cap-free. The knob must default to
+# the wave-1 constant and must disable the box at <= 0.
+
+
+def test_hull_outlier_factor_defaults_to_the_wave1_constant():
+    args = sae.build_parser().parse_args(["--mode", "build"] + _minimal_build_argv())
+    assert args.hull_outlier_factor is None
+    assert sae.effective_hull_outlier_factor(args) == sae.IQR_OUTLIER_FACTOR == 1.0
+
+
+def test_hull_outlier_factor_zero_disables_the_box_and_is_recorded():
+    args = sae.build_parser().parse_args(
+        ["--mode", "build", "--hull_outlier_factor", "0"] + _minimal_build_argv()
+    )
+    assert sae.effective_hull_outlier_factor(args) == 0.0
+    assert not (sae.effective_hull_outlier_factor(args) > 0)
+    assert sae._filter_config(args)["hull_outlier_factor"] == 0.0
+
+
+def test_hull_outlier_factor_explicit_value_is_used():
+    args = sae.build_parser().parse_args(
+        ["--mode", "build", "--hull_outlier_factor", "2.5"] + _minimal_build_argv()
+    )
+    assert sae.effective_hull_outlier_factor(args) == 2.5
+
+
+def _minimal_build_argv():
+    """The required options other than --mode, with dummies; nothing here
+    touches the filesystem or the GPU (parse_args only)."""
+    return ["--model_path", "x", "--cam_view", "x", "--ids", "1", "--out", "x"]

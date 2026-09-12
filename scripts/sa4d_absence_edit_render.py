@@ -1829,6 +1829,16 @@ def _mask_consistency(gaussians, pipe, args, index, selection_at, background, de
     return survivors, report
 
 
+def effective_hull_outlier_factor(args):
+    """The IQR factor the build's post-vote outlier box uses; <= 0 means the
+    box is skipped. None (the CLI default) keeps the wave-1 constant so an
+    existing build command line reproduces its recorded row set."""
+    value = getattr(args, "hull_outlier_factor", None)
+    if value is None:
+        return float(IQR_OUTLIER_FACTOR)
+    return float(value)
+
+
 def _filter_config(args):
     """The narrowing knobs, exactly as given, for the output JSON."""
     return {
@@ -1837,6 +1847,7 @@ def _filter_config(args):
         "scale_max_factor": None if args.scale_max_factor is None else float(args.scale_max_factor),
         "box_percentile": None if args.box_percentile is None else float(args.box_percentile),
         "box_pad": float(args.box_pad),
+        "hull_outlier_factor": effective_hull_outlier_factor(args),
         "mask_consistency_root": args.mask_consistency,
         "mask_min_cams": None if args.mask_consistency is None else int(args.mask_min_cams),
         "mask_frames": args.mask_frames,
@@ -2287,10 +2298,12 @@ def run_build(args):
             raise SystemExit("the DEVA mask-consistency vote emptied the canonical set")
 
         canonical = torch.from_numpy(canonical_np).cuda()
-        keep_sub = points_inside_convex_hull(
-            gaussians.get_xyz, canonical, outlier_factor=IQR_OUTLIER_FACTOR
-        )
-        canonical = apply_subset_filter(canonical, keep_sub)
+        hull_outlier_factor = effective_hull_outlier_factor(args)
+        if hull_outlier_factor > 0:
+            keep_sub = points_inside_convex_hull(
+                gaussians.get_xyz, canonical, outlier_factor=hull_outlier_factor
+            )
+            canonical = apply_subset_filter(canonical, keep_sub)
         count_after_iqr = int(canonical.sum().item())
         if count_after_iqr == 0:
             raise SystemExit("the IQR box filter emptied the canonical set")
@@ -2431,8 +2444,12 @@ def run_build(args):
             "majority_rule": "selected in strictly more than half of the render-window timestamps",
             "iqr_box": {
                 "function": "utils.segment_utils.points_inside_convex_hull",
-                "outlier_factor": IQR_OUTLIER_FACTOR,
-                "note": "IQR box on the UNDEFORMED get_xyz; the hull limb is commented out upstream",
+                "outlier_factor": hull_outlier_factor,
+                "applied": bool(hull_outlier_factor > 0),
+                "default_outlier_factor": IQR_OUTLIER_FACTOR,
+                "note": "IQR box on the UNDEFORMED get_xyz; the hull limb is commented out upstream; "
+                        "--hull_outlier_factor <= 0 skips the box (canonical_after_iqr then equals "
+                        "canonical_after_mask_consistency)",
             },
             "radius": {
                 "rule": "radii <= mean + %g * std" % RADIUS_STD_FACTOR,
@@ -2510,6 +2527,15 @@ def build_parser():
     parser.add_argument("--box_pad", type=float, default=0.1,
                         help="grow each axis of the percentile box by this fraction of "
                              "its extent, on both sides")
+    parser.add_argument("--hull_outlier_factor", type=float, default=None,
+                        help="build only: IQR factor of the post-vote outlier box that "
+                             "points_inside_convex_hull applies to the canonical set's "
+                             "UNDEFORMED positions (default: the module constant "
+                             "IQR_OUTLIER_FACTOR = %g, the wave-1 behaviour); a value "
+                             "<= 0 DISABLES the box so the build keeps exactly the "
+                             "voted rows the preview showed. At 1.0 the box discarded "
+                             "the vertical extremity (the cap) of a tall bottle on "
+                             "flame_steak (2026-09-12)" % IQR_OUTLIER_FACTOR)
     parser.add_argument("--mask_consistency", type=str, default=None,
                         help="DEVA root holding camXX/pseudo_label/object_mask/FFFF.png; "
                              "enables the multi-view mask vote (default: off)")
