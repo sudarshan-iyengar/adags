@@ -702,3 +702,11 @@ background fine-tune is not done.
 |---|---|
 | this page, sections 0-13.9 (before this record) | `af83c8813fbd8895902bcb5141afda5d6d5da1f00e4c72b0ff60b73901a19cea` |
 | `configs/n3v/absfix_gate_spec_v2.json` after the 13.9 edits (STG commit and clicks still pending) | `e7790bc7af3bae55a13d12281c4ddfe1b9eff6c5a787e83c765bc243789d4a7a` |
+
+### 13.10 S2 clicks recorded before inference (2026-09-13)
+
+All clicks placed by the primary under 13.9(a) from the box-free sheets `research-wiki/assets/absfix-<scene>-clickpacket-nobox-f{50,92}.jpg` (no DEVA/SA4D mask viewed): 20 cameras × 2 frames on flame_steak and sear_steak, 19 × 2 on cut_roasted_beef (cam04 absent from its derived scene), 118 clicks, one per camera per seed frame on the dark glass shoulder above the label; the bottle is static, so the frame-92 click repeats the frame-50 position after the frame-92 tile was viewed. Written to `S2.clicks` in the JSON with `S2.clicks_sha256`; no SAM2 inference has run on them yet.
+
+| item | sha256 |
+|---|---|
+| `configs/n3v/absfix_gate_spec_v2.json` with the S2 clicks | `b333a914a8727360f3b270efcc033b7f4ec96f481e0a8b9b9bca8bed94c9668b` |

@@ -335,9 +335,641 @@
   ],
   "click_rule": "Section 13.9(a): clicks placed by the PRIMARY from packet sheets regenerated WITHOUT the cyan construction boxes; the placer never views a DEVA/SA4D mask; one click per training camera at frame 50 (seeds 50->109) and one at frame 92 (seeds 92->99), on the dark glass shoulder above the label; all coordinates recorded here BEFORE inference, with the sheet file named",
   "clicks": {
-   "flame_steak": "pending (primary, from absfix-<scene>-clickpacket-nobox-f{50,92}.jpg)",
-   "sear_steak": "pending (primary)",
-   "cut_roasted_beef": "pending (primary; calibration scene, needed for its G-est-mem cells)"
+   "flame_steak": {
+    "placed_by": "primary (Claude), 2026-09-13, from the box-free sheets only; no DEVA/SA4D mask viewed",
+    "sheets": [
+     "research-wiki/assets/absfix-flame_steak-clickpacket-nobox-f50.jpg",
+     "research-wiki/assets/absfix-flame_steak-clickpacket-nobox-f92.jpg"
+    ],
+    "rule": "one positive click per training camera at the dark glass shoulder above the label, read against the 50 px full-frame grid; the bottle is static so the frame-92 click repeats the frame-50 position after viewing the frame-92 tile",
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "n_cameras": 20,
+    "clicks": {
+     "cam01": {
+      "f50": [
+       1227,
+       955
+      ],
+      "f92": [
+       1227,
+       955
+      ]
+     },
+     "cam02": {
+      "f50": [
+       1163,
+       918
+      ],
+      "f92": [
+       1163,
+       918
+      ]
+     },
+     "cam03": {
+      "f50": [
+       1100,
+       885
+      ],
+      "f92": [
+       1100,
+       885
+      ]
+     },
+     "cam04": {
+      "f50": [
+       1050,
+       882
+      ],
+      "f92": [
+       1050,
+       882
+      ]
+     },
+     "cam05": {
+      "f50": [
+       1033,
+       875
+      ],
+      "f92": [
+       1033,
+       875
+      ]
+     },
+     "cam06": {
+      "f50": [
+       940,
+       838
+      ],
+      "f92": [
+       940,
+       838
+      ]
+     },
+     "cam07": {
+      "f50": [
+       887,
+       812
+      ],
+      "f92": [
+       887,
+       812
+      ]
+     },
+     "cam08": {
+      "f50": [
+       851,
+       792
+      ],
+      "f92": [
+       851,
+       792
+      ]
+     },
+     "cam09": {
+      "f50": [
+       805,
+       797
+      ],
+      "f92": [
+       805,
+       797
+      ]
+     },
+     "cam10": {
+      "f50": [
+       760,
+       787
+      ],
+      "f92": [
+       760,
+       787
+      ]
+     },
+     "cam11": {
+      "f50": [
+       800,
+       805
+      ],
+      "f92": [
+       800,
+       805
+      ]
+     },
+     "cam12": {
+      "f50": [
+       772,
+       738
+      ],
+      "f92": [
+       772,
+       738
+      ]
+     },
+     "cam13": {
+      "f50": [
+       1063,
+       742
+      ],
+      "f92": [
+       1063,
+       742
+      ]
+     },
+     "cam14": {
+      "f50": [
+       1062,
+       775
+      ],
+      "f92": [
+       1062,
+       775
+      ]
+     },
+     "cam15": {
+      "f50": [
+       992,
+       752
+      ],
+      "f92": [
+       992,
+       752
+      ]
+     },
+     "cam16": {
+      "f50": [
+       975,
+       712
+      ],
+      "f92": [
+       975,
+       712
+      ]
+     },
+     "cam17": {
+      "f50": [
+       900,
+       742
+      ],
+      "f92": [
+       900,
+       742
+      ]
+     },
+     "cam18": {
+      "f50": [
+       867,
+       727
+      ],
+      "f92": [
+       867,
+       727
+      ]
+     },
+     "cam19": {
+      "f50": [
+       1010,
+       825
+      ],
+      "f92": [
+       1010,
+       825
+      ]
+     },
+     "cam20": {
+      "f50": [
+       982,
+       884
+      ],
+      "f92": [
+       982,
+       884
+      ]
+     }
+    }
+   },
+   "sear_steak": {
+    "placed_by": "primary (Claude), 2026-09-13, from the box-free sheets only; no DEVA/SA4D mask viewed",
+    "sheets": [
+     "research-wiki/assets/absfix-sear_steak-clickpacket-nobox-f50.jpg",
+     "research-wiki/assets/absfix-sear_steak-clickpacket-nobox-f92.jpg"
+    ],
+    "rule": "one positive click per training camera at the dark glass shoulder above the label, read against the 50 px full-frame grid; the bottle is static so the frame-92 click repeats the frame-50 position after viewing the frame-92 tile",
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "n_cameras": 20,
+    "clicks": {
+     "cam01": {
+      "f50": [
+       1227,
+       955
+      ],
+      "f92": [
+       1227,
+       955
+      ]
+     },
+     "cam02": {
+      "f50": [
+       1163,
+       918
+      ],
+      "f92": [
+       1163,
+       918
+      ]
+     },
+     "cam03": {
+      "f50": [
+       1100,
+       885
+      ],
+      "f92": [
+       1100,
+       885
+      ]
+     },
+     "cam04": {
+      "f50": [
+       1050,
+       882
+      ],
+      "f92": [
+       1050,
+       882
+      ]
+     },
+     "cam05": {
+      "f50": [
+       1033,
+       875
+      ],
+      "f92": [
+       1033,
+       875
+      ]
+     },
+     "cam06": {
+      "f50": [
+       940,
+       838
+      ],
+      "f92": [
+       940,
+       838
+      ]
+     },
+     "cam07": {
+      "f50": [
+       887,
+       812
+      ],
+      "f92": [
+       887,
+       812
+      ]
+     },
+     "cam08": {
+      "f50": [
+       851,
+       792
+      ],
+      "f92": [
+       851,
+       792
+      ]
+     },
+     "cam09": {
+      "f50": [
+       805,
+       797
+      ],
+      "f92": [
+       805,
+       797
+      ]
+     },
+     "cam10": {
+      "f50": [
+       760,
+       787
+      ],
+      "f92": [
+       760,
+       787
+      ]
+     },
+     "cam11": {
+      "f50": [
+       800,
+       805
+      ],
+      "f92": [
+       800,
+       805
+      ]
+     },
+     "cam12": {
+      "f50": [
+       772,
+       738
+      ],
+      "f92": [
+       772,
+       738
+      ]
+     },
+     "cam13": {
+      "f50": [
+       1063,
+       742
+      ],
+      "f92": [
+       1063,
+       742
+      ]
+     },
+     "cam14": {
+      "f50": [
+       1062,
+       775
+      ],
+      "f92": [
+       1062,
+       775
+      ]
+     },
+     "cam15": {
+      "f50": [
+       992,
+       752
+      ],
+      "f92": [
+       992,
+       752
+      ]
+     },
+     "cam16": {
+      "f50": [
+       975,
+       712
+      ],
+      "f92": [
+       975,
+       712
+      ]
+     },
+     "cam17": {
+      "f50": [
+       900,
+       742
+      ],
+      "f92": [
+       900,
+       742
+      ]
+     },
+     "cam18": {
+      "f50": [
+       867,
+       727
+      ],
+      "f92": [
+       867,
+       727
+      ]
+     },
+     "cam19": {
+      "f50": [
+       1010,
+       825
+      ],
+      "f92": [
+       1010,
+       825
+      ]
+     },
+     "cam20": {
+      "f50": [
+       982,
+       884
+      ],
+      "f92": [
+       982,
+       884
+      ]
+     }
+    }
+   },
+   "cut_roasted_beef": {
+    "placed_by": "primary (Claude), 2026-09-13, from the box-free sheets only; no DEVA/SA4D mask viewed",
+    "sheets": [
+     "research-wiki/assets/absfix-cut_roasted_beef-clickpacket-nobox-f50.jpg",
+     "research-wiki/assets/absfix-cut_roasted_beef-clickpacket-nobox-f92.jpg"
+    ],
+    "rule": "one positive click per training camera at the dark glass shoulder above the label, read against the 50 px full-frame grid; the bottle is static so the frame-92 click repeats the frame-50 position after viewing the frame-92 tile",
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "n_cameras": 19,
+    "clicks": {
+     "cam01": {
+      "f50": [
+       1250,
+       955
+      ],
+      "f92": [
+       1250,
+       955
+      ]
+     },
+     "cam02": {
+      "f50": [
+       1180,
+       915
+      ],
+      "f92": [
+       1180,
+       915
+      ]
+     },
+     "cam03": {
+      "f50": [
+       1113,
+       880
+      ],
+      "f92": [
+       1113,
+       880
+      ]
+     },
+     "cam05": {
+      "f50": [
+       1048,
+       870
+      ],
+      "f92": [
+       1048,
+       870
+      ]
+     },
+     "cam06": {
+      "f50": [
+       946,
+       832
+      ],
+      "f92": [
+       946,
+       832
+      ]
+     },
+     "cam07": {
+      "f50": [
+       892,
+       808
+      ],
+      "f92": [
+       892,
+       808
+      ]
+     },
+     "cam08": {
+      "f50": [
+       853,
+       780
+      ],
+      "f92": [
+       853,
+       780
+      ]
+     },
+     "cam09": {
+      "f50": [
+       808,
+       792
+      ],
+      "f92": [
+       808,
+       792
+      ]
+     },
+     "cam10": {
+      "f50": [
+       757,
+       777
+      ],
+      "f92": [
+       757,
+       777
+      ]
+     },
+     "cam11": {
+      "f50": [
+       815,
+       808
+      ],
+      "f92": [
+       815,
+       808
+      ]
+     },
+     "cam12": {
+      "f50": [
+       785,
+       737
+      ],
+      "f92": [
+       785,
+       737
+      ]
+     },
+     "cam13": {
+      "f50": [
+       1080,
+       737
+      ],
+      "f92": [
+       1080,
+       737
+      ]
+     },
+     "cam14": {
+      "f50": [
+       1070,
+       772
+      ],
+      "f92": [
+       1070,
+       772
+      ]
+     },
+     "cam15": {
+      "f50": [
+       1000,
+       748
+      ],
+      "f92": [
+       1000,
+       748
+      ]
+     },
+     "cam16": {
+      "f50": [
+       979,
+       712
+      ],
+      "f92": [
+       979,
+       712
+      ]
+     },
+     "cam17": {
+      "f50": [
+       906,
+       742
+      ],
+      "f92": [
+       906,
+       742
+      ]
+     },
+     "cam18": {
+      "f50": [
+       872,
+       722
+      ],
+      "f92": [
+       872,
+       722
+      ]
+     },
+     "cam19": {
+      "f50": [
+       1061,
+       818
+      ],
+      "f92": [
+       1061,
+       818
+      ]
+     },
+     "cam20": {
+      "f50": [
+       985,
+       880
+      ],
+      "f92": [
+       985,
+       880
+      ]
+     }
+    }
+   }
   },
   "camera_drop_rule": "applied at EACH seed frame separately: mask area at the seed frame < 500 px or > 5x the median over cameras -> camera dropped from the vote and listed; vote requires >= 12 remaining cameras",
   "checkpoint": "models/sam2/sam2.1_hiera_large.pt",
@@ -351,7 +983,8 @@
    "flame_steak": "pending",
    "sear_steak": "pending",
    "cut_roasted_beef": "pending"
-  }
+  },
+  "clicks_sha256": "3c273e223cb81637300fd23080c9ced9e0114e0bbf670cdffce53fc702756ee7"
  },
  "MEMBERSHIP_PRECONDITION": {
   "precision_min": 0.8,
