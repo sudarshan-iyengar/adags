@@ -572,3 +572,70 @@ filled from the _v3 build outputs.
 | item | sha256 |
 |---|---|
 | `configs/n3v/absfix_gate_spec_v2.json` after the admission fill | `f8c68072e7bc7e5da0d12761fc7faa024138d78816ca11bb231071a4ecf762b8` |
+
+### 13.7 The _v3 construction record and the flame_steak background note (2026-09-12)
+
+Both confirmatory fixtures were rebuilt under the §13.6 rule (Lane B jobs
+57382785/87 flame_steak, 57382813/14 sear_steak; records
+`research-wiki/assets/absfix-<scene>-construction-v3.json`, copied into
+the JSON's `CONSTRUCTION` fields): `iqr_box.applied = false`; rows
+removed 2,227 / 2,431 (vote 2,230 / 2,434; radius filter −3 each);
+build cap-band red pixels 0/0/0 on cam00/08/15 at frames 60/75/89 (the
+originals carry 263–278); verifier exhaustive PASS on 6,300 images per
+scene (5,670 sha-identical, 630 edited, all diffs inside mask + 14 px,
+raw tree unchanged); events `BOTTLE_*` as in wave 1; cam00 event boxes
+[957,753,1027,965] / [957,754,1027,963]; MANIFEST sha256
+`a0a9c3690e56085b96105d9465182950146c0986ac4345ab4a458666aa242d7e` /
+`e781126645a2d0d898dfa01195f564e5295d5f4fe455a80caad2ae15b7d3c322`.
+Derived roots `data_derived/absfix/{flame_steak,sear_steak}_absfix_60_89_v3`.
+Montages viewed by the primary: the cap is gone on all 21 cameras in
+both scenes.
+
+**Declared limitation of the flame_steak fixture (inside P1's teacher
+region, shared by every arm):** the rows the disabled box had spared
+also painted the counterfactual background, so the _v3 and _v1 cam00
+frame-75 composites differ on 5,682 px (flame_steak) and 6,252 px
+(sear_steak), all inside the event box, and a knife segment revealed
+behind the flame_steak bottle is crisp in _v1 and blurred in _v3 (zoom
+sheets `runs/realdata/absfix2/<scene>/zoom_f75_orig_v1_v3.png`). This
+is the shared-row mechanism of [[absence-fixture-lane-2026-09-10]] §5
+appearing in the construction; it lowers the P1 ceiling on flame_steak
+for all arms equally and is not a difference between arms. Recorded,
+not repaired: any further construction change would be a new derived
+root and a new §13 entry.
+
+### 13.8 Freeze list — filled as far as this block can fill it (2026-09-12)
+
+Read against §11.7. "user" = the user's decision; "go" = needs the
+prefix training, T1 and votes that this block was not authorised to run.
+
+| item | value |
+|---|---|
+| spec text, sha256 | recorded in the hash record below (this page with the record lines removed) |
+| `configs/n3v/absfix_gate_spec_v2.json`, sha256 | recorded below |
+| repository commit carrying both | the commit that adds this section (see `git log`); Leonardo fast-forwarded to it before any cell |
+| reducer `scripts/realdata_gate_analysis.py` | commit 34cc193, sha256 `a44dcc333b921fd502f9bb661593c689f1bcdc694ce23840ac3e8862a207b64f`; 55 v2 tests + wave-1 reproduction fixture |
+| sham draw script `scripts/draw_membership_shams.py` | commit 2bc5acf, sha256 `0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485`; vote script with `--emit_row_weights` sha256 `69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905` |
+| per-scene admission blocks | FILLED (§13.6; both scenes admitted; jobs 57377609/10) |
+| per-scene construction fields | FILLED (§13.7; _v3 builds; `--hull_outlier_factor 0`; `sa4d_absence_edit_render.py` sha256 `7648de041d845ef9ab580ed817200ecad0fa0ec5befec20b580ca81e7e4076b0` at commit 3d95d3e; assembler sha256 `15994bbf29b0a7881ee756f0da35e0072a8003c78ba7676bb03380c3f10c71f8`) |
+| SAM2 checkpoint sha256, config, commit | FILLED: `2647878d5dfa5098f2f8649825738a9345572bae2d4350a2468587ece47dd318`, `configs/sam2.1/sam2.1_hiera_l.yaml`, facebookresearch/sam2 `2b90b9f5ceec907a1c18123530e92e794ad901a4`; driver `scripts/s2_sam2_propagate.py` sha256 `4f874ed4160c6d9c7863d928889b4de5d80ec2273b71961f0e92e36f8028f752` (commit 1fc8392); smoke 57383718, probe 57383950 |
+| S2 click coordinates per camera per scene | **PENDING (user)**: packet delivered (`absfix-<scene>-clickpacket-f{50,92}.jpg`), template `absfix-s2-clicks-template.json`; the probe's guidance (shoulder above the label) is information, not a placement |
+| S2 mask manifest sha256 | PENDING (after the clicks; one GPU inference job per scene, ~minutes) |
+| T1 estimator | `scripts/estimate_episodes.py` sha256 `c90416df0901708350171a065afd2622d413f80d86f95c81bdd6f8639b56362d` (unchanged since wave 1); T1 runs on the new scenes PENDING (go) |
+| programs per prefix (8 gated arms), sha256 | PENDING (go): needs the four ungated 6k prefixes per scene, T1, the three votes and the sham draws |
+| prefix checkpoints, sha256 | PENDING (go): 8 new prefixes (2 scenes × 4 seeds, ~2.1 h each) |
+| evaluator `scripts/eval_n3v_gated.py` sha256 | FILLED: `4bdf427fa59264125843b0523b4466b2200383eb76eacf6d196679681cc1b927`; `main.py --val` verified equal to 4 decimals (job 57378507) but not used for scoring |
+| X external baseline | NOT ADMISSIBLE as FreeTimeGS (no released training code; ++ 404; RetimeGS no code); **PENDING (user)**: accept SpacetimeGaussians as the descriptive baseline, or record X as NOT RUN |
+| pre-existing test failure noticed | `tests/test_gate_cell_precondition.py::ConsumerContract::test_read_precondition_recovers_all_eight_fields` (a ninth field `arm_kind`); not touched; not a freeze item |
+
+Three pending kinds remain: the user's clicks and the X decision, and
+the GPU prerequisites (prefixes, T1, votes) that produce the programs
+and checkpoint hashes. The programs cannot exist before the prefixes
+train, so "every line has a value" is reachable only after a "go" that
+covers the prefixes, T1 and votes as a first stage, with continuations
+withheld until the last hash is recorded.
+
+| item | sha256 |
+|---|---|
+| this page, sections 0-13.8 (before this record) | `e5a6cfa56232762c11d34d433711f1fb159225093dfdb9d07b4c1bb715347a09` |
+| `configs/n3v/absfix_gate_spec_v2.json` after the S2/evaluator/baseline/construction fills | `062c8ebd0495aa28e776a1aa52554e3b5745d35580985d7be2d4623b11f955be` |

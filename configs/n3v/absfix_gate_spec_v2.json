@@ -97,8 +97,8 @@
    },
    "CONSTRUCTION": {
     "base_rows": "all",
-    "mask_min_cams": "pending (Lane B1 repair)",
-    "mask_cams_total": "pending",
+    "mask_min_cams": 8,
+    "mask_cams_total": 20,
     "mask_frames": [
      45,
      60,
@@ -106,22 +106,43 @@
      89,
      104
     ],
-    "mask_source": "pending (DEVA harmonised cam15 id 79; extra cap id if used)",
+    "mask_source": "DEVA harmonised cam15 id 79; no extra id",
     "edit_region": "deva",
     "dilate": 6,
     "feather": 2,
-    "rows_removed": "pending",
-    "build_dir": "pending (_v2)",
-    "derived_root": "pending (_v2)",
-    "preview_evidence": "pending",
-    "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on"
+    "rows_removed": 2227,
+    "build_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/build_id79_60_89_v3",
+    "derived_root": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/data_derived/absfix/flame_steak_absfix_60_89_v3",
+    "preview_evidence": "section 13.6 (jobs 57377286, 57377527/28/29/41, capband_prev_vs_build.json); build cap-band counts 0/0/0 on cam00/08/15 at 60/75/89",
+    "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on",
+    "hull_outlier_factor": 0.0,
+    "counts": {
+     "after_majority": 2230,
+     "after_mask_consistency": 2230,
+     "after_iqr_box": 2230,
+     "after_radius": 2227
+    },
+    "jobs": {
+     "build_job": "57382785",
+     "assemble_verify_job": "57382785 (same job: assemble + verify run in the build sbatch)",
+     "montage_capband_job": "57382787"
+    },
+    "manifest_sha256": {
+     "MANIFEST.absence_edit.json": {
+      "sha256": "a0a9c3690e56085b96105d9465182950146c0986ac4345ab4a458666aa242d7e",
+      "bytes": 344215
+     }
+    },
+    "cap_band_red_px_build": null
    },
    "evaluation_mask_job": 57252526,
    "raster_wh": [
     1352,
     1014
    ],
-   "event_name": "pending (assembler --event_prefix BOTTLE -> BOTTLE_absence_gap; set when the _v3 derived root is assembled)"
+   "event_name": "BOTTLE_absence_gap",
+   "derived_scene": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/data_derived/absfix/flame_steak_absfix_60_89_v3",
+   "construction_evidence_file": "research-wiki/assets/absfix-flame_steak-construction-v3.json"
   },
   "sear_steak": {
    "role": "confirmatory",
@@ -163,8 +184,8 @@
    },
    "CONSTRUCTION": {
     "base_rows": "all",
-    "mask_min_cams": "pending (Lane B1 repair)",
-    "mask_cams_total": "pending",
+    "mask_min_cams": 8,
+    "mask_cams_total": 20,
     "mask_frames": [
      45,
      60,
@@ -172,22 +193,43 @@
      89,
      104
     ],
-    "mask_source": "pending (DEVA harmonised cam15 id 114; extra cap id if used)",
+    "mask_source": "DEVA harmonised cam15 id 114; no extra id",
     "edit_region": "deva",
     "dilate": 6,
     "feather": 2,
-    "rows_removed": "pending",
-    "build_dir": "pending (_v2)",
-    "derived_root": "pending (_v2)",
-    "preview_evidence": "pending",
-    "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on"
+    "rows_removed": 2431,
+    "build_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/build_id114_60_89_v3",
+    "derived_root": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/data_derived/absfix/sear_steak_absfix_60_89_v3",
+    "preview_evidence": "section 13.6 (jobs 57377286, 57377527/28/29/41, capband_prev_vs_build.json); build cap-band counts 0/0/0 on cam00/08/15 at 60/75/89",
+    "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on",
+    "hull_outlier_factor": 0.0,
+    "counts": {
+     "after_majority": 2434,
+     "after_mask_consistency": 2434,
+     "after_iqr_box": 2434,
+     "after_radius": 2431
+    },
+    "jobs": {
+     "build_job": "57382813",
+     "assemble_verify_job": "57382813 (same job: assemble + verify run in the build sbatch)",
+     "montage_capband_job": "57382814"
+    },
+    "manifest_sha256": {
+     "MANIFEST.absence_edit.json": {
+      "sha256": "e781126645a2d0d898dfa01195f564e5295d5f4fe455a80caad2ae15b7d3c322",
+      "bytes": 344243
+     }
+    },
+    "cap_band_red_px_build": null
    },
    "evaluation_mask_job": 57252529,
    "raster_wh": [
     1352,
     1014
    ],
-   "event_name": "pending (assembler --event_prefix BOTTLE -> BOTTLE_absence_gap; set when the _v3 derived root is assembled)"
+   "event_name": "BOTTLE_absence_gap",
+   "derived_scene": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/data_derived/absfix/sear_steak_absfix_60_89_v3",
+   "construction_evidence_file": "research-wiki/assets/absfix-sear_steak-construction-v3.json"
   }
  },
  "ADMISSION_RULE": {
@@ -278,9 +320,9 @@
  },
  "S2": {
   "model": "SAM2",
-  "checkpoint_sha256": "pending",
-  "config": "pending",
-  "code_commit": "pending",
+  "checkpoint_sha256": "2647878d5dfa5098f2f8649825738a9345572bae2d4350a2468587ece47dd318",
+  "config": "configs/sam2.1/sam2.1_hiera_l.yaml",
+  "code_commit": "2b90b9f5ceec907a1c18123530e92e794ad901a4 (facebookresearch/sam2; W/repo/sam2; venv W/envs/sam2, torch 2.5.1+cu121)",
   "propagation": [
    [
     50,
@@ -297,7 +339,13 @@
    "sear_steak": "pending",
    "cut_roasted_beef": "pending"
   },
-  "camera_drop_rule": "applied at EACH seed frame separately: mask area at the seed frame < 500 px or > 5x the median over cameras -> camera dropped from the vote and listed; vote requires >= 12 remaining cameras"
+  "camera_drop_rule": "applied at EACH seed frame separately: mask area at the seed frame < 500 px or > 5x the median over cameras -> camera dropped from the vote and listed; vote requires >= 12 remaining cameras",
+  "checkpoint": "models/sam2/sam2.1_hiera_large.pt",
+  "driver": "scripts/s2_sam2_propagate.py",
+  "driver_sha256": "4f874ed4160c6d9c7863d928889b4de5d80ec2273b71961f0e92e36f8028f752",
+  "smoke_job": 57383718,
+  "click_probe_job": 57383950,
+  "click_guidance_from_probe": "cam15 f50 throwaway probe: shoulder click [996,735] -> whole bottle 7152 px; label click -> label only 3517 px (would fail the 0.70 IoU precondition); low-body click -> the wine glass in front. Guidance only; the user's clicks are not chosen by the probe."
  },
  "MEMBERSHIP_PRECONDITION": {
   "precision_min": 0.8,
@@ -340,8 +388,8 @@
    299
   ],
   "camera": "cam00",
-  "sha256": "pending",
-  "note": "the only evaluator for wave-2 scoring; main.py --val is not used"
+  "sha256": "4bdf427fa59264125843b0523b4466b2200383eb76eacf6d196679681cc1b927",
+  "note": "the only evaluator for wave-2 scoring; main.py --val (commit bfb8cbb) reproduces it to 4 decimals on absfix_oracle_s0 (job 57378507) but is not used for scoring"
  },
  "PAIRED_MIN_EFFECT_DB": 0.5,
  "PAIRED_FLOOR_SOURCE": "fixed",
@@ -477,8 +525,11 @@
  ],
  "EXTERNAL_BASELINE": {
   "method": "FreeTimeGS",
+  "status": "NOT RUN: no released training code (zju3dv/EasyVolcap issue 47 open >1 year; FreeTimeGS++ repos 404; RetimeGS no code) as of 2026-09-12",
+  "unofficial_reimplementation": "OpsiClear-4DGS/FreeTimeGsVanilla commit 911dcf4157a3ddf5c96d9147f97627480268fe0f (AGPL-3.0; not the paper's code; COLMAP input; no parity claim) - not admissible as a citable baseline",
+  "proposed_replacement": "SpacetimeGaussians (STG; public code; per-primitive temporal opacity; published cut_roasted_beef 33.52) - pending the user's confirmation; commit and schedule to be pinned then",
   "seeds_per_scene": 2,
-  "status": "pending admission; NOT RUN with reason if not admitted"
+  "verdict_role": "descriptive only, out of both claims"
  },
  "COST_ESTIMATE_A100H": {
   "per_confirmatory_scene": 105,
@@ -492,5 +543,26 @@
   "dense initialisation: VGGT or Depth Anything 3 dense cloud replacing the COLMAP sparse init on the same protocol"
  ],
  "FOLLOWUP_RECORDED_ONLY": "absence-vs-occlusion separation via the EL-GS v8 model-transmittance idea (renderer-conditioned censored evidence); design note only, no cell authorised",
- "EVENT_NAME_RULE": "per-scene bounding-box event read by P2/S1/H1/C1: <event_prefix>_absence_gap with event_prefix BOTTLE for every scene; P1 reads roi:core"
+ "EVENT_NAME_RULE": "per-scene bounding-box event read by P2/S1/H1/C1: <event_prefix>_absence_gap with event_prefix BOTTLE for every scene; P1 reads roi:core",
+ "REDUCER": {
+  "script": "scripts/realdata_gate_analysis.py",
+  "commit": "34cc193",
+  "sha256": "a44dcc333b921fd502f9bb661593c689f1bcdc694ce23840ac3e8862a207b64f",
+  "tests": "tests/test_realdata_gate_analysis_v2.py (55) + wave-1 reproduction fixture tests/fixtures/absfix_wave1/"
+ },
+ "SHAM_DRAWS": {
+  "script": "scripts/draw_membership_shams.py",
+  "commit": "2bc5acf",
+  "sha256": "0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485",
+  "vote_script_sha256": "69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905 (scripts/realdata_membership_vote.py with --emit_row_weights)"
+ },
+ "FIXTURE_CONSTRUCTION_SCRIPTS": {
+  "sa4d_absence_edit_render.py_sha256": "7648de041d845ef9ab580ed817200ecad0fa0ec5befec20b580ca81e7e4076b0 (commit 3d95d3e)",
+  "build_absence_fixture_scene.py_sha256": "15994bbf29b0a7881ee756f0da35e0072a8003c78ba7676bb03380c3f10c71f8"
+ },
+ "T1": {
+  "script": "scripts/estimate_episodes.py",
+  "sha256": "c90416df0901708350171a065afd2622d413f80d86f95c81bdd6f8639b56362d",
+  "visualisation": "scripts/t1_estimator_viz.py (commit deff517)"
+ }
 }
