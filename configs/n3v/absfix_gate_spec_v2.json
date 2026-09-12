@@ -1324,16 +1324,21 @@
  ],
  "EXTERNAL_BASELINE": {
   "method": "SpacetimeGaussians (STG)",
-  "status": "CONFIRMED by the user 2026-09-13; descriptive only, outside both claims",
-  "repo": "pending (pinned commit, licence)",
-  "published_n3v_schedule": "pending",
+  "status": "PINNED and PLUMBED; training runs with stage 2 (descriptive only)",
+  "repo": "https://github.com/oppo-us-research/SpacetimeGaussians commit 427abfc58309a4a5213843dd673fb22c4529306c (main, 2025-03-30); thirdparty/mmcv @ 3ba02dfd; licence MIT (OPPO) with the Gaussian-Splatting use limitation",
+  "published_n3v_schedule": "full model: iterations 30000 (arguments/__init__.py:94), batch 2 (:107), densify 500-9000 @ 0.0002 (:117-119), save at 7000/10000/12000/25000/30000 (helper3dg.py:41), metric at test_iteration 25000, 1 GPU; per-frame COLMAP point_triangulator init (README L64-71); raster: published resolution 2 on 2704x2028 = 1352x1014, so on the derived 1352x1014 frames the config uses resolution 1 (verified COLMAP intrinsics PINHOLE 1352 1014 f=731.0336)",
   "seeds_per_scene": 2,
   "scenes": [
    "flame_steak",
    "sear_steak"
   ],
   "runs_with": "stage 2",
-  "not_admissible": "FreeTimeGS (no released training code; EasyVolcap issue 47 open >1 year), FreeTimeGS++ (repos 404), RetimeGS (no code), as of 2026-09-12"
+  "not_admissible": "FreeTimeGS (no released training code; EasyVolcap issue 47 open >1 year), FreeTimeGS++ (repos 404), RetimeGS (no code), as of 2026-09-12",
+  "install": "W/repo/stg (pinned), venv W/envs/stg (torch 2.5.1+cu121, numpy 1.26.4), five CUDA extensions built sm_80 (job 57485725); patches W/repo/stg/patches/stg_adags.diff (sk_ssim import fix; STG_SEED env flag because the code hard-codes seed 0); LPIPS linear weights must be pre-fetched on the login node (no network on compute nodes)",
+  "preprocessing": "prep_derived.py under W/agent-control/realdata/stg/ symlinks derived frames into STG's colmap_<frame> layout and runs STG's own per-frame COLMAP triangulation (~9 s/frame; flame_steak frames 0-49 done, job 57485385; frames 50-299 and sear_steak pending)",
+  "dry_run": "job 57488278 train 200 it (loss 0.207 -> 0.153, 67 s), job 57489307 render 50 cam00 PNGs 1352x1014 (plumbing only, no result)",
+  "stage2_commands": "W/agent-control/realdata/stg/README_stage2.md (train_stg.sbatch / render_stg.sbatch)",
+  "cost_estimate_a100h": "1.0-1.5 h per model; 2 seeds x 2 scenes (+ calibration if run) => 30-42 A100-h incl. COLMAP and renders"
  },
  "COST_ESTIMATE_A100H": {
   "per_confirmatory_scene": 105,
@@ -1382,5 +1387,22 @@
    "all hashes"
   ],
   "gated_cells": "NONE; stage 2 waits for the user's second go"
+ },
+ "PLATE_CENSUS": {
+  "date": "2026-09-13",
+  "jobs": [
+   57485507,
+   57486262,
+   57487805
+  ],
+  "verdict": "NO candidate meets all three requirements on any scene (stable id, plate available on every camera, size/visibility)",
+  "counts_pass_stability_and_size/plate_possible/pass_cam15_plate": {
+   "cut_roasted_beef": "1026/8/0",
+   "flame_steak": "1331/9/5",
+   "sear_steak": "958/0/0"
+  },
+  "top_candidate": "flame_steak cam15 id 127 = the flame above the pan; its harmonised cam00 id 111 = the cook's body (montage viewed by the primary)",
+  "binding_cause": "DEVA segment granularity is inconsistent across cameras: a small cam15 object is swallowed by a 10-30x larger segment elsewhere, so a 21-camera plate requirement is not answerable for small objects by this route",
+  "consequence": "per the 2026-09-13 plan: build the INSERTION fixture as spec v3 (new frozen spec, own kill-argument); scripts W/agent-control/realdata/plate_census/ and scripts/plate_census.py; artefacts runs/realdata/plate_census/<scene>/{census.json,montage.jpg}"
  }
 }

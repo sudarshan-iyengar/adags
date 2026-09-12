@@ -718,3 +718,13 @@ Run 1 (jobs 57485941/42/43, driver on the recorded clicks): kept 19/20, 19/20, 1
 | item | sha256 |
 |---|---|
 | `configs/n3v/absfix_gate_spec_v2.json` after the re-seed record | `54bf5ae0f223d0607ef5efd762acd34357b338892de77cb61174339a4ae30adc` |
+
+### 13.12 X pinned; plate census NEGATIVE, insertion fixture selected for v3 (2026-09-13)
+
+**X = SpacetimeGaussians pinned:** commit `427abfc58309a4a5213843dd673fb22c4529306c` (MIT with the Gaussian-Splatting use limitation); published full schedule 30,000 iterations, batch 2, densify 500–9,000, metric at 25,000, one GPU, per-frame COLMAP init; on the derived 1352 × 1014 frames the config uses `resolution: 1` (the published `resolution: 2` on native 2704 × 2028 gives the same raster; verified intrinsics f = 731.03). Installed (five CUDA extensions, job 57485725), two recorded patches (SSIM import; a seed flag, since STG hard-codes seed 0), flame_steak frames 0–49 preprocessed (57485385), 200-iteration dry run and cam00 render verified at the raster (57488278, 57489307). Estimated 30–42 A100-h for 2 seeds × 2 scenes; runs with stage 2; descriptive only.
+
+**Plate census (jobs 57485507, 57486262, 57487805; CPU): NEGATIVE on all three scenes.** Rows passing stability and size / plate-possible / passing the cam15 plate test: cut_roasted_beef 1,026 / 8 / 0; flame_steak 1,331 / 9 / 5; sear_steak 958 / 0 / 0. The one id passing the cam15 plate test (flame_steak 127) is the flame above the pan and its cam00 counterpart is the cook (montage viewed). Binding cause: DEVA segment granularity differs across cameras by 10–30×, so a small object cannot be tested for plates on 21 cameras by this route. Consequence, per the user's 2026-09-13 rule: the INSERTION fixture is the v3 candidate (new frozen spec with its own kill-argument); nothing about wave 2 changes.
+
+| item | sha256 |
+|---|---|
+| `configs/n3v/absfix_gate_spec_v2.json` after the X pin and census record | `0e80b11709889b7933f8bdfdbfd6c5acd4ac7a046925dfe0379b350437fcd19c` |
