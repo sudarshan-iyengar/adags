@@ -333,11 +333,11 @@
     99
    ]
   ],
-  "click_rule": "TWO positive clicks per training camera, one at frame 50 (seeds propagation 50->109) and one at frame 92 (seeds propagation 92->99), placed by the user from the RAW frames (click packet), coordinates recorded here BEFORE inference, no retries",
+  "click_rule": "Section 13.9(a): clicks placed by the PRIMARY from packet sheets regenerated WITHOUT the cyan construction boxes; the placer never views a DEVA/SA4D mask; one click per training camera at frame 50 (seeds 50->109) and one at frame 92 (seeds 92->99), on the dark glass shoulder above the label; all coordinates recorded here BEFORE inference, with the sheet file named",
   "clicks": {
-   "flame_steak": "pending",
-   "sear_steak": "pending",
-   "cut_roasted_beef": "pending"
+   "flame_steak": "pending (primary, from absfix-<scene>-clickpacket-nobox-f{50,92}.jpg)",
+   "sear_steak": "pending (primary)",
+   "cut_roasted_beef": "pending (primary; calibration scene, needed for its G-est-mem cells)"
   },
   "camera_drop_rule": "applied at EACH seed frame separately: mask area at the seed frame < 500 px or > 5x the median over cameras -> camera dropped from the vote and listed; vote requires >= 12 remaining cameras",
   "checkpoint": "models/sam2/sam2.1_hiera_large.pt",
@@ -345,7 +345,13 @@
   "driver_sha256": "4f874ed4160c6d9c7863d928889b4de5d80ec2273b71961f0e92e36f8028f752",
   "smoke_job": 57383718,
   "click_probe_job": 57383950,
-  "click_guidance_from_probe": "cam15 f50 throwaway probe: shoulder click [996,735] -> whole bottle 7152 px; label click -> label only 3517 px (would fail the 0.70 IoU precondition); low-body click -> the wine glass in front. Guidance only; the user's clicks are not chosen by the probe."
+  "click_guidance_from_probe": "cam15 f50 throwaway probe: shoulder click [996,735] -> whole bottle 7152 px; label click -> label only 3517 px (would fail the 0.70 IoU precondition); low-body click -> the wine glass in front. Guidance only; the user's clicks are not chosen by the probe.",
+  "reseed_rule": "Section 13.9(b): after the first run each camera's mask is checked ONCE by eye against the RAW frame only, criterion 'mask covers the bottle from cap to base'; a failing camera gets exactly ONE second click at that seed frame (replaces the first; re-run for that camera only); no third attempt; per-scene per-frame re-seed counts and both coordinates in the manifest and reported; precondition thresholds unchanged",
+  "reseeds": {
+   "flame_steak": "pending",
+   "sear_steak": "pending",
+   "cut_roasted_beef": "pending"
+  }
  },
  "MEMBERSHIP_PRECONDITION": {
   "precision_min": 0.8,
@@ -524,12 +530,17 @@
   "any dataset not trained here"
  ],
  "EXTERNAL_BASELINE": {
-  "method": "FreeTimeGS",
-  "status": "NOT RUN: no released training code (zju3dv/EasyVolcap issue 47 open >1 year; FreeTimeGS++ repos 404; RetimeGS no code) as of 2026-09-12",
-  "unofficial_reimplementation": "OpsiClear-4DGS/FreeTimeGsVanilla commit 911dcf4157a3ddf5c96d9147f97627480268fe0f (AGPL-3.0; not the paper's code; COLMAP input; no parity claim) - not admissible as a citable baseline",
-  "proposed_replacement": "SpacetimeGaussians (STG; public code; per-primitive temporal opacity; published cut_roasted_beef 33.52) - pending the user's confirmation; commit and schedule to be pinned then",
+  "method": "SpacetimeGaussians (STG)",
+  "status": "CONFIRMED by the user 2026-09-13; descriptive only, outside both claims",
+  "repo": "pending (pinned commit, licence)",
+  "published_n3v_schedule": "pending",
   "seeds_per_scene": 2,
-  "verdict_role": "descriptive only, out of both claims"
+  "scenes": [
+   "flame_steak",
+   "sear_steak"
+  ],
+  "runs_with": "stage 2",
+  "not_admissible": "FreeTimeGS (no released training code; EasyVolcap issue 47 open >1 year), FreeTimeGS++ (repos 404), RetimeGS (no code), as of 2026-09-12"
  },
  "COST_ESTIMATE_A100H": {
   "per_confirmatory_scene": 105,
@@ -564,5 +575,19 @@
   "script": "scripts/estimate_episodes.py",
   "sha256": "c90416df0901708350171a065afd2622d413f80d86f95c81bdd6f8639b56362d",
   "visualisation": "scripts/t1_estimator_viz.py (commit deff517)"
+ },
+ "STAGE_1": {
+  "authorised": "2026-09-13 by the user (section 13.9 d)",
+  "content": [
+   "8 ungated 6k prefixes on the _v3 roots (2 scenes x 4 seeds)",
+   "T1 per prefix",
+   "construction-derived vote per prefix + row-weight dump",
+   "sham draws A/B/L per prefix",
+   "SAM2 propagation under 13.9(a)-(b)",
+   "S2 vote per prefix",
+   "membership and T1 preconditions",
+   "all hashes"
+  ],
+  "gated_cells": "NONE; stage 2 waits for the user's second go"
  }
 }

@@ -639,3 +639,66 @@ withheld until the last hash is recorded.
 |---|---|
 | this page, sections 0-13.8 (before this record) | `e5a6cfa56232762c11d34d433711f1fb159225093dfdb9d07b4c1bb715347a09` |
 | `configs/n3v/absfix_gate_spec_v2.json` after the S2/evaluator/baseline/construction fills | `062c8ebd0495aa28e776a1aa52554e3b5745d35580985d7be2d4623b11f955be` |
+
+### 13.9 S2 click procedure amended, one bounded re-seed, X fixed to SpacetimeGaussians, stage 1 authorised (user decision 2026-09-13; appended BEFORE any SAM2 inference)
+
+**(a) Who places the clicks.** §13.1 had the user place the clicks. Amended:
+the S2 clicks are placed by the PRIMARY (the orchestrating agent), not by
+the user, from click-packet sheets REGENERATED WITHOUT the cyan
+construction boxes; the placer never views a DEVA or SA4D mask at any
+point of the placement. The crop windows of the regenerated sheets reuse
+the packet's per-camera origins (a window around the bottle; no mask or
+box is drawn inside it) so that the sheets remain comparable; the click
+is placed on the raw pixels only. One click per training camera at frame
+50 and one at frame 92, on the dark glass shoulder above the label (the
+2026-09-12 probe showed a shoulder click returns the whole bottle, a
+label click only the label, a low-body click the wine glass). All
+coordinates (2 × 20 cameras × 2 scenes = 80) are written into
+`S2.clicks` in the JSON BEFORE inference, with the sheet files they were
+read from named beside them.
+
+**(b) One bounded re-seed.** After the first propagation run, every
+camera's SAM2 mask is checked ONCE, by eye, against the RAW frame only
+(never against a DEVA/SA4D mask), with the single criterion "the mask
+covers the bottle from cap to base". A camera whose mask fails the
+criterion at a seed frame receives exactly ONE second click at that seed
+frame; the second click replaces the first for that camera and frame;
+propagation is re-run for that camera only; no third attempt exists. The
+manifest records, per scene and per seed frame, which cameras were
+re-seeded, both click coordinates, and the count; the count is reported
+beside the precondition. The precondition thresholds of §11.3 are
+unchanged (precision ≥ 0.80, recall ≥ 0.70, size ratio [0.5, 2.0], cam15
+IoU ≥ 0.70 at frames 50 and 95); a camera that still fails after its
+second click is kept in the vote unless the §11.3 camera-drop rule
+removes it.
+
+**(c) X = SpacetimeGaussians** (STG; public code; per-primitive temporal
+opacity; published `cut_roasted_beef` 33.52), confirmed by the user.
+Descriptive only, outside both claims; two seeds per derived confirmatory
+scene at STG's published N3V schedule, scored with the same profile;
+runs alongside stage 2. The pinned commit and schedule are recorded in
+the JSON (`EXTERNAL_BASELINE`) and in the hash record below.
+
+**(d) Stage 1 authorised (no gated cell):** the eight ungated 6k prefixes
+on the `_v3` derived roots of flame_steak and sear_steak (four seeds
+each, `b0c_crb300_6k_rp_prefix.yaml`), T1 per prefix, the
+construction-derived vote per prefix, the row-weight dump, the three
+sham draws per prefix, SAM2 propagation under (a)–(b), the S2 vote per
+prefix, both preconditions, and every hash of §13.8. Stage 2
+(continuations) waits for the user's second "go" after the fully valued
+freeze list is shown.
+
+**(e) In parallel, CPU only:** a plate-candidate census on all three
+scenes for a possible v3 fixture (a moving object whose absent-window
+footprint is object-free and hand-free at some other time on every
+camera), scoring each DEVA id's segmentation stability across the
+window as well as plate availability; ranked montage for the user's
+choice; the user decides the object. Recorded here as intent; a plate or
+insertion fixture is a NEW frozen spec (v3) with its own kill-argument
+pass. The bottle fixtures stay as the static-object case. The SA4D
+background fine-tune is not done.
+
+| item | sha256 |
+|---|---|
+| this page, sections 0-13.9 (before this record) | `af83c8813fbd8895902bcb5141afda5d6d5da1f00e4c72b0ff60b73901a19cea` |
+| `configs/n3v/absfix_gate_spec_v2.json` after the 13.9 edits (STG commit and clicks still pending) | `e7790bc7af3bae55a13d12281c4ddfe1b9eff6c5a787e83c765bc243789d4a7a` |
