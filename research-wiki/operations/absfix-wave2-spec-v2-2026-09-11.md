@@ -522,3 +522,53 @@ a further §13 line with the new JSON hash.
 | this page, sections 0-13.5 (before this record) | `492bffb285d536b8902fe625efdaf3105ab64b250aa0f9c3fb5da9f1cb315a5d` |
 | `configs/n3v/absfix_gate_spec_v2.json` after the section-13 edits | `6f39916ed550e53546039d12a8a71374ab6865deec727225e69550b6f98377c6` |
 | `configs/n3v/absfix_gate_spec_v2.json` after line-ending normalisation to LF (content unchanged; the previous line hashed a CRLF working copy) | `735ec3060e5899f25f941a2dd512fb2abf7dfe83745cbff218c118cae0e64195` |
+
+### 13.6 Admission blocks filled, the repair's root cause, and the confirmatory construction rule (2026-09-12)
+
+**Admission (Lane B jobs 57377609/57377610; evidence files
+`research-wiki/assets/absfix-{flame_steak,sear_steak}-admission.json`):
+BOTH confirmatory scenes ADMITTED under §11.1.** 21 cameras, frames
+40–109: worst min/median 0.9803 (flame_steak cam04) and 0.9765
+(sear_steak cam14); 0 frames below 0.60 × median, 0 below 2,000 px
+(smallest minimum area 4,934 / 4,977 px on cam10), 0 missing masks; one
+connected component on every camera at frames 50/75/100; control window
+[230,259] passes on its own median and on the main-window median (worst
+0.9893 / 0.9915), no fallback. cam00 evaluation ids 65 (flame_steak; mask
+job 57252526, id-map job 57254952) and 67 (sear_steak; 57252529 /
+57254953); raster 1352 × 1014; mechanism boxes (union of the cam00
+silhouette over 63–87, +8 px, half-open) **[957,753,1027,965]** and
+**[957,754,1027,962]**; bbox at frame 75 [965,761,1018,957] /
+[965,763,1018,953]. Written into the JSON (CA/CB, boxes, ids, jobs,
+`admission` block, `event_name` rule: every scene is assembled with
+`--event_prefix BOTTLE`, so the bounding-box event is
+`BOTTLE_absence_gap`; the reducer needs this name and the frozen JSON
+had omitted it, found by Lane C).
+
+**Repair root cause (Lane B, jobs 57377286, 57377527/28/29/41,
+57378195/97; `capband_prev_vs_build.json`).** The cap is not a separate
+DEVA id (the silhouette includes it). Lowering `mask_min_cams` changed
+nothing: the 8-camera PREVIEW is already cap-free (0 red cap-band pixels
+on cam00/08/15 at frames 60/75/89), the BUILD at the same vote is not
+(283/178/272). `run_build` applies a post-vote IQR outlier box
+(`points_inside_convex_hull`, factor 1.0) that `run_preview` does not;
+it dropped 240 of 2,230 voted rows on flame_steak and 134 of 2,434 on
+sear_steak, and cap-band object-alpha counts identify the dropped rows as
+the cap (flame_steak cam00 677 → 441, cam15 829 → 580, cam08 484 → 328;
+sear_steak cam00 674 → 674). The mc=7 "_v2" builds of both scenes are
+mis-labelled repairs (an mc=7 variant), preserved and never trained on.
+
+**Confirmatory construction rule (frozen here, applied identically to
+both scenes, build suffix _v3):** `base_rows all`, `mask_min_cams 8`
+of the training cameras (the wave-1 value), `mask_frames
+45/60/75/89/104`, DEVA harmonised cam15 id (79 / 114), no extra id,
+`edit_region deva`, `dilate 6`, `feather 2`, and
+**`--hull_outlier_factor 0` (the post-vote IQR box DISABLED)**, with the
+radius filter unchanged. Difference from `cut_roasted_beef` (factor
+1.0): recorded here with the reason above; the calibration scene keeps
+its wave-1 build. Code: commit exposing the knob (this session), pushed
+before the rebuild. The JSON's CONSTRUCTION fields for the two scenes are
+filled from the _v3 build outputs.
+
+| item | sha256 |
+|---|---|
+| `configs/n3v/absfix_gate_spec_v2.json` after the admission fill | `f8c68072e7bc7e5da0d12761fc7faa024138d78816ca11bb231071a4ecf762b8` |

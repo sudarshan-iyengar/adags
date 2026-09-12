@@ -54,25 +54,47 @@
     "build_dir": "runs/realdata/absfix/build_id117_60_89",
     "derived_root": "data_derived/absfix/cut_roasted_beef_absfix_60_89",
     "preview_evidence": "preview 57098650; build 57102816; cap remnant declared as a calibration-fixture limitation"
-   }
+   },
+   "event_name": "BOTTLE_absence_gap"
   },
   "flame_steak": {
    "role": "confirmatory",
    "object": "wine bottle",
    "construction_id_cam15": 79,
-   "evaluation_id_cam00": "pending",
-   "evaluation_id_job": "pending",
+   "evaluation_id_cam00": 65,
+   "evaluation_id_job": 57254952,
    "A": 60,
    "B": 89,
-   "CA": "pending",
-   "CB": "pending",
+   "CA": 230,
+   "CB": 259,
    "margins": [
     40,
     109
    ],
-   "MECHANISM_FBOX": "pending",
+   "MECHANISM_FBOX": [
+    957,
+    753,
+    1027,
+    965
+   ],
    "MECHANISM_FBOX_FRAME": 75,
-   "admission": "pending (section 11.1 rule on Lane B's per-camera silhouette-area table)",
+   "admission": {
+    "admitted": true,
+    "evidence_jobs": [
+     57377609,
+     57377610
+    ],
+    "cameras": 21,
+    "main_window_frames": [
+     40,
+     109
+    ],
+    "main_window_failing_cameras": [],
+    "components_max_over_cameras_at_50_75_100": 1,
+    "control_window_passes_own_and_main_median": true,
+    "control_fallback": null,
+    "evidence_file": "research-wiki/assets/absfix-flame_steak-admission.json"
+   },
    "CONSTRUCTION": {
     "base_rows": "all",
     "mask_min_cams": "pending (Lane B1 repair)",
@@ -93,25 +115,52 @@
     "derived_root": "pending (_v2)",
     "preview_evidence": "pending",
     "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on"
-   }
+   },
+   "evaluation_mask_job": 57252526,
+   "raster_wh": [
+    1352,
+    1014
+   ],
+   "event_name": "pending (assembler --event_prefix BOTTLE -> BOTTLE_absence_gap; set when the _v3 derived root is assembled)"
   },
   "sear_steak": {
    "role": "confirmatory",
    "object": "wine bottle",
    "construction_id_cam15": 114,
-   "evaluation_id_cam00": "pending",
-   "evaluation_id_job": "pending",
+   "evaluation_id_cam00": 67,
+   "evaluation_id_job": 57254953,
    "A": 60,
    "B": 89,
-   "CA": "pending",
-   "CB": "pending",
+   "CA": 230,
+   "CB": 259,
    "margins": [
     40,
     109
    ],
-   "MECHANISM_FBOX": "pending",
+   "MECHANISM_FBOX": [
+    957,
+    754,
+    1027,
+    962
+   ],
    "MECHANISM_FBOX_FRAME": 75,
-   "admission": "pending (section 11.1 rule on Lane B's per-camera silhouette-area table)",
+   "admission": {
+    "admitted": true,
+    "evidence_jobs": [
+     57377609,
+     57377610
+    ],
+    "cameras": 21,
+    "main_window_frames": [
+     40,
+     109
+    ],
+    "main_window_failing_cameras": [],
+    "components_max_over_cameras_at_50_75_100": 1,
+    "control_window_passes_own_and_main_median": true,
+    "control_fallback": null,
+    "evidence_file": "research-wiki/assets/absfix-sear_steak-admission.json"
+   },
    "CONSTRUCTION": {
     "base_rows": "all",
     "mask_min_cams": "pending (Lane B1 repair)",
@@ -132,7 +181,13 @@
     "derived_root": "pending (_v2)",
     "preview_evidence": "pending",
     "superseded_builds": "2026-09-11 mask_min_cams 8 build and derived root: preserved, never trained on"
-   }
+   },
+   "evaluation_mask_job": 57252529,
+   "raster_wh": [
+    1352,
+    1014
+   ],
+   "event_name": "pending (assembler --event_prefix BOTTLE -> BOTTLE_absence_gap; set when the _v3 derived root is assembled)"
   }
  },
  "ADMISSION_RULE": {
@@ -142,7 +197,7 @@
    40,
    109
   ],
-  "cameras": "all 20",
+  "cameras": "all 21 (cam00 + 20 training)",
   "unique_component_frames": [
    50,
    75,
@@ -436,5 +491,6 @@
   "deferred-seeding sweep: seeding iteration in {0, 2k, 4k, 6k, 8k} vs bound rows and gate effect on one confirmatory scene",
   "dense initialisation: VGGT or Depth Anything 3 dense cloud replacing the COLMAP sparse init on the same protocol"
  ],
- "FOLLOWUP_RECORDED_ONLY": "absence-vs-occlusion separation via the EL-GS v8 model-transmittance idea (renderer-conditioned censored evidence); design note only, no cell authorised"
+ "FOLLOWUP_RECORDED_ONLY": "absence-vs-occlusion separation via the EL-GS v8 model-transmittance idea (renderer-conditioned censored evidence); design note only, no cell authorised",
+ "EVENT_NAME_RULE": "per-scene bounding-box event read by P2/S1/H1/C1: <event_prefix>_absence_gap with event_prefix BOTTLE for every scene; P1 reads roi:core"
 }
