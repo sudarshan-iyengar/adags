@@ -42,7 +42,7 @@ def truth_program(n_rows=N_ROWS, truth_rows=TRUTH_ROWS, group=1):
                     "lo": [0.0, 0.0, 0.0], "span": [1.0, 1.0, 1.0],
                     "group_cell_keys": {"1": [7]}},
         "groups": [{"group": group, "gaps": [[1.9, 2.96]],
-                    "offset_frame": GAP[0], "onset_frame": GAP[1],
+                    "offset_frame": GAP[0], "onset_frame": GAP[1] + 1,
                     "rows_at_estimation": len(truth_rows)}],
         "source": {"instrument": "test"},
         "row_group_ids": column,
@@ -247,7 +247,7 @@ def test_the_sham_program_differs_from_the_truth_program_only_in_its_rows():
         assert program[key] == base[key], key
     assert program["groups"][0]["gaps"] == base["groups"][0]["gaps"]
     assert program["groups"][0]["offset_frame"] == GAP[0]
-    assert program["groups"][0]["onset_frame"] == GAP[1]
+    assert program["groups"][0]["onset_frame"] == GAP[1] + 1
     assert program["groups"][0]["rows_at_estimation"] == len(TRUTH_ROWS)
     assert program["source"]["instrument"] == "test"
     assert program["source"]["wrongmem"]["arm"] == dms.DRAW_A

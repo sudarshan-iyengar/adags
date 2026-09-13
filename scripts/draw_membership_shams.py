@@ -181,8 +181,12 @@ def check_gap(program, gap):
     if gap is None:
         return
     group = program["groups"][0]
+    # The estimator's `offset_frame` is the first ABSENT frame and its
+    # `onset_frame` the first PRESENT frame after the gap, so the absent
+    # window `--gap A B` (B = the LAST absent frame, spec v1.2.0 anchor
+    # semantics) is [offset_frame, onset_frame - 1].
     declared = [int(group.get("offset_frame", -1)),
-                int(group.get("onset_frame", -1))]
+                int(group.get("onset_frame", 0)) - 1]
     if declared != [int(gap[0]), int(gap[1])]:
         raise DrawRefused(
             "the truth program's gap is %r but --gap says %r; the shams carry "
