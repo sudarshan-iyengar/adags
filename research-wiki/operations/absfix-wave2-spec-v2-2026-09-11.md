@@ -846,3 +846,89 @@ draw removes less than half the paint, so a win over it could be read as
 | item | sha256 |
 |---|---|
 | this page, sections 0-13.18 (before this record) | `24501477306d6a8948b922b8657b855cfcde9700bee3ca0547d7f537ce16e5b3` |
+
+### 13.19 Recount against the frozen boxes, the audit of T1-derived quantities, and why the radius L rule also refuses (2026-09-13, 14:40 CEST)
+
+**Audit of §13.15 (user request).** Exactly one quantity in the stage-1
+setup was T1-derived: the calibration scene's vote seed box
+`[-1.0604, 1.7081, -2.5094] .. [-0.4, 2.4219, -1.6656]`, which is the
+union of the two voxel cells blind T1 gated on wave-1 prefix 0 (job
+57132256) and was reused as an authored constant for the four calibration
+votes in wave 1 and in stage 1 (both the construction-derived and the S2
+votes). No confirmatory-scene quantity is T1-derived: their seed boxes
+follow the construction-derived rule of §13.16; the frozen mechanism
+boxes of every scene are the cam00 silhouette unions of §13.6 (JSON
+`MECHANISM_FBOX`), which never read T1. §11.5 is NOT amended to accept
+the T1-derived box; instead every program of every prefix was recounted
+against the frozen boxes.
+
+**Recount (jobs 57556801/02/04; `research-wiki/assets/absfix-box-recount.md`;
+integer counts, rows gated / rows whose deformed centre projects inside the
+frozen box on cam00 at frame 75, or at 245 / 291 for G-mis / G-ones):**
+G, G-est, G-est-mem (where it exists), G-mis and G-ones put ≥ 0.9996 of
+their rows inside the box on every prefix of every scene (all PASS the
+≥ 100 clause; e.g. sear_steak G 7,676 / 7,434 / 7,656 / 7,536 rows,
+≥ 0.9996 in box). So the calibration reading survives the audit: its
+programs pass the frozen box exactly as the confirmatory ones do.
+**G-est-mem on sear_steak stays MISSING** (no S2 program: the vote refuses
+on cam09, §13.16), so Claim B on sear_steak stays DESIGN_WITHOUT_POWER;
+the recount could not admit it because the instrument itself is not
+admitted, which is a mask question, not a box question.
+
+**The count-matched uniform shams fail the box clause by construction:**
+A and B place 46–103 rows in the box (23 of 24 cells below 100; sear s3 A
+= 103). A uniform draw over the cloud is non-local by definition; §11.4
+applies an object-locality test to a control whose purpose is not to be
+the object. Recorded here as a category error in §11.4 for the user to
+dispose of (recommended: A and B are exempt from the in-box clause only,
+keeping the row-count and zero-presence clauses, as G-mis and G-ones are
+exempt from the window clause). Not changed.
+
+**The radius L rule of §13.18 ALSO refuses on all 12 prefixes, and
+locality is not the cause.** With the frozen measure (each row's rendered
+contribution INSIDE the object silhouette on cam15 at frame 50, the
+archive column `w_in`), all non-truth rows of the whole cloud together
+carry only 0.21–0.48 of the truth mass (calibration 0.21–0.25, flame
+0.45–0.48, sear 0.44–0.46), so the ±10% band is unreachable at any
+radius (verbatim: "all non-truth rows together carry 2732.7 of
+contribution mass against the truth set's 5667.53; the +-10% band
+[5100.78, 6234.28] is unreachable at any radius"). This is a property of
+the measure: only rows that paint the object's silhouette carry mass in
+it, and the vote assigned those rows to the truth set. The retired
+local-only ratios reproduce (flame 0.41 / 0.39 / 0.39 / 0.37, sear
+0.38 / 0.40 / 0.37 / 0.40).
+
+**Feasibility on the total-contribution measure (`w_total`, each row's
+rendered contribution to the whole cam15 view at frame 50; login-node
+numpy, three prefixes):** the truth set's `w_total` is 5,831 / 5,744 /
+5,681 (flame s1 / sear s1 / calibration s0), of which 98% is inside its
+silhouette; the non-truth cloud carries 168–172× that mass; the radius
+at which non-truth rows reach 0.9× the truth mass is **0.707 / 0.722 /
+0.740 units** from the truth centroid, enclosing 5,597 / 6,148 / 4,928
+non-truth rows, against truth rows whose own distances have median 0.20
+and maximum 0.53. A mass-matched draw on `w_total` therefore exists, is
+as local as the cloud allows (a shell just outside the bottle), and
+removes the same amount of PAINT from the view as the truth set, which
+is the magnitude the Codex review asked to match. The decision to change
+the measure is the user's; the script gained `--contribution_key` so the
+measure is an explicit, recorded choice (every counts sidecar names it).
+
+**Script defect found and fixed (commit after this section):** the xyz
+loader flattened arrays, so `--l_mode radius --xyz` refused every input
+from the CLI ("xyz has shape (1798695,)"); the radius tests passed
+because they bypassed the loader. Fixed with CLI-path tests.
+
+**A/B re-emission under the fixed `--gap` check (job 57556521):** row
+sets identical to stage 1 on all 16 programs (`row_ids_sha256` equal);
+file hashes differ by exactly one key, `source.wrongmem.emitted_by`
+(stage 1's fallback wrote it, `draw_all` does not). The stage-1 A/B
+programs stay the frozen ones.
+
+Calibration inputs added for the 16 calibration cells: row weights
+(votes re-run with the dump, member sets identical to wave 1 on all four:
+7,004 / 6,981 / 6,858 / 6,813), local eligibility, canonical xyz (sha256
+equal to each T1 program's `cloud.xyz_sha256`, 12/12).
+
+| item | sha256 |
+|---|---|
+| this page, sections 0-13.19 (before this record) | `c55a66905f81f0f071d0aa5e3c007b69145b569c225d932f79eae85b9b05e253` |

@@ -1,0 +1,1564 @@
+{
+ "L": [
+  {
+   "L_refusal": "all non-truth rows together carry 1370.94 of contribution mass against the truth set's 5450.95; the +-10% band [4905.86, 5996.05] is unreachable at any radius",
+   "all_non_truth_mass": 1370.9444248123184,
+   "all_non_truth_mass_ratio_to_truth": 0.25150546189864265,
+   "all_non_truth_n": 592561,
+   "band": [
+    4905.857602521298,
+    5996.048180859365
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 4492,
+   "local_only_mass_ratio_retired_rule": 0.14920230291244113,
+   "local_only_mass_retired_rule": 813.2947245074276,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 0,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "cut_roasted_beef",
+   "status": "REFUSED",
+   "truth_mass": 5450.952891690331,
+   "truth_n": 7004
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 1186.65 of contribution mass against the truth set's 5545.23; the +-10% band [4990.7, 6099.75] is unreachable at any radius",
+   "all_non_truth_mass": 1186.6450675043056,
+   "all_non_truth_mass_ratio_to_truth": 0.2139939832368603,
+   "all_non_truth_n": 592631,
+   "band": [
+    4990.70368521425,
+    6099.748948595195
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 4595,
+   "local_only_mass_ratio_retired_rule": 0.12255521039490164,
+   "local_only_mass_retired_rule": 679.5963779556037,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 1,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "cut_roasted_beef",
+   "status": "REFUSED",
+   "truth_mass": 5545.226316904722,
+   "truth_n": 6981
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 1232.65 of contribution mass against the truth set's 5613.72; the +-10% band [5052.35, 6175.09] is unreachable at any radius",
+   "all_non_truth_mass": 1232.6452629312348,
+   "all_non_truth_mass_ratio_to_truth": 0.2195772559066302,
+   "all_non_truth_n": 592724,
+   "band": [
+    5052.348122566246,
+    6175.09214980319
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 4465,
+   "local_only_mass_ratio_retired_rule": 0.1307894171210365,
+   "local_only_mass_retired_rule": 734.215184492225,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 2,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "cut_roasted_beef",
+   "status": "REFUSED",
+   "truth_mass": 5613.720136184718,
+   "truth_n": 6858
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 1336.14 of contribution mass against the truth set's 5283.76; the +-10% band [4755.39, 5812.14] is unreachable at any radius",
+   "all_non_truth_mass": 1336.139613421407,
+   "all_non_truth_mass_ratio_to_truth": 0.2528766060529132,
+   "all_non_truth_n": 592717,
+   "band": [
+    4755.385129724667,
+    5812.137380774594
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 4745,
+   "local_only_mass_ratio_retired_rule": 0.14168805037393678,
+   "local_only_mass_retired_rule": 748.6458308976651,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 3,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "cut_roasted_beef",
+   "status": "REFUSED",
+   "truth_mass": 5283.76125524963,
+   "truth_n": 6813
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2732.7 of contribution mass against the truth set's 5667.53; the +-10% band [5100.78, 6234.28] is unreachable at any radius",
+   "all_non_truth_mass": 2732.7041406529906,
+   "all_non_truth_mass_ratio_to_truth": 0.4821686031526021,
+   "all_non_truth_n": 593103,
+   "band": [
+    5100.7753522460325,
+    6234.280986078485
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 6551,
+   "local_only_mass_ratio_retired_rule": 0.4056116263824363,
+   "local_only_mass_retired_rule": 2298.8153182621754,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 0,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "flame_steak",
+   "status": "REFUSED",
+   "truth_mass": 5667.528169162259,
+   "truth_n": 6582
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2620.21 of contribution mass against the truth set's 5724.17; the +-10% band [5151.75, 6296.59] is unreachable at any radius",
+   "all_non_truth_mass": 2620.210906787846,
+   "all_non_truth_mass_ratio_to_truth": 0.45774500934392637,
+   "all_non_truth_n": 593064,
+   "band": [
+    5151.754291082259,
+    6296.588577989428
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 6549,
+   "local_only_mass_ratio_retired_rule": 0.3879182720655328,
+   "local_only_mass_retired_rule": 2220.5106918920264,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 1,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "flame_steak",
+   "status": "REFUSED",
+   "truth_mass": 5724.171434535843,
+   "truth_n": 6584
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2539.39 of contribution mass against the truth set's 5392.86; the +-10% band [4853.58, 5932.15] is unreachable at any radius",
+   "all_non_truth_mass": 2539.3854076408074,
+   "all_non_truth_mass_ratio_to_truth": 0.47087898030517455,
+   "all_non_truth_n": 593030,
+   "band": [
+    4853.575892038202,
+    5932.1483124911365
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 6503,
+   "local_only_mass_ratio_retired_rule": 0.3869919861087178,
+   "local_only_mass_retired_rule": 2086.9944157658397,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 2,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "flame_steak",
+   "status": "REFUSED",
+   "truth_mass": 5392.862102264669,
+   "truth_n": 6648
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2546.01 of contribution mass against the truth set's 5677.12; the +-10% band [5109.41, 6244.83] is unreachable at any radius",
+   "all_non_truth_mass": 2546.007616170329,
+   "all_non_truth_mass_ratio_to_truth": 0.4484679857849416,
+   "all_non_truth_n": 593045,
+   "band": [
+    5109.41009655953,
+    6244.834562461648
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 6479,
+   "local_only_mass_ratio_retired_rule": 0.3719349761316496,
+   "local_only_mass_retired_rule": 2111.5203581229757,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 3,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "flame_steak",
+   "status": "REFUSED",
+   "truth_mass": 5677.122329510588,
+   "truth_n": 6641
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2538.05 of contribution mass against the truth set's 5706.2; the +-10% band [5135.58, 6276.82] is unreachable at any radius",
+   "all_non_truth_mass": 2538.0472912334476,
+   "all_non_truth_mass_ratio_to_truth": 0.4447877273240422,
+   "all_non_truth_n": 591994,
+   "band": [
+    5135.579112878621,
+    6276.818915740538
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 6824,
+   "local_only_mass_ratio_retired_rule": 0.3833778912165764,
+   "local_only_mass_retired_rule": 2187.630544968113,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 0,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "sear_steak",
+   "status": "REFUSED",
+   "truth_mass": 5706.199014309579,
+   "truth_n": 7676
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2582.31 of contribution mass against the truth set's 5646.8; the +-10% band [5082.12, 6211.48] is unreachable at any radius",
+   "all_non_truth_mass": 2582.3069142439344,
+   "all_non_truth_mass_ratio_to_truth": 0.4573044966162089,
+   "all_non_truth_n": 592211,
+   "band": [
+    5082.119769248658,
+    6211.479717970582
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 6941,
+   "local_only_mass_ratio_retired_rule": 0.4000898131943838,
+   "local_only_mass_retired_rule": 2259.227054566867,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 1,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "sear_steak",
+   "status": "REFUSED",
+   "truth_mass": 5646.799743609619,
+   "truth_n": 7434
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2531.07 of contribution mass against the truth set's 5781.96; the +-10% band [5203.77, 6360.16] is unreachable at any radius",
+   "all_non_truth_mass": 2531.0727521389863,
+   "all_non_truth_mass_ratio_to_truth": 0.43775306608287723,
+   "all_non_truth_n": 591981,
+   "band": [
+    5203.768182160063,
+    6360.161111528965
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 6942,
+   "local_only_mass_ratio_retired_rule": 0.3676253174124341,
+   "local_only_mass_retired_rule": 2125.5965885636865,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 2,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "sear_steak",
+   "status": "REFUSED",
+   "truth_mass": 5781.9646468445135,
+   "truth_n": 7656
+  },
+  {
+   "L_refusal": "all non-truth rows together carry 2621.79 of contribution mass against the truth set's 5794.1; the +-10% band [5214.69, 6373.51] is unreachable at any radius",
+   "all_non_truth_mass": 2621.7877843541023,
+   "all_non_truth_mass_ratio_to_truth": 0.4524929261708331,
+   "all_non_truth_n": 592032,
+   "band": [
+    5214.68705795381,
+    6373.506404165768
+   ],
+   "contribution_draw": null,
+   "counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_v2/counts_gwrongmem_l.json",
+   "draw_n": null,
+   "local_only_eligible_n": 7134,
+   "local_only_mass_ratio_retired_rule": 0.3951026896695527,
+   "local_only_mass_retired_rule": 2289.2632026472857,
+   "n_within_radius": null,
+   "overlap_n": null,
+   "prefix": 3,
+   "program_sha256": null,
+   "provenance": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_v2/draws_v2_provenance.json",
+   "radius_reached": null,
+   "radius_rule_reachable": false,
+   "row_ids_sha256": null,
+   "scene": "sear_steak",
+   "status": "REFUSED",
+   "truth_mass": 5794.096731059789,
+   "truth_n": 7536
+  }
+ ],
+ "ab_identity_vs_stage1_ab_only": {
+  "flame_steak_s0": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 72.97601260337979,
+      "contribution_truth": 5667.528169162259,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6582,
+      "eligible_n": 593103,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "f274b0e50cb2bbdacaab5a8ab55b24a640b535833d21da7ba320e5da6b408d38",
+      "row_ids_sha256": "a6e94c335f8ec788cd2f43ba4aee90c96228c1002d31e1675141bb060323aaf3",
+      "seed": 1000,
+      "truth_n": 6582
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "349bec9eeb37e77fd3905b5b63564b774ee96907eb4627bc018250c5be2771c4",
+     "stage1_row_ids_sha256": "a6e94c335f8ec788cd2f43ba4aee90c96228c1002d31e1675141bb060323aaf3",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6582,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1000
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 72.97601260337979,
+      "contribution_truth": 5667.528169162259,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6582,
+      "eligible_n": 593103,
+      "overlap_n": 0,
+      "program_sha256": "a60fe75ba18642a8d61705e57c80062196ee8b13f34f42be58b597d2998c0ebb",
+      "row_ids_sha256": "a6e94c335f8ec788cd2f43ba4aee90c96228c1002d31e1675141bb060323aaf3",
+      "seed": 1000,
+      "truth_n": 6582
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "baf520fe6aec35a334f2b3f44db92e1eda544d55ae54c892d6d2c287c435f8c6",
+     "v2_row_ids_sha256": "a6e94c335f8ec788cd2f43ba4aee90c96228c1002d31e1675141bb060323aaf3",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6582,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1000
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 15.136339424992912,
+      "contribution_truth": 5667.528169162259,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6582,
+      "eligible_n": 593103,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "c46e698efb775f7c18500f9674c7f55368091afc8b3a2903e5c23eb6ffcc3ce0",
+      "row_ids_sha256": "c96725bf1c9c182d5aefbd0384ef058766ec620320d56c18cddcd62d4e9952b1",
+      "seed": 2000,
+      "truth_n": 6582
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "243072e656f0227ded12be1860bbcce65595e4fc15c8dab7cc3f9db73af26cd9",
+     "stage1_row_ids_sha256": "c96725bf1c9c182d5aefbd0384ef058766ec620320d56c18cddcd62d4e9952b1",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6582,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2000
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 15.136339424992912,
+      "contribution_truth": 5667.528169162259,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6582,
+      "eligible_n": 593103,
+      "overlap_n": 0,
+      "program_sha256": "a0cbd11639f7259cda2ac02ba9c012f44a60d7b316676f5fc24dd6f030a0f643",
+      "row_ids_sha256": "c96725bf1c9c182d5aefbd0384ef058766ec620320d56c18cddcd62d4e9952b1",
+      "seed": 2000,
+      "truth_n": 6582
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "b8eed9d4573eac55bcd2051bb8836f9e58c4be7b93534c8c6847634f5f66a7ea",
+     "v2_row_ids_sha256": "c96725bf1c9c182d5aefbd0384ef058766ec620320d56c18cddcd62d4e9952b1",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6582,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2000
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_v2"
+  },
+  "flame_steak_s1": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 94.6481385169609,
+      "contribution_truth": 5724.171434535843,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6584,
+      "eligible_n": 593064,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "dfda328faaeea0004df8b90fce7638e61e4974d86e75c913ac820f33f6b04859",
+      "row_ids_sha256": "ae05d514c50f0f2ffa6e56c688fc573b1c8b88ea1b5be87258f2bdaebfb53c8e",
+      "seed": 1001,
+      "truth_n": 6584
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "311dedc1f26474977b0451403fd7bfd737eb910d73cc3a8d86872802986e1a10",
+     "stage1_row_ids_sha256": "ae05d514c50f0f2ffa6e56c688fc573b1c8b88ea1b5be87258f2bdaebfb53c8e",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6584,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1001
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 94.6481385169609,
+      "contribution_truth": 5724.171434535843,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6584,
+      "eligible_n": 593064,
+      "overlap_n": 0,
+      "program_sha256": "b0e0805162e7dd44cad8143fbd1b60591c4d3e3f9554bf3bfe8bed7d4466ebb4",
+      "row_ids_sha256": "ae05d514c50f0f2ffa6e56c688fc573b1c8b88ea1b5be87258f2bdaebfb53c8e",
+      "seed": 1001,
+      "truth_n": 6584
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "9410555cf0a899acdce567d3e4c12e0822af64882dd6955054a1a9d5d767064c",
+     "v2_row_ids_sha256": "ae05d514c50f0f2ffa6e56c688fc573b1c8b88ea1b5be87258f2bdaebfb53c8e",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6584,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1001
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 50.21128243114799,
+      "contribution_truth": 5724.171434535843,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6584,
+      "eligible_n": 593064,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "565e9dc27570af2ae00c459ec6be3fc45252865841840254dcdb9d21363142eb",
+      "row_ids_sha256": "1575e9fdb53b330244aa0069fdddb730afb9355f468aba5835bb66dbc842f283",
+      "seed": 2001,
+      "truth_n": 6584
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "21e92cf1e41033e864527f9be6b7709f643b6ff9b019035226d821571a7cafe9",
+     "stage1_row_ids_sha256": "1575e9fdb53b330244aa0069fdddb730afb9355f468aba5835bb66dbc842f283",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6584,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2001
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 50.21128243114799,
+      "contribution_truth": 5724.171434535843,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6584,
+      "eligible_n": 593064,
+      "overlap_n": 0,
+      "program_sha256": "cfb2f5bb75f47d793170203b14b096f9c6bb995ea0f70d78d84d581a28cfcfbc",
+      "row_ids_sha256": "1575e9fdb53b330244aa0069fdddb730afb9355f468aba5835bb66dbc842f283",
+      "seed": 2001,
+      "truth_n": 6584
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "eba0070f6d20129417ae46c7a3317d83ac29cd8fe74ea579508cc397263547a5",
+     "v2_row_ids_sha256": "1575e9fdb53b330244aa0069fdddb730afb9355f468aba5835bb66dbc842f283",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6584,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2001
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_v2"
+  },
+  "flame_steak_s2": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 31.085635807481594,
+      "contribution_truth": 5392.862102264669,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6648,
+      "eligible_n": 593030,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "1af56b98da04bdc197574dbc366ab6a6a0ec12651841c75fe2aaa4c4a40c1300",
+      "row_ids_sha256": "39631ecd3a0db31c46ccc9428f0b0e65cb738f21e316c2c77c63c0a475cfd9e5",
+      "seed": 1002,
+      "truth_n": 6648
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "6c4efa392f123e5935305ad35752d19cac51018fc6117eac50f9c446f59214b1",
+     "stage1_row_ids_sha256": "39631ecd3a0db31c46ccc9428f0b0e65cb738f21e316c2c77c63c0a475cfd9e5",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6648,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1002
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 31.085635807481594,
+      "contribution_truth": 5392.862102264669,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6648,
+      "eligible_n": 593030,
+      "overlap_n": 0,
+      "program_sha256": "e479bd491ad4f9f067304ba83b62ad238ec3fcc3d539fa8f026ad93bb0a00341",
+      "row_ids_sha256": "39631ecd3a0db31c46ccc9428f0b0e65cb738f21e316c2c77c63c0a475cfd9e5",
+      "seed": 1002,
+      "truth_n": 6648
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "aeab4cc3bf885aecfdbdea05bd6d449fb86ef33c17cf8d112293d3a91eaa1fad",
+     "v2_row_ids_sha256": "39631ecd3a0db31c46ccc9428f0b0e65cb738f21e316c2c77c63c0a475cfd9e5",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6648,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1002
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 7.030583535088226,
+      "contribution_truth": 5392.862102264669,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6648,
+      "eligible_n": 593030,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "aed22a80245f87604e8ed3a8c7750573034fc2a9b26282b4982b481bee13f913",
+      "row_ids_sha256": "101b8719c117367a93a124ad6988093f6ad4cfdb9ffe6f9d0b369d9e8d08349e",
+      "seed": 2002,
+      "truth_n": 6648
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "a76b14bc0f6d884b30f854b0be98226f3afeed21ba46567237265e32e8585190",
+     "stage1_row_ids_sha256": "101b8719c117367a93a124ad6988093f6ad4cfdb9ffe6f9d0b369d9e8d08349e",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6648,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2002
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 7.030583535088226,
+      "contribution_truth": 5392.862102264669,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6648,
+      "eligible_n": 593030,
+      "overlap_n": 0,
+      "program_sha256": "f8bd6363f754a8ee4ae0b32931aeca6ff66560f201eebdce64143b28c4f07a76",
+      "row_ids_sha256": "101b8719c117367a93a124ad6988093f6ad4cfdb9ffe6f9d0b369d9e8d08349e",
+      "seed": 2002,
+      "truth_n": 6648
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "6dcdda3412818b7dad140cedb82eb91442e38c86c37adebd3e73c39cdcbeccd6",
+     "v2_row_ids_sha256": "101b8719c117367a93a124ad6988093f6ad4cfdb9ffe6f9d0b369d9e8d08349e",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6648,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2002
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_v2"
+  },
+  "flame_steak_s3": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 13.688961495339754,
+      "contribution_truth": 5677.122329510588,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6641,
+      "eligible_n": 593045,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "13a2513e5897d55b4406162343d571d2c32bb85b00fe50fdeb8352424dcc8bf8",
+      "row_ids_sha256": "bb6f6cdb3b6547d6ec1686a620f6fe45313aa306b71f499efe59381dd59dea25",
+      "seed": 1003,
+      "truth_n": 6641
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "f3300214c9867ee58d5cd74f15dee34bc0398112c9cdb080fe00bacdb1bcbaa8",
+     "stage1_row_ids_sha256": "bb6f6cdb3b6547d6ec1686a620f6fe45313aa306b71f499efe59381dd59dea25",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6641,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1003
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 13.688961495339754,
+      "contribution_truth": 5677.122329510588,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6641,
+      "eligible_n": 593045,
+      "overlap_n": 0,
+      "program_sha256": "774198b9307571f3a5ea356fd7fdd9774ea501861f67fd63410241b95f9bf121",
+      "row_ids_sha256": "bb6f6cdb3b6547d6ec1686a620f6fe45313aa306b71f499efe59381dd59dea25",
+      "seed": 1003,
+      "truth_n": 6641
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "22b3c3e8673cf69e73d1ea76796a5cef357e14222e3c961c7773cf6f763b360d",
+     "v2_row_ids_sha256": "bb6f6cdb3b6547d6ec1686a620f6fe45313aa306b71f499efe59381dd59dea25",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 6641,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1003
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 8.997450800146908,
+      "contribution_truth": 5677.122329510588,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6641,
+      "eligible_n": 593045,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "a74a745b0d0df02e1bf6778196c36c09a48d2f4f96ed1a29a23f620846be28a9",
+      "row_ids_sha256": "70a47c38dc9dfefb38a14e93507ba66e4f435f1f27d8584431198f2f9e5801d1",
+      "seed": 2003,
+      "truth_n": 6641
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "ec41966569e36d76ca6b0e0332d2417c4c62e526725d636841f16f231375d41b",
+     "stage1_row_ids_sha256": "70a47c38dc9dfefb38a14e93507ba66e4f435f1f27d8584431198f2f9e5801d1",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6641,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2003
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 8.997450800146908,
+      "contribution_truth": 5677.122329510588,
+      "draw": "uniform_outside_truth",
+      "draw_n": 6641,
+      "eligible_n": 593045,
+      "overlap_n": 0,
+      "program_sha256": "90f93a5c8cf38be99fd5057a8f608a70d68148f55ca602620c51ce6f18e7567f",
+      "row_ids_sha256": "70a47c38dc9dfefb38a14e93507ba66e4f435f1f27d8584431198f2f9e5801d1",
+      "seed": 2003,
+      "truth_n": 6641
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "7789416672a875a6dbd08e7e757432a0265a427f162fbc3e024f9c79ac07d26c",
+     "v2_row_ids_sha256": "70a47c38dc9dfefb38a14e93507ba66e4f435f1f27d8584431198f2f9e5801d1",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 6641,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2003
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_v2"
+  },
+  "sear_steak_s0": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 12.583023746250547,
+      "contribution_truth": 5706.199014309579,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7676,
+      "eligible_n": 591994,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "8e2438272ca89e4007dd9134a57f9a6e8856cbd52d831eb29a33de9e1c73e17d",
+      "row_ids_sha256": "a9aef20ae781b38a2f3dbc6f154afdafa6e2b34c82d749f191fe1bf4a85a93f8",
+      "seed": 1000,
+      "truth_n": 7676
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "665b1796e1164dc28b9299c44132d008f75519d6002214e9c47b3cf3f4ab94d6",
+     "stage1_row_ids_sha256": "a9aef20ae781b38a2f3dbc6f154afdafa6e2b34c82d749f191fe1bf4a85a93f8",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7676,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1000
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 12.583023746250547,
+      "contribution_truth": 5706.199014309579,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7676,
+      "eligible_n": 591994,
+      "overlap_n": 0,
+      "program_sha256": "39fd6a37187aaf6fbfa77cdb5de28251a37b9e1ff8a428bc16fe6d16966d6370",
+      "row_ids_sha256": "a9aef20ae781b38a2f3dbc6f154afdafa6e2b34c82d749f191fe1bf4a85a93f8",
+      "seed": 1000,
+      "truth_n": 7676
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "5c4179e6192260d834265089a24f69ce288f2cf070eaf7d24e38e8875e9c8adc",
+     "v2_row_ids_sha256": "a9aef20ae781b38a2f3dbc6f154afdafa6e2b34c82d749f191fe1bf4a85a93f8",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7676,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1000
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 84.47766859526746,
+      "contribution_truth": 5706.199014309579,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7676,
+      "eligible_n": 591994,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "e14df05f32dc37e23e14b17691f4ac723781e5d0fe9250d64d995d4bb429cc9c",
+      "row_ids_sha256": "768ccd33d650ca0037c1c9d7ec38210767ecfc0db327883e508d47f8682173de",
+      "seed": 2000,
+      "truth_n": 7676
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "c11b82ce6aad1bb6065b39218baf2e34bfa11d4bd9c544c73e28a58b71f206f7",
+     "stage1_row_ids_sha256": "768ccd33d650ca0037c1c9d7ec38210767ecfc0db327883e508d47f8682173de",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7676,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2000
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 84.47766859526746,
+      "contribution_truth": 5706.199014309579,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7676,
+      "eligible_n": 591994,
+      "overlap_n": 0,
+      "program_sha256": "ed9fbbc1089793a3fcdd0c6f1827a6601bea77b4b34b3080464076115fcebe46",
+      "row_ids_sha256": "768ccd33d650ca0037c1c9d7ec38210767ecfc0db327883e508d47f8682173de",
+      "seed": 2000,
+      "truth_n": 7676
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "32b95b40a03978e82be663714143fc8260a3ab08f45d8d36fe66afdeba72214d",
+     "v2_row_ids_sha256": "768ccd33d650ca0037c1c9d7ec38210767ecfc0db327883e508d47f8682173de",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7676,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2000
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_v2"
+  },
+  "sear_steak_s1": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 8.848976361790847,
+      "contribution_truth": 5646.799743609619,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7434,
+      "eligible_n": 592211,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "49a1ab55d8f8c063a11f201f53fe20de7fdd3621d6446a35e939154d2b414b95",
+      "row_ids_sha256": "b00c0c155f0ea8fe34d0e4d8ecec5bcc00bfc104eb1ca67e652d7494a9f18e14",
+      "seed": 1001,
+      "truth_n": 7434
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "d804666648ef6a19851042f0a443927efe59a2b74afa3d124c20d3dcedbe8e49",
+     "stage1_row_ids_sha256": "b00c0c155f0ea8fe34d0e4d8ecec5bcc00bfc104eb1ca67e652d7494a9f18e14",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7434,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1001
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 8.848976361790847,
+      "contribution_truth": 5646.799743609619,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7434,
+      "eligible_n": 592211,
+      "overlap_n": 0,
+      "program_sha256": "41a1bc8cb7f5d0e6b988e4d0c37242e636deb4c3a79f081734ad057dd912bc2b",
+      "row_ids_sha256": "b00c0c155f0ea8fe34d0e4d8ecec5bcc00bfc104eb1ca67e652d7494a9f18e14",
+      "seed": 1001,
+      "truth_n": 7434
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "7bccb160298b71953faa8214a73a8f587c4f47423a7f31481686cdfd02fbd1d2",
+     "v2_row_ids_sha256": "b00c0c155f0ea8fe34d0e4d8ecec5bcc00bfc104eb1ca67e652d7494a9f18e14",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7434,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1001
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 13.967524263542145,
+      "contribution_truth": 5646.799743609619,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7434,
+      "eligible_n": 592211,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "9a20b5e8bbf5e857ab0f64d581aeb1151800a67bfc6c0eda95cbab398cd5e715",
+      "row_ids_sha256": "52206561f77e4daa5e696ca2b48cddee1153290fde3b5985df8249e2f66084a0",
+      "seed": 2001,
+      "truth_n": 7434
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "4ee78f99a42fe8cb0e3bac6d4498a5dbbfa74c699a0d5d159ed091ca5576a2a5",
+     "stage1_row_ids_sha256": "52206561f77e4daa5e696ca2b48cddee1153290fde3b5985df8249e2f66084a0",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7434,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2001
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 13.967524263542145,
+      "contribution_truth": 5646.799743609619,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7434,
+      "eligible_n": 592211,
+      "overlap_n": 0,
+      "program_sha256": "737f1eb9bc9b451ed50ff39e091f8045c82e5500a30dbdcfb2e5c6e96cbecf45",
+      "row_ids_sha256": "52206561f77e4daa5e696ca2b48cddee1153290fde3b5985df8249e2f66084a0",
+      "seed": 2001,
+      "truth_n": 7434
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "9c16bbe7833d97d4a7ff4cc64ff5fb0ec06a0ac111b2e67d753f2fbbe9feabfa",
+     "v2_row_ids_sha256": "52206561f77e4daa5e696ca2b48cddee1153290fde3b5985df8249e2f66084a0",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7434,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2001
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_v2"
+  },
+  "sear_steak_s2": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 15.393390570301563,
+      "contribution_truth": 5781.9646468445135,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7656,
+      "eligible_n": 591981,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "894f40ad903e2ba33ec25cbaa77a504d366b2f904208692115d21823bed28685",
+      "row_ids_sha256": "0c11553dbaab8efe341c21c6fa73340018967ecb1f0ab2464f46aebc501cc08d",
+      "seed": 1002,
+      "truth_n": 7656
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "18a72ef7c88d3c3e28f371de357e7e8082c17820ed2c2d7b4817405efbc65942",
+     "stage1_row_ids_sha256": "0c11553dbaab8efe341c21c6fa73340018967ecb1f0ab2464f46aebc501cc08d",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7656,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1002
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 15.393390570301563,
+      "contribution_truth": 5781.9646468445135,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7656,
+      "eligible_n": 591981,
+      "overlap_n": 0,
+      "program_sha256": "08cbe0cb95ad2045d0e479e23387416aa6c2f18acd2b42736186a0d29318c910",
+      "row_ids_sha256": "0c11553dbaab8efe341c21c6fa73340018967ecb1f0ab2464f46aebc501cc08d",
+      "seed": 1002,
+      "truth_n": 7656
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "cba569f93b3ea76051c318721b24151b5ce722b998cb1fe775cf2df26b278663",
+     "v2_row_ids_sha256": "0c11553dbaab8efe341c21c6fa73340018967ecb1f0ab2464f46aebc501cc08d",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7656,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1002
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 15.609886307749548,
+      "contribution_truth": 5781.9646468445135,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7656,
+      "eligible_n": 591981,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "e3d66a64e61f8bdac9eddc52118e04e3bf973c1b101dbb00e435526637de5b11",
+      "row_ids_sha256": "4954eac02a31590412c406ba02d307bd8ecc35296fcdabb565dc5da61763d236",
+      "seed": 2002,
+      "truth_n": 7656
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "911177aa2dd3cda699e348cef136a4d4662de3e8f486d5375f3fd4d78a5c963f",
+     "stage1_row_ids_sha256": "4954eac02a31590412c406ba02d307bd8ecc35296fcdabb565dc5da61763d236",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7656,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2002
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 15.609886307749548,
+      "contribution_truth": 5781.9646468445135,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7656,
+      "eligible_n": 591981,
+      "overlap_n": 0,
+      "program_sha256": "2fbeeec8bd341485657cf6acf374f485686ad597f4a7b879aab261356f26e19e",
+      "row_ids_sha256": "4954eac02a31590412c406ba02d307bd8ecc35296fcdabb565dc5da61763d236",
+      "seed": 2002,
+      "truth_n": 7656
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "aa054fd245c1965c680d1f11e92dff3c318930ae34ce0e0a5d1c252bfe42df9e",
+     "v2_row_ids_sha256": "4954eac02a31590412c406ba02d307bd8ecc35296fcdabb565dc5da61763d236",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7656,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2002
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_v2"
+  },
+  "sear_steak_s3": {
+   "arms": {
+    "A": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_a.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 76.36887527492945,
+      "contribution_truth": 5794.096731059789,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7536,
+      "eligible_n": 592032,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "7755fbb0689aa8b505a1abde46d9a3a0f5c76e5a439c0571504256f63105ff24",
+      "row_ids_sha256": "aba067b60c9d018e664df716cee52cf158c20f8bee402686ac1fcaca2809d1df",
+      "seed": 1003,
+      "truth_n": 7536
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_a.json",
+     "stage1_program_sha256": "072a947aebd06ab67d3836920987c86f112650673690a3bd104d5ee57f2b383a",
+     "stage1_row_ids_sha256": "aba067b60c9d018e664df716cee52cf158c20f8bee402686ac1fcaca2809d1df",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7536,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1003
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_v2/counts_gwrongmem_a.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_A",
+      "contribution_draw": 76.36887527492945,
+      "contribution_truth": 5794.096731059789,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7536,
+      "eligible_n": 592032,
+      "overlap_n": 0,
+      "program_sha256": "0c0ada278ed1ad3e15899bf9ff4a27714d006ff634d630d88d52b381bb043c56",
+      "row_ids_sha256": "aba067b60c9d018e664df716cee52cf158c20f8bee402686ac1fcaca2809d1df",
+      "seed": 1003,
+      "truth_n": 7536
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_v2/program_gwrongmem_a.json",
+     "v2_program_sha256": "463c07b1a3cc9ae6a8d1dccb09cffa33447b07be854d16da198c88c99d2c9433",
+     "v2_row_ids_sha256": "aba067b60c9d018e664df716cee52cf158c20f8bee402686ac1fcaca2809d1df",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_A",
+      "count": 7536,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 1003
+     }
+    },
+    "B": {
+     "program_sha_identical": false,
+     "row_ids_sha_identical": true,
+     "source_wrongmem_differing_keys": [
+      "emitted_by"
+     ],
+     "stage1_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_b.json",
+     "stage1_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 53.362606021168176,
+      "contribution_truth": 5794.096731059789,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7536,
+      "eligible_n": 592032,
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "overlap_n": 0,
+      "program_sha256": "7a3d440511ab2e6167e4a26688d376753882220c1d27709444ea5fa8073fdb95",
+      "row_ids_sha256": "6d4a25cb51b20b6ff46d16ec0605e2fb3b8da68e1a51ea6b379cdc12edc08e56",
+      "seed": 2003,
+      "truth_n": 7536
+     },
+     "stage1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_b.json",
+     "stage1_program_sha256": "dccdbe93fe2e1eab65fef0bfbb09879f4885e2be8d2cc703bcf944ba56bcc662",
+     "stage1_row_ids_sha256": "6d4a25cb51b20b6ff46d16ec0605e2fb3b8da68e1a51ea6b379cdc12edc08e56",
+     "stage1_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7536,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "emitted_by": "draws_diag.py --emit_ab after the spec-faithful CLI refused on the L limb",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2003
+     },
+     "status": "DIFFERS",
+     "v2_counts": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_v2/counts_gwrongmem_b.json",
+     "v2_counts_payload": {
+      "arm": "GWRONGMEM_B",
+      "contribution_draw": 53.362606021168176,
+      "contribution_truth": 5794.096731059789,
+      "draw": "uniform_outside_truth",
+      "draw_n": 7536,
+      "eligible_n": 592032,
+      "overlap_n": 0,
+      "program_sha256": "888ed9d6784f101866583af6452b613d06ceb28af533cea57ba503ad77bba735",
+      "row_ids_sha256": "6d4a25cb51b20b6ff46d16ec0605e2fb3b8da68e1a51ea6b379cdc12edc08e56",
+      "seed": 2003,
+      "truth_n": 7536
+     },
+     "v2_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_v2/program_gwrongmem_b.json",
+     "v2_program_sha256": "165494f6afdf54feed0a2fb6182ddb7fc24a782460e38d27788de6b3bf909500",
+     "v2_row_ids_sha256": "6d4a25cb51b20b6ff46d16ec0605e2fb3b8da68e1a51ea6b379cdc12edc08e56",
+     "v2_source_wrongmem": {
+      "arm": "GWRONGMEM_B",
+      "count": 7536,
+      "draw": "uniform_outside_truth",
+      "drawn_by": "scripts/draw_membership_shams.py",
+      "kind": "count_matched_zero_overlap_draw",
+      "seed": 2003
+     }
+    }
+   },
+   "stage1_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only",
+   "v2_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_v2"
+  }
+ },
+ "calibration_vote_equality": {
+  "s0": {
+   "identical_member_set": true,
+   "new_members": 7004,
+   "new_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix0_seedbox/program_oracle.json",
+   "new_program_sha256": "28c6ba1a97d09c0b86ce4e46400bc8cd8958421c18d5f7465967611661dd54c8",
+   "new_row_ids_sha256": "f4f666ece1564325dc37de0bd06102946c3b40f46087c648f735bb99f769f94b",
+   "only_in_new": 0,
+   "only_in_wave1": 0,
+   "row_weights_npz": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix0_seedbox/row_weights_cam15_f50.npz",
+   "row_weights_sha256": "b28473823cdb0656e712f6f25f841072c4bd349ed925e7bf4bfcfeb81e7f134d",
+   "status": "ok",
+   "wave1_members": 7004,
+   "wave1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s0/program_oracle.json",
+   "wave1_program_sha256": "28c6ba1a97d09c0b86ce4e46400bc8cd8958421c18d5f7465967611661dd54c8",
+   "wave1_row_ids_sha256": "f4f666ece1564325dc37de0bd06102946c3b40f46087c648f735bb99f769f94b"
+  },
+  "s1": {
+   "identical_member_set": true,
+   "new_members": 6981,
+   "new_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix1_seedbox/program_oracle.json",
+   "new_program_sha256": "166462305463e130f709b0369fa404544dc52f48bebf413ce7f615659a666c26",
+   "new_row_ids_sha256": "d212109d425d21c438a1503b8c7dd9d1db91cc2145990ce409e9fe57e9fe7bad",
+   "only_in_new": 0,
+   "only_in_wave1": 0,
+   "row_weights_npz": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix1_seedbox/row_weights_cam15_f50.npz",
+   "row_weights_sha256": "dbe7498208dcb5a110a982121508cdb3526f6e9dd260f0c8e58e54ff3dd500e7",
+   "status": "ok",
+   "wave1_members": 6981,
+   "wave1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s1/program_oracle.json",
+   "wave1_program_sha256": "166462305463e130f709b0369fa404544dc52f48bebf413ce7f615659a666c26",
+   "wave1_row_ids_sha256": "d212109d425d21c438a1503b8c7dd9d1db91cc2145990ce409e9fe57e9fe7bad"
+  },
+  "s2": {
+   "identical_member_set": true,
+   "new_members": 6858,
+   "new_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix2_seedbox/program_oracle.json",
+   "new_program_sha256": "361f8a1ff0392ea98d506424ba13d0946462fda8e71afb335d04dc1cbd5443a3",
+   "new_row_ids_sha256": "4035cfbbebc2bbd17500436824d8d396567d8487a9e7004e6926b8260c120714",
+   "only_in_new": 0,
+   "only_in_wave1": 0,
+   "row_weights_npz": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix2_seedbox/row_weights_cam15_f50.npz",
+   "row_weights_sha256": "97fd4adb6a73f576db3fd4254d70b5d6fa3448df0c0319aa30ec7a228bab73bc",
+   "status": "ok",
+   "wave1_members": 6858,
+   "wave1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s2/program_oracle.json",
+   "wave1_program_sha256": "361f8a1ff0392ea98d506424ba13d0946462fda8e71afb335d04dc1cbd5443a3",
+   "wave1_row_ids_sha256": "4035cfbbebc2bbd17500436824d8d396567d8487a9e7004e6926b8260c120714"
+  },
+  "s3": {
+   "identical_member_set": true,
+   "new_members": 6813,
+   "new_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix3_seedbox/program_oracle.json",
+   "new_program_sha256": "e813c0131791227825843bc27f1ffbf7d361a7c6ea997a6b89c144a344500e5f",
+   "new_row_ids_sha256": "c8e52a730c7e91ffd35c0f2f3903af12f1d6a779e64b42287b8d71b4df37d1be",
+   "only_in_new": 0,
+   "only_in_wave1": 0,
+   "row_weights_npz": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix3_seedbox/row_weights_cam15_f50.npz",
+   "row_weights_sha256": "67a36c98d7220ecd8ebba0cf4f584026e8d11ee58489215b0a85fe7f77200a7a",
+   "status": "ok",
+   "wave1_members": 6813,
+   "wave1_program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s3/program_oracle.json",
+   "wave1_program_sha256": "e813c0131791227825843bc27f1ffbf7d361a7c6ea997a6b89c144a344500e5f",
+   "wave1_row_ids_sha256": "c8e52a730c7e91ffd35c0f2f3903af12f1d6a779e64b42287b8d71b4df37d1be"
+  }
+ },
+ "out_dirs": "runs/realdata/absfix2/<scene>/draws_prefix<S>_v2",
+ "spec": "spec v2.0.0 section 13.18 radius L rule; scripts/draw_membership_shams.py --l_mode radius --xyz <votes>/xyz_canonical.npy --gap 60 89",
+ "xyz_canonical": {
+  "cut_roasted_beef_s0": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s0/chkpnt6000.pth",
+   "n_rows": 599565,
+   "npy_sha256": "c4fa6fc1e76cfc9acb63a35e90649ede0201dfef03c38b987a2a486851c6d995",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix0_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s0",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s0/program_oracle.json",
+   "program_xyz_sha256": "06601cfd0c72dc721dc850dba664ce5d062739da65d44cdc57454571cbdb3ff7",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "06601cfd0c72dc721dc850dba664ce5d062739da65d44cdc57454571cbdb3ff7"
+  },
+  "cut_roasted_beef_s1": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s1/chkpnt6000.pth",
+   "n_rows": 599612,
+   "npy_sha256": "7d94295fa59808e69b011828e0db72491831c05272379d6aa2d710dc4167bce9",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix1_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s1",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s1/program_oracle.json",
+   "program_xyz_sha256": "f0f4d63f8633578d3fa17c37cef50417cfdcf162ea98210a77cd158baffe61d5",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "f0f4d63f8633578d3fa17c37cef50417cfdcf162ea98210a77cd158baffe61d5"
+  },
+  "cut_roasted_beef_s2": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s2/chkpnt6000.pth",
+   "n_rows": 599582,
+   "npy_sha256": "b72fdb3e1eae3a6d46aa2bf3a80fab5204309d2986cd8f8e03363a677b0d6825",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix2_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s2",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s2/program_oracle.json",
+   "program_xyz_sha256": "f07befe0a6f23596ea1056dc72f66abed9293f8ae1637cda29bfffb0a0af5a24",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "f07befe0a6f23596ea1056dc72f66abed9293f8ae1637cda29bfffb0a0af5a24"
+  },
+  "cut_roasted_beef_s3": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s3/chkpnt6000.pth",
+   "n_rows": 599530,
+   "npy_sha256": "441eb7f5ce40c0853485353855577ad267c1b113a3729d0c667029b642dd3181",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/votes_prefix3_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s3",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix/prefix_s3/program_oracle.json",
+   "program_xyz_sha256": "ca4328aa8100883130e9a35c60703080cfee028e00cdd1cd9e98aca463de2f81",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "ca4328aa8100883130e9a35c60703080cfee028e00cdd1cd9e98aca463de2f81"
+  },
+  "flame_steak_s0": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "n_rows": 599685,
+   "npy_sha256": "63ee0eecbebafbbdbed283a405b5a4756d6f774add1718e9fae60b5b9fba6057",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_seedbox/program_oracle.json",
+   "program_xyz_sha256": "96474662c70899811caaa24279a9c2f056aa67cbfbc4952b241bc94071fe3080",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "96474662c70899811caaa24279a9c2f056aa67cbfbc4952b241bc94071fe3080"
+  },
+  "flame_steak_s1": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "n_rows": 599648,
+   "npy_sha256": "9d5b9c0c43c52916cfdc2f6d7ea498b96b6f097621aaeeaf9880a20d5ce50560",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_seedbox/program_oracle.json",
+   "program_xyz_sha256": "3a500402e7f1b7dc7ef1c750ba97d2d9d518f85d021bd6b023e86579cda2f753",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "3a500402e7f1b7dc7ef1c750ba97d2d9d518f85d021bd6b023e86579cda2f753"
+  },
+  "flame_steak_s2": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "n_rows": 599678,
+   "npy_sha256": "cb2242d4eebb063a6bde61ef22fe99cd6ef45f89650b4fcc3cc0b82f15b7380f",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_seedbox/program_oracle.json",
+   "program_xyz_sha256": "ea7f1320eff91135aaecf1330f119f8d0287e2e3b7d73f226c4dec9fa4dc1739",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "ea7f1320eff91135aaecf1330f119f8d0287e2e3b7d73f226c4dec9fa4dc1739"
+  },
+  "flame_steak_s3": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "n_rows": 599686,
+   "npy_sha256": "7392502040b52e8873c4acc2fd5cf330859912a7f65136c17966110505de9385",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_seedbox/program_oracle.json",
+   "program_xyz_sha256": "9e328e24b1da2be9290f92f6798e519312b95c743d13187aaac7748d6020aca1",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "9e328e24b1da2be9290f92f6798e519312b95c743d13187aaac7748d6020aca1"
+  },
+  "sear_steak_s0": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "n_rows": 599670,
+   "npy_sha256": "5eba1976edce6682612face5e7be72262b5763b095b7d52ec61590f062982afb",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_seedbox/program_oracle.json",
+   "program_xyz_sha256": "f1b84e34cf885564e0972cfb313906a8e157b05aeab11faef03a2ce1cc968bf5",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "f1b84e34cf885564e0972cfb313906a8e157b05aeab11faef03a2ce1cc968bf5"
+  },
+  "sear_steak_s1": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "n_rows": 599645,
+   "npy_sha256": "0be35d738f4da703bfdeffb265f3d87cd35d13959faead09fc6d36fd8bec9381",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_seedbox/program_oracle.json",
+   "program_xyz_sha256": "3912ab8cbc34fb7a7eb882d08085b53404bd327f3c3d9b6d63d393e4d87215ae",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "3912ab8cbc34fb7a7eb882d08085b53404bd327f3c3d9b6d63d393e4d87215ae"
+  },
+  "sear_steak_s2": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "n_rows": 599637,
+   "npy_sha256": "c90dfc9255adc69d4098fc6b6e8604c6946e774167a1b4bcf39ccb9c9773d118",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_seedbox/program_oracle.json",
+   "program_xyz_sha256": "cd056174be6b6b86bf049578e32912c3a9667e3d19951114a9834e6265c050a5",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "cd056174be6b6b86bf049578e32912c3a9667e3d19951114a9834e6265c050a5"
+  },
+  "sear_steak_s3": {
+   "checkpoint": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "n_rows": 599568,
+   "npy_sha256": "a3c30f3061429df99d461d9e0d2dfeb2619603d95df02ec6c45e591b186c5deb",
+   "out_npy": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_seedbox/xyz_canonical.npy",
+   "prefix_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3",
+   "program_compared": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_seedbox/program_oracle.json",
+   "program_xyz_sha256": "fc62306ba4e906b0940158ea0353e71fdbfe92d51d7c4e97f5ce65e04224780c",
+   "sha_matches_program": true,
+   "status": "written",
+   "xyz_sha256": "fc62306ba4e906b0940158ea0353e71fdbfe92d51d7c4e97f5ce65e04224780c"
+  }
+ }
+}

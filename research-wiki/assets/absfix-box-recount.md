@@ -1,0 +1,106 @@
+# absfix2 stage-1 cell-precondition SETUP recount
+
+Spec v2.0.0 section 11.4 against the FROZEN per-scene MECHANISM_FBOX
+(half-open [x0,y0,x1,y1) in render-raster pixels, nearest pixel, held-out
+cam00, DEFORMED centres). `rows_in_box >= 100` is the clause tested here;
+the `>= 1000 gated rows at 12k` clause is post-training and `rows_gated`
+below is the SETUP count on the 6k prefix cloud, not that test.
+
+| scene | prefix | arm | rows_gated | rows_in_box | frame | pass |
+|---|---|---|---|---|---|---|
+| cut_roasted_beef | 0 | G | 7,004 | 7,004 | 75 | PASS |
+| cut_roasted_beef | 0 | GEST | 7,004 | 7,004 | 75 | PASS |
+| cut_roasted_beef | 0 | GESTMEM | 6,927 | 6,927 | 75 | PASS |
+| cut_roasted_beef | 0 | GWRONGMEM_A | 7,004 | 60 | 75 | FAIL |
+| cut_roasted_beef | 0 | GWRONGMEM_B | 7,004 | 58 | 75 | FAIL |
+| cut_roasted_beef | 0 | GWRONGMEM_L | - | - | 75 | MISSING |
+| cut_roasted_beef | 0 | GMIS | 7,004 | 7,004 | 245 | PASS |
+| cut_roasted_beef | 0 | GONES | 7,004 | 7,004 | 291 | PASS |
+| cut_roasted_beef | 1 | G | 6,981 | 6,981 | 75 | PASS |
+| cut_roasted_beef | 1 | GEST | 6,981 | 6,981 | 75 | PASS |
+| cut_roasted_beef | 1 | GESTMEM | 6,917 | 6,917 | 75 | PASS |
+| cut_roasted_beef | 1 | GWRONGMEM_A | 6,981 | 67 | 75 | FAIL |
+| cut_roasted_beef | 1 | GWRONGMEM_B | 6,981 | 55 | 75 | FAIL |
+| cut_roasted_beef | 1 | GWRONGMEM_L | - | - | 75 | MISSING |
+| cut_roasted_beef | 1 | GMIS | 6,981 | 6,981 | 245 | PASS |
+| cut_roasted_beef | 1 | GONES | 6,981 | 6,981 | 291 | PASS |
+| cut_roasted_beef | 2 | G | 6,858 | 6,858 | 75 | PASS |
+| cut_roasted_beef | 2 | GEST | 6,858 | 6,858 | 75 | PASS |
+| cut_roasted_beef | 2 | GESTMEM | 6,778 | 6,778 | 75 | PASS |
+| cut_roasted_beef | 2 | GWRONGMEM_A | 6,858 | 64 | 75 | FAIL |
+| cut_roasted_beef | 2 | GWRONGMEM_B | 6,858 | 49 | 75 | FAIL |
+| cut_roasted_beef | 2 | GWRONGMEM_L | - | - | 75 | MISSING |
+| cut_roasted_beef | 2 | GMIS | 6,858 | 6,858 | 245 | PASS |
+| cut_roasted_beef | 2 | GONES | 6,858 | 6,858 | 291 | PASS |
+| cut_roasted_beef | 3 | G | 6,813 | 6,811 | 75 | PASS |
+| cut_roasted_beef | 3 | GEST | 6,813 | 6,811 | 75 | PASS |
+| cut_roasted_beef | 3 | GESTMEM | 6,751 | 6,749 | 75 | PASS |
+| cut_roasted_beef | 3 | GWRONGMEM_A | 6,813 | 59 | 75 | FAIL |
+| cut_roasted_beef | 3 | GWRONGMEM_B | 6,813 | 61 | 75 | FAIL |
+| cut_roasted_beef | 3 | GWRONGMEM_L | - | - | 75 | MISSING |
+| cut_roasted_beef | 3 | GMIS | 6,813 | 6,812 | 245 | PASS |
+| cut_roasted_beef | 3 | GONES | 6,813 | 6,812 | 291 | PASS |
+| flame_steak | 0 | G | 6,582 | 6,580 | 75 | PASS |
+| flame_steak | 0 | GEST | 6,582 | 6,580 | 75 | PASS |
+| flame_steak | 0 | GESTMEM | 6,434 | 6,432 | 75 | PASS |
+| flame_steak | 0 | GWRONGMEM_A | 6,582 | 66 | 75 | FAIL |
+| flame_steak | 0 | GWRONGMEM_B | 6,582 | 57 | 75 | FAIL |
+| flame_steak | 0 | GWRONGMEM_L | - | - | 75 | MISSING |
+| flame_steak | 0 | GMIS | 6,582 | 6,582 | 245 | PASS |
+| flame_steak | 0 | GONES | 6,582 | 6,582 | 291 | PASS |
+| flame_steak | 1 | G | 6,584 | 6,584 | 75 | PASS |
+| flame_steak | 1 | GEST | 6,584 | 6,584 | 75 | PASS |
+| flame_steak | 1 | GESTMEM | 6,450 | 6,450 | 75 | PASS |
+| flame_steak | 1 | GWRONGMEM_A | 6,584 | 60 | 75 | FAIL |
+| flame_steak | 1 | GWRONGMEM_B | 6,584 | 71 | 75 | FAIL |
+| flame_steak | 1 | GWRONGMEM_L | - | - | 75 | MISSING |
+| flame_steak | 1 | GMIS | 6,584 | 6,584 | 245 | PASS |
+| flame_steak | 1 | GONES | 6,584 | 6,584 | 291 | PASS |
+| flame_steak | 2 | G | 6,648 | 6,645 | 75 | PASS |
+| flame_steak | 2 | GEST | 6,648 | 6,645 | 75 | PASS |
+| flame_steak | 2 | GESTMEM | 6,515 | 6,512 | 75 | PASS |
+| flame_steak | 2 | GWRONGMEM_A | 6,648 | 72 | 75 | FAIL |
+| flame_steak | 2 | GWRONGMEM_B | 6,648 | 46 | 75 | FAIL |
+| flame_steak | 2 | GWRONGMEM_L | - | - | 75 | MISSING |
+| flame_steak | 2 | GMIS | 6,648 | 6,648 | 245 | PASS |
+| flame_steak | 2 | GONES | 6,648 | 6,648 | 291 | PASS |
+| flame_steak | 3 | G | 6,641 | 6,640 | 75 | PASS |
+| flame_steak | 3 | GEST | 6,641 | 6,640 | 75 | PASS |
+| flame_steak | 3 | GESTMEM | 6,497 | 6,496 | 75 | PASS |
+| flame_steak | 3 | GWRONGMEM_A | 6,641 | 76 | 75 | FAIL |
+| flame_steak | 3 | GWRONGMEM_B | 6,641 | 56 | 75 | FAIL |
+| flame_steak | 3 | GWRONGMEM_L | - | - | 75 | MISSING |
+| flame_steak | 3 | GMIS | 6,641 | 6,641 | 245 | PASS |
+| flame_steak | 3 | GONES | 6,641 | 6,641 | 291 | PASS |
+| sear_steak | 0 | G | 7,676 | 7,676 | 75 | PASS |
+| sear_steak | 0 | GEST | 7,676 | 7,676 | 75 | PASS |
+| sear_steak | 0 | GESTMEM | - | - | 75 | MISSING |
+| sear_steak | 0 | GWRONGMEM_A | 7,676 | 79 | 75 | FAIL |
+| sear_steak | 0 | GWRONGMEM_B | 7,676 | 87 | 75 | FAIL |
+| sear_steak | 0 | GWRONGMEM_L | - | - | 75 | MISSING |
+| sear_steak | 0 | GMIS | 7,676 | 7,676 | 245 | PASS |
+| sear_steak | 0 | GONES | 7,676 | 7,676 | 291 | PASS |
+| sear_steak | 1 | G | 7,434 | 7,434 | 75 | PASS |
+| sear_steak | 1 | GEST | 7,434 | 7,434 | 75 | PASS |
+| sear_steak | 1 | GESTMEM | - | - | 75 | MISSING |
+| sear_steak | 1 | GWRONGMEM_A | 7,434 | 59 | 75 | FAIL |
+| sear_steak | 1 | GWRONGMEM_B | 7,434 | 69 | 75 | FAIL |
+| sear_steak | 1 | GWRONGMEM_L | - | - | 75 | MISSING |
+| sear_steak | 1 | GMIS | 7,434 | 7,434 | 245 | PASS |
+| sear_steak | 1 | GONES | 7,434 | 7,434 | 291 | PASS |
+| sear_steak | 2 | G | 7,656 | 7,656 | 75 | PASS |
+| sear_steak | 2 | GEST | 7,656 | 7,656 | 75 | PASS |
+| sear_steak | 2 | GESTMEM | - | - | 75 | MISSING |
+| sear_steak | 2 | GWRONGMEM_A | 7,656 | 90 | 75 | FAIL |
+| sear_steak | 2 | GWRONGMEM_B | 7,656 | 82 | 75 | FAIL |
+| sear_steak | 2 | GWRONGMEM_L | - | - | 75 | MISSING |
+| sear_steak | 2 | GMIS | 7,656 | 7,656 | 245 | PASS |
+| sear_steak | 2 | GONES | 7,656 | 7,656 | 291 | PASS |
+| sear_steak | 3 | G | 7,536 | 7,533 | 75 | PASS |
+| sear_steak | 3 | GEST | 7,536 | 7,533 | 75 | PASS |
+| sear_steak | 3 | GESTMEM | - | - | 75 | MISSING |
+| sear_steak | 3 | GWRONGMEM_A | 7,536 | 103 | 75 | PASS |
+| sear_steak | 3 | GWRONGMEM_B | 7,536 | 95 | 75 | FAIL |
+| sear_steak | 3 | GWRONGMEM_L | - | - | 75 | MISSING |
+| sear_steak | 3 | GMIS | 7,536 | 7,535 | 245 | PASS |
+| sear_steak | 3 | GONES | 7,536 | 7,534 | 291 | PASS |
