@@ -307,7 +307,7 @@
   "GMIS": "construction-derived membership, gap moved to the control window (timing sham)",
   "GWRONGMEM_A": "count-matched uniform draw over rows OUTSIDE the construction-derived set, zero overlap, seed 1000+prefix_seed",
   "GWRONGMEM_B": "second independent draw, seed 2000+prefix_seed",
-  "GWRONGMEM_L": "local contribution-matched sham: rows outside the construction-derived set projecting inside the +20 px construction silhouette on >= 8 of 19 cameras at frames 50 and 95, greedy by contribution until total contribution mass at frame 50 on cam15 is within +-10% of the construction-derived set's",
+  "GWRONGMEM_L": "section 13.18: mass-matched sham with locality relaxed by radius: non-truth rows in order of 3D distance from the truth centroid (canonical xyz), greedy by descending contribution within the smallest radius whose rows carry >= 0.9x the truth mass, until the frame-50 cam15 contribution mass is within +-10% of the truth mass; deterministic; radius, n_within_radius and the retired local-only mass ratio recorded per prefix",
   "GONES": "construction-derived membership, late gap [286,297] (code-path sham, not a null)"
  },
  "WRONGMEM_OVERLAP_MAX": 0,
@@ -1449,7 +1449,8 @@
   "script": "scripts/draw_membership_shams.py",
   "commit": "2bc5acf",
   "sha256": "0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485",
-  "vote_script_sha256": "69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905 (scripts/realdata_membership_vote.py with --emit_row_weights)"
+  "vote_script_sha256": "69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905 (scripts/realdata_membership_vote.py with --emit_row_weights)",
+  "script_v2": "scripts/draw_membership_shams.py sha256 347233de8872dd7b47a2540ffa355bfbea2fe12353c24fa98b0be8af3dc8d750 (commit e7573a7: --l_mode radius, --xyz; --gap check fixed in 3f09120); the L programs and the re-emitted A/B programs of wave 2 are drawn with this version"
  },
  "FIXTURE_CONSTRUCTION_SCRIPTS": {
   "sa4d_absence_edit_render.py_sha256": "7648de041d845ef9ab580ed817200ecad0fa0ec5befec20b580ca81e7e4076b0 (commit 3d95d3e)",
@@ -1533,7 +1534,7 @@
   "date": "2026-09-13 08:40 CEST",
   "record": "research-wiki/assets/absfix-stage1-record.json (tracked from this commit); table absfix-stage1-record.md; seed boxes absfix-seed-boxes.json",
   "reducer": "scripts/realdata_gate_analysis.py sha256 a44dcc333b921fd502f9bb661593c689f1bcdc694ce23840ac3e8862a207b64f (commit 34cc193)",
-  "draw_script": "scripts/draw_membership_shams.py: 0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485 (commit 2bc5acf, the version the stage-1 draws ran) and 442231ae76936648696612dbd0fed11c7563b21281b1b4e985a8ed969a129a44 (commit 3f09120, --gap check fixed; draws omit --gap so the outputs are identical)",
+  "draw_script": "scripts/draw_membership_shams.py: 0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485 (commit 2bc5acf, the version the stage-1 draws ran) and 442231ae76936648696612dbd0fed11c7563b21281b1b4e985a8ed969a129a44 (commit 3f09120, --gap check fixed; draws omit --gap so the outputs are identical); L programs drawn with 347233de8872dd7b47a2540ffa355bfbea2fe12353c24fa98b0be8af3dc8d750 (commit e7573a7, section 13.18)",
   "vote_script": "scripts/realdata_membership_vote.py sha256 69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905",
   "evaluator": "scripts/eval_n3v_gated.py sha256 4bdf427fa59264125843b0523b4466b2200383eb76eacf6d196679681cc1b927",
   "t1_estimator": "scripts/estimate_episodes.py sha256 c90416df0901708350171a065afd2622d413f80d86f95c81bdd6f8639b56362d",
@@ -1547,7 +1548,7 @@
   "t1_reports_programs": "8/8 hashed; pooled windows flame [60,89],[60,90],[60,89],[60,93]; sear [60,89],[60,89],[57,106],[60,90]",
   "programs_G_mis_ones": "8/8 hashed; members flame 6582/6584/6648/6641, sear 7676/7434/7656/7536; LOCO Jaccard >= 0.998",
   "programs_wrongmem_A_B": "8/8 hashed; count-matched, overlap 0, seeds 1000+s / 2000+s",
-  "programs_wrongmem_L": "0/8: NOT constructible as frozen (eligible local mass / truth mass 0.37-0.41 vs the +-10% band); USER DECISION pending (13.13)",
+  "programs_wrongmem_L": "pending: radius-mode draws (section 13.18) running on all 12 prefixes",
   "programs_gestmem": "flame_steak 4/4 (6434/6450/6515/6497), cut_roasted_beef 4/4 (6927/6917/6778/6751), sear_steak 0/4 (S2 vote refuses on cam09, 13.16)",
   "membership_precondition": "flame 4/4 PASS (P 0.9998-1.0000, R 0.9775-0.9800); calibration 4/4 PASS; sear: not computable (no S2 program)",
   "t1_precondition_pooled": "flame s0/s1/s2 PASS, s3 FAIL ([60,93], onset err 4, IoU 0.882); sear s0/s1 PASS, s2 FAIL ([57,106], IoU 0.60, onset err 17), s3 PASS on the pooled reading ([60,90]); calibration 4/4 PASS pooled",
