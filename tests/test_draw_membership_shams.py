@@ -486,3 +486,63 @@ def test_load_xyz_rejects_wrong_shape(tmp_path):
     np.save(path, np.zeros((4, 2)))
     with pytest.raises(dms.DrawRefused, match="needs \\[7, 3\\]"):
         dms.load_xyz(str(path), 7)
+
+
+
+# --- the xyz loader keeps its shape; the contribution key is selectable -------
+
+
+def test_load_xyz_keeps_the_stored_shape_from_npy_and_npz(tmp_path):
+    xyz = np.arange(21, dtype=np.float64).reshape(7, 3)
+    npy = tmp_path / "xyz.npy"
+    np.save(npy, xyz)
+    assert np.array_equal(dms.load_xyz(str(npy), 7), xyz)
+    npz = tmp_path / "xyz.npz"
+    np.savez(npz, xyz=xyz)
+    assert np.array_equal(dms.load_xyz(str(npz), 7), xyz)
+
+
+def test_cli_radius_mode_runs_end_to_end_with_an_npy_xyz(tmp_path):
+    program = truth_program()
+    n = len(program["row_group_ids"])
+    truth = dms.truth_mask(program)
+    xyz = np.zeros((n, 3))
+    outside = np.flatnonzero(~truth)
+    xyz[outside, 0] = np.linspace(1.0, 5.0, outside.size)
+    w_in = np.full(n, 0.01)
+    w_in[truth] = 10.0
+    w_total = np.full(n, 3.0)
+    w_total[truth] = 10.0
+    eligible = np.zeros(n, dtype=bool)
+    eligible[outside[:3]] = True
+    (tmp_path / "program.json").write_text(json.dumps(program))
+    np.savez(tmp_path / "weights.npz", w_in=w_in, w_total=w_total)
+    np.savez(tmp_path / "elig.npz", eligible=eligible)
+    np.save(tmp_path / "xyz.npy", xyz)
+    out = tmp_path / "out"
+    # on w_in the non-truth rows cannot reach the band: refusal, nothing written
+    rc = dms.main(["--truth_program", str(tmp_path / "program.json"),
+                   "--contribution", str(tmp_path / "weights.npz"),
+                   "--local_eligible", str(tmp_path / "elig.npz"),
+                   "--xyz", str(tmp_path / "xyz.npy"),
+                   "--out_dir", str(out), "--prefix_seed", "0",
+                   "--gap", "60", "89", "--l_mode", "radius"])
+    assert rc == 2 and not out.exists()
+    # on w_total it is constructible and the key is recorded
+    rc = dms.main(["--truth_program", str(tmp_path / "program.json"),
+                   "--contribution", str(tmp_path / "weights.npz"),
+                   "--contribution_key", "w_total",
+                   "--local_eligible", str(tmp_path / "elig.npz"),
+                   "--xyz", str(tmp_path / "xyz.npy"),
+                   "--out_dir", str(out), "--prefix_seed", "0",
+                   "--gap", "60", "89", "--l_mode", "radius"])
+    assert rc == 0
+    counts = json.loads((out / "counts_gwrongmem_l.json").read_text())
+    assert counts["contribution_key"] == "w_total"
+    assert counts["contribution_file"] == "weights.npz"
+    assert counts["overlap_n"] == 0
+    assert 0.9 * counts["contribution_truth"] <= counts["contribution_draw"] \
+        <= 1.1 * counts["contribution_truth"]
+    assert counts["radius_reached"] > 0
+    a = json.loads((out / "counts_gwrongmem_a.json").read_text())
+    assert a["contribution_key"] == "w_total"

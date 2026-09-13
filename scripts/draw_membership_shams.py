@@ -119,35 +119,42 @@ def load_program(path):
     return payload
 
 
-def _array_from_file(path, keys, what):
-    """A 1-D array from an .npz (first of `keys` present), .npy or json."""
+def _array_from_file(path, keys, what, flatten=True):
+    """An array from an .npz (first of `keys` present), .npy or json.
+
+    Columns are flattened to 1-D; `flatten=False` keeps the stored shape
+    (the xyz table is [n_rows, 3])."""
+    shape = (lambda a: np.asarray(a).reshape(-1)) if flatten else np.asarray
     ext = os.path.splitext(path)[1].lower()
     if ext == ".npz":
         with np.load(path, allow_pickle=False) as data:
             for key in keys:
                 if key in data:
-                    return np.asarray(data[key]).reshape(-1)
+                    return shape(data[key])
             raise DrawRefused(
                 "%s: none of %s is in the archive (found %s)"
                 % (path, list(keys), sorted(data.files)))
     if ext == ".npy":
-        return np.asarray(np.load(path, allow_pickle=False)).reshape(-1)
+        return shape(np.load(path, allow_pickle=False))
     if ext == ".json":
         with open(path, encoding="utf-8") as handle:
             payload = json.load(handle)
         if isinstance(payload, dict):
             for key in keys:
                 if key in payload:
-                    return np.asarray(payload[key]).reshape(-1)
+                    return shape(payload[key])
             raise DrawRefused(
                 "%s: none of %s is in the object (found %s)"
                 % (path, list(keys), sorted(payload)))
-        return np.asarray(payload).reshape(-1)
+        return shape(payload)
     raise DrawRefused("%s: cannot read a %s from a %r file" % (path, what, ext))
 
 
-def load_contribution(path, n_rows):
-    values = _array_from_file(path, CONTRIBUTION_KEYS, "contribution column")
+def load_contribution(path, n_rows, key=None):
+    """The per-row contribution column; `key` names the archive column to
+    use (default: the first of CONTRIBUTION_KEYS present)."""
+    keys = (key,) if key else CONTRIBUTION_KEYS
+    values = _array_from_file(path, keys, "contribution column")
     if values.size != n_rows:
         raise DrawRefused(
             "%s: contribution has %d entries, the cloud has %d rows"
@@ -260,7 +267,8 @@ def local_contribution_matched_draw(truth, eligible, contribution,
 
 def load_xyz(path, n_rows):
     """[n_rows, 3] canonical positions from a .npy or an .npz (key `xyz`)."""
-    xyz = _array_from_file(path, ("xyz", "_xyz", "positions"), "xyz")
+    xyz = _array_from_file(path, ("xyz", "_xyz", "positions"), "xyz",
+                           flatten=False)
     xyz = np.asarray(xyz, dtype=np.float64)
     if xyz.ndim != 2 or xyz.shape[0] != n_rows or xyz.shape[1] != 3:
         raise DrawRefused(
@@ -500,13 +508,22 @@ def main(argv=None):
     parser.add_argument("--xyz", default=None,
                         help="[n_rows, 3] canonical xyz (.npy, or .npz with "
                              "key xyz); required for --l_mode radius")
+    parser.add_argument("--contribution_key", default=None,
+                        help="which column of --contribution carries the "
+                             "mass to match (an .npz key such as w_in, the "
+                             "contribution inside the object silhouette, or "
+                             "w_total, the contribution to the whole view); "
+                             "default: the first of %s present; the key used "
+                             "is recorded in every counts sidecar"
+                             % (list(CONTRIBUTION_KEYS),))
     args = parser.parse_args(argv)
 
     try:
         program = load_program(args.truth_program)
         check_gap(program, args.gap)
         n_rows = len(program["row_group_ids"])
-        contribution = load_contribution(args.contribution, n_rows)
+        contribution = load_contribution(args.contribution, n_rows,
+                                         key=args.contribution_key)
         eligible = load_local_eligible(args.local_eligible, n_rows)
         xyz = load_xyz(args.xyz, n_rows) if args.xyz else None
         draws = draw_all(program, contribution, eligible, args.prefix_seed,
@@ -516,6 +533,12 @@ def main(argv=None):
     except DrawRefused as exc:
         print("REFUSED: %s" % exc, file=sys.stderr)
         return 2
+    for arm in draws:
+        draws[arm][2]["contribution_key"] = (args.contribution_key
+                                             or "default:%s"
+                                             % list(CONTRIBUTION_KEYS))
+        draws[arm][2]["contribution_file"] = os.path.basename(
+            args.contribution)
     for arm, program_path, counts_path in write_draws(args.out_dir, draws):
         counts = draws[arm][2]
         print("%s rows %d (truth %d, overlap %d, eligible %d, mass %.6g vs "
