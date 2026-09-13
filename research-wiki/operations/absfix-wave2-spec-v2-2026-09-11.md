@@ -802,3 +802,47 @@ where admitted and reported descriptively; (3) the stage-2 go.
 |---|---|
 | this page, sections 0-13.17 (before this record) | `1a4e612f3cd1df53d3226009d1410bcecf70197fe9f966e1097bff2e3d41d95c` |
 | `configs/n3v/absfix_gate_spec_v2.json` with FREEZE_LIST_STATUS | `11341cad22823e012888060037d05912868270df772cf0b6fdc3624ee506406b` |
+
+### 13.18 §11.2 amended: G-wrongmem-L keeps mass matching and relaxes locality by radius (user decision 2026-09-13; appended BEFORE any L program is drawn)
+
+§11.2 defined G-wrongmem-L as rows OUTSIDE the construction-derived set
+that project inside the +20 px construction silhouette on ≥ 8 cameras,
+drawn greedily by descending contribution until the mass at frame 50 on
+cam15 is within ±10% of the truth mass. §13.13 and §13.17 recorded that
+this set cannot reach the band on any of the 8 confirmatory prefixes:
+the locally eligible non-truth rows carry only 0.37–0.41 of the truth
+mass (flame 0.41 / 0.39 / 0.39 / 0.37; sear 0.38 / 0.40 / 0.37 / 0.40).
+**That number is a finding and stays on the record: the construction-
+derived vote captures most of the paint around the object.**
+
+The user rejected a count-matched local replacement because it gives up
+the magnitude matching the Codex review asked for (a count-matched local
+draw removes less than half the paint, so a win over it could be read as
+"removing more paint near the object"). **Amended rule, binding:**
+
+* G-wrongmem-L = non-truth rows taken in order of 3D distance from the
+  centroid of the truth set (canonical `_xyz`, the frame the vote and the
+  seed boxes use), greedy by descending contribution, until the
+  contribution mass at frame 50 on cam15 is within ±10% of the truth
+  mass. Concretely: the radius R is the smallest distance at which the
+  non-truth rows within R carry at least (1 − 0.10) × the truth mass;
+  within R the rows are taken by descending contribution (ties by row
+  index), skipping a row that would overshoot (1 + 0.10) × the truth
+  mass, stopping once the lower edge is reached. Zero overlap with the
+  truth set is asserted. The draw is deterministic (no seed).
+* Recorded per prefix in the counts sidecar: the radius reached, the
+  number of non-truth rows within it, the drawn count and mass, the
+  truth mass, and the local-only mass ratio of the retired rule
+  (0.37–0.41) as the finding. Draws A and B are unchanged.
+* The reducer's Claim A rule (§11.5) is unchanged: `G − GWRONGMEM_L` on
+  both endpoints in every pair.
+* Code: `scripts/draw_membership_shams.py` gains the radius mode (the
+  retired local mode is kept, off by default) with tests; the `--gap`
+  check defect of §13.13 was fixed separately in commit 3f09120; the A/B
+  programs of stage 1 are re-emitted under the fixed script with `--gap
+  60 89` and their hashes compared to the stage-1 hashes (expected
+  identical; the draws are seeded and the fix touched only the check).
+
+| item | sha256 |
+|---|---|
+| this page, sections 0-13.18 (before this record) | `24501477306d6a8948b922b8657b855cfcde9700bee3ca0547d7f537ce16e5b3` |
