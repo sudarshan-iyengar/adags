@@ -736,3 +736,11 @@ Run 1 (jobs 57485941/42/43, driver on the recorded clicks): kept 19/20, 19/20, 1
 * **S2 final masks (run 1 + one bounded re-seed):** every camera kept after the re-seed: flame_steak 20/20 (cam19 re-seeded), sear_steak 20/20 (cam09, cam19), cut_roasted_beef 19/19 (cam17); re-seed counts per seed frame 1/1, 2/2, 1/1.
 * **Membership precondition on the calibration scene, prefixes 0–2 (S2 vote vs construction-derived vote, jobs 57488990/57492151/57489429):** precision 1.0000 / 0.9996 / 0.9999; recall 0.9890 / 0.9904 / 0.9882 (TP 6,927 / 6,914 / 6,777; FP 0 / 3 / 1; FN 77 / 67 / 81; truth_n 7,004 / 6,981 / 6,858); size ratio 0.989 / 0.991 / 0.988; cam15 IoU 0.9386 (f50) and 0.9349 (f95). All three PASS §11.3. Prefix 3 pending (its S2 vote stalled twice at import and is being resubmitted).
 * **Chain state at 03:55 CEST:** flame_steak prefixes 0–3 and sear_steak prefix 1 COMPLETED (~2 h each); sear_steak prefixes 0, 2, 3 hung with empty run dirs for 3 h 45 and are being cancelled and resubmitted with their dependents; T1 running on the completed prefixes; votes, eligibility, draws, S2 votes and preconditions queued by dependency.
+
+### 13.14 Run-2 outcomes by eye (2026-09-13)
+
+Second clicks, checked once against the raw-frame sheets `s2-<scene>-run2-check-reseed.jpg`: flame_steak cam19 and sear_steak cam19 now cover the whole bottle (7,381 / 7,654 px at frame 50); sear_steak cam09 selected the countertop (23,627 px) and cut_roasted_beef cam17 the label only (2,590 px). Both failures are KEPT in their votes under 13.9(b) (the area rule does not remove them; no third attempt). The membership precondition is the guard: on the calibration scene it PASSED on prefixes 0–2 with cam17's label-only mask included (§13.13). Recorded in the JSON under `S2.run2` and `S2.membership_precondition_results`.
+
+| item | sha256 |
+|---|---|
+| `configs/n3v/absfix_gate_spec_v2.json` after the run-2 record | `8e286d90fb2ba1f763ac4fb709a4185cace02f3b6888f6ec19dfb514cca5639d` |

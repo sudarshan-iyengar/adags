@@ -1144,7 +1144,79 @@
     "cut_roasted_beef": 19
    }
   },
-  "clicks_sha256_after_reseed": "71260e0295afa71f43a2de7d054930e4cfc817ee7a82f8ead1a35aec92f687e3"
+  "clicks_sha256_after_reseed": "71260e0295afa71f43a2de7d054930e4cfc817ee7a82f8ead1a35aec92f687e3",
+  "run2": {
+   "jobs": {
+    "flame_steak": 57488364,
+    "sear_steak": 57488399,
+    "cut_roasted_beef": 57488403
+   },
+   "outcome_by_eye": {
+    "flame_steak cam19": "PASS: whole bottle, 7381 (f50) / 7352 (f92) px",
+    "sear_steak cam19": "PASS: whole bottle, 7654 / 7676 px",
+    "sear_steak cam09": "FAIL: second click selected the countertop, 23627 / 23758 px; kept (below 5x median); no third attempt",
+    "cut_roasted_beef cam17": "FAIL: second click selected the label only, 2590 / 2614 px; kept (above 500 px); no third attempt"
+   },
+   "final_kept": {
+    "flame_steak": 20,
+    "sear_steak": 20,
+    "cut_roasted_beef": 19
+   },
+   "final_dropped": {
+    "flame_steak": [],
+    "sear_steak": [],
+    "cut_roasted_beef": []
+   }
+  },
+  "membership_precondition_results": {
+   "cut_roasted_beef": {
+    "s0": {
+     "precision": 1.0,
+     "recall": 0.989,
+     "TP": 6927,
+     "FP": 0,
+     "FN": 77,
+     "truth_n": 7004,
+     "pred_n": 6927,
+     "size_ratio": 0.989,
+     "iou_cam15_f50": 0.9386,
+     "iou_cam15_f95": 0.9349,
+     "pass": true,
+     "job": 57488990
+    },
+    "s1": {
+     "precision": 0.9996,
+     "recall": 0.9904,
+     "TP": 6914,
+     "FP": 3,
+     "FN": 67,
+     "truth_n": 6981,
+     "pred_n": 6917,
+     "size_ratio": 0.9908,
+     "iou_cam15_f50": 0.9386,
+     "iou_cam15_f95": 0.9349,
+     "pass": true,
+     "job": 57492151
+    },
+    "s2": {
+     "precision": 0.9999,
+     "recall": 0.9882,
+     "TP": 6777,
+     "FP": 1,
+     "FN": 81,
+     "truth_n": 6858,
+     "pred_n": 6778,
+     "size_ratio": 0.9883,
+     "iou_cam15_f50": 0.9386,
+     "iou_cam15_f95": 0.9349,
+     "pass": true,
+     "job": 57489429
+    },
+    "s3": "pending (S2 vote resubmitted after import stalls)"
+   },
+   "flame_steak": "pending",
+   "sear_steak": "pending"
+  }
  },
  "MEMBERSHIP_PRECONDITION": {
   "precision_min": 0.8,
