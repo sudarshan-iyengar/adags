@@ -932,3 +932,38 @@ equal to each T1 program's `cloud.xyz_sha256`, 12/12).
 | item | sha256 |
 |---|---|
 | this page, sections 0-13.19 (before this record) | `c55a66905f81f0f071d0aa5e3c007b69145b569c225d932f79eae85b9b05e253` |
+
+### 13.20 Provisional L draws on the total-contribution measure (2026-09-13, 15:20 CEST; NOT frozen, decision pending)
+
+Job 57559108 (CPU, 39 s), script version `4ea716ad…` (commit cb6dd1c),
+`--contribution_key w_total --l_mode radius --gap 60 89`, outputs in
+`draws_prefix<S>_v3prov/` (never used for training unless the user
+freezes the measure); summary `research-wiki/assets/absfix-draws-v3prov.json`.
+
+| scene | prefix | radius reached (units) | non-truth rows within | rows drawn | truth rows | mass ratio | overlap | local-only ratio of the §11.2 rule on `w_total` |
+|---|---|---|---|---|---|---|---|---|
+| flame_steak | 0 / 1 / 2 / 3 | 0.708 / 0.707 / 0.711 / 0.706 | 5,588 / 5,597 / 5,677 / 5,680 | 2,223 / 2,211 / 2,144 / 2,224 | 6,582 / 6,584 / 6,648 / 6,641 | 0.900 ×4 | 0 ×4 | 1.60 / 1.47 / 1.42 / 1.44 |
+| sear_steak | 0 / 1 / 2 / 3 | 0.720 / 0.722 / 0.718 / 0.717 | 6,035 / 6,148 / 6,213 / 6,298 | 2,361 / 2,316 / 2,602 / 2,219 | 7,676 / 7,434 / 7,656 / 7,536 | 0.900 ×4 | 0 ×4 | 1.29 / 1.33 / 1.38 / 1.35 |
+| cut_roasted_beef | 0 / 1 / 2 / 3 | 0.740 / 0.739 / 0.735 / 0.731 | 4,928 / 4,954 / 4,852 / 5,046 | 1,546 / 1,524 / 1,668 / 1,503 | 7,004 / 6,981 / 6,858 / 6,813 | 0.900 ×4 | 0 ×4 | 1.12 / 0.95 / 1.02 / 1.12 |
+
+Readings, before any decision: (i) on `w_total` the mass-matched sham
+exists on 12/12 prefixes, within 0.71–0.74 units of the truth centroid
+(the truth rows themselves lie within 0.53), i.e. a shell just outside
+the bottle; the greedy walk stops at the lower edge of the band (0.900)
+because the highest-contribution rows are taken first; (ii) **the
+ORIGINAL §11.2 local rule is itself constructible on `w_total`**: the
+locally eligible non-truth rows carry 0.95–1.60 of the truth mass on
+every prefix (the ≥ 0.90 edge is reachable on all 12), so locality can be
+KEPT and only the measure changed; (iii) the retired `w_in` measure is
+the reason for both refusals, not the geometry.
+
+The decision on the record for the user: which measure (`w_total`,
+recommended: the paint the rows contribute to the view) and which
+locality rule (the original local rule on `w_total`, recommended, since
+it keeps the review's locality and magnitude together; the radius rule
+stays as the fallback). Until frozen, no L program enters the freeze
+list.
+
+| item | sha256 |
+|---|---|
+| this page, sections 0-13.20 (before this record) | `8526974f6a8047a8f307488ab37e8cf3699b572180c235e1f0738db081759462` |
