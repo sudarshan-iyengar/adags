@@ -258,6 +258,77 @@ def local_contribution_matched_draw(truth, eligible, contribution,
     return np.sort(np.asarray(taken, dtype=np.int64)), pool.size
 
 
+def load_xyz(path, n_rows):
+    """[n_rows, 3] canonical positions from a .npy or an .npz (key `xyz`)."""
+    xyz = _array_from_file(path, ("xyz", "_xyz", "positions"), "xyz")
+    xyz = np.asarray(xyz, dtype=np.float64)
+    if xyz.ndim != 2 or xyz.shape[0] != n_rows or xyz.shape[1] != 3:
+        raise DrawRefused(
+            "xyz has shape %r; the program has %d rows and needs [%d, 3]"
+            % (xyz.shape, n_rows, n_rows))
+    if not np.all(np.isfinite(xyz)):
+        raise DrawRefused("xyz carries non-finite values")
+    return xyz
+
+
+def radius_contribution_matched_draw(truth, xyz, contribution,
+                                     tolerance=DEFAULT_MASS_TOLERANCE):
+    """Spec v2.0.0 section 13.18: mass-matched, locality relaxed by radius.
+
+    Non-truth rows are ranked by 3D distance from the truth set's centroid.
+    The radius R is the smallest distance at which the non-truth rows within
+    R carry at least `(1 - tolerance) * target` contribution mass; within R
+    the rows are taken by descending contribution (ties by row index),
+    skipping a row that would overshoot `(1 + tolerance) * target`, stopping
+    once the lower edge is reached. Deterministic; no seed.
+
+    Returns (rows, info) with info = {radius, n_within_radius, centroid}.
+    """
+    target = float(contribution[truth].sum())
+    if target <= 0.0:
+        raise DrawRefused(
+            "the truth set carries no contribution mass at the recorded view; "
+            "there is nothing to match")
+    lower = (1.0 - float(tolerance)) * target
+    upper = (1.0 + float(tolerance)) * target
+    centroid = xyz[truth].mean(axis=0)
+    pool = np.flatnonzero(~truth)
+    if pool.size == 0:
+        raise DrawRefused("every row is in the truth set; no sham is possible")
+    dist = np.linalg.norm(xyz[pool] - centroid[None, :], axis=1)
+    by_dist = np.lexsort((pool, dist))
+    cum = np.cumsum(np.maximum(contribution[pool[by_dist]], 0.0))
+    if cum[-1] < lower:
+        raise DrawRefused(
+            "all non-truth rows together carry %.6g of contribution mass "
+            "against the truth set's %.6g; the +-%.0f%% band [%.6g, %.6g] is "
+            "unreachable at any radius" % (float(cum[-1]), target,
+                                            100.0 * tolerance, lower, upper))
+    k = int(np.searchsorted(cum, lower, side="left"))
+    radius = float(dist[by_dist[k]])
+    # every non-truth row at distance <= radius (ties at the boundary included)
+    within = pool[dist <= radius]
+    order = within[np.lexsort((within, -contribution[within]))]
+    taken, mass = [], 0.0
+    for row in order:
+        value = float(contribution[row])
+        if mass + value > upper:
+            continue
+        taken.append(int(row))
+        mass += value
+        if mass >= lower:
+            break
+    if mass < lower:  # pragma: no cover - the prefix sum guarantees reach
+        raise DrawRefused("the greedy walk within radius %.6g ended at %.6g "
+                          "below the lower edge %.6g" % (radius, mass, lower))
+    info = {
+        "radius": radius,
+        "n_within_radius": int(within.size),
+        "centroid": [float(v) for v in centroid],
+    }
+    return np.sort(np.asarray(taken, dtype=np.int64)), info
+
+
 # ---------------------------------------------------------------------------
 # Outputs
 # ---------------------------------------------------------------------------
@@ -308,9 +379,20 @@ def counts_sidecar(arm, truth, rows, eligible_n, contribution, seed,
 
 def draw_all(truth_program, contribution, eligible, prefix_seed,
              draw_index=DEFAULT_DRAW_INDEX,
-             tolerance=DEFAULT_MASS_TOLERANCE):
-    """{arm: (program, program_sha256, counts)} for the three shams."""
+             tolerance=DEFAULT_MASS_TOLERANCE, xyz=None, l_mode="local"):
+    """{arm: (program, program_sha256, counts)} for the three shams.
+
+    `l_mode` is "local" (section 11.2 as first frozen: locally eligible rows,
+    which cannot reach the band on the real prefixes) or "radius" (section
+    13.18: mass matching kept, locality relaxed by 3D radius from the truth
+    centroid; needs `xyz`). In radius mode the local-only mass ratio is still
+    computed from `eligible` and recorded as a finding.
+    """
     truth = truth_mask(truth_program)
+    if l_mode not in ("local", "radius"):
+        raise DrawRefused("unknown l_mode %r" % (l_mode,))
+    if l_mode == "radius" and xyz is None:
+        raise DrawRefused("l_mode radius needs the cloud's xyz")
     seeds = {
         DRAW_A: SEED_STRIDE * int(draw_index) + int(prefix_seed),
         DRAW_B: SEED_STRIDE * (int(draw_index) + 1) + int(prefix_seed),
@@ -325,12 +407,29 @@ def draw_all(truth_program, contribution, eligible, prefix_seed,
         out[arm] = (program, digest, counts_sidecar(
             arm, truth, rows, eligible_n, contribution, seeds[arm], digest,
             extra))
-    rows, eligible_n = local_contribution_matched_draw(
-        truth, eligible, contribution, tolerance)
-    extra = {
-        "draw": "greedy_descending_contribution_local",
-        "mass_tolerance": float(tolerance),
-    }
+    if l_mode == "radius":
+        local_pool = np.flatnonzero(eligible & ~truth)
+        local_only_ratio = (float(contribution[local_pool].sum())
+                            / float(contribution[truth].sum()))
+        rows, info = radius_contribution_matched_draw(
+            truth, xyz, contribution, tolerance)
+        eligible_n = info["n_within_radius"]
+        extra = {
+            "draw": "greedy_descending_contribution_within_radius",
+            "mass_tolerance": float(tolerance),
+            "radius_reached": info["radius"],
+            "n_within_radius": info["n_within_radius"],
+            "truth_centroid_xyz": info["centroid"],
+            "local_only_mass_ratio_retired_rule": local_only_ratio,
+            "local_only_eligible_n": int(local_pool.size),
+        }
+    else:
+        rows, eligible_n = local_contribution_matched_draw(
+            truth, eligible, contribution, tolerance)
+        extra = {
+            "draw": "greedy_descending_contribution_local",
+            "mass_tolerance": float(tolerance),
+        }
     program, digest = build_sham_program(
         truth_program, rows, DRAW_L, seeds[DRAW_L], extra)
     out[DRAW_L] = (program, digest, counts_sidecar(
@@ -391,6 +490,16 @@ def main(argv=None):
                         default=DEFAULT_MASS_TOLERANCE,
                         help="the L draw's contribution band (default %.2f)"
                              % DEFAULT_MASS_TOLERANCE)
+    parser.add_argument("--l_mode", choices=("local", "radius"),
+                        default="local",
+                        help="L draw rule: 'local' = section 11.2 as first "
+                             "frozen (eligible local rows; refuses when they "
+                             "cannot reach the band); 'radius' = section "
+                             "13.18 (mass matched, locality relaxed by 3D "
+                             "radius from the truth centroid; needs --xyz)")
+    parser.add_argument("--xyz", default=None,
+                        help="[n_rows, 3] canonical xyz (.npy, or .npz with "
+                             "key xyz); required for --l_mode radius")
     args = parser.parse_args(argv)
 
     try:
@@ -399,9 +508,11 @@ def main(argv=None):
         n_rows = len(program["row_group_ids"])
         contribution = load_contribution(args.contribution, n_rows)
         eligible = load_local_eligible(args.local_eligible, n_rows)
+        xyz = load_xyz(args.xyz, n_rows) if args.xyz else None
         draws = draw_all(program, contribution, eligible, args.prefix_seed,
                          draw_index=args.draw_index,
-                         tolerance=args.mass_tolerance)
+                         tolerance=args.mass_tolerance,
+                         xyz=xyz, l_mode=args.l_mode)
     except DrawRefused as exc:
         print("REFUSED: %s" % exc, file=sys.stderr)
         return 2

@@ -382,3 +382,107 @@ def test_the_module_does_not_import_torch():
     before = "torch" in sys.modules
     importlib.reload(dms)
     assert ("torch" in sys.modules) == before
+
+
+
+# --- section 13.18: the radius-relaxed, mass-matched L draw ------------------
+
+
+def _radius_cloud():
+    """Truth = 10 rows at the origin with contribution 10 each (mass 100).
+    Non-truth rows: 5 at distance 1 with contribution 1 (local shell, mass 5),
+    20 at distance 2 with contribution 4 (mass 80), 30 at distance 3 with
+    contribution 5 (mass 150). The band [90, 110] is unreachable within
+    radius 2 (85) and reachable within radius 3."""
+    n = 10 + 5 + 20 + 30
+    xyz = np.zeros((n, 3))
+    contribution = np.zeros(n)
+    truth = np.zeros(n, dtype=bool)
+    truth[:10] = True
+    contribution[:10] = 10.0
+    xyz[10:15, 0] = 1.0
+    contribution[10:15] = 1.0
+    xyz[15:35, 0] = 2.0
+    contribution[15:35] = 4.0
+    xyz[35:65, 0] = 3.0
+    contribution[35:65] = 5.0
+    return truth, xyz, contribution
+
+
+def test_radius_draw_reaches_the_band_at_the_smallest_sufficient_radius():
+    truth, xyz, contribution = _radius_cloud()
+    rows, info = dms.radius_contribution_matched_draw(truth, xyz, contribution)
+    assert info["radius"] == 3.0
+    assert info["n_within_radius"] == 55
+    mass = contribution[rows].sum()
+    assert 90.0 <= mass <= 110.0
+    assert not truth[rows].any()
+    # greedy by descending contribution within the radius: the 5-mass rows
+    # come first, so 18 of them reach 90 exactly
+    assert len(rows) == 18
+    assert np.all(contribution[rows] == 5.0)
+
+
+def test_radius_draw_is_deterministic_and_skips_overshooting_rows():
+    truth, xyz, contribution = _radius_cloud()
+    a, _ = dms.radius_contribution_matched_draw(truth, xyz, contribution)
+    b, _ = dms.radius_contribution_matched_draw(truth, xyz, contribution)
+    assert np.array_equal(a, b)
+    # a single heavy row that would overshoot the upper edge is skipped
+    contribution2 = contribution.copy()
+    contribution2[35] = 500.0
+    rows, _ = dms.radius_contribution_matched_draw(truth, xyz, contribution2)
+    assert 35 not in rows
+    assert 90.0 <= contribution2[rows].sum() <= 110.0
+
+
+def test_radius_draw_refuses_when_no_radius_reaches_the_band():
+    truth, xyz, contribution = _radius_cloud()
+    contribution[10:] = 0.5
+    with pytest.raises(dms.DrawRefused, match="unreachable at any radius"):
+        dms.radius_contribution_matched_draw(truth, xyz, contribution)
+
+
+def test_draw_all_radius_mode_records_the_radius_and_the_local_only_finding():
+    truth, xyz, contribution = _radius_cloud()
+    program = truth_program()
+    n = len(program["row_group_ids"])
+    # rebuild the synthetic cloud at the program's row count
+    xyz2 = np.zeros((n, 3))
+    contribution2 = np.full(n, 0.01)
+    truth2 = dms.truth_mask(program)
+    contribution2[truth2] = 10.0
+    outside = np.flatnonzero(~truth2)
+    xyz2[outside, 0] = np.linspace(1.0, 5.0, outside.size)
+    contribution2[outside] = 3.0
+    eligible = np.zeros(n, dtype=bool)
+    eligible[outside[:3]] = True
+    out = dms.draw_all(program, contribution2, eligible, prefix_seed=0,
+                       xyz=xyz2, l_mode="radius")
+    counts = out[dms.DRAW_L][2]
+    assert counts["draw"] == "greedy_descending_contribution_within_radius"
+    assert counts["overlap_n"] == 0
+    assert "radius_reached" in counts and counts["radius_reached"] > 0
+    assert counts["n_within_radius"] >= counts["draw_n"]
+    assert "local_only_mass_ratio_retired_rule" in counts
+    assert counts["local_only_eligible_n"] == 3
+    target = counts["contribution_truth"]
+    assert 0.9 * target <= counts["contribution_draw"] <= 1.1 * target
+    # A and B are untouched by the mode
+    assert out[dms.DRAW_A][2]["draw"] == "uniform_outside_truth"
+
+
+def test_draw_all_radius_mode_needs_xyz():
+    truth, xyz, contribution = _radius_cloud()
+    program = truth_program()
+    n = len(program["row_group_ids"])
+    with pytest.raises(dms.DrawRefused, match="needs the cloud"):
+        dms.draw_all(program, np.ones(n), np.zeros(n, dtype=bool), 0,
+                     l_mode="radius")
+
+
+def test_load_xyz_rejects_wrong_shape(tmp_path):
+    path = tmp_path / "xyz.npy"
+    np.save(path, np.zeros((4, 2)))
+    with pytest.raises(dms.DrawRefused, match="needs \\[7, 3\\]"):
+        dms.load_xyz(str(path), 7)
