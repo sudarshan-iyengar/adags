@@ -1,0 +1,5182 @@
+{
+ "chains": {
+  "chain.txt": [
+   "flame_steak s0 57485022 57485392 57485394 57485395 57489514",
+   "flame_steak s1 57485047 57485397 57485398 57485399 57489517",
+   "flame_steak s2 57485053 57485401 57485402 57485403 57489519",
+   "flame_steak s3 57485054 57485405 57485406 57485408 57489523",
+   "sear_steak s0 57485060 57485411 57485413 57485414 57489524",
+   "sear_steak s1 57485062 57485421 57485422 57485427 57489525",
+   "sear_steak s2 57485068 57485430 57485437 57485438 57489529",
+   "sear_steak s3 57485069 57485445 57485446 57485451 57489533"
+  ],
+  "chain_resub.txt": [
+   "sear_steak 0 57504087 57504113 57504114 57504119 57504120 57504125 57504126",
+   "sear_steak 2 57504132 57504133 57504134 57504136 57504137 57504138 57504144",
+   "sear_steak 3 57504146 57504147 57504154 57504155 57504157 57504163 57504169"
+  ],
+  "chain_seedbox.txt": [
+   "flame_steak 0 vote=57509030 elig=57509031 draws=57509033 s2vote=57509034 precond=57509061 prefix_dep=none t1_dep=57485392",
+   "flame_steak 1 vote=57509062 elig=57509063 draws=57509064 s2vote=57509065 precond=57509067 prefix_dep=none t1_dep=none(completed)",
+   "flame_steak 2 vote=57509068 elig=57509069 draws=57509070 s2vote=57509071 precond=57509072 prefix_dep=none t1_dep=none(completed)",
+   "flame_steak 3 vote=57509073 elig=57509075 draws=57509076 s2vote=57509077 precond=57509078 prefix_dep=none t1_dep=none(completed)",
+   "sear_steak 0 vote=57509079 elig=57509080 draws=57509081 s2vote=57509082 precond=57509083 prefix_dep=57504087 t1_dep=57504113",
+   "sear_steak 1 vote=57509084 elig=57509085 draws=57509086 s2vote=57509087 precond=57509088 prefix_dep=none t1_dep=none(completed)",
+   "sear_steak 2 vote=57509090 elig=57509091 draws=57509092 s2vote=57509094 precond=57509098 prefix_dep=57504132 t1_dep=57504133",
+   "sear_steak 3 vote=57509099 elig=57509100 draws=57509101 s2vote=57509102 precond=57509103 prefix_dep=57504146 t1_dep=57504147"
+  ]
+ },
+ "helper_sha256": {
+  "draws_diag.py": "6f180142acb01228672ef7870e8ef1789d7758c1d53a714099269f6be95450dd",
+  "local_eligible.py": "82052e63e5b581115127f20f387b37a5ed5f4eeb0fe0de67c1c47f50ab579a8e",
+  "make_seed_boxes.py": "e89a49fc7f610126c14c06f3b0beb3d70c5301365ce8bac76564ea6764caeea7",
+  "stage1_hashes.py": "e273804855c8e0b86ac54a791db1dbb6e0d3b12e45b4440b28354c139b77ed39"
+ },
+ "jids": {
+  "draws_flame_steak_s0_seedbox": "57509033",
+  "draws_flame_steak_s0_warden1": "57514415",
+  "draws_flame_steak_s1_seedbox": "57509064",
+  "draws_flame_steak_s2_seedbox": "57509070",
+  "draws_flame_steak_s3_seedbox": "57509076",
+  "draws_sear_steak_s0_resub": "57504120",
+  "draws_sear_steak_s0_seedbox": "57509081",
+  "draws_sear_steak_s1_seedbox": "57509086",
+  "draws_sear_steak_s2_resub": "57504137",
+  "draws_sear_steak_s2_seedbox": "57509092",
+  "draws_sear_steak_s3_resub": "57504157",
+  "draws_sear_steak_s3_seedbox": "57509101",
+  "elig_flame_steak_s0_seedbox": "57509031",
+  "elig_flame_steak_s0_warden1": "57514414",
+  "elig_flame_steak_s1_seedbox": "57509063",
+  "elig_flame_steak_s2_seedbox": "57509069",
+  "elig_flame_steak_s3_seedbox": "57509075",
+  "elig_sear_steak_s0_resub": "57504119",
+  "elig_sear_steak_s0_seedbox": "57509080",
+  "elig_sear_steak_s1_seedbox": "57509085",
+  "elig_sear_steak_s2_resub": "57504136",
+  "elig_sear_steak_s2_seedbox": "57509091",
+  "elig_sear_steak_s3_resub": "57504155",
+  "elig_sear_steak_s3_seedbox": "57509100",
+  "precond_cut_roasted_beef_s3_resub": "57504225",
+  "precond_flame_steak_s0_seedbox": "57509061",
+  "precond_flame_steak_s0_warden1": "57514416",
+  "precond_flame_steak_s0_warden2": "57515413",
+  "precond_flame_steak_s1_seedbox": "57509067",
+  "precond_flame_steak_s1_warden1": "57514418",
+  "precond_flame_steak_s2_seedbox": "57509072",
+  "precond_flame_steak_s3_seedbox": "57509078",
+  "precond_sear_steak_s0_resub": "57504126",
+  "precond_sear_steak_s0_seedbox": "57509083",
+  "precond_sear_steak_s1_seedbox": "57509088",
+  "precond_sear_steak_s2_resub": "57504144",
+  "precond_sear_steak_s2_seedbox": "57509098",
+  "precond_sear_steak_s3_resub": "57504169",
+  "precond_sear_steak_s3_seedbox": "57509103",
+  "prefix_flame_steak_s0": "57485022",
+  "prefix_flame_steak_s1": "57485047",
+  "prefix_flame_steak_s2": "57485053",
+  "prefix_flame_steak_s3": "57485054",
+  "prefix_sear_steak_s0": "57485060",
+  "prefix_sear_steak_s0_resub": "57504087",
+  "prefix_sear_steak_s1": "57485062",
+  "prefix_sear_steak_s2": "57485068",
+  "prefix_sear_steak_s2_resub": "57504132",
+  "prefix_sear_steak_s3": "57485069",
+  "prefix_sear_steak_s3_resub": "57504146",
+  "s2vote_cut_roasted_beef_s0": "57488863",
+  "s2vote_cut_roasted_beef_s1": "57492150",
+  "s2vote_cut_roasted_beef_s2": "57488865",
+  "s2vote_cut_roasted_beef_s3": "57494941",
+  "s2vote_cut_roasted_beef_s3_resub": "57504222",
+  "s2vote_flame_steak_s0": "57488903",
+  "s2vote_flame_steak_s0_seedbox": "57509034",
+  "s2vote_flame_steak_s1": "57488906",
+  "s2vote_flame_steak_s1_seedbox": "57509065",
+  "s2vote_flame_steak_s1_warden1": "57514417",
+  "s2vote_flame_steak_s2": "57488907",
+  "s2vote_flame_steak_s2_seedbox": "57509071",
+  "s2vote_flame_steak_s3": "57488908",
+  "s2vote_flame_steak_s3_seedbox": "57509077",
+  "s2vote_sear_steak_s0": "57488909",
+  "s2vote_sear_steak_s0_resub": "57504125",
+  "s2vote_sear_steak_s0_seedbox": "57509082",
+  "s2vote_sear_steak_s1": "57488910",
+  "s2vote_sear_steak_s1_seedbox": "57509087",
+  "s2vote_sear_steak_s2": "57488911",
+  "s2vote_sear_steak_s2_resub": "57504138",
+  "s2vote_sear_steak_s2_seedbox": "57509094",
+  "s2vote_sear_steak_s3": "57488912",
+  "s2vote_sear_steak_s3_resub": "57504163",
+  "s2vote_sear_steak_s3_seedbox": "57509102",
+  "seedbox_derive": "57508186",
+  "seedbox_derive2": "57508564",
+  "t1_flame_steak_s0_warden1": "57514412",
+  "t1_flame_steak_s0_warden2": "57515412",
+  "t1_sear_steak_s0_resub": "57504113",
+  "t1_sear_steak_s2_resub": "57504133",
+  "t1_sear_steak_s3_resub": "57504147",
+  "vote_flame_steak_s0_seedbox": "57509030",
+  "vote_flame_steak_s0_warden1": "57514413",
+  "vote_flame_steak_s1_seedbox": "57509062",
+  "vote_flame_steak_s2_seedbox": "57509068",
+  "vote_flame_steak_s3_seedbox": "57509073",
+  "vote_sear_steak_s0_resub": "57504114",
+  "vote_sear_steak_s0_seedbox": "57509079",
+  "vote_sear_steak_s1_seedbox": "57509084",
+  "vote_sear_steak_s2_resub": "57504134",
+  "vote_sear_steak_s2_seedbox": "57509090",
+  "vote_sear_steak_s3_resub": "57504154",
+  "vote_sear_steak_s3_seedbox": "57509099"
+ },
+ "jobs_by_name": {
+  "absfix2_draws_flame_steak_s0_seedbox": [
+   {
+    "elapsed": "00:00:10",
+    "exit": "0:0",
+    "jobid": "57514415",
+    "name": "absfix2_draws_flame_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_flame_steak_s1": [
+   {
+    "elapsed": "00:01:19",
+    "exit": "0:0",
+    "jobid": "57489517",
+    "name": "absfix2_draws_flame_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_flame_steak_s1_seedbox": [
+   {
+    "elapsed": "00:00:12",
+    "exit": "0:0",
+    "jobid": "57509064",
+    "name": "absfix2_draws_flame_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_flame_steak_s2_seedbox": [
+   {
+    "elapsed": "00:00:11",
+    "exit": "0:0",
+    "jobid": "57509070",
+    "name": "absfix2_draws_flame_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_flame_steak_s3_seedbox": [
+   {
+    "elapsed": "00:00:12",
+    "exit": "0:0",
+    "jobid": "57509076",
+    "name": "absfix2_draws_flame_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_sear_steak_s0_seedbox": [
+   {
+    "elapsed": "00:00:29",
+    "exit": "0:0",
+    "jobid": "57509081",
+    "name": "absfix2_draws_sear_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_sear_steak_s1": [
+   {
+    "elapsed": "00:01:04",
+    "exit": "0:0",
+    "jobid": "57489525",
+    "name": "absfix2_draws_sear_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_sear_steak_s1_seedbox": [
+   {
+    "elapsed": "00:00:12",
+    "exit": "0:0",
+    "jobid": "57509086",
+    "name": "absfix2_draws_sear_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_sear_steak_s2_seedbox": [
+   {
+    "elapsed": "00:00:47",
+    "exit": "0:0",
+    "jobid": "57509092",
+    "name": "absfix2_draws_sear_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_draws_sear_steak_s3_seedbox": [
+   {
+    "elapsed": "00:00:11",
+    "exit": "0:0",
+    "jobid": "57509101",
+    "name": "absfix2_draws_sear_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_flame_steak_s0_seedbox": [
+   {
+    "elapsed": "00:02:51",
+    "exit": "0:0",
+    "jobid": "57514414",
+    "name": "absfix2_elig_flame_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_flame_steak_s1": [
+   {
+    "elapsed": "00:01:15",
+    "exit": "0:0",
+    "jobid": "57485399",
+    "name": "absfix2_elig_flame_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_flame_steak_s1_seedbox": [
+   {
+    "elapsed": "00:01:08",
+    "exit": "0:0",
+    "jobid": "57509063",
+    "name": "absfix2_elig_flame_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_flame_steak_s2_seedbox": [
+   {
+    "elapsed": "00:02:53",
+    "exit": "0:0",
+    "jobid": "57509069",
+    "name": "absfix2_elig_flame_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_flame_steak_s3_seedbox": [
+   {
+    "elapsed": "00:01:31",
+    "exit": "0:0",
+    "jobid": "57509075",
+    "name": "absfix2_elig_flame_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_sear_steak_s0_seedbox": [
+   {
+    "elapsed": "00:02:46",
+    "exit": "0:0",
+    "jobid": "57509080",
+    "name": "absfix2_elig_sear_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_sear_steak_s1": [
+   {
+    "elapsed": "00:02:51",
+    "exit": "0:0",
+    "jobid": "57485427",
+    "name": "absfix2_elig_sear_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_sear_steak_s1_seedbox": [
+   {
+    "elapsed": "00:02:50",
+    "exit": "0:0",
+    "jobid": "57509085",
+    "name": "absfix2_elig_sear_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_sear_steak_s2_seedbox": [
+   {
+    "elapsed": "00:02:44",
+    "exit": "0:0",
+    "jobid": "57509091",
+    "name": "absfix2_elig_sear_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_elig_sear_steak_s3_seedbox": [
+   {
+    "elapsed": "00:01:07",
+    "exit": "0:0",
+    "jobid": "57509100",
+    "name": "absfix2_elig_sear_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_flame_steak_uprefix6k_s0": [
+   {
+    "elapsed": "02:03:29",
+    "exit": "0:0",
+    "jobid": "57485022",
+    "name": "absfix2_flame_steak_uprefix6k_s0",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_flame_steak_uprefix6k_s1": [
+   {
+    "elapsed": "02:11:26",
+    "exit": "0:0",
+    "jobid": "57485047",
+    "name": "absfix2_flame_steak_uprefix6k_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_flame_steak_uprefix6k_s2": [
+   {
+    "elapsed": "02:13:41",
+    "exit": "0:0",
+    "jobid": "57485053",
+    "name": "absfix2_flame_steak_uprefix6k_s2",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_flame_steak_uprefix6k_s3": [
+   {
+    "elapsed": "02:01:59",
+    "exit": "0:0",
+    "jobid": "57485054",
+    "name": "absfix2_flame_steak_uprefix6k_s3",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_cut_roasted_beef_s0": [
+   {
+    "elapsed": "00:00:11",
+    "exit": "0:0",
+    "jobid": "57488990",
+    "name": "absfix2_precond_cut_roasted_beef_s0",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_cut_roasted_beef_s1": [
+   {
+    "elapsed": "00:01:07",
+    "exit": "0:0",
+    "jobid": "57492151",
+    "name": "absfix2_precond_cut_roasted_beef_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_cut_roasted_beef_s2": [
+   {
+    "elapsed": "00:00:11",
+    "exit": "0:0",
+    "jobid": "57489429",
+    "name": "absfix2_precond_cut_roasted_beef_s2",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_cut_roasted_beef_s3": [
+   {
+    "elapsed": "00:01:00",
+    "exit": "0:0",
+    "jobid": "57504225",
+    "name": "absfix2_precond_cut_roasted_beef_s3",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_flame_steak_s0_seedbox": [
+   {
+    "elapsed": "00:00:58",
+    "exit": "0:0",
+    "jobid": "57515413",
+    "name": "absfix2_precond_flame_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_flame_steak_s1": [
+   {
+    "elapsed": "00:00:16",
+    "exit": "0:0",
+    "jobid": "57489499",
+    "name": "absfix2_precond_flame_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_flame_steak_s1_seedbox": [
+   {
+    "elapsed": "00:01:57",
+    "exit": "0:0",
+    "jobid": "57514418",
+    "name": "absfix2_precond_flame_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_flame_steak_s2_seedbox": [
+   {
+    "elapsed": "00:00:08",
+    "exit": "0:0",
+    "jobid": "57509072",
+    "name": "absfix2_precond_flame_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_precond_flame_steak_s3_seedbox": [
+   {
+    "elapsed": "00:00:11",
+    "exit": "0:0",
+    "jobid": "57509078",
+    "name": "absfix2_precond_flame_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_cut_roasted_beef_s0": [
+   {
+    "elapsed": "00:06:10",
+    "exit": "0:0",
+    "jobid": "57488863",
+    "name": "absfix2_s2vote_cut_roasted_beef_s0",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_cut_roasted_beef_s1": [
+   {
+    "elapsed": "00:38:06",
+    "exit": "0:0",
+    "jobid": "57488864",
+    "name": "absfix2_s2vote_cut_roasted_beef_s1",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "00:04:54",
+    "exit": "0:0",
+    "jobid": "57492150",
+    "name": "absfix2_s2vote_cut_roasted_beef_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_cut_roasted_beef_s2": [
+   {
+    "elapsed": "00:10:38",
+    "exit": "0:0",
+    "jobid": "57488865",
+    "name": "absfix2_s2vote_cut_roasted_beef_s2",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_cut_roasted_beef_s3": [
+   {
+    "elapsed": "00:38:06",
+    "exit": "0:0",
+    "jobid": "57488867",
+    "name": "absfix2_s2vote_cut_roasted_beef_s3",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "00:37:34",
+    "exit": "0:0",
+    "jobid": "57492188",
+    "name": "absfix2_s2vote_cut_roasted_beef_s3",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "01:33:20",
+    "exit": "0:0",
+    "jobid": "57494941",
+    "name": "absfix2_s2vote_cut_roasted_beef_s3",
+    "state": "TIMEOUT"
+   },
+   {
+    "elapsed": "00:04:28",
+    "exit": "0:0",
+    "jobid": "57504222",
+    "name": "absfix2_s2vote_cut_roasted_beef_s3",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_flame_steak_s0_seedbox": [
+   {
+    "elapsed": "00:04:06",
+    "exit": "0:0",
+    "jobid": "57509034",
+    "name": "absfix2_s2vote_flame_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_flame_steak_s1": [
+   {
+    "elapsed": "00:02:04",
+    "exit": "0:0",
+    "jobid": "57488906",
+    "name": "absfix2_s2vote_flame_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_flame_steak_s1_seedbox": [
+   {
+    "elapsed": "01:11:39",
+    "exit": "0:0",
+    "jobid": "57509065",
+    "name": "absfix2_s2vote_flame_steak_s1_seedbox",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "00:04:29",
+    "exit": "0:0",
+    "jobid": "57514417",
+    "name": "absfix2_s2vote_flame_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_flame_steak_s2": [
+   {
+    "elapsed": "00:02:42",
+    "exit": "0:0",
+    "jobid": "57488907",
+    "name": "absfix2_s2vote_flame_steak_s2",
+    "state": "CANCELLED by 132193"
+   }
+  ],
+  "absfix2_s2vote_flame_steak_s2_seedbox": [
+   {
+    "elapsed": "00:04:06",
+    "exit": "0:0",
+    "jobid": "57509071",
+    "name": "absfix2_s2vote_flame_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_flame_steak_s3": [
+   {
+    "elapsed": "00:04:32",
+    "exit": "1:0",
+    "jobid": "57488908",
+    "name": "absfix2_s2vote_flame_steak_s3",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_s2vote_flame_steak_s3_seedbox": [
+   {
+    "elapsed": "00:04:15",
+    "exit": "0:0",
+    "jobid": "57509077",
+    "name": "absfix2_s2vote_flame_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_s2vote_sear_steak_s0_seedbox": [
+   {
+    "elapsed": "00:03:38",
+    "exit": "1:0",
+    "jobid": "57509082",
+    "name": "absfix2_s2vote_sear_steak_s0_seedbox",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_s2vote_sear_steak_s1": [
+   {
+    "elapsed": "00:05:52",
+    "exit": "1:0",
+    "jobid": "57488910",
+    "name": "absfix2_s2vote_sear_steak_s1",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_s2vote_sear_steak_s1_seedbox": [
+   {
+    "elapsed": "00:03:40",
+    "exit": "1:0",
+    "jobid": "57509087",
+    "name": "absfix2_s2vote_sear_steak_s1_seedbox",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_s2vote_sear_steak_s2_seedbox": [
+   {
+    "elapsed": "00:04:03",
+    "exit": "1:0",
+    "jobid": "57509094",
+    "name": "absfix2_s2vote_sear_steak_s2_seedbox",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_s2vote_sear_steak_s3_seedbox": [
+   {
+    "elapsed": "00:01:40",
+    "exit": "1:0",
+    "jobid": "57509102",
+    "name": "absfix2_s2vote_sear_steak_s3_seedbox",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_sear_steak_uprefix6k_s0": [
+   {
+    "elapsed": "03:46:21",
+    "exit": "0:0",
+    "jobid": "57485060",
+    "name": "absfix2_sear_steak_uprefix6k_s0",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "02:02:00",
+    "exit": "0:0",
+    "jobid": "57504087",
+    "name": "absfix2_sear_steak_uprefix6k_s0",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_sear_steak_uprefix6k_s1": [
+   {
+    "elapsed": "02:06:26",
+    "exit": "0:0",
+    "jobid": "57485062",
+    "name": "absfix2_sear_steak_uprefix6k_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_sear_steak_uprefix6k_s2": [
+   {
+    "elapsed": "03:46:21",
+    "exit": "0:0",
+    "jobid": "57485068",
+    "name": "absfix2_sear_steak_uprefix6k_s2",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "02:02:44",
+    "exit": "0:0",
+    "jobid": "57504132",
+    "name": "absfix2_sear_steak_uprefix6k_s2",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_sear_steak_uprefix6k_s3": [
+   {
+    "elapsed": "03:45:38",
+    "exit": "0:0",
+    "jobid": "57485069",
+    "name": "absfix2_sear_steak_uprefix6k_s3",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "02:11:20",
+    "exit": "0:0",
+    "jobid": "57504146",
+    "name": "absfix2_sear_steak_uprefix6k_s3",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_seedbox": [
+   {
+    "elapsed": "00:07:00",
+    "exit": "0:0",
+    "jobid": "57508186",
+    "name": "absfix2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_seedbox2": [
+   {
+    "elapsed": "00:07:35",
+    "exit": "0:0",
+    "jobid": "57508564",
+    "name": "absfix2_seedbox2",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_smoke_draws": [
+   {
+    "elapsed": "00:00:16",
+    "exit": "2:0",
+    "jobid": "57487916",
+    "name": "absfix2_smoke_draws",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_smoke_elig": [
+   {
+    "elapsed": "00:02:48",
+    "exit": "0:0",
+    "jobid": "57487888",
+    "name": "absfix2_smoke_elig",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_smoke_vote": [
+   {
+    "elapsed": "00:28:28",
+    "exit": "0:0",
+    "jobid": "57485503",
+    "name": "absfix2_smoke_vote",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "00:08:08",
+    "exit": "0:0",
+    "jobid": "57487886",
+    "name": "absfix2_smoke_vote",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_flame_steak_s0": [
+   {
+    "elapsed": "03:47:03",
+    "exit": "0:0",
+    "jobid": "57485392",
+    "name": "absfix2_t1_flame_steak_s0",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "00:12:32",
+    "exit": "0:0",
+    "jobid": "57514412",
+    "name": "absfix2_t1_flame_steak_s0",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "01:51:28",
+    "exit": "0:0",
+    "jobid": "57515412",
+    "name": "absfix2_t1_flame_steak_s0",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_flame_steak_s1": [
+   {
+    "elapsed": "01:50:57",
+    "exit": "0:0",
+    "jobid": "57485397",
+    "name": "absfix2_t1_flame_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_flame_steak_s2": [
+   {
+    "elapsed": "02:03:00",
+    "exit": "0:0",
+    "jobid": "57485401",
+    "name": "absfix2_t1_flame_steak_s2",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_flame_steak_s3": [
+   {
+    "elapsed": "01:55:25",
+    "exit": "0:0",
+    "jobid": "57485405",
+    "name": "absfix2_t1_flame_steak_s3",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_sear_steak_s0": [
+   {
+    "elapsed": "01:56:12",
+    "exit": "0:0",
+    "jobid": "57504113",
+    "name": "absfix2_t1_sear_steak_s0",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_sear_steak_s1": [
+   {
+    "elapsed": "01:54:03",
+    "exit": "0:0",
+    "jobid": "57485421",
+    "name": "absfix2_t1_sear_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_sear_steak_s2": [
+   {
+    "elapsed": "02:03:01",
+    "exit": "0:0",
+    "jobid": "57504133",
+    "name": "absfix2_t1_sear_steak_s2",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_t1_sear_steak_s3": [
+   {
+    "elapsed": "01:57:08",
+    "exit": "0:0",
+    "jobid": "57504147",
+    "name": "absfix2_t1_sear_steak_s3",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_flame_steak_s0_seedbox": [
+   {
+    "elapsed": "01:11:39",
+    "exit": "0:0",
+    "jobid": "57509030",
+    "name": "absfix2_vote_flame_steak_s0_seedbox",
+    "state": "CANCELLED by 132193"
+   },
+   {
+    "elapsed": "00:05:24",
+    "exit": "0:0",
+    "jobid": "57514413",
+    "name": "absfix2_vote_flame_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_flame_steak_s1": [
+   {
+    "elapsed": "00:03:52",
+    "exit": "0:0",
+    "jobid": "57485398",
+    "name": "absfix2_vote_flame_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_flame_steak_s1_seedbox": [
+   {
+    "elapsed": "00:06:25",
+    "exit": "0:0",
+    "jobid": "57509062",
+    "name": "absfix2_vote_flame_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_flame_steak_s2": [
+   {
+    "elapsed": "00:02:42",
+    "exit": "0:0",
+    "jobid": "57485402",
+    "name": "absfix2_vote_flame_steak_s2",
+    "state": "CANCELLED by 132193"
+   }
+  ],
+  "absfix2_vote_flame_steak_s2_seedbox": [
+   {
+    "elapsed": "00:06:56",
+    "exit": "0:0",
+    "jobid": "57509068",
+    "name": "absfix2_vote_flame_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_flame_steak_s3": [
+   {
+    "elapsed": "00:03:40",
+    "exit": "1:0",
+    "jobid": "57485406",
+    "name": "absfix2_vote_flame_steak_s3",
+    "state": "FAILED"
+   }
+  ],
+  "absfix2_vote_flame_steak_s3_seedbox": [
+   {
+    "elapsed": "00:08:12",
+    "exit": "0:0",
+    "jobid": "57509073",
+    "name": "absfix2_vote_flame_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_sear_steak_s0_seedbox": [
+   {
+    "elapsed": "00:04:27",
+    "exit": "0:0",
+    "jobid": "57509079",
+    "name": "absfix2_vote_sear_steak_s0_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_sear_steak_s1": [
+   {
+    "elapsed": "00:06:24",
+    "exit": "0:0",
+    "jobid": "57485422",
+    "name": "absfix2_vote_sear_steak_s1",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_sear_steak_s1_seedbox": [
+   {
+    "elapsed": "00:04:01",
+    "exit": "0:0",
+    "jobid": "57509084",
+    "name": "absfix2_vote_sear_steak_s1_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_sear_steak_s2_seedbox": [
+   {
+    "elapsed": "00:04:44",
+    "exit": "0:0",
+    "jobid": "57509090",
+    "name": "absfix2_vote_sear_steak_s2_seedbox",
+    "state": "COMPLETED"
+   }
+  ],
+  "absfix2_vote_sear_steak_s3_seedbox": [
+   {
+    "elapsed": "00:03:59",
+    "exit": "0:0",
+    "jobid": "57509099",
+    "name": "absfix2_vote_sear_steak_s3_seedbox",
+    "state": "COMPLETED"
+   }
+  ]
+ },
+ "note": "stage-1 collector record for spec v2.0.0 section 11.7 / 13.8. Plain and _seedbox entries are kept distinct: the plain entries of the two confirmatory scenes are the T1-seeded outputs of section 13.15 (kept, never used); _seedbox are the authored-box reruns. The calibration scene has plain entries only.",
+ "s2_final_manifest": {
+  "cut_roasted_beef": {
+   "cameras_kept": [
+    "cam01",
+    "cam02",
+    "cam03",
+    "cam05",
+    "cam06",
+    "cam07",
+    "cam08",
+    "cam09",
+    "cam10",
+    "cam11",
+    "cam12",
+    "cam13",
+    "cam14",
+    "cam15",
+    "cam16",
+    "cam17",
+    "cam18",
+    "cam19",
+    "cam20"
+   ],
+   "n_camera_entries": 19,
+   "n_cameras_kept": 19,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/manifest.json",
+   "scene": "cut_roasted_beef",
+   "sha256": "ab0feb995161d091ad971d0178bdd2d7aa84fcd63bdf3d50fd6d859795c318b6"
+  },
+  "flame_steak": {
+   "cameras_kept": [
+    "cam01",
+    "cam02",
+    "cam03",
+    "cam04",
+    "cam05",
+    "cam06",
+    "cam07",
+    "cam08",
+    "cam09",
+    "cam10",
+    "cam11",
+    "cam12",
+    "cam13",
+    "cam14",
+    "cam15",
+    "cam16",
+    "cam17",
+    "cam18",
+    "cam19",
+    "cam20"
+   ],
+   "n_camera_entries": 20,
+   "n_cameras_kept": 20,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/manifest.json",
+   "scene": "flame_steak",
+   "sha256": "f0fba4a710ab7c895443933544f1f782e1ed3ebe3e11c5fe646701debce643d4"
+  },
+  "sear_steak": {
+   "cameras_kept": [
+    "cam01",
+    "cam02",
+    "cam03",
+    "cam04",
+    "cam05",
+    "cam06",
+    "cam07",
+    "cam08",
+    "cam09",
+    "cam10",
+    "cam11",
+    "cam12",
+    "cam13",
+    "cam14",
+    "cam15",
+    "cam16",
+    "cam17",
+    "cam18",
+    "cam19",
+    "cam20"
+   ],
+   "n_camera_entries": 20,
+   "n_cameras_kept": 20,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/manifest.json",
+   "scene": "sear_steak",
+   "sha256": "23601321de17339b47ce633169b6dac2b9cd90dcea0629355ebf1b756a1a4754"
+  }
+ },
+ "sacct": {
+  "57485022": {
+   "elapsed": "02:03:29",
+   "exit": "0:0",
+   "name": "absfix2_flame_steak_uprefix6k_s0",
+   "state": "COMPLETED"
+  },
+  "57485047": {
+   "elapsed": "02:11:26",
+   "exit": "0:0",
+   "name": "absfix2_flame_steak_uprefix6k_s1",
+   "state": "COMPLETED"
+  },
+  "57485053": {
+   "elapsed": "02:13:41",
+   "exit": "0:0",
+   "name": "absfix2_flame_steak_uprefix6k_s2",
+   "state": "COMPLETED"
+  },
+  "57485054": {
+   "elapsed": "02:01:59",
+   "exit": "0:0",
+   "name": "absfix2_flame_steak_uprefix6k_s3",
+   "state": "COMPLETED"
+  },
+  "57485060": {
+   "elapsed": "03:46:21",
+   "exit": "0:0",
+   "name": "absfix2_sear_steak_uprefix6k_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57485062": {
+   "elapsed": "02:06:26",
+   "exit": "0:0",
+   "name": "absfix2_sear_steak_uprefix6k_s1",
+   "state": "COMPLETED"
+  },
+  "57485068": {
+   "elapsed": "03:46:21",
+   "exit": "0:0",
+   "name": "absfix2_sear_steak_uprefix6k_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57485069": {
+   "elapsed": "03:45:38",
+   "exit": "0:0",
+   "name": "absfix2_sear_steak_uprefix6k_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57485392": {
+   "elapsed": "03:47:03",
+   "exit": "0:0",
+   "name": "absfix2_t1_flame_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57485397": {
+   "elapsed": "01:50:57",
+   "exit": "0:0",
+   "name": "absfix2_t1_flame_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57485398": {
+   "elapsed": "00:03:52",
+   "exit": "0:0",
+   "name": "absfix2_vote_flame_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57485399": {
+   "elapsed": "00:01:15",
+   "exit": "0:0",
+   "name": "absfix2_elig_flame_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57485401": {
+   "elapsed": "02:03:00",
+   "exit": "0:0",
+   "name": "absfix2_t1_flame_steak_s2",
+   "state": "COMPLETED"
+  },
+  "57485402": {
+   "elapsed": "00:02:42",
+   "exit": "0:0",
+   "name": "absfix2_vote_flame_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57485405": {
+   "elapsed": "01:55:25",
+   "exit": "0:0",
+   "name": "absfix2_t1_flame_steak_s3",
+   "state": "COMPLETED"
+  },
+  "57485406": {
+   "elapsed": "00:03:40",
+   "exit": "1:0",
+   "name": "absfix2_vote_flame_steak_s3",
+   "state": "FAILED"
+  },
+  "57485421": {
+   "elapsed": "01:54:03",
+   "exit": "0:0",
+   "name": "absfix2_t1_sear_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57485422": {
+   "elapsed": "00:06:24",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57485427": {
+   "elapsed": "00:02:51",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57485503": {
+   "elapsed": "00:28:28",
+   "exit": "0:0",
+   "name": "absfix2_smoke_vote",
+   "state": "CANCELLED by 132193"
+  },
+  "57487886": {
+   "elapsed": "00:08:08",
+   "exit": "0:0",
+   "name": "absfix2_smoke_vote",
+   "state": "COMPLETED"
+  },
+  "57487888": {
+   "elapsed": "00:02:48",
+   "exit": "0:0",
+   "name": "absfix2_smoke_elig",
+   "state": "COMPLETED"
+  },
+  "57487916": {
+   "elapsed": "00:00:16",
+   "exit": "2:0",
+   "name": "absfix2_smoke_draws",
+   "state": "FAILED"
+  },
+  "57488863": {
+   "elapsed": "00:06:10",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s0",
+   "state": "COMPLETED"
+  },
+  "57488864": {
+   "elapsed": "00:38:06",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s1",
+   "state": "CANCELLED by 132193"
+  },
+  "57488865": {
+   "elapsed": "00:10:38",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s2",
+   "state": "COMPLETED"
+  },
+  "57488867": {
+   "elapsed": "00:38:06",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57488903": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57488906": {
+   "elapsed": "00:02:04",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57488907": {
+   "elapsed": "00:02:42",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57488908": {
+   "elapsed": "00:04:32",
+   "exit": "1:0",
+   "name": "absfix2_s2vote_flame_steak_s3",
+   "state": "FAILED"
+  },
+  "57488909": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_sear_steak_s0",
+   "state": "CANCELLED"
+  },
+  "57488910": {
+   "elapsed": "00:05:52",
+   "exit": "1:0",
+   "name": "absfix2_s2vote_sear_steak_s1",
+   "state": "FAILED"
+  },
+  "57488911": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_sear_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57488912": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_sear_steak_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57488990": {
+   "elapsed": "00:00:11",
+   "exit": "0:0",
+   "name": "absfix2_precond_cut_roasted_beef_s0",
+   "state": "COMPLETED"
+  },
+  "57489429": {
+   "elapsed": "00:00:11",
+   "exit": "0:0",
+   "name": "absfix2_precond_cut_roasted_beef_s2",
+   "state": "COMPLETED"
+  },
+  "57489499": {
+   "elapsed": "00:00:16",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57489517": {
+   "elapsed": "00:01:19",
+   "exit": "0:0",
+   "name": "absfix2_draws_flame_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57489525": {
+   "elapsed": "00:01:04",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s1",
+   "state": "COMPLETED"
+  },
+  "57492150": {
+   "elapsed": "00:04:54",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s1",
+   "state": "COMPLETED"
+  },
+  "57492151": {
+   "elapsed": "00:01:07",
+   "exit": "0:0",
+   "name": "absfix2_precond_cut_roasted_beef_s1",
+   "state": "COMPLETED"
+  },
+  "57492188": {
+   "elapsed": "00:37:34",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57494941": {
+   "elapsed": "01:33:20",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s3",
+   "state": "TIMEOUT"
+  },
+  "57504087": {
+   "elapsed": "02:02:00",
+   "exit": "0:0",
+   "name": "absfix2_sear_steak_uprefix6k_s0",
+   "state": "COMPLETED"
+  },
+  "57504113": {
+   "elapsed": "01:56:12",
+   "exit": "0:0",
+   "name": "absfix2_t1_sear_steak_s0",
+   "state": "COMPLETED"
+  },
+  "57504114": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57504119": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57504120": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57504125": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_sear_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57504126": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_sear_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57504132": {
+   "elapsed": "02:02:44",
+   "exit": "0:0",
+   "name": "absfix2_sear_steak_uprefix6k_s2",
+   "state": "COMPLETED"
+  },
+  "57504133": {
+   "elapsed": "02:03:01",
+   "exit": "0:0",
+   "name": "absfix2_t1_sear_steak_s2",
+   "state": "COMPLETED"
+  },
+  "57504134": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57504136": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57504137": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57504138": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_sear_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57504144": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_sear_steak_s2",
+   "state": "CANCELLED by 132193"
+  },
+  "57504146": {
+   "elapsed": "02:11:20",
+   "exit": "0:0",
+   "name": "absfix2_sear_steak_uprefix6k_s3",
+   "state": "COMPLETED"
+  },
+  "57504147": {
+   "elapsed": "01:57:08",
+   "exit": "0:0",
+   "name": "absfix2_t1_sear_steak_s3",
+   "state": "COMPLETED"
+  },
+  "57504154": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57504155": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57504157": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57504163": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_sear_steak_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57504169": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_sear_steak_s3",
+   "state": "CANCELLED by 132193"
+  },
+  "57504222": {
+   "elapsed": "00:04:28",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_cut_roasted_beef_s3",
+   "state": "COMPLETED"
+  },
+  "57504225": {
+   "elapsed": "00:01:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_cut_roasted_beef_s3",
+   "state": "COMPLETED"
+  },
+  "57508186": {
+   "elapsed": "00:07:00",
+   "exit": "0:0",
+   "name": "absfix2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57508564": {
+   "elapsed": "00:07:35",
+   "exit": "0:0",
+   "name": "absfix2_seedbox2",
+   "state": "COMPLETED"
+  },
+  "57509030": {
+   "elapsed": "01:11:39",
+   "exit": "0:0",
+   "name": "absfix2_vote_flame_steak_s0_seedbox",
+   "state": "CANCELLED by 132193"
+  },
+  "57509031": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_elig_flame_steak_s0_seedbox",
+   "state": "CANCELLED"
+  },
+  "57509033": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_draws_flame_steak_s0_seedbox",
+   "state": "CANCELLED"
+  },
+  "57509034": {
+   "elapsed": "00:04:06",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s0_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509061": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s0_seedbox",
+   "state": "CANCELLED"
+  },
+  "57509062": {
+   "elapsed": "00:06:25",
+   "exit": "0:0",
+   "name": "absfix2_vote_flame_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509063": {
+   "elapsed": "00:01:08",
+   "exit": "0:0",
+   "name": "absfix2_elig_flame_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509064": {
+   "elapsed": "00:00:12",
+   "exit": "0:0",
+   "name": "absfix2_draws_flame_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509065": {
+   "elapsed": "01:11:39",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s1_seedbox",
+   "state": "CANCELLED by 132193"
+  },
+  "57509067": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s1_seedbox",
+   "state": "CANCELLED"
+  },
+  "57509068": {
+   "elapsed": "00:06:56",
+   "exit": "0:0",
+   "name": "absfix2_vote_flame_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509069": {
+   "elapsed": "00:02:53",
+   "exit": "0:0",
+   "name": "absfix2_elig_flame_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509070": {
+   "elapsed": "00:00:11",
+   "exit": "0:0",
+   "name": "absfix2_draws_flame_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509071": {
+   "elapsed": "00:04:06",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509072": {
+   "elapsed": "00:00:08",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509073": {
+   "elapsed": "00:08:12",
+   "exit": "0:0",
+   "name": "absfix2_vote_flame_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509075": {
+   "elapsed": "00:01:31",
+   "exit": "0:0",
+   "name": "absfix2_elig_flame_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509076": {
+   "elapsed": "00:00:12",
+   "exit": "0:0",
+   "name": "absfix2_draws_flame_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509077": {
+   "elapsed": "00:04:15",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509078": {
+   "elapsed": "00:00:11",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509079": {
+   "elapsed": "00:04:27",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s0_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509080": {
+   "elapsed": "00:02:46",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s0_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509081": {
+   "elapsed": "00:00:29",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s0_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509082": {
+   "elapsed": "00:03:38",
+   "exit": "1:0",
+   "name": "absfix2_s2vote_sear_steak_s0_seedbox",
+   "state": "FAILED"
+  },
+  "57509083": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_sear_steak_s0_seedbox",
+   "state": "CANCELLED"
+  },
+  "57509084": {
+   "elapsed": "00:04:01",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509085": {
+   "elapsed": "00:02:50",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509086": {
+   "elapsed": "00:00:12",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509087": {
+   "elapsed": "00:03:40",
+   "exit": "1:0",
+   "name": "absfix2_s2vote_sear_steak_s1_seedbox",
+   "state": "FAILED"
+  },
+  "57509088": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_sear_steak_s1_seedbox",
+   "state": "CANCELLED"
+  },
+  "57509090": {
+   "elapsed": "00:04:44",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509091": {
+   "elapsed": "00:02:44",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509092": {
+   "elapsed": "00:00:47",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s2_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509094": {
+   "elapsed": "00:04:03",
+   "exit": "1:0",
+   "name": "absfix2_s2vote_sear_steak_s2_seedbox",
+   "state": "FAILED"
+  },
+  "57509098": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_sear_steak_s2_seedbox",
+   "state": "CANCELLED"
+  },
+  "57509099": {
+   "elapsed": "00:03:59",
+   "exit": "0:0",
+   "name": "absfix2_vote_sear_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509100": {
+   "elapsed": "00:01:07",
+   "exit": "0:0",
+   "name": "absfix2_elig_sear_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509101": {
+   "elapsed": "00:00:11",
+   "exit": "0:0",
+   "name": "absfix2_draws_sear_steak_s3_seedbox",
+   "state": "COMPLETED"
+  },
+  "57509102": {
+   "elapsed": "00:01:40",
+   "exit": "1:0",
+   "name": "absfix2_s2vote_sear_steak_s3_seedbox",
+   "state": "FAILED"
+  },
+  "57509103": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_sear_steak_s3_seedbox",
+   "state": "CANCELLED"
+  },
+  "57514412": {
+   "elapsed": "00:12:32",
+   "exit": "0:0",
+   "name": "absfix2_t1_flame_steak_s0",
+   "state": "CANCELLED by 132193"
+  },
+  "57514413": {
+   "elapsed": "00:05:24",
+   "exit": "0:0",
+   "name": "absfix2_vote_flame_steak_s0_seedbox",
+   "state": "COMPLETED"
+  },
+  "57514414": {
+   "elapsed": "00:02:51",
+   "exit": "0:0",
+   "name": "absfix2_elig_flame_steak_s0_seedbox",
+   "state": "COMPLETED"
+  },
+  "57514415": {
+   "elapsed": "00:00:10",
+   "exit": "0:0",
+   "name": "absfix2_draws_flame_steak_s0_seedbox",
+   "state": "COMPLETED"
+  },
+  "57514416": {
+   "elapsed": "00:00:00",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s0_seedbox",
+   "state": "CANCELLED"
+  },
+  "57514417": {
+   "elapsed": "00:04:29",
+   "exit": "0:0",
+   "name": "absfix2_s2vote_flame_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57514418": {
+   "elapsed": "00:01:57",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s1_seedbox",
+   "state": "COMPLETED"
+  },
+  "57515412": {
+   "elapsed": "01:51:28",
+   "exit": "0:0",
+   "name": "absfix2_t1_flame_steak_s0",
+   "state": "COMPLETED"
+  },
+  "57515413": {
+   "elapsed": "00:00:58",
+   "exit": "0:0",
+   "name": "absfix2_precond_flame_steak_s0_seedbox",
+   "state": "COMPLETED"
+  }
+ },
+ "sbatch_sha256": {
+  "draws.sbatch": "23dabd1c3f8f9fa3412e76dd0c16393551bd404deaae7181dcd439619a394e29",
+  "draws.sbatch.t1seed": "7b0171a7c1934dd7970054bde3a7cbb5ac137912a16a868a5efbe1fe09bdc283",
+  "elig.sbatch": "bb352bc85a33f12ddc4d7fe4d588b413b259fdf4d2bd220e79c45652e93c66a7",
+  "elig.sbatch.t1seed": "b86da014a283882785999ffaac927904d674a7d56cc6a1001499ef7a363bcc0d",
+  "hashes.sbatch": "78c915d11cf0059e45866a39af83498050f50e3e0f4ba4364f3a107d9a9a4579",
+  "precond.sbatch": "6e196a086805dde25e4fc774f662a93dc583b01fdf01d2ff26d6dd8dbfcf65c8",
+  "precond.sbatch.t1seed": "b9019d0acc5bc8c7a3db4f62db1b9ee223aa8dc39f51a13ba17b50480a6af278",
+  "precond_boost.sbatch": "ff59597be9826870a1184858521950fc5dd3ff5ca7feb7a3aa9f9712eeb02ed0",
+  "precond_boost.sbatch.t1seed": "9e8d74ee6f62464df70aa0c8a64602731d27758ba8d72a30a96c808b85e3344b",
+  "prefix_cell.sbatch": "4b820dc5dc58672b66804060c38bd6d28f78c14ca3d88644806315d804be1a71",
+  "s2_vote.sbatch": "af104a214264e83d63fc9e5ce01f05494b331d66b0bafd8ded08e98b98804ff7",
+  "t1.sbatch": "9a8d3fd843b7afbc711d784b50705fe0456507ab59e176d2f39804cc87691d3e",
+  "vote.sbatch": "34e37c436b0ed28e50401b5e7ca498b498cef4119b83a18e316be135199abd56"
+ },
+ "scenes": {
+  "cut_roasted_beef": {
+   "s0": {
+    "precond": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/precond_prefix0",
+     "membership": {
+      "FN": 77,
+      "FP": 0,
+      "TP": 6927,
+      "mask_iou": {
+       "cam15_f50": {
+        "area_construction": 7314,
+        "area_s2": 7144,
+        "iou": 0.9385894341646555,
+        "pixel_intersection": 7000,
+        "pixel_union": 7458
+       },
+       "cam15_f95": {
+        "area_construction": 7259,
+        "area_s2": 7150,
+        "iou": 0.934873103263059,
+        "pixel_intersection": 6962,
+        "pixel_union": 7447
+       }
+      },
+      "pass": true,
+      "precision": 1.0,
+      "pred_n": 6927,
+      "reasons": [],
+      "recall": 0.9890062821245003,
+      "size_ratio": 0.9890062821245003,
+      "thresholds": {
+       "mask_iou_min": 0.7,
+       "precision_min": 0.8,
+       "recall_min": 0.7,
+       "size_ratio": [
+        0.5,
+        2.0
+       ]
+      },
+      "truth_n": 7004
+     },
+     "membership_sha256": "7bafd1d27efa10350b42ebdf424015d6ca078f549eb805b8d97fdb71206340c5",
+     "t1": {
+      "distinct_intervals": [
+       [
+        60,
+        89
+       ],
+       [
+        60,
+        91
+       ]
+      ],
+      "n_distinct_intervals": 2,
+      "n_gated_groups": 2,
+      "pass": false,
+      "pass_union_reading": true,
+      "per_group": [
+       {
+        "interval": [
+         60,
+         89
+        ],
+        "offset_error": 0,
+        "onset_error": 0,
+        "temporal_iou": 1.0
+       },
+       {
+        "interval": [
+         60,
+         91
+        ],
+        "offset_error": 0,
+        "onset_error": 2,
+        "temporal_iou": 0.9375
+       }
+      ],
+      "reasons": [
+       "distinct-interval reading: 2 interval(s), the precondition requires 1"
+      ],
+      "reasons_union_reading": [],
+      "thresholds": {
+       "intervals": 1,
+       "offset_error_max_frames": 3,
+       "onset_error_max_frames": 3,
+       "temporal_iou_min": 0.8
+      },
+      "truth_gap_inclusive": [
+       60,
+       89
+      ],
+      "union": {
+       "interval": [
+        60,
+        91
+       ],
+       "offset_error": 0,
+       "onset_error": 2,
+       "temporal_iou": 0.9375
+      }
+     },
+     "t1_sha256": "61a48f46efaff0f58b029af4ff501e438e85dea8a659dd43712c966c2603a2c6"
+    },
+    "precond_attempts": [
+     {
+      "elapsed": "00:00:11",
+      "exit": "0:0",
+      "jobid": "57488990",
+      "name": "absfix2_precond_cut_roasted_beef_s0",
+      "state": "COMPLETED"
+     }
+    ],
+    "precond_job": "57488990",
+    "s2vote": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix0",
+     "loco_jaccard_min": 0.9987011112714678,
+     "n_members": 6927,
+     "present": true,
+     "program_gestmem_sha256": "c27b4f653079ed879409882d5391bd554d71499a8250c3e8b240abc760fd8135",
+     "vote_s2_sha256": "2333796d9bd295b93519d9cd77d2624732b1e6082d96bd17b3467e1825e50e62"
+    },
+    "s2vote_attempts": [
+     {
+      "elapsed": "00:06:10",
+      "exit": "0:0",
+      "jobid": "57488863",
+      "name": "absfix2_s2vote_cut_roasted_beef_s0",
+      "state": "COMPLETED"
+     }
+    ],
+    "s2vote_job": "57488863"
+   },
+   "s1": {
+    "precond": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/precond_prefix1",
+     "membership": {
+      "FN": 67,
+      "FP": 3,
+      "TP": 6914,
+      "mask_iou": {
+       "cam15_f50": {
+        "area_construction": 7314,
+        "area_s2": 7144,
+        "iou": 0.9385894341646555,
+        "pixel_intersection": 7000,
+        "pixel_union": 7458
+       },
+       "cam15_f95": {
+        "area_construction": 7259,
+        "area_s2": 7150,
+        "iou": 0.934873103263059,
+        "pixel_intersection": 6962,
+        "pixel_union": 7447
+       }
+      },
+      "pass": true,
+      "precision": 0.9995662859621223,
+      "pred_n": 6917,
+      "reasons": [],
+      "recall": 0.9904025211287781,
+      "size_ratio": 0.9908322589886835,
+      "thresholds": {
+       "mask_iou_min": 0.7,
+       "precision_min": 0.8,
+       "recall_min": 0.7,
+       "size_ratio": [
+        0.5,
+        2.0
+       ]
+      },
+      "truth_n": 6981
+     },
+     "membership_sha256": "7ce29ce568df05393798ae01b059385dbbeafd71f3053a9c54869ce5d888b440",
+     "t1": {
+      "distinct_intervals": [
+       [
+        60,
+        89
+       ],
+       [
+        60,
+        91
+       ]
+      ],
+      "n_distinct_intervals": 2,
+      "n_gated_groups": 2,
+      "pass": false,
+      "pass_union_reading": true,
+      "per_group": [
+       {
+        "interval": [
+         60,
+         89
+        ],
+        "offset_error": 0,
+        "onset_error": 0,
+        "temporal_iou": 1.0
+       },
+       {
+        "interval": [
+         60,
+         91
+        ],
+        "offset_error": 0,
+        "onset_error": 2,
+        "temporal_iou": 0.9375
+       }
+      ],
+      "reasons": [
+       "distinct-interval reading: 2 interval(s), the precondition requires 1"
+      ],
+      "reasons_union_reading": [],
+      "thresholds": {
+       "intervals": 1,
+       "offset_error_max_frames": 3,
+       "onset_error_max_frames": 3,
+       "temporal_iou_min": 0.8
+      },
+      "truth_gap_inclusive": [
+       60,
+       89
+      ],
+      "union": {
+       "interval": [
+        60,
+        91
+       ],
+       "offset_error": 0,
+       "onset_error": 2,
+       "temporal_iou": 0.9375
+      }
+     },
+     "t1_sha256": "a57ef30f5643e829306b03ad4f926ca8308aa630453505a93351f591bd85e8b1"
+    },
+    "precond_attempts": [
+     {
+      "elapsed": "00:01:07",
+      "exit": "0:0",
+      "jobid": "57492151",
+      "name": "absfix2_precond_cut_roasted_beef_s1",
+      "state": "COMPLETED"
+     }
+    ],
+    "precond_job": "57492151",
+    "s2vote": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix1",
+     "loco_jaccard_min": 0.9989881468632553,
+     "n_members": 6917,
+     "present": true,
+     "program_gestmem_sha256": "352c7aff35bd5434c1ff5b26ab7286adcd1d4fb0707ea5572b67a13021ec9e92",
+     "vote_s2_sha256": "bdc05d0cd40892ccdda8e368bc599fe5f15d292638dba9b7f764cdc73cc1fd6c"
+    },
+    "s2vote_attempts": [
+     {
+      "elapsed": "00:38:06",
+      "exit": "0:0",
+      "jobid": "57488864",
+      "name": "absfix2_s2vote_cut_roasted_beef_s1",
+      "state": "CANCELLED by 132193"
+     },
+     {
+      "elapsed": "00:04:54",
+      "exit": "0:0",
+      "jobid": "57492150",
+      "name": "absfix2_s2vote_cut_roasted_beef_s1",
+      "state": "COMPLETED"
+     }
+    ],
+    "s2vote_job": "57492150"
+   },
+   "s2": {
+    "precond": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/precond_prefix2",
+     "membership": {
+      "FN": 81,
+      "FP": 1,
+      "TP": 6777,
+      "mask_iou": {
+       "cam15_f50": {
+        "area_construction": 7314,
+        "area_s2": 7144,
+        "iou": 0.9385894341646555,
+        "pixel_intersection": 7000,
+        "pixel_union": 7458
+       },
+       "cam15_f95": {
+        "area_construction": 7259,
+        "area_s2": 7150,
+        "iou": 0.934873103263059,
+        "pixel_intersection": 6962,
+        "pixel_union": 7447
+       }
+      },
+      "pass": true,
+      "precision": 0.9998524638536441,
+      "pred_n": 6778,
+      "reasons": [],
+      "recall": 0.9881889763779528,
+      "size_ratio": 0.9883347914843977,
+      "thresholds": {
+       "mask_iou_min": 0.7,
+       "precision_min": 0.8,
+       "recall_min": 0.7,
+       "size_ratio": [
+        0.5,
+        2.0
+       ]
+      },
+      "truth_n": 6858
+     },
+     "membership_sha256": "4bffe0746d99da04724592d8c4add09cd832cb41163e68310072b687cf27042f",
+     "t1": {
+      "distinct_intervals": [
+       [
+        60,
+        89
+       ],
+       [
+        60,
+        91
+       ]
+      ],
+      "n_distinct_intervals": 2,
+      "n_gated_groups": 2,
+      "pass": false,
+      "pass_union_reading": true,
+      "per_group": [
+       {
+        "interval": [
+         60,
+         89
+        ],
+        "offset_error": 0,
+        "onset_error": 0,
+        "temporal_iou": 1.0
+       },
+       {
+        "interval": [
+         60,
+         91
+        ],
+        "offset_error": 0,
+        "onset_error": 2,
+        "temporal_iou": 0.9375
+       }
+      ],
+      "reasons": [
+       "distinct-interval reading: 2 interval(s), the precondition requires 1"
+      ],
+      "reasons_union_reading": [],
+      "thresholds": {
+       "intervals": 1,
+       "offset_error_max_frames": 3,
+       "onset_error_max_frames": 3,
+       "temporal_iou_min": 0.8
+      },
+      "truth_gap_inclusive": [
+       60,
+       89
+      ],
+      "union": {
+       "interval": [
+        60,
+        91
+       ],
+       "offset_error": 0,
+       "onset_error": 2,
+       "temporal_iou": 0.9375
+      }
+     },
+     "t1_sha256": "31ee53b101aa8b61ec707f664b1f8c5cc4fe8db7b04c1b6b0e2437847638db36"
+    },
+    "precond_attempts": [
+     {
+      "elapsed": "00:00:11",
+      "exit": "0:0",
+      "jobid": "57489429",
+      "name": "absfix2_precond_cut_roasted_beef_s2",
+      "state": "COMPLETED"
+     }
+    ],
+    "precond_job": "57489429",
+    "s2vote": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix2",
+     "loco_jaccard_min": 0.9985261606484893,
+     "n_members": 6778,
+     "present": true,
+     "program_gestmem_sha256": "f4880367a88591406af5b22fdaee913c4be222a5d0bf2445b05cfcfbf8d0ef36",
+     "vote_s2_sha256": "676b002aa75856eac277e581b2f4f496640b7da2121d572408ea6b8d07484ffc"
+    },
+    "s2vote_attempts": [
+     {
+      "elapsed": "00:10:38",
+      "exit": "0:0",
+      "jobid": "57488865",
+      "name": "absfix2_s2vote_cut_roasted_beef_s2",
+      "state": "COMPLETED"
+     }
+    ],
+    "s2vote_job": "57488865"
+   },
+   "s3": {
+    "precond": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/precond_prefix3",
+     "membership": {
+      "FN": 65,
+      "FP": 3,
+      "TP": 6748,
+      "mask_iou": {
+       "cam15_f50": {
+        "area_construction": 7314,
+        "area_s2": 7144,
+        "iou": 0.9385894341646555,
+        "pixel_intersection": 7000,
+        "pixel_union": 7458
+       },
+       "cam15_f95": {
+        "area_construction": 7259,
+        "area_s2": 7150,
+        "iou": 0.934873103263059,
+        "pixel_intersection": 6962,
+        "pixel_union": 7447
+       }
+      },
+      "pass": true,
+      "precision": 0.9995556213894238,
+      "pred_n": 6751,
+      "reasons": [],
+      "recall": 0.9904594158226919,
+      "size_ratio": 0.9908997504770292,
+      "thresholds": {
+       "mask_iou_min": 0.7,
+       "precision_min": 0.8,
+       "recall_min": 0.7,
+       "size_ratio": [
+        0.5,
+        2.0
+       ]
+      },
+      "truth_n": 6813
+     },
+     "membership_sha256": "b889a9713f36f97e1495010c54660486e30a2e2f51cf38422413794799c523f5",
+     "t1": {
+      "distinct_intervals": [
+       [
+        60,
+        89
+       ],
+       [
+        60,
+        91
+       ]
+      ],
+      "n_distinct_intervals": 2,
+      "n_gated_groups": 2,
+      "pass": false,
+      "pass_union_reading": true,
+      "per_group": [
+       {
+        "interval": [
+         60,
+         89
+        ],
+        "offset_error": 0,
+        "onset_error": 0,
+        "temporal_iou": 1.0
+       },
+       {
+        "interval": [
+         60,
+         91
+        ],
+        "offset_error": 0,
+        "onset_error": 2,
+        "temporal_iou": 0.9375
+       }
+      ],
+      "reasons": [
+       "distinct-interval reading: 2 interval(s), the precondition requires 1"
+      ],
+      "reasons_union_reading": [],
+      "thresholds": {
+       "intervals": 1,
+       "offset_error_max_frames": 3,
+       "onset_error_max_frames": 3,
+       "temporal_iou_min": 0.8
+      },
+      "truth_gap_inclusive": [
+       60,
+       89
+      ],
+      "union": {
+       "interval": [
+        60,
+        91
+       ],
+       "offset_error": 0,
+       "onset_error": 2,
+       "temporal_iou": 0.9375
+      }
+     },
+     "t1_sha256": "c437087191f3092e095944c5a55a30aa3974a9d8645366622aa46448c5fd5db9"
+    },
+    "precond_attempts": [
+     {
+      "elapsed": "00:01:00",
+      "exit": "0:0",
+      "jobid": "57504225",
+      "name": "absfix2_precond_cut_roasted_beef_s3",
+      "state": "COMPLETED"
+     }
+    ],
+    "precond_job": "57504225",
+    "s2vote": {
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix3",
+     "loco_jaccard_min": 0.9985196150999259,
+     "n_members": 6751,
+     "present": true,
+     "program_gestmem_sha256": "45481b1648817a097f7e63688ee1757a1abac6fddbd093caf8176fb890e975d6",
+     "vote_s2_sha256": "432bbb4c973cf988dc02bedbf7e53e23caf840da76043d43fa3b667e47d69399"
+    },
+    "s2vote_attempts": [
+     {
+      "elapsed": "00:38:06",
+      "exit": "0:0",
+      "jobid": "57488867",
+      "name": "absfix2_s2vote_cut_roasted_beef_s3",
+      "state": "CANCELLED by 132193"
+     },
+     {
+      "elapsed": "00:37:34",
+      "exit": "0:0",
+      "jobid": "57492188",
+      "name": "absfix2_s2vote_cut_roasted_beef_s3",
+      "state": "CANCELLED by 132193"
+     },
+     {
+      "elapsed": "01:33:20",
+      "exit": "0:0",
+      "jobid": "57494941",
+      "name": "absfix2_s2vote_cut_roasted_beef_s3",
+      "state": "TIMEOUT"
+     },
+     {
+      "elapsed": "00:04:28",
+      "exit": "0:0",
+      "jobid": "57504222",
+      "name": "absfix2_s2vote_cut_roasted_beef_s3",
+      "state": "COMPLETED"
+     }
+    ],
+    "s2vote_job": "57504222"
+   }
+  },
+  "flame_steak": {
+   "s0": {
+    "plain": {
+     "draws": {
+      "L_refusal_message": null,
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0",
+      "draw_a": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "draw_b": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "local_eligible_sha256": null,
+      "present": false
+     },
+     "draws_attempts": [],
+     "draws_job": null,
+     "elig_job": null,
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix0",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix0",
+      "present": false,
+      "program_gestmem_sha256": null,
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [],
+     "s2vote_job": null,
+     "vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0",
+      "present": false,
+      "sha256_program_mis.json": null,
+      "sha256_program_ones.json": null,
+      "sha256_program_oracle.json": null,
+      "sha256_row_weights_cam15_f50.npz": null,
+      "sha256_vote_truth.json": null
+     },
+     "vote_attempts": [],
+     "vote_job": null
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e",
+     "f_box_profile_sha256": "9d845f7e6a2afd9e32c96a8ca8cb9e53c1ca4211881dd01a4c144a0a2c57c9e2",
+     "job": "57485022",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5100.7753522460325,
+        6234.280986078485
+       ],
+       "diagnostic_sha256": "efa819d5c6a662d0734235b7fec3ca5eac2b631e0967158d2d59938d23168898",
+       "eligible_n": 13133,
+       "eligible_non_truth_mass_w_in": 2298.8153182621754,
+       "eligible_non_truth_n": 6551,
+       "mass_ratio_eligible_over_truth": 0.4056116263824363,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5667.528169162259,
+       "truth_n": 6582
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2298.82 of contribution mass against the truth set's 5667.53; the +-10% band [5100.78, 6234.28] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox",
+      "draw_a": {
+       "contribution_draw": 72.97601260337979,
+       "contribution_truth": 5667.528169162259,
+       "counts_sha256": "fd1755be2c28e537e78f461008947cd139041dc12967ee06918a9f859b9213a2",
+       "draw_n": 6582,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593103,
+       "overlap_n": 0,
+       "program_sha256": "349bec9eeb37e77fd3905b5b63564b774ee96907eb4627bc018250c5be2771c4",
+       "program_sha256_in_counts": "f274b0e50cb2bbdacaab5a8ab55b24a640b535833d21da7ba320e5da6b408d38",
+       "seed": 1000,
+       "truth_n": 6582
+      },
+      "draw_b": {
+       "contribution_draw": 15.136339424992912,
+       "contribution_truth": 5667.528169162259,
+       "counts_sha256": "aa808cc40ca2773a742a0a4037b03e67f42a7860d913f5bf83ba4f74fac85425",
+       "draw_n": 6582,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593103,
+       "overlap_n": 0,
+       "program_sha256": "243072e656f0227ded12be1860bbcce65595e4fc15c8dab7cc3f9db73af26cd9",
+       "program_sha256_in_counts": "c46e698efb775f7c18500f9674c7f55368091afc8b3a2903e5c23eb6ffcc3ce0",
+       "seed": 2000,
+       "truth_n": 6582
+      },
+      "local_eligible_sha256": "01d124214007971649545524e0b71da66f81a04a04fcc15cfe165b3ba3257e48",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:10",
+       "exit": "0:0",
+       "jobid": "57514415",
+       "name": "absfix2_draws_flame_steak_s0_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57514415",
+     "elig_job": "57514414",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix0_seedbox",
+      "membership": {
+       "FN": 148,
+       "FP": 0,
+       "TP": 6434,
+       "mask_iou": {
+        "cam15_f50": {
+         "area_construction": 8716,
+         "area_s2": 8130,
+         "iou": 0.9305523722209489,
+         "pixel_intersection": 8120,
+         "pixel_union": 8726
+        },
+        "cam15_f95": {
+         "area_construction": 8753,
+         "area_s2": 8296,
+         "iou": 0.9442353746151214,
+         "pixel_intersection": 8280,
+         "pixel_union": 8769
+        }
+       },
+       "pass": true,
+       "precision": 1.0,
+       "pred_n": 6434,
+       "reasons": [],
+       "recall": 0.9775144333029474,
+       "size_ratio": 0.9775144333029474,
+       "thresholds": {
+        "mask_iou_min": 0.7,
+        "precision_min": 0.8,
+        "recall_min": 0.7,
+        "size_ratio": [
+         0.5,
+         2.0
+        ]
+       },
+       "truth_n": 6582
+      },
+      "membership_sha256": "44195d5b169b8086d873e3b652c0d07745f42bdea1c2ecc37acaa68ff1f5ffea",
+      "t1": {
+       "distinct_intervals": [
+        [
+         60,
+         89
+        ]
+       ],
+       "n_distinct_intervals": 1,
+       "n_gated_groups": 3,
+       "pass": true,
+       "pass_union_reading": true,
+       "per_group": [
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        }
+       ],
+       "reasons": [],
+       "reasons_union_reading": [],
+       "thresholds": {
+        "intervals": 1,
+        "offset_error_max_frames": 3,
+        "onset_error_max_frames": 3,
+        "temporal_iou_min": 0.8
+       },
+       "truth_gap_inclusive": [
+        60,
+        89
+       ],
+       "union": {
+        "interval": [
+         60,
+         89
+        ],
+        "offset_error": 0,
+        "onset_error": 0,
+        "temporal_iou": 1.0
+       }
+      },
+      "t1_sha256": "a907390f7bad3a0d982ba28bfbc8f1cacd390f153c617fd3a1c521b0d7994c89"
+     },
+     "precond_attempts": [
+      {
+       "elapsed": "00:00:58",
+       "exit": "0:0",
+       "jobid": "57515413",
+       "name": "absfix2_precond_flame_steak_s0_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "precond_job": "57515413",
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix0_seedbox",
+      "loco_jaccard_min": 0.9989130434782608,
+      "n_members": 6434,
+      "present": true,
+      "program_gestmem_sha256": "a2c251e76cee9aa5923c5528d0964999225eac90498222e0ee9c027c822a994f",
+      "vote_s2_sha256": "9494049d47fc36865c1a1da5eb920e58c907a5e8a019972ecceef5c3a802f90b"
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:04:06",
+       "exit": "0:0",
+       "jobid": "57509034",
+       "name": "absfix2_s2vote_flame_steak_s0_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "s2vote_job": "57509034",
+     "vote": {
+      "checkpoint_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_seedbox",
+      "loco_jaccard_min": 0.9987849331713244,
+      "loco_n": 20,
+      "n_members": 6582,
+      "n_members_before_cap": 7553,
+      "present": true,
+      "seed_bbox": [
+       -0.8528,
+       1.7112,
+       -2.3238,
+       -0.5279,
+       2.0968,
+       -1.5924
+      ],
+      "seed_rows": 6766,
+      "sha256_program_mis.json": "003bfbd74b822e27ddc0df7dd77215d732bfa5683aa69c51b5671a82eb783a5c",
+      "sha256_program_ones.json": "fe638e66752b9db0092046d0f87b080a1bd0ec0265ccf2e6c519e575059c125d",
+      "sha256_program_oracle.json": "7d1ecee0f7efdc205d78568b2419fa9d81a8e76a95c658053ec7217ad8691e69",
+      "sha256_row_weights_cam15_f50.npz": "ca3805d2230f4e765e420c45098a0fdfa7fd16a2c4ff37837873224b6b3e8246",
+      "sha256_vote_truth.json": "1163d39328704d09a88de4f999abc675dfbfd6f4551e31588b7b295790b444f2"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "01:11:39",
+       "exit": "0:0",
+       "jobid": "57509030",
+       "name": "absfix2_vote_flame_steak_s0_seedbox",
+       "state": "CANCELLED by 132193"
+      },
+      {
+       "elapsed": "00:05:24",
+       "exit": "0:0",
+       "jobid": "57514413",
+       "name": "absfix2_vote_flame_steak_s0_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57514413"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "03:47:03",
+       "exit": "0:0",
+       "jobid": "57485392",
+       "name": "absfix2_t1_flame_steak_s0",
+       "state": "CANCELLED by 132193"
+      },
+      {
+       "elapsed": "00:12:32",
+       "exit": "0:0",
+       "jobid": "57514412",
+       "name": "absfix2_t1_flame_steak_s0",
+       "state": "CANCELLED by 132193"
+      },
+      {
+       "elapsed": "01:51:28",
+       "exit": "0:0",
+       "jobid": "57515412",
+       "name": "absfix2_t1_flame_steak_s0",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/t1_prefix0",
+     "job": "57515412",
+     "program_sha256_in_report": "227a847a7770f90d4267a1a7209a73de7e33975fb5cf8056f9d4b3f82fc21649",
+     "program_v2_sha256": "79540e955a7633c35bcabb24ad24e3b8e822b1e214acf497ac82439ad4d015b2",
+     "report_sha256": "a3da3cd451f47725589d15a49b83ee297a65b06f9309cf19e175ad1c36318db8",
+     "windows": {
+      "n_gated": 3,
+      "n_groups": 1269,
+      "per_group": [
+       {
+        "agreeing_cameras": 4,
+        "group": 996,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 997,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1045,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       }
+      ],
+      "pooled_window": [
+       60,
+       89
+      ]
+     }
+    }
+   },
+   "s1": {
+    "plain": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5750.350207026222,
+        7028.205808587605
+       ],
+       "diagnostic_sha256": "0d4755b4a22a446d58191d2f5c38b6fae54cffa33f51b58fa24531e64e57a84e",
+       "eligible_n": 13133,
+       "eligible_non_truth_mass_w_in": 1555.4041109887676,
+       "eligible_non_truth_n": 6003,
+       "mass_ratio_eligible_over_truth": 0.24343972966714778,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 6389.278007806914,
+       "truth_n": 7130
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 1555.4 of contribution mass against the truth set's 6389.28; the +-10% band [5750.35, 7028.21] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1",
+      "draw_a": {
+       "contribution_draw": 46.739232335356064,
+       "contribution_truth": 6389.278007806914,
+       "counts_sha256": "599f09d5bc17ee7b38a2ecb83464ffd3ea4976a49bbc02a7696114149c95f9ee",
+       "draw_n": 7130,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 592518,
+       "overlap_n": 0,
+       "program_sha256": "b222f8c524d9fb32ec436b198aa0cb003b4547286614bda713dac39ded48c346",
+       "program_sha256_in_counts": "78d4eca2e1ac1917872141550d8db462bc4f4badac05b933d7ea8b0d1babb5a5",
+       "seed": 1001,
+       "truth_n": 7130
+      },
+      "draw_b": {
+       "contribution_draw": 8.616521926152927,
+       "contribution_truth": 6389.278007806914,
+       "counts_sha256": "245f3b27d6da1d842399129199a20d9bccd306ff5b800105ea7d1d0ede171e38",
+       "draw_n": 7130,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 592518,
+       "overlap_n": 0,
+       "program_sha256": "24276dfc84b0b2bddc2a5523d9bd0747d270f5adcab25ed662370818f4ea6750",
+       "program_sha256_in_counts": "25d8f2390fcc47e0f7ebd6999e02d28b6d7487d470b52b583fd77e821b3de855",
+       "seed": 2001,
+       "truth_n": 7130
+      },
+      "local_eligible_sha256": "ee913d86366d6c8e7a72210092468f5f83e8be3612880144bb98d674c1a5aeb0",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:01:19",
+       "exit": "0:0",
+       "jobid": "57489517",
+       "name": "absfix2_draws_flame_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57489517",
+     "elig_job": "57485399",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix1",
+      "membership": {
+       "FN": 112,
+       "FP": 1,
+       "TP": 7018,
+       "mask_iou": {
+        "cam15_f50": {
+         "area_construction": 8716,
+         "area_s2": 8130,
+         "iou": 0.9305523722209489,
+         "pixel_intersection": 8120,
+         "pixel_union": 8726
+        },
+        "cam15_f95": {
+         "area_construction": 8753,
+         "area_s2": 8296,
+         "iou": 0.9442353746151214,
+         "pixel_intersection": 8280,
+         "pixel_union": 8769
+        }
+       },
+       "pass": true,
+       "precision": 0.9998575295626158,
+       "pred_n": 7019,
+       "reasons": [],
+       "recall": 0.9842917251051894,
+       "size_ratio": 0.9844319775596073,
+       "thresholds": {
+        "mask_iou_min": 0.7,
+        "precision_min": 0.8,
+        "recall_min": 0.7,
+        "size_ratio": [
+         0.5,
+         2.0
+        ]
+       },
+       "truth_n": 7130
+      },
+      "membership_sha256": "58a4cb6f6bdf1bed526ffae8b97353a084b9acf61a176563847e29e1f842b082",
+      "t1": {
+       "distinct_intervals": [
+        [
+         60,
+         89
+        ],
+        [
+         60,
+         90
+        ]
+       ],
+       "n_distinct_intervals": 2,
+       "n_gated_groups": 5,
+       "pass": false,
+       "pass_union_reading": true,
+       "per_group": [
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          90
+         ],
+         "offset_error": 0,
+         "onset_error": 1,
+         "temporal_iou": 0.967741935483871
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        }
+       ],
+       "reasons": [
+        "distinct-interval reading: 2 interval(s), the precondition requires 1"
+       ],
+       "reasons_union_reading": [],
+       "thresholds": {
+        "intervals": 1,
+        "offset_error_max_frames": 3,
+        "onset_error_max_frames": 3,
+        "temporal_iou_min": 0.8
+       },
+       "truth_gap_inclusive": [
+        60,
+        89
+       ],
+       "union": {
+        "interval": [
+         60,
+         90
+        ],
+        "offset_error": 0,
+        "onset_error": 1,
+        "temporal_iou": 0.967741935483871
+       }
+      },
+      "t1_sha256": "da21f0bc0153efbe75b21ed9a7fc07ddb08ffcde7fb124372f779622cd9ef8e6"
+     },
+     "precond_attempts": [
+      {
+       "elapsed": "00:00:16",
+       "exit": "0:0",
+       "jobid": "57489499",
+       "name": "absfix2_precond_flame_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "precond_job": "57489499",
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix1",
+      "loco_jaccard_min": 0.9984343865641901,
+      "n_members": 7019,
+      "present": true,
+      "program_gestmem_sha256": "511cdb24b20733ecb82cb0fe2e5f6d49198e34064242b2d1c724ba49f141db62",
+      "vote_s2_sha256": "7ffa3c6616253012a583fa0dc0841bd7033b077428538ca402fe560ced10ba05"
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:02:04",
+       "exit": "0:0",
+       "jobid": "57488906",
+       "name": "absfix2_s2vote_flame_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "s2vote_job": "57488906",
+     "vote": {
+      "checkpoint_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1",
+      "loco_jaccard_min": 0.9987386124737211,
+      "loco_n": 20,
+      "n_members": 7130,
+      "n_members_before_cap": 7531,
+      "present": true,
+      "seed_bbox": null,
+      "seed_rows": 8335,
+      "sha256_program_mis.json": "3dbd902516ece03982b980644e36a62092e4a32c17bd10ce2f550f85d0cd4219",
+      "sha256_program_ones.json": "352a8da803088f4003f0dac9ce89d2adb1cbbe4d4330ac449de57644482b6454",
+      "sha256_program_oracle.json": "599a5724f8280ec5ae31cedfad6210b1384c79cad94cbd1fab0bd73fd0b319f5",
+      "sha256_row_weights_cam15_f50.npz": "eeb281fca381f318e29b47e0c0e51a21f0c1637a7c0f61fdee18b64ee3e4872d",
+      "sha256_vote_truth.json": "a2db3427abfa9580192318b9af5a048c5b06f52b93f04a32ae2110e37aa04a3e"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:03:52",
+       "exit": "0:0",
+       "jobid": "57485398",
+       "name": "absfix2_vote_flame_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57485398"
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1",
+     "f_box_profile_sha256": "29cd6f6e1e04525527dab78d43759763b7f4a6aee86ca2fe479e5a17a5ae9118",
+     "job": "57485047",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5151.754291082259,
+        6296.588577989428
+       ],
+       "diagnostic_sha256": "4fccc468e8acd260e98c280f7e02c73c1c8012c936ca3aa8e035610c02faaad4",
+       "eligible_n": 13133,
+       "eligible_non_truth_mass_w_in": 2220.5106918920264,
+       "eligible_non_truth_n": 6549,
+       "mass_ratio_eligible_over_truth": 0.3879182720655328,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5724.171434535843,
+       "truth_n": 6584
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2220.51 of contribution mass against the truth set's 5724.17; the +-10% band [5151.75, 6296.59] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox",
+      "draw_a": {
+       "contribution_draw": 94.6481385169609,
+       "contribution_truth": 5724.171434535843,
+       "counts_sha256": "f7ee39d6f87556a57f720f2ce3832434fba6fc8941cbf4886bd771a20b23a05c",
+       "draw_n": 6584,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593064,
+       "overlap_n": 0,
+       "program_sha256": "311dedc1f26474977b0451403fd7bfd737eb910d73cc3a8d86872802986e1a10",
+       "program_sha256_in_counts": "dfda328faaeea0004df8b90fce7638e61e4974d86e75c913ac820f33f6b04859",
+       "seed": 1001,
+       "truth_n": 6584
+      },
+      "draw_b": {
+       "contribution_draw": 50.21128243114799,
+       "contribution_truth": 5724.171434535843,
+       "counts_sha256": "3cf22e0037e1360e6c8b3cac54c094f4994af4272e8f27b70990389e3427ffac",
+       "draw_n": 6584,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593064,
+       "overlap_n": 0,
+       "program_sha256": "21e92cf1e41033e864527f9be6b7709f643b6ff9b019035226d821571a7cafe9",
+       "program_sha256_in_counts": "565e9dc27570af2ae00c459ec6be3fc45252865841840254dcdb9d21363142eb",
+       "seed": 2001,
+       "truth_n": 6584
+      },
+      "local_eligible_sha256": "940a62e20a9d8db6870454e1750cdbb18087f36e15b5f54a71e99beeb41baf75",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:12",
+       "exit": "0:0",
+       "jobid": "57509064",
+       "name": "absfix2_draws_flame_steak_s1_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57509064",
+     "elig_job": "57509063",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix1_seedbox",
+      "membership": {
+       "FN": 135,
+       "FP": 1,
+       "TP": 6449,
+       "mask_iou": {
+        "cam15_f50": {
+         "area_construction": 8716,
+         "area_s2": 8130,
+         "iou": 0.9305523722209489,
+         "pixel_intersection": 8120,
+         "pixel_union": 8726
+        },
+        "cam15_f95": {
+         "area_construction": 8753,
+         "area_s2": 8296,
+         "iou": 0.9442353746151214,
+         "pixel_intersection": 8280,
+         "pixel_union": 8769
+        }
+       },
+       "pass": true,
+       "precision": 0.9998449612403101,
+       "pred_n": 6450,
+       "reasons": [],
+       "recall": 0.9794957472660997,
+       "size_ratio": 0.9796476306196841,
+       "thresholds": {
+        "mask_iou_min": 0.7,
+        "precision_min": 0.8,
+        "recall_min": 0.7,
+        "size_ratio": [
+         0.5,
+         2.0
+        ]
+       },
+       "truth_n": 6584
+      },
+      "membership_sha256": "7f0d5a8402ecb9822a86aa4d1fb4770223828f6e50244d8d09b8e442a3488b31",
+      "t1": {
+       "distinct_intervals": [
+        [
+         60,
+         89
+        ],
+        [
+         60,
+         90
+        ]
+       ],
+       "n_distinct_intervals": 2,
+       "n_gated_groups": 5,
+       "pass": false,
+       "pass_union_reading": true,
+       "per_group": [
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          90
+         ],
+         "offset_error": 0,
+         "onset_error": 1,
+         "temporal_iou": 0.967741935483871
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        }
+       ],
+       "reasons": [
+        "distinct-interval reading: 2 interval(s), the precondition requires 1"
+       ],
+       "reasons_union_reading": [],
+       "thresholds": {
+        "intervals": 1,
+        "offset_error_max_frames": 3,
+        "onset_error_max_frames": 3,
+        "temporal_iou_min": 0.8
+       },
+       "truth_gap_inclusive": [
+        60,
+        89
+       ],
+       "union": {
+        "interval": [
+         60,
+         90
+        ],
+        "offset_error": 0,
+        "onset_error": 1,
+        "temporal_iou": 0.967741935483871
+       }
+      },
+      "t1_sha256": "da21f0bc0153efbe75b21ed9a7fc07ddb08ffcde7fb124372f779622cd9ef8e6"
+     },
+     "precond_attempts": [
+      {
+       "elapsed": "00:01:57",
+       "exit": "0:0",
+       "jobid": "57514418",
+       "name": "absfix2_precond_flame_steak_s1_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "precond_job": "57514418",
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix1_seedbox",
+      "loco_jaccard_min": 0.9979869928770517,
+      "n_members": 6450,
+      "present": true,
+      "program_gestmem_sha256": "1c052f55a851916ab1b0296a5f2a5e907e7469280e7347858ea2ace02974cba3",
+      "vote_s2_sha256": "bdc3a3e0a7a6f78310202a0f9cebe6d24c4c4ca6586fb4e27b1f7967cb7052ff"
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "01:11:39",
+       "exit": "0:0",
+       "jobid": "57509065",
+       "name": "absfix2_s2vote_flame_steak_s1_seedbox",
+       "state": "CANCELLED by 132193"
+      },
+      {
+       "elapsed": "00:04:29",
+       "exit": "0:0",
+       "jobid": "57514417",
+       "name": "absfix2_s2vote_flame_steak_s1_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "s2vote_job": "57514417",
+     "vote": {
+      "checkpoint_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_seedbox",
+      "loco_jaccard_min": 0.998330550918197,
+      "loco_n": 20,
+      "n_members": 6584,
+      "n_members_before_cap": 7531,
+      "present": true,
+      "seed_bbox": [
+       -0.8528,
+       1.7112,
+       -2.3238,
+       -0.5279,
+       2.0968,
+       -1.5924
+      ],
+      "seed_rows": 6707,
+      "sha256_program_mis.json": "5ed6d5df92bc0ef8ed026bb245ed8554330f1da963fac92ed30a8f99fc2d6efd",
+      "sha256_program_ones.json": "4a51fa4708c58afe59d069dd90c0b0f018324ad6d4e80e932a9fae7de71c6173",
+      "sha256_program_oracle.json": "013477c126aeb98a0ccc313ce2e3188588667cee86f15e2f0658c7cae44038c0",
+      "sha256_row_weights_cam15_f50.npz": "c4d5e364e4c479b6d6031d4dd1d1c2448036061e23769822bddafe0fabb5430e",
+      "sha256_vote_truth.json": "ccdc628de0202ea8eb5abba076cb238d27996e08bf069280f2cb9c26ed385f50"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:06:25",
+       "exit": "0:0",
+       "jobid": "57509062",
+       "name": "absfix2_vote_flame_steak_s1_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57509062"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "01:50:57",
+       "exit": "0:0",
+       "jobid": "57485397",
+       "name": "absfix2_t1_flame_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/t1_prefix1",
+     "job": "57485397",
+     "program_sha256_in_report": "932d4a94e706f3a19d3862ed87b9f8ced889c5323c9dfc6856db58ff1b47f99c",
+     "program_v2_sha256": "8ed138aa1e9ed86dcf0e2487dce8dcde9bcd2c2d5514f5c2371daec1354e2b82",
+     "report_sha256": "24343265da5f29e091ef5fa1b7871832b84e401423bfa910e79059ddb2678d38",
+     "windows": {
+      "n_gated": 5,
+      "n_groups": 1285,
+      "per_group": [
+       {
+        "agreeing_cameras": 3,
+        "group": 1001,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1003,
+        "offset_frame": 60,
+        "onset_frame": 91,
+        "window": [
+         60,
+         90
+        ]
+       },
+       {
+        "agreeing_cameras": 3,
+        "group": 1004,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1051,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1052,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       }
+      ],
+      "pooled_window": [
+       60,
+       90
+      ]
+     }
+    }
+   },
+   "s2": {
+    "plain": {
+     "draws": {
+      "L_refusal_message": null,
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2",
+      "draw_a": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "draw_b": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "local_eligible_sha256": null,
+      "present": false
+     },
+     "draws_attempts": [],
+     "draws_job": null,
+     "elig_job": null,
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix2",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix2",
+      "present": true,
+      "program_gestmem_sha256": null,
+      "refusal_message": null,
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:02:42",
+       "exit": "0:0",
+       "jobid": "57488907",
+       "name": "absfix2_s2vote_flame_steak_s2",
+       "state": "CANCELLED by 132193"
+      }
+     ],
+     "s2vote_job": "57488907",
+     "vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2",
+      "present": false,
+      "sha256_program_mis.json": null,
+      "sha256_program_ones.json": null,
+      "sha256_program_oracle.json": null,
+      "sha256_row_weights_cam15_f50.npz": null,
+      "sha256_vote_truth.json": null
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:02:42",
+       "exit": "0:0",
+       "jobid": "57485402",
+       "name": "absfix2_vote_flame_steak_s2",
+       "state": "CANCELLED by 132193"
+      }
+     ],
+     "vote_job": "57485402"
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2",
+     "f_box_profile_sha256": "e08bd4050cd191b200ef899f6142880e3fc8d6d9bc485f550f5f6d6aa76abad7",
+     "job": "57485053",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        4853.575892038202,
+        5932.1483124911365
+       ],
+       "diagnostic_sha256": "fe7787a4677e6d426f5e7c48f74189143ce1095bd95e5f115e7d6b8e790e982e",
+       "eligible_n": 13151,
+       "eligible_non_truth_mass_w_in": 2086.9944157658397,
+       "eligible_non_truth_n": 6503,
+       "mass_ratio_eligible_over_truth": 0.3869919861087178,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5392.862102264669,
+       "truth_n": 6648
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2086.99 of contribution mass against the truth set's 5392.86; the +-10% band [4853.58, 5932.15] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox",
+      "draw_a": {
+       "contribution_draw": 31.085635807481594,
+       "contribution_truth": 5392.862102264669,
+       "counts_sha256": "3856cb324141e7abd302f1eaa64be89dbd4302c3139eaea0d0c7789f91cd2042",
+       "draw_n": 6648,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593030,
+       "overlap_n": 0,
+       "program_sha256": "6c4efa392f123e5935305ad35752d19cac51018fc6117eac50f9c446f59214b1",
+       "program_sha256_in_counts": "1af56b98da04bdc197574dbc366ab6a6a0ec12651841c75fe2aaa4c4a40c1300",
+       "seed": 1002,
+       "truth_n": 6648
+      },
+      "draw_b": {
+       "contribution_draw": 7.030583535088226,
+       "contribution_truth": 5392.862102264669,
+       "counts_sha256": "82b17fc13a4199f7b5505a9953033da01c77d6e51fb805f60b012718e20408a9",
+       "draw_n": 6648,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593030,
+       "overlap_n": 0,
+       "program_sha256": "a76b14bc0f6d884b30f854b0be98226f3afeed21ba46567237265e32e8585190",
+       "program_sha256_in_counts": "aed22a80245f87604e8ed3a8c7750573034fc2a9b26282b4982b481bee13f913",
+       "seed": 2002,
+       "truth_n": 6648
+      },
+      "local_eligible_sha256": "4e206a9883229968e7483bbdf7dc895d004d116ddad0babc44663daaafdf5e2a",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:11",
+       "exit": "0:0",
+       "jobid": "57509070",
+       "name": "absfix2_draws_flame_steak_s2_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57509070",
+     "elig_job": "57509069",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix2_seedbox",
+      "membership": {
+       "FN": 133,
+       "FP": 0,
+       "TP": 6515,
+       "mask_iou": {
+        "cam15_f50": {
+         "area_construction": 8716,
+         "area_s2": 8130,
+         "iou": 0.9305523722209489,
+         "pixel_intersection": 8120,
+         "pixel_union": 8726
+        },
+        "cam15_f95": {
+         "area_construction": 8753,
+         "area_s2": 8296,
+         "iou": 0.9442353746151214,
+         "pixel_intersection": 8280,
+         "pixel_union": 8769
+        }
+       },
+       "pass": true,
+       "precision": 1.0,
+       "pred_n": 6515,
+       "reasons": [],
+       "recall": 0.9799939831528279,
+       "size_ratio": 0.9799939831528279,
+       "thresholds": {
+        "mask_iou_min": 0.7,
+        "precision_min": 0.8,
+        "recall_min": 0.7,
+        "size_ratio": [
+         0.5,
+         2.0
+        ]
+       },
+       "truth_n": 6648
+      },
+      "membership_sha256": "069e480fa7f05f3fc28034ae048cd285dcb1c2fe2b4a72e801f557839f70081b",
+      "t1": {
+       "distinct_intervals": [
+        [
+         60,
+         89
+        ]
+       ],
+       "n_distinct_intervals": 1,
+       "n_gated_groups": 4,
+       "pass": true,
+       "pass_union_reading": true,
+       "per_group": [
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        }
+       ],
+       "reasons": [],
+       "reasons_union_reading": [],
+       "thresholds": {
+        "intervals": 1,
+        "offset_error_max_frames": 3,
+        "onset_error_max_frames": 3,
+        "temporal_iou_min": 0.8
+       },
+       "truth_gap_inclusive": [
+        60,
+        89
+       ],
+       "union": {
+        "interval": [
+         60,
+         89
+        ],
+        "offset_error": 0,
+        "onset_error": 0,
+        "temporal_iou": 1.0
+       }
+      },
+      "t1_sha256": "846aad162fe0c13348249e76d043a7f2eabfb4e30de8ea4e30110e809c714e15"
+     },
+     "precond_attempts": [
+      {
+       "elapsed": "00:00:08",
+       "exit": "0:0",
+       "jobid": "57509072",
+       "name": "absfix2_precond_flame_steak_s2_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "precond_job": "57509072",
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix2_seedbox",
+      "loco_jaccard_min": 0.9986196319018404,
+      "n_members": 6515,
+      "present": true,
+      "program_gestmem_sha256": "59bc5f4cb5d1f6a1b1d848eae1ad9945737502041465b4b6ef7c7523062806d9",
+      "vote_s2_sha256": "da39eefc080ddbc3acec741f5c0e67ed2d8cbfbe1e6f8889206e287f60172c14"
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:04:06",
+       "exit": "0:0",
+       "jobid": "57509071",
+       "name": "absfix2_s2vote_flame_steak_s2_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "s2vote_job": "57509071",
+     "vote": {
+      "checkpoint_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_seedbox",
+      "loco_jaccard_min": 0.9981963024199609,
+      "loco_n": 20,
+      "n_members": 6648,
+      "n_members_before_cap": 7588,
+      "present": true,
+      "seed_bbox": [
+       -0.8528,
+       1.7112,
+       -2.3238,
+       -0.5279,
+       2.0968,
+       -1.5924
+      ],
+      "seed_rows": 6712,
+      "sha256_program_mis.json": "51a17c0cfa87ccd6a517c5ff65ea843a3cd1cf4b125e4f2197753bb30c94634e",
+      "sha256_program_ones.json": "64a6bd259e2d142e842d29ffb726e5740398e6b5b6f1e3962dd0173502a58998",
+      "sha256_program_oracle.json": "6c277d329d898b6c2acdc0975b28b91a6f1e87b7329ef81582e5dc02a872e03f",
+      "sha256_row_weights_cam15_f50.npz": "f2f3aa9e06b7c3ae0f74ad54425766ff79af53bb5b3cccdebe823e9e956ea774",
+      "sha256_vote_truth.json": "445ff94f7a4a3e671b30f5148666e8c9bc6f18170f1b7a44f80e82f503bcedae"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:06:56",
+       "exit": "0:0",
+       "jobid": "57509068",
+       "name": "absfix2_vote_flame_steak_s2_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57509068"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "02:03:00",
+       "exit": "0:0",
+       "jobid": "57485401",
+       "name": "absfix2_t1_flame_steak_s2",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/t1_prefix2",
+     "job": "57485401",
+     "program_sha256_in_report": "b7b289419a9b16d92fb355418aae07e924899edf9ef29ec5098bc5400128f982",
+     "program_v2_sha256": "59b3ab5d7e14ef698f7b4b350c987f5597481024448410082763dd403a533fcf",
+     "report_sha256": "76e61bbe1e9f1489a59f82f502413df931c70b11d7807e982fd1a27fb63ad897",
+     "windows": {
+      "n_gated": 4,
+      "n_groups": 1286,
+      "per_group": [
+       {
+        "agreeing_cameras": 4,
+        "group": 1009,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1010,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1054,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1057,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       }
+      ],
+      "pooled_window": [
+       60,
+       89
+      ]
+     }
+    }
+   },
+   "s3": {
+    "plain": {
+     "draws": {
+      "L_refusal_message": null,
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3",
+      "draw_a": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "draw_b": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "local_eligible_sha256": null,
+      "present": false
+     },
+     "draws_attempts": [],
+     "draws_job": null,
+     "elig_job": null,
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix3",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix3",
+      "present": true,
+      "program_gestmem_sha256": null,
+      "refusal_message": [
+       "    raise ContractError(",
+       "depth_visibility.errors.ContractError: the vote admitted zero rows; there is no program to emit and `seed_families` would refuse the artifact anyway (elgs/trainer_hooks.py:950-957)"
+      ],
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:04:32",
+       "exit": "1:0",
+       "jobid": "57488908",
+       "name": "absfix2_s2vote_flame_steak_s3",
+       "state": "FAILED"
+      }
+     ],
+     "s2vote_job": "57488908",
+     "vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3",
+      "present": false,
+      "sha256_program_mis.json": null,
+      "sha256_program_ones.json": null,
+      "sha256_program_oracle.json": null,
+      "sha256_row_weights_cam15_f50.npz": null,
+      "sha256_vote_truth.json": null
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:03:40",
+       "exit": "1:0",
+       "jobid": "57485406",
+       "name": "absfix2_vote_flame_steak_s3",
+       "state": "FAILED"
+      }
+     ],
+     "vote_job": "57485406"
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20",
+     "f_box_profile_sha256": "0716a9d4cabde56c240fc1c74ccbf7fd37789dc1fc3134d195da119963c93467",
+     "job": "57485054",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5109.41009655953,
+        6244.834562461648
+       ],
+       "diagnostic_sha256": "31405525a6551ef6488f3e55758930fb5b7bfe876f9f1100a133b77a3e5d1e45",
+       "eligible_n": 13120,
+       "eligible_non_truth_mass_w_in": 2111.5203581229757,
+       "eligible_non_truth_n": 6479,
+       "mass_ratio_eligible_over_truth": 0.3719349761316496,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5677.122329510588,
+       "truth_n": 6641
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2111.52 of contribution mass against the truth set's 5677.12; the +-10% band [5109.41, 6244.83] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox",
+      "draw_a": {
+       "contribution_draw": 13.688961495339754,
+       "contribution_truth": 5677.122329510588,
+       "counts_sha256": "91372a546abf39a17052df68e5e0dc661f035299ec3dd539d074b9c4dedf29bf",
+       "draw_n": 6641,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593045,
+       "overlap_n": 0,
+       "program_sha256": "f3300214c9867ee58d5cd74f15dee34bc0398112c9cdb080fe00bacdb1bcbaa8",
+       "program_sha256_in_counts": "13a2513e5897d55b4406162343d571d2c32bb85b00fe50fdeb8352424dcc8bf8",
+       "seed": 1003,
+       "truth_n": 6641
+      },
+      "draw_b": {
+       "contribution_draw": 8.997450800146908,
+       "contribution_truth": 5677.122329510588,
+       "counts_sha256": "f31dad429bfdce161677bd69a225ba54651c885c8c00d44ec42cc6b08058865c",
+       "draw_n": 6641,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 593045,
+       "overlap_n": 0,
+       "program_sha256": "ec41966569e36d76ca6b0e0332d2417c4c62e526725d636841f16f231375d41b",
+       "program_sha256_in_counts": "a74a745b0d0df02e1bf6778196c36c09a48d2f4f96ed1a29a23f620846be28a9",
+       "seed": 2003,
+       "truth_n": 6641
+      },
+      "local_eligible_sha256": "e4e2535da51b419fa7e41f2495a80f3be42413d01555798196cf814b93f0526c",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:12",
+       "exit": "0:0",
+       "jobid": "57509076",
+       "name": "absfix2_draws_flame_steak_s3_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57509076",
+     "elig_job": "57509075",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/precond_prefix3_seedbox",
+      "membership": {
+       "FN": 144,
+       "FP": 0,
+       "TP": 6497,
+       "mask_iou": {
+        "cam15_f50": {
+         "area_construction": 8716,
+         "area_s2": 8130,
+         "iou": 0.9305523722209489,
+         "pixel_intersection": 8120,
+         "pixel_union": 8726
+        },
+        "cam15_f95": {
+         "area_construction": 8753,
+         "area_s2": 8296,
+         "iou": 0.9442353746151214,
+         "pixel_intersection": 8280,
+         "pixel_union": 8769
+        }
+       },
+       "pass": true,
+       "precision": 1.0,
+       "pred_n": 6497,
+       "reasons": [],
+       "recall": 0.9783165185965969,
+       "size_ratio": 0.9783165185965969,
+       "thresholds": {
+        "mask_iou_min": 0.7,
+        "precision_min": 0.8,
+        "recall_min": 0.7,
+        "size_ratio": [
+         0.5,
+         2.0
+        ]
+       },
+       "truth_n": 6641
+      },
+      "membership_sha256": "5dc48eb11bf127471a1d828aa5f322750685c33feabca7bf6b64bea9da119be1",
+      "t1": {
+       "distinct_intervals": [
+        [
+         60,
+         89
+        ],
+        [
+         60,
+         91
+        ],
+        [
+         62,
+         93
+        ]
+       ],
+       "n_distinct_intervals": 3,
+       "n_gated_groups": 5,
+       "pass": false,
+       "pass_union_reading": false,
+       "per_group": [
+        {
+         "interval": [
+          62,
+          93
+         ],
+         "offset_error": 2,
+         "onset_error": 4,
+         "temporal_iou": 0.8235294117647058
+        },
+        {
+         "interval": [
+          60,
+          91
+         ],
+         "offset_error": 0,
+         "onset_error": 2,
+         "temporal_iou": 0.9375
+        },
+        {
+         "interval": [
+          60,
+          91
+         ],
+         "offset_error": 0,
+         "onset_error": 2,
+         "temporal_iou": 0.9375
+        },
+        {
+         "interval": [
+          60,
+          91
+         ],
+         "offset_error": 0,
+         "onset_error": 2,
+         "temporal_iou": 0.9375
+        },
+        {
+         "interval": [
+          60,
+          89
+         ],
+         "offset_error": 0,
+         "onset_error": 0,
+         "temporal_iou": 1.0
+        }
+       ],
+       "reasons": [
+        "distinct-interval reading: 3 interval(s), the precondition requires 1",
+        "distinct-interval reading: |onset error| 4 > 3"
+       ],
+       "reasons_union_reading": [
+        "union reading: |onset error| 4 > 3"
+       ],
+       "thresholds": {
+        "intervals": 1,
+        "offset_error_max_frames": 3,
+        "onset_error_max_frames": 3,
+        "temporal_iou_min": 0.8
+       },
+       "truth_gap_inclusive": [
+        60,
+        89
+       ],
+       "union": {
+        "interval": [
+         60,
+         93
+        ],
+        "offset_error": 0,
+        "onset_error": 4,
+        "temporal_iou": 0.8823529411764706
+       }
+      },
+      "t1_sha256": "c11e7813539b8e0008de2790fd6dd2506b8d9abe6f80bc47968eb27db19595a0"
+     },
+     "precond_attempts": [
+      {
+       "elapsed": "00:00:11",
+       "exit": "0:0",
+       "jobid": "57509078",
+       "name": "absfix2_precond_flame_steak_s3_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "precond_job": "57509078",
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix3_seedbox",
+      "loco_jaccard_min": 0.9980015372790162,
+      "n_members": 6497,
+      "present": true,
+      "program_gestmem_sha256": "8c47657f8ef771710d71ae3816d350e09fa6979a84c74ac865c48e4321483fe4",
+      "vote_s2_sha256": "de3b1dd1d32ad88e9b5df56eadadb67d97cd119a845b6cade661d0c52bd79231"
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:04:15",
+       "exit": "0:0",
+       "jobid": "57509077",
+       "name": "absfix2_s2vote_flame_steak_s3_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "s2vote_job": "57509077",
+     "vote": {
+      "checkpoint_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_seedbox",
+      "loco_jaccard_min": 0.9984957882069796,
+      "loco_n": 20,
+      "n_members": 6641,
+      "n_members_before_cap": 7558,
+      "present": true,
+      "seed_bbox": [
+       -0.8528,
+       1.7112,
+       -2.3238,
+       -0.5279,
+       2.0968,
+       -1.5924
+      ],
+      "seed_rows": 6706,
+      "sha256_program_mis.json": "e5ab9fda0466940df5ed29929f07fd16935000eb80ad8ddb2ab814efcc3948ed",
+      "sha256_program_ones.json": "e9f5e19c275f0ebdbfe2b22be9e72b96aadddc0b9f165bda7af4619a5e6baced",
+      "sha256_program_oracle.json": "a9f7305f1bd4c995e22588899f14581fa8c12e45680c01502733bb916231a31f",
+      "sha256_row_weights_cam15_f50.npz": "acf3d2ddcafab1efb24913070405460c439717cde4bdd62e9332df192935e881",
+      "sha256_vote_truth.json": "5fb93152a85368d60dcb0c364425773e30286d5361b4e4d318f5f97cc74b0a5c"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:08:12",
+       "exit": "0:0",
+       "jobid": "57509073",
+       "name": "absfix2_vote_flame_steak_s3_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57509073"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "01:55:25",
+       "exit": "0:0",
+       "jobid": "57485405",
+       "name": "absfix2_t1_flame_steak_s3",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/t1_prefix3",
+     "job": "57485405",
+     "program_sha256_in_report": "7114ad80b1389ee68311067657fa9ddca7b7ac36fdbfc2fb9dcb0bc3206d8a71",
+     "program_v2_sha256": "d8097c614c3d5ab77255e97d17a7c387ac32839920a7bd5180b4d4024e42712c",
+     "report_sha256": "e4b5c111dd74155a91bdcc52f68c2bcf6bae6b710f16ba8aad513e58515e0a9e",
+     "windows": {
+      "n_gated": 5,
+      "n_groups": 1267,
+      "per_group": [
+       {
+        "agreeing_cameras": 4,
+        "group": 857,
+        "offset_frame": 62,
+        "onset_frame": 94,
+        "window": [
+         62,
+         93
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 999,
+        "offset_frame": 60,
+        "onset_frame": 92,
+        "window": [
+         60,
+         91
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1000,
+        "offset_frame": 60,
+        "onset_frame": 92,
+        "window": [
+         60,
+         91
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1049,
+        "offset_frame": 60,
+        "onset_frame": 92,
+        "window": [
+         60,
+         91
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1050,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       }
+      ],
+      "pooled_window": [
+       60,
+       93
+      ]
+     }
+    }
+   }
+  },
+  "sear_steak": {
+   "s0": {
+    "plain": {
+     "draws": {
+      "L_refusal_message": null,
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0",
+      "draw_a": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "draw_b": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "local_eligible_sha256": null,
+      "present": false
+     },
+     "draws_attempts": [],
+     "draws_job": null,
+     "elig_job": null,
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix0",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix0",
+      "present": false,
+      "program_gestmem_sha256": null,
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [],
+     "s2vote_job": null,
+     "vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0",
+      "present": false,
+      "sha256_program_mis.json": null,
+      "sha256_program_ones.json": null,
+      "sha256_program_oracle.json": null,
+      "sha256_row_weights_cam15_f50.npz": null,
+      "sha256_vote_truth.json": null
+     },
+     "vote_attempts": [],
+     "vote_job": null
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8",
+     "f_box_profile_sha256": "e6c9869ad6e0c0c83c2bc911a4da718b86353701215030f0ddcefb8b99df8960",
+     "job": "57504087",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5135.579112878621,
+        6276.818915740538
+       ],
+       "diagnostic_sha256": "b5c8d876726c95150da1eafda996906667f5774f1d2bf782c97a4918b2b0142f",
+       "eligible_n": 14500,
+       "eligible_non_truth_mass_w_in": 2187.630544968113,
+       "eligible_non_truth_n": 6824,
+       "mass_ratio_eligible_over_truth": 0.3833778912165764,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5706.199014309579,
+       "truth_n": 7676
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2187.63 of contribution mass against the truth set's 5706.2; the +-10% band [5135.58, 6276.82] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox",
+      "draw_a": {
+       "contribution_draw": 12.583023746250547,
+       "contribution_truth": 5706.199014309579,
+       "counts_sha256": "27193b42e753ada660b9abf05074c225d36b495b7a917caead14f7f143ef0d0c",
+       "draw_n": 7676,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 591994,
+       "overlap_n": 0,
+       "program_sha256": "665b1796e1164dc28b9299c44132d008f75519d6002214e9c47b3cf3f4ab94d6",
+       "program_sha256_in_counts": "8e2438272ca89e4007dd9134a57f9a6e8856cbd52d831eb29a33de9e1c73e17d",
+       "seed": 1000,
+       "truth_n": 7676
+      },
+      "draw_b": {
+       "contribution_draw": 84.47766859526746,
+       "contribution_truth": 5706.199014309579,
+       "counts_sha256": "f6c389f4351647cb8b8648c1074ff38b16a7be4521473fcd3e397744773c23db",
+       "draw_n": 7676,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 591994,
+       "overlap_n": 0,
+       "program_sha256": "c11b82ce6aad1bb6065b39218baf2e34bfa11d4bd9c544c73e28a58b71f206f7",
+       "program_sha256_in_counts": "e14df05f32dc37e23e14b17691f4ac723781e5d0fe9250d64d995d4bb429cc9c",
+       "seed": 2000,
+       "truth_n": 7676
+      },
+      "local_eligible_sha256": "29266c73a96dccc7750b377698baf3b6f542867b8f8b2ed90f48774525f10e76",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:29",
+       "exit": "0:0",
+       "jobid": "57509081",
+       "name": "absfix2_draws_sear_steak_s0_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57509081",
+     "elig_job": "57509080",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix0_seedbox",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix0_seedbox",
+      "present": true,
+      "program_gestmem_sha256": null,
+      "refusal_message": [
+       "    raise ContractError(",
+       "depth_visibility.errors.ContractError: no DEVA id met the mass bar for cam09 frame 50 (mass_cover 0.8, id_min_mass_frac 0.05, min_id_pixels 64). The view's total S-mass is 2364.87, of which 1.0000 sits on the ignored id. Top 5 ids by S-mass (s_mass, mass_fraction, pixels, id): [(0.0, 0.0, 23627, 255)]"
+      ],
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:03:38",
+       "exit": "1:0",
+       "jobid": "57509082",
+       "name": "absfix2_s2vote_sear_steak_s0_seedbox",
+       "state": "FAILED"
+      }
+     ],
+     "s2vote_job": "57509082",
+     "vote": {
+      "checkpoint_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_seedbox",
+      "loco_jaccard_min": 0.9981770833333333,
+      "loco_n": 20,
+      "n_members": 7676,
+      "n_members_before_cap": 8781,
+      "present": true,
+      "seed_bbox": [
+       -0.9472,
+       1.6696,
+       -2.3164,
+       -0.6261,
+       2.0485,
+       -1.5913
+      ],
+      "seed_rows": 7639,
+      "sha256_program_mis.json": "80f297b2b229ea810e1b70fc8e1cc6f8469e9ddf2abfea209adffaa96e612698",
+      "sha256_program_ones.json": "833ebb88674db9c71afb93d6a6cfde6067cd54466fb22e0c4393c9b95b5076c5",
+      "sha256_program_oracle.json": "cc8501f6aaa01aea092c821f61c1c6382dbb83b2b0a4bd97ac3cafb4085b8ed2",
+      "sha256_row_weights_cam15_f50.npz": "240614595ad190ae3b8077eedc77895cb8dcb44a1346d7522a573c770312eb36",
+      "sha256_vote_truth.json": "77fb180c42249d380f3e8f62234a3e92e337490a5711e173f7a340a93e940f34"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:04:27",
+       "exit": "0:0",
+       "jobid": "57509079",
+       "name": "absfix2_vote_sear_steak_s0_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57509079"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "01:56:12",
+       "exit": "0:0",
+       "jobid": "57504113",
+       "name": "absfix2_t1_sear_steak_s0",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/t1_prefix0",
+     "job": "57504113",
+     "program_sha256_in_report": "fd07743fb612e5af5f3609f8df7cfa807b0680e4fabedf16d9ddb54a8fb4c10c",
+     "program_v2_sha256": "09fae43028dceacf369c194e2c8f3a5d359a21663469ac00b0db21f33574d38e",
+     "report_sha256": "c65cc73b1f3c3e1b851f8da9cce8c1be4628bdd72ee197b291b004e11162f613",
+     "windows": {
+      "n_gated": 4,
+      "n_groups": 1337,
+      "per_group": [
+       {
+        "agreeing_cameras": 3,
+        "group": 1010,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 3,
+        "group": 1013,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1014,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1015,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       }
+      ],
+      "pooled_window": [
+       60,
+       89
+      ]
+     }
+    }
+   },
+   "s1": {
+    "plain": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5700.293961414502,
+        6967.0259528399465
+       ],
+       "diagnostic_sha256": "1f274040272d8cb864a8b230ccb9beedca4b2bbc348bba48afed692648cbe9c8",
+       "eligible_n": 14375,
+       "eligible_non_truth_mass_w_in": 1572.366818459568,
+       "eligible_non_truth_n": 6248,
+       "mass_ratio_eligible_over_truth": 0.2482556419357807,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 6333.659957127224,
+       "truth_n": 8127
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 1572.37 of contribution mass against the truth set's 6333.66; the +-10% band [5700.29, 6967.03] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1",
+      "draw_a": {
+       "contribution_draw": 6.761586354114115,
+       "contribution_truth": 6333.659957127224,
+       "counts_sha256": "a048f6c362da990fe7492056117b04c9cf130ed03593175a3f0a67daf96dd54c",
+       "draw_n": 8127,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 591518,
+       "overlap_n": 0,
+       "program_sha256": "9e5cf958b5e87c69d204be94df2de6f136e9b2e83a743531266d31c8f80507cc",
+       "program_sha256_in_counts": "719cb69eb2ff6f3c867e54b565c05864363e6040b130ab16d37392abaa84f649",
+       "seed": 1001,
+       "truth_n": 8127
+      },
+      "draw_b": {
+       "contribution_draw": 7.749032633000752,
+       "contribution_truth": 6333.659957127224,
+       "counts_sha256": "7abf4c61224d5c30a5708ed0518aed7028f66d2dfefdcefde3b6fc4524a75c18",
+       "draw_n": 8127,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 591518,
+       "overlap_n": 0,
+       "program_sha256": "f4068893cbd82b5fea45bb2abbfa7e46ea847349873f83d679dc2345a372e2e2",
+       "program_sha256_in_counts": "ccdea4d561fa13eab4643a10580aa28829a94b31e4d6a94c861e6f7bc4209af6",
+       "seed": 2001,
+       "truth_n": 8127
+      },
+      "local_eligible_sha256": "30b3bc28c01d35c2f1697d72692988e971050b88f5d2b0b533c5cd3128b23679",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:01:04",
+       "exit": "0:0",
+       "jobid": "57489525",
+       "name": "absfix2_draws_sear_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57489525",
+     "elig_job": "57485427",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix1",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix1",
+      "present": true,
+      "program_gestmem_sha256": null,
+      "refusal_message": [
+       "    raise ContractError(",
+       "depth_visibility.errors.ContractError: no DEVA id met the mass bar for cam09 frame 50 (mass_cover 0.8, id_min_mass_frac 0.05, min_id_pixels 64). The view's total S-mass is 3405.67, of which 0.9999 sits on the ignored id. Top 5 ids by S-mass (s_mass, mass_fraction, pixels, id): [(0.273228, 8e-05, 23627, 255)]"
+      ],
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:05:52",
+       "exit": "1:0",
+       "jobid": "57488910",
+       "name": "absfix2_s2vote_sear_steak_s1",
+       "state": "FAILED"
+      }
+     ],
+     "s2vote_job": "57488910",
+     "vote": {
+      "checkpoint_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1",
+      "loco_jaccard_min": 0.9990161111794367,
+      "loco_n": 20,
+      "n_members": 8127,
+      "n_members_before_cap": 8539,
+      "present": true,
+      "seed_bbox": null,
+      "seed_rows": 9811,
+      "sha256_program_mis.json": "cba7b289bf4b7db12bc8686fec5a9463a13aa7c43f033a965d2f1d651ddf4d92",
+      "sha256_program_ones.json": "fdc443023b350f18f620cd2ed6667f5fdbe4d4e1a2e12882bd05d16118b12e3f",
+      "sha256_program_oracle.json": "65ff8e9f088de8af9ee07965329be37691ec9a3646a68b56173cccd9c6ddb250",
+      "sha256_row_weights_cam15_f50.npz": "5aa8d3dfa8e87caec6b4b473aaf77f298eae9963d3181cda58c8febb5c0d0fbc",
+      "sha256_vote_truth.json": "2740db8aceddb023b3a703612cb6a26191497d439a1937e41e95ceedfe94c23e"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:06:24",
+       "exit": "0:0",
+       "jobid": "57485422",
+       "name": "absfix2_vote_sear_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57485422"
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445",
+     "f_box_profile_sha256": "d00457539c12b895c26a0efa68ce24e829c10be9f1cc8f02fa5e41bd24c317dc",
+     "job": "57485062",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5082.119769248658,
+        6211.479717970582
+       ],
+       "diagnostic_sha256": "fbd70b3ba0df4c137e0363aaa228ee9caf6ff83e0082badf0a5bac1d1e37d527",
+       "eligible_n": 14375,
+       "eligible_non_truth_mass_w_in": 2259.227054566867,
+       "eligible_non_truth_n": 6941,
+       "mass_ratio_eligible_over_truth": 0.4000898131943838,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5646.799743609619,
+       "truth_n": 7434
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2259.23 of contribution mass against the truth set's 5646.8; the +-10% band [5082.12, 6211.48] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox",
+      "draw_a": {
+       "contribution_draw": 8.848976361790847,
+       "contribution_truth": 5646.799743609619,
+       "counts_sha256": "8b33fe8416ee1625aaa6856744b0ea2e1a05a5e9e8b0352808446140e5a051e2",
+       "draw_n": 7434,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 592211,
+       "overlap_n": 0,
+       "program_sha256": "d804666648ef6a19851042f0a443927efe59a2b74afa3d124c20d3dcedbe8e49",
+       "program_sha256_in_counts": "49a1ab55d8f8c063a11f201f53fe20de7fdd3621d6446a35e939154d2b414b95",
+       "seed": 1001,
+       "truth_n": 7434
+      },
+      "draw_b": {
+       "contribution_draw": 13.967524263542145,
+       "contribution_truth": 5646.799743609619,
+       "counts_sha256": "c76e4f49c9784dcd8f284f55f208087354a97b5bc0f0a4c359032dbf481980df",
+       "draw_n": 7434,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 592211,
+       "overlap_n": 0,
+       "program_sha256": "4ee78f99a42fe8cb0e3bac6d4498a5dbbfa74c699a0d5d159ed091ca5576a2a5",
+       "program_sha256_in_counts": "9a20b5e8bbf5e857ab0f64d581aeb1151800a67bfc6c0eda95cbab398cd5e715",
+       "seed": 2001,
+       "truth_n": 7434
+      },
+      "local_eligible_sha256": "771d00048d03ccd9dc9887c895119b2a1a3cfdabcd394287b05eaffe642a0228",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:12",
+       "exit": "0:0",
+       "jobid": "57509086",
+       "name": "absfix2_draws_sear_steak_s1_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57509086",
+     "elig_job": "57509085",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix1_seedbox",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix1_seedbox",
+      "present": true,
+      "program_gestmem_sha256": null,
+      "refusal_message": [
+       "    raise ContractError(",
+       "depth_visibility.errors.ContractError: no DEVA id met the mass bar for cam09 frame 50 (mass_cover 0.8, id_min_mass_frac 0.05, min_id_pixels 64). The view's total S-mass is 2451.34, of which 1.0000 sits on the ignored id. Top 5 ids by S-mass (s_mass, mass_fraction, pixels, id): [(0.0, 0.0, 23627, 255)]"
+      ],
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:03:40",
+       "exit": "1:0",
+       "jobid": "57509087",
+       "name": "absfix2_s2vote_sear_steak_s1_seedbox",
+       "state": "FAILED"
+      }
+     ],
+     "s2vote_job": "57509087",
+     "vote": {
+      "checkpoint_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_seedbox",
+      "loco_jaccard_min": 0.9989244420543156,
+      "loco_n": 20,
+      "n_members": 7434,
+      "n_members_before_cap": 8539,
+      "present": true,
+      "seed_bbox": [
+       -0.9472,
+       1.6696,
+       -2.3164,
+       -0.6261,
+       2.0485,
+       -1.5913
+      ],
+      "seed_rows": 7514,
+      "sha256_program_mis.json": "38f94e4ae62c97fb9058c1919c89a6231112a9905dff8391480e80b438fe2203",
+      "sha256_program_ones.json": "adc37139ef241bd6fc939b127511429cc07e5a647b384a91d8cf4246ca5d8eb7",
+      "sha256_program_oracle.json": "9f889670d197ee9add8b1ea2e0eef12e776c1d6a07027cc84763c9655a85f4a2",
+      "sha256_row_weights_cam15_f50.npz": "2d9a75d73e1f96ea5c22d21918d0eb1c4b749600136030a28e0195682727d22f",
+      "sha256_vote_truth.json": "588f2d8b59a0816ca602ea3f9e72d034229eb9913133a555903cf42288b02bee"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:04:01",
+       "exit": "0:0",
+       "jobid": "57509084",
+       "name": "absfix2_vote_sear_steak_s1_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57509084"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "01:54:03",
+       "exit": "0:0",
+       "jobid": "57485421",
+       "name": "absfix2_t1_sear_steak_s1",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/t1_prefix1",
+     "job": "57485421",
+     "program_sha256_in_report": "cee5b2c1deb3e2542040550738e3a2c123a8af25e8f74f2ead041fa4c89e18ce",
+     "program_v2_sha256": "f4ca5be3268b04e1fde284dadae5f028c9dab858b2a24c6582ce896e519e9bc4",
+     "report_sha256": "0a10402b6ec364b1fbc0f153f6ee25f3b6da1080e99652c17718366adb34dc01",
+     "windows": {
+      "n_gated": 5,
+      "n_groups": 1325,
+      "per_group": [
+       {
+        "agreeing_cameras": 3,
+        "group": 1007,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1010,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1011,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 3,
+        "group": 1012,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1065,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       }
+      ],
+      "pooled_window": [
+       60,
+       89
+      ]
+     }
+    }
+   },
+   "s2": {
+    "plain": {
+     "draws": {
+      "L_refusal_message": null,
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2",
+      "draw_a": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "draw_b": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "local_eligible_sha256": null,
+      "present": false
+     },
+     "draws_attempts": [],
+     "draws_job": null,
+     "elig_job": null,
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix2",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix2",
+      "present": false,
+      "program_gestmem_sha256": null,
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [],
+     "s2vote_job": null,
+     "vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2",
+      "present": false,
+      "sha256_program_mis.json": null,
+      "sha256_program_ones.json": null,
+      "sha256_program_oracle.json": null,
+      "sha256_row_weights_cam15_f50.npz": null,
+      "sha256_vote_truth.json": null
+     },
+     "vote_attempts": [],
+     "vote_job": null
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6",
+     "f_box_profile_sha256": "e02c3fc5737629f0450f9b6e2a7e761dbc7e75760716855629889aec240aa826",
+     "job": "57504132",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5203.768182160063,
+        6360.161111528965
+       ],
+       "diagnostic_sha256": "3bf7dbb03fb50820bdfbf8a72745469504360aeb5befc78e652b061f64c6cd66",
+       "eligible_n": 14598,
+       "eligible_non_truth_mass_w_in": 2125.5965885636865,
+       "eligible_non_truth_n": 6942,
+       "mass_ratio_eligible_over_truth": 0.3676253174124341,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5781.9646468445135,
+       "truth_n": 7656
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2125.6 of contribution mass against the truth set's 5781.96; the +-10% band [5203.77, 6360.16] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox",
+      "draw_a": {
+       "contribution_draw": 15.393390570301563,
+       "contribution_truth": 5781.9646468445135,
+       "counts_sha256": "9c16fdac197d130348137da95395d41d99b9752b58d4c2cac0a583f1f52ab37c",
+       "draw_n": 7656,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 591981,
+       "overlap_n": 0,
+       "program_sha256": "18a72ef7c88d3c3e28f371de357e7e8082c17820ed2c2d7b4817405efbc65942",
+       "program_sha256_in_counts": "894f40ad903e2ba33ec25cbaa77a504d366b2f904208692115d21823bed28685",
+       "seed": 1002,
+       "truth_n": 7656
+      },
+      "draw_b": {
+       "contribution_draw": 15.609886307749548,
+       "contribution_truth": 5781.9646468445135,
+       "counts_sha256": "7364f51d734d694a4a577eefe82117a79e80f35940fcb23d4e026d353de77c29",
+       "draw_n": 7656,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 591981,
+       "overlap_n": 0,
+       "program_sha256": "911177aa2dd3cda699e348cef136a4d4662de3e8f486d5375f3fd4d78a5c963f",
+       "program_sha256_in_counts": "e3d66a64e61f8bdac9eddc52118e04e3bf973c1b101dbb00e435526637de5b11",
+       "seed": 2002,
+       "truth_n": 7656
+      },
+      "local_eligible_sha256": "6496eff202a2b4f0a8939fa63a41e4e23acc47424151dc314a15e26a7a3ef63a",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:47",
+       "exit": "0:0",
+       "jobid": "57509092",
+       "name": "absfix2_draws_sear_steak_s2_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57509092",
+     "elig_job": "57509091",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix2_seedbox",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix2_seedbox",
+      "present": true,
+      "program_gestmem_sha256": null,
+      "refusal_message": [
+       "    raise ContractError(",
+       "depth_visibility.errors.ContractError: no DEVA id met the mass bar for cam09 frame 50 (mass_cover 0.8, id_min_mass_frac 0.05, min_id_pixels 64). The view's total S-mass is 2688.26, of which 1.0000 sits on the ignored id. Top 5 ids by S-mass (s_mass, mass_fraction, pixels, id): [(0.0, 0.0, 23627, 255)]"
+      ],
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:04:03",
+       "exit": "1:0",
+       "jobid": "57509094",
+       "name": "absfix2_s2vote_sear_steak_s2_seedbox",
+       "state": "FAILED"
+      }
+     ],
+     "s2vote_job": "57509094",
+     "vote": {
+      "checkpoint_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_seedbox",
+      "loco_jaccard_min": 0.9980425420853452,
+      "loco_n": 20,
+      "n_members": 7656,
+      "n_members_before_cap": 8769,
+      "present": true,
+      "seed_bbox": [
+       -0.9472,
+       1.6696,
+       -2.3164,
+       -0.6261,
+       2.0485,
+       -1.5913
+      ],
+      "seed_rows": 7647,
+      "sha256_program_mis.json": "6a3f0b4659b85ffb717d180f1ba91f3e0c144b3843b3d927a5c3eb47ef037d57",
+      "sha256_program_ones.json": "0a360d4b1e3c35cb0a7f3666f828dcf3d7b1e12742a603319e2ce89cb5af3f07",
+      "sha256_program_oracle.json": "dfd51cd49261f0d569edc7e8c2e4277454e34ab8cd0b55a4c481f7d4d2593b7f",
+      "sha256_row_weights_cam15_f50.npz": "cd99772beaaff69bf5e143c7995054d3e20652143eb8f72c3260907a1ff3f28d",
+      "sha256_vote_truth.json": "6e005b37a942745e9323359653aba751f57aafe5f13108c2935d9d255d2a642c"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:04:44",
+       "exit": "0:0",
+       "jobid": "57509090",
+       "name": "absfix2_vote_sear_steak_s2_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57509090"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "02:03:01",
+       "exit": "0:0",
+       "jobid": "57504133",
+       "name": "absfix2_t1_sear_steak_s2",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/t1_prefix2",
+     "job": "57504133",
+     "program_sha256_in_report": "f7a49eb7c74603259cbf4a4b2dab823d1dc38067bf6fe78b59417eb1e9ad3af9",
+     "program_v2_sha256": "39f47dcf84f16ad02e9bae3ec0b40276c4444f90132e0ee82922041f67499006",
+     "report_sha256": "d194fd3da4eb46aa9a6a28597e041d9dbc75db6c0cbfc5b19bd07b932306943f",
+     "windows": {
+      "n_gated": 3,
+      "n_groups": 1345,
+      "per_group": [
+       {
+        "agreeing_cameras": 3,
+        "group": 999,
+        "offset_frame": 57,
+        "onset_frame": 107,
+        "window": [
+         57,
+         106
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1021,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1022,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       }
+      ],
+      "pooled_window": [
+       57,
+       106
+      ]
+     }
+    }
+   },
+   "s3": {
+    "plain": {
+     "draws": {
+      "L_refusal_message": null,
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3",
+      "draw_a": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "draw_b": {
+       "contribution_draw": null,
+       "contribution_truth": null,
+       "counts_sha256": null,
+       "draw_n": null,
+       "draw_rule": null,
+       "eligible_n": null,
+       "overlap_n": null,
+       "program_sha256": null,
+       "program_sha256_in_counts": null,
+       "seed": null,
+       "truth_n": null
+      },
+      "local_eligible_sha256": null,
+      "present": false
+     },
+     "draws_attempts": [],
+     "draws_job": null,
+     "elig_job": null,
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix3",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix3",
+      "present": false,
+      "program_gestmem_sha256": null,
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [],
+     "s2vote_job": null,
+     "vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3",
+      "present": false,
+      "sha256_program_mis.json": null,
+      "sha256_program_ones.json": null,
+      "sha256_program_oracle.json": null,
+      "sha256_row_weights_cam15_f50.npz": null,
+      "sha256_vote_truth.json": null
+     },
+     "vote_attempts": [],
+     "vote_job": null
+    },
+    "prefix": {
+     "chkpnt6000_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa",
+     "f_box_profile_sha256": "8fb1fff09c2ae17d9c46a4eb6e9c0f29dad748a5ba77a33471e9385466f8781c",
+     "job": "57504146",
+     "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3"
+    },
+    "seedbox": {
+     "draws": {
+      "L": {
+       "band_w_in": [
+        5214.68705795381,
+        6373.506404165768
+       ],
+       "diagnostic_sha256": "f4357932b1f0e8995151dcd136436e58ad2c8fd9c229dcd9307a90fdee680b58",
+       "eligible_n": 14670,
+       "eligible_non_truth_mass_w_in": 2289.2632026472857,
+       "eligible_non_truth_n": 7134,
+       "mass_ratio_eligible_over_truth": 0.3951026896695527,
+       "reachable_at_min_cams_8": false,
+       "truth_mass_w_in": 5794.096731059789,
+       "truth_n": 7536
+      },
+      "L_refusal_message": [
+       "REFUSED: the eligible local rows carry 2289.26 of contribution mass against the truth set's 5794.1; the +-10% band [5214.69, 6373.51] is unreachable, so no contribution-matched local sham exists"
+      ],
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox",
+      "draw_a": {
+       "contribution_draw": 76.36887527492945,
+       "contribution_truth": 5794.096731059789,
+       "counts_sha256": "38c812d34a1a3446a90f161d57108a70426eaf260f6c3575fc6e01edeaa21384",
+       "draw_n": 7536,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 592032,
+       "overlap_n": 0,
+       "program_sha256": "072a947aebd06ab67d3836920987c86f112650673690a3bd104d5ee57f2b383a",
+       "program_sha256_in_counts": "7755fbb0689aa8b505a1abde46d9a3a0f5c76e5a439c0571504256f63105ff24",
+       "seed": 1003,
+       "truth_n": 7536
+      },
+      "draw_b": {
+       "contribution_draw": 53.362606021168176,
+       "contribution_truth": 5794.096731059789,
+       "counts_sha256": "2a7925281bc6cccf510ec98b1d76276d7da479312bc289f82d9c19e5d2ba28cc",
+       "draw_n": 7536,
+       "draw_rule": "uniform_outside_truth",
+       "eligible_n": 592032,
+       "overlap_n": 0,
+       "program_sha256": "dccdbe93fe2e1eab65fef0bfbb09879f4885e2be8d2cc703bcf944ba56bcc662",
+       "program_sha256_in_counts": "7a3d440511ab2e6167e4a26688d376753882220c1d27709444ea5fa8073fdb95",
+       "seed": 2003,
+       "truth_n": 7536
+      },
+      "local_eligible_sha256": "87d411e0e7d2b3ade35d422fbbc41076f4fa3b7c6d1c2e3571eed12834828049",
+      "present": true
+     },
+     "draws_attempts": [
+      {
+       "elapsed": "00:00:11",
+       "exit": "0:0",
+       "jobid": "57509101",
+       "name": "absfix2_draws_sear_steak_s3_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "draws_job": "57509101",
+     "elig_job": "57509100",
+     "precond": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix3_seedbox",
+      "membership_sha256": null,
+      "t1_sha256": null
+     },
+     "precond_attempts": [],
+     "precond_job": null,
+     "s2vote": {
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/s2vote_prefix3_seedbox",
+      "present": true,
+      "program_gestmem_sha256": null,
+      "refusal_message": [
+       "    raise ContractError(",
+       "depth_visibility.errors.ContractError: no DEVA id met the mass bar for cam09 frame 50 (mass_cover 0.8, id_min_mass_frac 0.05, min_id_pixels 64). The view's total S-mass is 2601.98, of which 1.0000 sits on the ignored id. Top 5 ids by S-mass (s_mass, mass_fraction, pixels, id): [(0.0, 0.0, 23627, 255)]"
+      ],
+      "vote_s2_sha256": null
+     },
+     "s2vote_attempts": [
+      {
+       "elapsed": "00:01:40",
+       "exit": "1:0",
+       "jobid": "57509102",
+       "name": "absfix2_s2vote_sear_steak_s3_seedbox",
+       "state": "FAILED"
+      }
+     ],
+     "s2vote_job": "57509102",
+     "vote": {
+      "checkpoint_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa",
+      "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_seedbox",
+      "loco_jaccard_min": 0.9984093319194062,
+      "loco_n": 20,
+      "n_members": 7536,
+      "n_members_before_cap": 8730,
+      "present": true,
+      "seed_bbox": [
+       -0.9472,
+       1.6696,
+       -2.3164,
+       -0.6261,
+       2.0485,
+       -1.5913
+      ],
+      "seed_rows": 7645,
+      "sha256_program_mis.json": "33803999fda286b80b53c7ade544157b090b4cca9082536591b0a124880787c8",
+      "sha256_program_ones.json": "d4bbd8a571a8e2b075335b7728d77f741ca28931beee032e31ffd7d8dce03bc1",
+      "sha256_program_oracle.json": "9ca61abbed25cc451d86d7e9b51ae7586328e4e538ffe79ed3f60ab55242d1cc",
+      "sha256_row_weights_cam15_f50.npz": "e8f7aa2ad348519114cde2c7ce4337c823a5fd3a213684d68ddf6d58dd94c871",
+      "sha256_vote_truth.json": "0b169a84d915fa9b5e195d6fdf30acc251388e4df5d7e930c6aa431750f9b463"
+     },
+     "vote_attempts": [
+      {
+       "elapsed": "00:03:59",
+       "exit": "0:0",
+       "jobid": "57509099",
+       "name": "absfix2_vote_sear_steak_s3_seedbox",
+       "state": "COMPLETED"
+      }
+     ],
+     "vote_job": "57509099"
+    },
+    "t1": {
+     "attempts": [
+      {
+       "elapsed": "01:57:08",
+       "exit": "0:0",
+       "jobid": "57504147",
+       "name": "absfix2_t1_sear_steak_s3",
+       "state": "COMPLETED"
+      }
+     ],
+     "dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/t1_prefix3",
+     "job": "57504147",
+     "program_sha256_in_report": "a8b353e1f41d54e77a23a8cc40aed1ecda6b1f41e7795ec1d9e5e7de9f36ce3c",
+     "program_v2_sha256": "882e1dba29d7d2d9b0188e7fa4f274fe98492fd9ea356dcd3ff3f7ec29338dd6",
+     "report_sha256": "958046da927b9602a8155fa3f9e53c76d84aaca568b0dc08b371d39ba712440f",
+     "windows": {
+      "n_gated": 3,
+      "n_groups": 1364,
+      "per_group": [
+       {
+        "agreeing_cameras": 3,
+        "group": 1032,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1033,
+        "offset_frame": 60,
+        "onset_frame": 90,
+        "window": [
+         60,
+         89
+        ]
+       },
+       {
+        "agreeing_cameras": 4,
+        "group": 1034,
+        "offset_frame": 60,
+        "onset_frame": 91,
+        "window": [
+         60,
+         90
+        ]
+       }
+      ],
+      "pooled_window": [
+       60,
+       90
+      ]
+     }
+    }
+   }
+  }
+ },
+ "schema": "adags-absfix2-stage1-record-v1",
+ "sear_t1_preconditions": {
+  "job": 57525563,
+  "prefixes": {
+   "s0": {
+    "n_distinct_intervals": 1,
+    "pass": true,
+    "pass_union_reading": true,
+    "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix0_seedbox/t1_precondition.json",
+    "sha256": "43e82b2eb3f075883ef5aa6aa483f8bf5423e0d9556c3b41775e55ebcd1eaa33"
+   },
+   "s1": {
+    "n_distinct_intervals": 1,
+    "pass": true,
+    "pass_union_reading": true,
+    "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix1_seedbox/t1_precondition.json",
+    "sha256": "73674f889f4ea74c92f11b53a66702bbdbb980ee25d5017ad84cb0a973fb7de3"
+   },
+   "s2": {
+    "n_distinct_intervals": 2,
+    "pass": false,
+    "pass_union_reading": false,
+    "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix2_seedbox/t1_precondition.json",
+    "sha256": "1c27dcc76a1cda9816705002d7847a255e1b4bd791253e90833b149a43fae2ff"
+   },
+   "s3": {
+    "n_distinct_intervals": 2,
+    "pass": false,
+    "pass_union_reading": true,
+    "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/precond_prefix3_seedbox/t1_precondition.json",
+    "sha256": "1ea161473cce40dc034da6c687e668cb9a0188b0b22e6b7cea851e695381bcf0"
+   }
+  },
+  "reason": "T1-only precondition for the four sear_steak prefixes; the combined precond_boost.sbatch job for each was CANCELLED as a dependent of the expected S2-vote refusal (spec 13.16, cam09 ContractError; ledger 2026-09-13T05:06/06:11/08:13). T1's own program does not depend on the S2 vote, so it is evaluated on its own into a fresh precond_prefix<S>_seedbox dir; the membership limb of these four prefixes is not computed (no S2 program exists to compare against).",
+  "sbatch": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/precond_t1only_sear.sbatch",
+  "truth_gap_inclusive": [
+   60,
+   89
+  ]
+ },
+ "seed_boxes": {
+  "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/seed_boxes.json",
+  "sha256": "5fefd68c72f18259aefc17e1af9a8a2d2ac8510dccf224439799b0e709210583"
+ },
+ "written": "2026-09-13T08:18:01+0200"
+}

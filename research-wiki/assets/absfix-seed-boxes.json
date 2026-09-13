@@ -1,0 +1,1500 @@
+{
+ "acceptance": "Declared before the numbers were read: on the CALIBRATION scene the rule must reach the wave-1 authored box's own projection figure, >= 0.90 of the rows inside the box projecting inside the cam15 frame-50 mask. The FIRST rule tried (the frozen local-eligibility geometry: +20 px dilation, >= 8 of 19 cameras; job 57508186) FAILED it -- 29,013 rows, extent 2.98 x 1.67 x 1.63, only 0.332 in-mask against the authored box's 0.936 -- and was replaced by the strict rule above (job 57508564) before any box was used. Both are in the sensitivity table of every record.",
+ "boxes": {
+  "cut_roasted_beef": {
+   "checks_on_wave1_prefix0": {
+    "box": [
+     -1.0604,
+     1.7081,
+     -2.5094,
+     -0.4,
+     2.4219,
+     -1.6656
+    ],
+    "extent": [
+     0.6604,
+     0.7138,
+     0.8437999999999999
+    ],
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9456211327939077,
+     "fraction_inside_s2_final_mask": 0.9363398381722989,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 8404,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 8404,
+    "rows_total": 599565,
+    "support_rows_inside_box": 4574,
+    "support_rows_total": 4998
+   },
+   "origin": "wave-1 authored box, UNCHANGED",
+   "provenance": "VERBATIM from research-wiki/operations/absence-fixture-lane-2026-09-10.md section 4: \"Frozen parse (declared before the run): seed bbox = the union of the gated cells, [-1.0604, 1.7081, -2.5094] .. [-0.4000, 2.4219, -1.6656]\". The gated cells are the two voxel cells (keys 2482, 2737) that blind T1 gated on cut_roasted_beef PREFIX 0 (job 57132256, 2 of 1,245 groups). So the wave-1 calibration box was T1-DERIVED on one prefix and then reused as an authored constant for all four calibration prefixes; it was NOT derived from the construction, and spec section 13.15's phrase \"construction-derived exactly as the calibration scene's box was\" cannot be taken literally. This record therefore does two things: it keeps the calibration scene's box exactly as wave 1 froze it (its votes have already run with it), and it defines a CONSTRUCTION-derived rule for the two confirmatory scenes that is calibrated against that box on the calibration scene's own prefix and reference cloud.",
+   "rule_box_checks": {
+    "box": [
+     -0.9155,
+     1.7748,
+     -2.327,
+     -0.5821,
+     2.156,
+     -1.5709
+    ],
+    "extent": [
+     0.33340000000000003,
+     0.3812000000000002,
+     0.7561
+    ],
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9439854362134155,
+     "fraction_inside_s2_final_mask": 0.9340428511412967,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 7141,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 7141,
+    "rows_total": 599565,
+    "support_rows_inside_box": 4987,
+    "support_rows_total": 4998
+   },
+   "rule_support_n": 4998,
+   "rule_would_have_given": [
+    -0.9155,
+    1.7748,
+    -2.327,
+    -0.5821,
+    2.156,
+    -1.5709
+   ],
+   "seed_bbox3d": [
+    -1.0604,
+    1.7081,
+    -2.5094,
+    -0.4,
+    2.4219,
+    -1.6656
+   ]
+  },
+  "flame_steak": {
+   "checks": {
+    "box": [
+     -0.8528,
+     1.7112,
+     -2.3238,
+     -0.5279,
+     2.0968,
+     -1.5924
+    ],
+    "extent": [
+     0.32489999999999997,
+     0.38559999999999994,
+     0.7313999999999998
+    ],
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.933651408975697,
+     "fraction_inside_s2_final_mask": 0.905024601162964,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 6707,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 6707,
+    "rows_total": 599648,
+    "support_rows_inside_box": 4680,
+    "support_rows_total": 4686
+   },
+   "cloud_xyz_sha256": "3a500402e7f1b7dc7ef1c750ba97d2d9d518f85d021bd6b023e86579cda2f753",
+   "crosscheck_prefix3": {
+    "checks": {
+     "box": [
+      -0.851,
+      1.712,
+      -2.3261,
+      -0.5292,
+      2.0933,
+      -1.591
+     ],
+     "extent": [
+      0.3218,
+      0.3813000000000002,
+      0.7350999999999999
+     ],
+     "projection_check": {
+      "camera": 15,
+      "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+      "construction_mask_px": 8716,
+      "fraction_inside_construction_mask": 0.9342144342144342,
+      "fraction_inside_s2_final_mask": 0.905999405999406,
+      "frame": 50,
+      "rows_in_box_projecting_in_frame": 6734,
+      "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+      "s2_mask_px": 8130
+     },
+     "rows_inside_box": 6734,
+     "rows_total": 599686,
+     "support_rows_inside_box": 4634,
+     "support_rows_total": 4642
+    },
+    "seed_bbox3d": [
+     -0.851,
+     1.712,
+     -2.3261,
+     -0.5292,
+     2.0933,
+     -1.591
+    ],
+    "support_n": 4642
+   },
+   "origin": "derived by the rule below from the _v3 construction",
+   "reference_prefix": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1",
+   "seed_bbox3d": [
+    -0.8528,
+    1.7112,
+    -2.3238,
+    -0.5279,
+    2.0968,
+    -1.5924
+   ],
+   "seed_bbox3d_unrounded": [
+    -0.8528271228075028,
+    1.7111537754535675,
+    -2.3238009095191954,
+    -0.5278936237096786,
+    2.096779930591583,
+    -1.5923919081687927
+   ],
+   "support_n": 4686
+  },
+  "sear_steak": {
+   "checks": {
+    "box": [
+     -0.9472,
+     1.6696,
+     -2.3164,
+     -0.6261,
+     2.0485,
+     -1.5913
+    ],
+    "extent": [
+     0.32110000000000005,
+     0.37890000000000024,
+     0.7250999999999999
+    ],
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9455682725578919,
+     "fraction_inside_s2_final_mask": 0.9281341495874368,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 7514,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 7514,
+    "rows_total": 599645,
+    "support_rows_inside_box": 5468,
+    "support_rows_total": 5475
+   },
+   "cloud_xyz_sha256": "3912ab8cbc34fb7a7eb882d08085b53404bd327f3c3d9b6d63d393e4d87215ae",
+   "origin": "derived by the rule below from the _v3 construction",
+   "reference_prefix": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1",
+   "seed_bbox3d": [
+    -0.9472,
+    1.6696,
+    -2.3164,
+    -0.6261,
+    2.0485,
+    -1.5913
+   ],
+   "seed_bbox3d_unrounded": [
+    -0.9472482526302338,
+    1.6696117949485778,
+    -2.316427464485168,
+    -0.6260593283176422,
+    2.048469626903534,
+    -1.5913440442085265
+   ],
+   "support_n": 5475
+  }
+ },
+ "derivation": "AUTHORED PER-SCENE SEED BOX, construction-derived, T1-free (spec v2.0.0 section 13.15). (1) Reference prefix: one prefix of the scene (cut_roasted_beef s0 = the wave-1 prefix T1 ran on, flame_steak s1, sear_steak s1); the box is authored once and reused for all four prefixes of that scene, as wave 1 reused one box for its four prefixes. (2) Support set: rows of that prefix's cloud whose DEFORMED centre (gaussian_model.get_dynamic_xyz then project_points_to_screen, nearest-pixel test) projects inside the UNDILATED construction silhouette of the scene's build on EVERY training camera (held-out cam00 excluded and never opened) at frame 50 AND at frame 95. (3) Box: the per-axis [1, 99] percentile of the CANONICAL xyz (gaussian_model._xyz, the array realdata_membership_vote.py tests --seed_bbox3d against) of the support set, padded by 0.05 model units on every face, rounded to 4 decimals. (4) No T1 artifact is read at any point.",
+ "first_rule_records": {
+  "cut_roasted_beef": {
+   "checks": {
+    "box": [
+     -3.037794506549835,
+     1.5125715792179106,
+     -3.2048834800720214,
+     -0.05902357362211126,
+     3.1791503787040702,
+     -1.572258931398392
+    ],
+    "extent": [
+     2.9787709329277234,
+     1.6665787994861596,
+     1.6326245486736295
+    ],
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.33619411987729636,
+     "fraction_inside_s2_final_mask": 0.33247165063936857,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 29013,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 29013,
+    "rows_total": 599565,
+    "support_rows_inside_box": 11247,
+    "support_rows_total": 11496
+   },
+   "seed_bbox3d": [
+    -3.0378,
+    1.5126,
+    -3.2049,
+    -0.059,
+    3.1792,
+    -1.5723
+   ],
+   "support_n": 11496
+  },
+  "flame_steak": {
+   "checks": {
+    "box": [
+     -2.8868598175048827,
+     1.444082546234131,
+     -3.191404056549072,
+     -0.14853825688362077,
+     3.1788167572021484,
+     -1.5871154928207396
+    ],
+    "extent": [
+     2.738321560621262,
+     1.7347342109680175,
+     1.6042885637283324
+    ],
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.42771689298345195,
+     "fraction_inside_s2_final_mask": 0.41610269397022226,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 22903,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 22903,
+    "rows_total": 599648,
+    "support_rows_inside_box": 12875,
+    "support_rows_total": 13133
+   },
+   "seed_bbox3d": [
+    -2.8869,
+    1.4441,
+    -3.1914,
+    -0.1485,
+    3.1788,
+    -1.5871
+   ],
+   "support_n": 13133
+  },
+  "sear_steak": {
+   "checks": {
+    "box": [
+     -3.1020222759246825,
+     1.5086212706565856,
+     -3.176310119628906,
+     -0.30187008619308453,
+     2.9565719270706174,
+     -1.588133454322815
+    ],
+    "extent": [
+     2.800152189731598,
+     1.4479506564140319,
+     1.588176665306091
+    ],
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.49661911617153076,
+     "fraction_inside_s2_final_mask": 0.48527679623085984,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 22923,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 22923,
+    "rows_total": 599645,
+    "support_rows_inside_box": 14038,
+    "support_rows_total": 14375
+   },
+   "seed_bbox3d": [
+    -3.102,
+    1.5086,
+    -3.1763,
+    -0.3019,
+    2.9566,
+    -1.5881
+   ],
+   "support_n": 14375
+  }
+ },
+ "jobs": {
+  "first_rule_rejected": 57508186,
+  "strict_rule": 57508564
+ },
+ "sanity_check": "NOT a construction input. Rows of the reference prefix cloud inside the box are projected into cam15 at frame 50 and scored against the S2 FINAL mask and the construction mask of that camera and frame. The same check on the wave-1 authored box and the wave-1 prefix-0 cloud calibrates it.",
+ "schema": "adags-absfix2-seed-boxes-v1",
+ "scripts": {
+  "derive": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/seed_box_derive2.py",
+  "first_attempt": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/seed_box_derive.py",
+  "records": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/seed_box"
+ },
+ "sensitivity": {
+  "cut_roasted_beef": [
+   {
+    "box": [
+     -1.428373761177063,
+     1.7627004384994507,
+     -2.8530823612213134,
+     -0.5773727798461914,
+     2.4583995056152337,
+     -1.5725022172927856
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.8510009813308717,
+     0.695699067115783,
+     1.2805801439285278
+    ],
+    "min_cams": 8,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.8201178069777979,
+     "fraction_inside_s2_final_mask": 0.8140462165835977,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11035,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 11035,
+    "rows_total": 599565,
+    "support_n": 9469,
+    "support_rows_inside_box": 9386,
+    "support_rows_total": 9469
+   },
+   {
+    "box": [
+     -0.9135704994201661,
+     1.763551765680313,
+     -2.6225177407264706,
+     -0.5788037687540054,
+     2.156584513187408,
+     -1.572339802980423
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.3347667306661607,
+     0.39303274750709516,
+     1.0501779377460476
+    ],
+    "min_cams": 12,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9361702127659575,
+     "fraction_inside_s2_final_mask": 0.9270516717325228,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9541,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 9541,
+    "rows_total": 599565,
+    "support_n": 8996,
+    "support_rows_inside_box": 8969,
+    "support_rows_total": 8996
+   },
+   {
+    "box": [
+     -0.911844539642334,
+     1.7643879771232605,
+     -2.5924873828887938,
+     -0.5791456818580627,
+     2.1548640012741087,
+     -1.5725924491882324
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.33269885778427133,
+     0.39047602415084826,
+     1.0198949337005614
+    ],
+    "min_cams": 15,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9399978909627755,
+     "fraction_inside_s2_final_mask": 0.9304017715912686,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9483,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 9483,
+    "rows_total": 599565,
+    "support_n": 8551,
+    "support_rows_inside_box": 8547,
+    "support_rows_total": 8551
+   },
+   {
+    "box": [
+     -0.9107929754257202,
+     1.7657326650619507,
+     -2.5706958866119383,
+     -0.5790926480293274,
+     2.153538942337036,
+     -1.57309730052948
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.3317003273963929,
+     0.38780627727508543,
+     0.9975985860824583
+    ],
+    "min_cams": 17,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9419443854807896,
+     "fraction_inside_s2_final_mask": 0.9319677350880917,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9422,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 9422,
+    "rows_total": 599565,
+    "support_n": 8173,
+    "support_rows_inside_box": 8170,
+    "support_rows_total": 8173
+   },
+   {
+    "box": [
+     -0.9154527354240418,
+     1.7748091590404511,
+     -2.3270348238945004,
+     -0.5820977181196212,
+     2.1560461664199826,
+     -1.570939038991928
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.33335501730442063,
+     0.3812370073795315,
+     0.7560957849025725
+    ],
+    "min_cams": 19,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9439932791935032,
+     "fraction_inside_s2_final_mask": 0.9340520862503501,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 7142,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 7142,
+    "rows_total": 599565,
+    "support_n": 4998,
+    "support_rows_inside_box": 4987,
+    "support_rows_total": 4998
+   },
+   {
+    "box": [
+     -3.037794506549835,
+     1.5125715792179106,
+     -3.2048834800720214,
+     -0.05902357362211126,
+     3.1791503787040702,
+     -1.572258931398392
+    ],
+    "dilate_px": 20,
+    "extent": [
+     2.9787709329277234,
+     1.6665787994861596,
+     1.6326245486736295
+    ],
+    "min_cams": 8,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.33619411987729636,
+     "fraction_inside_s2_final_mask": 0.33247165063936857,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 29013,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 29013,
+    "rows_total": 599565,
+    "support_n": 11496,
+    "support_rows_inside_box": 11247,
+    "support_rows_total": 11496
+   },
+   {
+    "box": [
+     -1.4415782356262208,
+     1.7164100885391236,
+     -2.861599311828613,
+     -0.5677635693550106,
+     2.4513875102996834,
+     -1.5705810689926147
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.8738146662712102,
+     0.7349774217605598,
+     1.2910182428359984
+    ],
+    "min_cams": 12,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.8134999101204387,
+     "fraction_inside_s2_final_mask": 0.80747797950746,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11126,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 11126,
+    "rows_total": 599565,
+    "support_n": 10239,
+    "support_rows_inside_box": 10073,
+    "support_rows_total": 10239
+   },
+   {
+    "box": [
+     -0.9425814002752304,
+     1.7482683086395263,
+     -2.7653990483283994,
+     -0.5763293480873107,
+     2.194535763263702,
+     -1.5699188387393952
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.3662520521879197,
+     0.44626745462417583,
+     1.1954802095890043
+    ],
+    "min_cams": 15,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9157349054685912,
+     "fraction_inside_s2_final_mask": 0.9080097580809108,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9838,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 9838,
+    "rows_total": 599565,
+    "support_n": 9838,
+    "support_rows_inside_box": 9736,
+    "support_rows_total": 9838
+   },
+   {
+    "box": [
+     -0.9314998078346253,
+     1.7543983817100524,
+     -2.6977982187271117,
+     -0.5777425587177276,
+     2.186561007499695,
+     -1.569912621974945
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.35375724911689765,
+     0.4321626257896425,
+     1.1278855967521666
+    ],
+    "min_cams": 17,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.925219185146983,
+     "fraction_inside_s2_final_mask": 0.9171738009283136,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9695,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 9695,
+    "rows_total": 599565,
+    "support_n": 9703,
+    "support_rows_inside_box": 9665,
+    "support_rows_total": 9703
+   },
+   {
+    "box": [
+     -0.927837023139,
+     1.7614547979831696,
+     -2.36233660697937,
+     -0.5817828756570815,
+     2.1866451501846313,
+     -1.564765352010727
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.34605414748191843,
+     0.42519035220146173,
+     0.7975712549686429
+    ],
+    "min_cams": 19,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 7314,
+     "fraction_inside_construction_mask": 0.9444812508281436,
+     "fraction_inside_s2_final_mask": 0.9346760302106797,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 7547,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/cut_roasted_beef/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 7144
+    },
+    "rows_inside_box": 7547,
+    "rows_total": 599565,
+    "support_n": 5768,
+    "support_rows_inside_box": 5754,
+    "support_rows_total": 5768
+   }
+  ],
+  "flame_steak": [
+   {
+    "box": [
+     -1.754416207075119,
+     1.7017304825782775,
+     -2.905483069419861,
+     -0.5242020809650421,
+     2.502492730617523,
+     -1.594178841114044
+    ],
+    "dilate_px": 0,
+    "extent": [
+     1.230214126110077,
+     0.8007622480392456,
+     1.3113042283058167
+    ],
+    "min_cams": 8,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.8273871078938297,
+     "fraction_inside_s2_final_mask": 0.8061013443640124,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11604,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 11604,
+    "rows_total": 599648,
+    "support_n": 9998,
+    "support_rows_inside_box": 9877,
+    "support_rows_total": 9998
+   },
+   {
+    "box": [
+     -0.8624052512645722,
+     1.7017931246757507,
+     -2.7925770211219785,
+     -0.5242338812351226,
+     2.100889902114868,
+     -1.5938561952114108
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.33817137002944964,
+     0.3990967774391174,
+     1.1987208259105677
+    ],
+    "min_cams": 12,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.9273743016759777,
+     "fraction_inside_s2_final_mask": 0.9035315243415802,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 10024,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 10024,
+    "rows_total": 599648,
+    "support_n": 9280,
+    "support_rows_inside_box": 9233,
+    "support_rows_total": 9280
+   },
+   {
+    "box": [
+     -0.8542218685150147,
+     1.7026043033599854,
+     -2.7600568962097167,
+     -0.5244621503353118,
+     2.0962432718276975,
+     -1.5952955293655395
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.32975971817970284,
+     0.3936389684677122,
+     1.1647613668441772
+    ],
+    "min_cams": 15,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.9319440249672808,
+     "fraction_inside_s2_final_mask": 0.9083861874559549,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9933,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 9933,
+    "rows_total": 599648,
+    "support_n": 9067,
+    "support_rows_inside_box": 9060,
+    "support_rows_total": 9067
+   },
+   {
+    "box": [
+     -0.8524773687124253,
+     1.7039358675479888,
+     -2.746131944656372,
+     -0.5244982427358627,
+     2.0952365350723268,
+     -1.5961204648017882
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.32797912597656265,
+     0.391300667524338,
+     1.1500114798545837
+    ],
+    "min_cams": 17,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.932403758714762,
+     "fraction_inside_s2_final_mask": 0.9090633525310701,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9897,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 9897,
+    "rows_total": 599648,
+    "support_n": 8890,
+    "support_rows_inside_box": 8886,
+    "support_rows_total": 8890
+   },
+   {
+    "box": [
+     -0.852063548564911,
+     1.705208852291107,
+     -2.5905099678039547,
+     -0.5243709743022918,
+     2.094949970245361,
+     -1.59635169506073
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.3276925742626191,
+     0.38974111795425403,
+     0.9941582727432248
+    ],
+    "min_cams": 19,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.9429432662288728,
+     "fraction_inside_s2_final_mask": 0.920120572720422,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9289,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 9289,
+    "rows_total": 599648,
+    "support_n": 7543,
+    "support_rows_inside_box": 7517,
+    "support_rows_total": 7543
+   },
+   {
+    "box": [
+     -0.8528271228075028,
+     1.7111537754535675,
+     -2.3238009095191954,
+     -0.5278936237096786,
+     2.096779930591583,
+     -1.5923919081687927
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.3249334990978242,
+     0.38562615513801557,
+     0.7314090013504027
+    ],
+    "min_cams": 20,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.933651408975697,
+     "fraction_inside_s2_final_mask": 0.905024601162964,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 6707,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 6707,
+    "rows_total": 599648,
+    "support_n": 4686,
+    "support_rows_inside_box": 4680,
+    "support_rows_total": 4686
+   },
+   {
+    "box": [
+     -2.8868598175048827,
+     1.444082546234131,
+     -3.191404056549072,
+     -0.14853825688362077,
+     3.1788167572021484,
+     -1.5871154928207396
+    ],
+    "dilate_px": 20,
+    "extent": [
+     2.738321560621262,
+     1.7347342109680175,
+     1.6042885637283324
+    ],
+    "min_cams": 8,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.42771689298345195,
+     "fraction_inside_s2_final_mask": 0.41610269397022226,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 22903,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 22903,
+    "rows_total": 599648,
+    "support_n": 13133,
+    "support_rows_inside_box": 12875,
+    "support_rows_total": 13133
+   },
+   {
+    "box": [
+     -1.7959755849838257,
+     1.6270496845245361,
+     -2.894752559661865,
+     -0.2792337751388544,
+     2.444248046875,
+     -1.5835871028900146
+    ],
+    "dilate_px": 20,
+    "extent": [
+     1.5167418098449712,
+     0.8171983623504637,
+     1.3111654567718503
+    ],
+    "min_cams": 12,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.7371750895647534,
+     "fraction_inside_s2_final_mask": 0.717813857763549,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 13119,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 13119,
+    "rows_total": 599648,
+    "support_n": 11433,
+    "support_rows_inside_box": 11222,
+    "support_rows_total": 11433
+   },
+   {
+    "box": [
+     -1.4267967426776886,
+     1.6562206482887267,
+     -2.8604827260971066,
+     -0.3173845189809801,
+     2.244807872772216,
+     -1.5826059567928314
+    ],
+    "dilate_px": 20,
+    "extent": [
+     1.1094122236967086,
+     0.5885872244834893,
+     1.2778767693042752
+    ],
+    "min_cams": 15,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.8257775434897207,
+     "fraction_inside_s2_final_mask": 0.8039008961518187,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11382,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 11382,
+    "rows_total": 599648,
+    "support_n": 10680,
+    "support_rows_inside_box": 10497,
+    "support_rows_total": 10680
+   },
+   {
+    "box": [
+     -0.9336830818653107,
+     1.6666391944885253,
+     -2.835574150085449,
+     -0.5215491545200345,
+     2.1355892515182497,
+     -1.5815104365348813
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.4121339273452762,
+     0.4689500570297245,
+     1.254063713550568
+    ],
+    "min_cams": 17,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.912843137254902,
+     "fraction_inside_s2_final_mask": 0.8891176470588236,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 10200,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 10200,
+    "rows_total": 599648,
+    "support_n": 10223,
+    "support_rows_inside_box": 10058,
+    "support_rows_total": 10223
+   },
+   {
+    "box": [
+     -0.8718628644943238,
+     1.6909667253494263,
+     -2.635024604797363,
+     -0.5246445989608765,
+     2.1233422946929927,
+     -1.578342118263245
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.34721826553344737,
+     0.43237556934356647,
+     1.0566824865341178
+    ],
+    "min_cams": 19,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.9358395463614407,
+     "fraction_inside_s2_final_mask": 0.9132626273233225,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 9523,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 9523,
+    "rows_total": 599648,
+    "support_n": 8553,
+    "support_rows_inside_box": 8489,
+    "support_rows_total": 8553
+   },
+   {
+    "box": [
+     -0.8681738901138306,
+     1.7036640071868896,
+     -2.345609312057495,
+     -0.5287104058265686,
+     2.123825130462646,
+     -1.568603801727295
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.33946348428726203,
+     0.4201611232757565,
+     0.7770055103302
+    ],
+    "min_cams": 20,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8716,
+     "fraction_inside_construction_mask": 0.9312987934705464,
+     "fraction_inside_s2_final_mask": 0.9034776437189496,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 7045,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/flame_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8130
+    },
+    "rows_inside_box": 7045,
+    "rows_total": 599648,
+    "support_n": 5553,
+    "support_rows_inside_box": 5544,
+    "support_rows_total": 5553
+   }
+  ],
+  "sear_steak": [
+   {
+    "box": [
+     -1.9017401313781739,
+     1.6580735266208648,
+     -2.9067957711219785,
+     -0.6224760955572128,
+     2.4226998567581175,
+     -1.5939961624145507
+    ],
+    "dilate_px": 0,
+    "extent": [
+     1.279264035820961,
+     0.7646263301372527,
+     1.3127996087074278
+    ],
+    "min_cams": 8,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.8544666357021211,
+     "fraction_inside_s2_final_mask": 0.8383650719925685,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 12918,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 12918,
+    "rows_total": 599645,
+    "support_n": 11470,
+    "support_rows_inside_box": 11373,
+    "support_rows_total": 11470
+   },
+   {
+    "box": [
+     -0.960924940109253,
+     1.6585559439659119,
+     -2.8170129752159117,
+     -0.6229627925157547,
+     2.06002331495285,
+     -1.5933497619628905
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.3379621475934983,
+     0.4014673709869383,
+     1.2236632132530212
+    ],
+    "min_cams": 12,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9306104523495828,
+     "fraction_inside_s2_final_mask": 0.9133948177426439,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11385,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 11385,
+    "rows_total": 599645,
+    "support_n": 10658,
+    "support_rows_inside_box": 10577,
+    "support_rows_total": 10658
+   },
+   {
+    "box": [
+     -0.9466529041528702,
+     1.6591897630691528,
+     -2.7748202753067015,
+     -0.62321586728096,
+     2.0497198629379274,
+     -1.5939063692092894
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.32343703687191017,
+     0.3905300998687746,
+     1.180913906097412
+    ],
+    "min_cams": 15,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9388864142538975,
+     "fraction_inside_s2_final_mask": 0.9222271714922049,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11225,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 11225,
+    "rows_total": 599645,
+    "support_n": 10390,
+    "support_rows_inside_box": 10365,
+    "support_rows_total": 10390
+   },
+   {
+    "box": [
+     -0.945598111152649,
+     1.6595995652675628,
+     -2.7511562013626096,
+     -0.6232154881954193,
+     2.0480266630649564,
+     -1.5942190885543825
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.32238262295722975,
+     0.3884270977973936,
+     1.156937112808227
+    ],
+    "min_cams": 17,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9410496046010065,
+     "fraction_inside_s2_final_mask": 0.924784327821711,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11128,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 11128,
+    "rows_total": 599645,
+    "support_n": 10188,
+    "support_rows_inside_box": 10151,
+    "support_rows_total": 10188
+   },
+   {
+    "box": [
+     -0.9434130758047105,
+     1.6623499155044554,
+     -2.5677729487419128,
+     -0.6235633015632629,
+     2.047176295518875,
+     -1.594254320859909
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.31984977424144756,
+     0.3848263800144196,
+     0.9735186278820038
+    ],
+    "min_cams": 19,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9520383693045563,
+     "fraction_inside_s2_final_mask": 0.9364988009592327,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 10425,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 10425,
+    "rows_total": 599645,
+    "support_n": 8606,
+    "support_rows_inside_box": 8582,
+    "support_rows_total": 8606
+   },
+   {
+    "box": [
+     -0.9472482526302338,
+     1.6696117949485778,
+     -2.316427464485168,
+     -0.6260593283176422,
+     2.048469626903534,
+     -1.5913440442085265
+    ],
+    "dilate_px": 0,
+    "extent": [
+     0.3211889243125916,
+     0.37885783195495604,
+     0.7250834202766416
+    ],
+    "min_cams": 20,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9455682725578919,
+     "fraction_inside_s2_final_mask": 0.9281341495874368,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 7514,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 7514,
+    "rows_total": 599645,
+    "support_n": 5475,
+    "support_rows_inside_box": 5468,
+    "support_rows_total": 5475
+   },
+   {
+    "box": [
+     -3.1020222759246825,
+     1.5086212706565856,
+     -3.176310119628906,
+     -0.30187008619308453,
+     2.9565719270706174,
+     -1.588133454322815
+    ],
+    "dilate_px": 20,
+    "extent": [
+     2.800152189731598,
+     1.4479506564140319,
+     1.588176665306091
+    ],
+    "min_cams": 8,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.49661911617153076,
+     "fraction_inside_s2_final_mask": 0.48527679623085984,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 22923,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 22923,
+    "rows_total": 599645,
+    "support_n": 14375,
+    "support_rows_inside_box": 14038,
+    "support_rows_total": 14375
+   },
+   {
+    "box": [
+     -1.9165973329544068,
+     1.56237651348114,
+     -2.892856922149658,
+     -0.38893597483634956,
+     2.370731220245361,
+     -1.5862421560287476
+    ],
+    "dilate_px": 20,
+    "extent": [
+     1.5276613581180571,
+     0.8083547067642212,
+     1.3066147661209104
+    ],
+    "min_cams": 12,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.7566976489885183,
+     "fraction_inside_s2_final_mask": 0.7421405139420448,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 14632,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 14632,
+    "rows_total": 599645,
+    "support_n": 13005,
+    "support_rows_inside_box": 12833,
+    "support_rows_total": 13005
+   },
+   {
+    "box": [
+     -1.5945428705215454,
+     1.610346326828003,
+     -2.862202739715576,
+     -0.4495800459384918,
+     2.184326477050781,
+     -1.5853922986984252
+    ],
+    "dilate_px": 20,
+    "extent": [
+     1.1449628245830537,
+     0.5739801502227782,
+     1.2768104410171506
+    ],
+    "min_cams": 15,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.8429803921568627,
+     "fraction_inside_s2_final_mask": 0.8269019607843138,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 12750,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 12750,
+    "rows_total": 599645,
+    "support_n": 12017,
+    "support_rows_inside_box": 11797,
+    "support_rows_total": 12017
+   },
+   {
+    "box": [
+     -1.1016335964202881,
+     1.6219571590423583,
+     -2.8367809295654296,
+     -0.6173980116844177,
+     2.0859728813171388,
+     -1.5849877357482909
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.4842355847358705,
+     0.4640157222747805,
+     1.2517931938171387
+    ],
+    "min_cams": 17,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9212194910101624,
+     "fraction_inside_s2_final_mask": 0.9038478241987319,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 11513,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 11513,
+    "rows_total": 599645,
+    "support_n": 11541,
+    "support_rows_inside_box": 11327,
+    "support_rows_total": 11541
+   },
+   {
+    "box": [
+     -0.9603973734378816,
+     1.6493449187278748,
+     -2.6048851680755614,
+     -0.6230364060401916,
+     2.0750979471206663,
+     -1.5803866457939146
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.33736096739768995,
+     0.4257530283927915,
+     1.0244985222816467
+    ],
+    "min_cams": 19,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9488886804839164,
+     "fraction_inside_s2_final_mask": 0.9333208290349808,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 10663,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 10663,
+    "rows_total": 599645,
+    "support_n": 9659,
+    "support_rows_inside_box": 9580,
+    "support_rows_total": 9659
+   },
+   {
+    "box": [
+     -0.9552832055091859,
+     1.6594250869750977,
+     -2.3510391044616696,
+     -0.6262024855613708,
+     2.0772674036025998,
+     -1.5729754829406737
+    ],
+    "dilate_px": 20,
+    "extent": [
+     0.32908071994781507,
+     0.41784231662750204,
+     0.778063621520996
+    ],
+    "min_cams": 20,
+    "projection_check": {
+     "camera": 15,
+     "construction_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/truth_mask_root/cam15/pseudo_label/object_mask/0050.png",
+     "construction_mask_px": 8667,
+     "fraction_inside_construction_mask": 0.9454993834771886,
+     "fraction_inside_s2_final_mask": 0.9287299630086313,
+     "frame": 50,
+     "rows_in_box_projecting_in_frame": 8110,
+     "s2_final_mask": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/s2/sear_steak/final/cam15/pseudo_label/object_mask/0050.png",
+     "s2_mask_px": 8146
+    },
+    "rows_inside_box": 8110,
+    "rows_total": 599645,
+    "support_n": 6367,
+    "support_rows_inside_box": 6353,
+    "support_rows_total": 6367
+   }
+  ]
+ },
+ "spec": "absfix-wave2-spec-v2-2026-09-11.md section 13.15",
+ "written": "2026-09-13T04:52:26+0200"
+}

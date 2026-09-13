@@ -1528,5 +1528,35 @@
   "prefix_independence": "flame_steak rule box from prefix 3 within 0.0033 units per face of the prefix-1 box",
   "rejected_first_rule": "job 57508186 (+20 px, >= 8 cameras) failed its own acceptance on the calibration scene (0.332 in-mask); replaced before any box was used (job 57508564)",
   "file": "agent-control/realdata/absfix2/stage1/seed_boxes.json sha256 5fefd68c72f18259aefc17e1af9a8a2d2ac8510dccf224439799b0e709210583; copy research-wiki/assets/absfix-seed-boxes.json"
+ },
+ "FREEZE_LIST_STATUS": {
+  "date": "2026-09-13 08:40 CEST",
+  "record": "research-wiki/assets/absfix-stage1-record.json (tracked from this commit); table absfix-stage1-record.md; seed boxes absfix-seed-boxes.json",
+  "reducer": "scripts/realdata_gate_analysis.py sha256 a44dcc333b921fd502f9bb661593c689f1bcdc694ce23840ac3e8862a207b64f (commit 34cc193)",
+  "draw_script": "scripts/draw_membership_shams.py: 0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485 (commit 2bc5acf, the version the stage-1 draws ran) and 442231ae76936648696612dbd0fed11c7563b21281b1b4e985a8ed969a129a44 (commit 3f09120, --gap check fixed; draws omit --gap so the outputs are identical)",
+  "vote_script": "scripts/realdata_membership_vote.py sha256 69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905",
+  "evaluator": "scripts/eval_n3v_gated.py sha256 4bdf427fa59264125843b0523b4466b2200383eb76eacf6d196679681cc1b927",
+  "t1_estimator": "scripts/estimate_episodes.py sha256 c90416df0901708350171a065afd2622d413f80d86f95c81bdd6f8639b56362d",
+  "admission_blocks": "FILLED (13.6)",
+  "construction_fields": "FILLED (_v3, 13.7)",
+  "sam2": "checkpoint 2647878d5dfa5098f2f8649825738a9345572bae2d4350a2468587ece47dd318; config configs/sam2.1/sam2.1_hiera_l.yaml; commit 2b90b9f5ceec907a1c18123530e92e794ad901a4; driver 4f874ed4160c6d9c7863d928889b4de5d80ec2273b71961f0e92e36f8028f752",
+  "s2_clicks": "118 recorded (13.10) + 4 bounded re-seeds (13.11/13.14)",
+  "s2_final_manifests": "sha256 in the record: flame_steak f0fba4a710ab7c89..., sear_steak 23601321de17339b..., cut_roasted_beef ab0feb995161d091...",
+  "seed_boxes": "agent-control/realdata/absfix2/stage1/seed_boxes.json sha256 5fefd68c72f18259aefc17e1af9a8a2d2ac8510dccf224439799b0e709210583",
+  "prefix_checkpoints": "8/8 hashed in the record",
+  "t1_reports_programs": "8/8 hashed; pooled windows flame [60,89],[60,90],[60,89],[60,93]; sear [60,89],[60,89],[57,106],[60,90]",
+  "programs_G_mis_ones": "8/8 hashed; members flame 6582/6584/6648/6641, sear 7676/7434/7656/7536; LOCO Jaccard >= 0.998",
+  "programs_wrongmem_A_B": "8/8 hashed; count-matched, overlap 0, seeds 1000+s / 2000+s",
+  "programs_wrongmem_L": "0/8: NOT constructible as frozen (eligible local mass / truth mass 0.37-0.41 vs the +-10% band); USER DECISION pending (13.13)",
+  "programs_gestmem": "flame_steak 4/4 (6434/6450/6515/6497), cut_roasted_beef 4/4 (6927/6917/6778/6751), sear_steak 0/4 (S2 vote refuses on cam09, 13.16)",
+  "membership_precondition": "flame 4/4 PASS (P 0.9998-1.0000, R 0.9775-0.9800); calibration 4/4 PASS; sear: not computable (no S2 program)",
+  "t1_precondition_pooled": "flame s0/s1/s2 PASS, s3 FAIL ([60,93], onset err 4, IoU 0.882); sear s0/s1 PASS, s2 FAIL ([57,106], IoU 0.60, onset err 17), s3 PASS on the pooled reading ([60,90]); calibration 4/4 PASS pooled",
+  "claim_B_admission_under_11_5": "flame_steak DWP (prefix 3 fails T1), sear_steak DWP (S2 instrument not admitted), cut_roasted_beef admitted (calibration)",
+  "external_baseline_X": "SpacetimeGaussians pinned 427abfc58309a4a5213843dd673fb22c4529306c; trains with stage 2",
+  "pending_user_decisions": [
+   "G-wrongmem-L rule (recommended: local, count-matched, zero-overlap, greedy by contribution; mass ratio reported)",
+   "accept Claim B = DWP on both confirmatory scenes under 11.5 as frozen, or amend",
+   "stage-2 go"
+  ]
  }
 }

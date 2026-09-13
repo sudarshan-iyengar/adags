@@ -761,3 +761,44 @@ Second clicks, checked once against the raw-frame sheets `s2-<scene>-run2-check-
 | item | sha256 |
 |---|---|
 | `configs/n3v/absfix_gate_spec_v2.json` after the seed-box and precondition records | `3c83f7a7ecbf99d272ac676614bec4c11fdbfb64cda5c0362ec9860e22095b83` |
+
+### 13.17 Freeze list, fully valued as far as stage 1 can value it (2026-09-13, 08:40 CEST)
+
+Stage 1 is terminal (all chains; warden and collector reports in
+[[absfix-wave2-stage1-2026-09-13]]). Machine record:
+`research-wiki/assets/absfix-stage1-record.json` (tracked from this
+commit), table `absfix-stage1-record.md`, seed boxes
+`absfix-seed-boxes.json`; the JSON carries the same values under
+`FREEZE_LIST_STATUS`.
+
+| item | value |
+|---|---|
+| spec text / JSON | hashes in the record line below; commit = the one carrying this section |
+| reducer | `a44dcc33…` (34cc193) |
+| draw script | `0758048d…` (2bc5acf, ran stage 1) and `442231ae…` (3f09120, `--gap` fix; identical outputs since draws omit `--gap`) |
+| vote script | `69d1a2b7…` |
+| evaluator | `4bdf427f…` |
+| T1 estimator | `c90416df…`; 8/8 reports and programs hashed; pooled windows flame [60,89] / [60,90] / [60,89] / [60,93], sear [60,89] / [60,89] / [57,106] / [60,90] |
+| admission and construction blocks | FILLED (13.6, 13.7) |
+| SAM2 | checkpoint `2647878d…`, config `sam2.1_hiera_l.yaml`, commit `2b90b9f5…`, driver `4f874ed4…`; 118 clicks + 4 re-seeds; final manifests hashed (flame `f0fba4a7…`, sear `23601321…`, crb `ab0feb99…`) |
+| seed boxes | `5fefd68c…` (13.16) |
+| prefix checkpoints | 8/8 hashed |
+| G / G-mis / G-ones programs | 8/8 hashed; members flame 6,582 / 6,584 / 6,648 / 6,641, sear 7,676 / 7,434 / 7,656 / 7,536 |
+| G-wrongmem-A / B | 8/8 hashed; count-matched, overlap 0 |
+| **G-wrongmem-L** | **0/8, not constructible as frozen** (eligible local mass 0.37–0.41 of truth); **user decision pending** |
+| G-est-mem programs | flame 4/4, calibration 4/4, **sear 0/4** (S2 vote refuses on cam09, 13.16) |
+| membership precondition | flame 4/4 PASS; calibration 4/4 PASS; sear not computable |
+| T1 precondition (pooled) | flame s0–s2 PASS, s3 FAIL; sear s0, s1 PASS, s2 FAIL ([57,106]), s3 PASS on the pooled reading; calibration 4/4 PASS |
+| Claim B admission under §11.5 | **DWP on flame_steak (prefix 3) and on sear_steak (instrument not admitted)**; calibration admitted |
+| X | SpacetimeGaussians `427abfc5…`; trains with stage 2 |
+
+**Every line the frozen rules can value is valued. Three lines are
+decisions, not measurements, and stage 2 waits for them:** (1) the
+G-wrongmem-L rule; (2) whether Claim B stays DESIGN_WITHOUT_POWER on
+both confirmatory scenes as §11.5 reads, with GESTMEM arms still trained
+where admitted and reported descriptively; (3) the stage-2 go.
+
+| item | sha256 |
+|---|---|
+| this page, sections 0-13.17 (before this record) | `1a4e612f3cd1df53d3226009d1410bcecf70197fe9f966e1097bff2e3d41d95c` |
+| `configs/n3v/absfix_gate_spec_v2.json` with FREEZE_LIST_STATUS | `11341cad22823e012888060037d05912868270df772cf0b6fdc3624ee506406b` |
