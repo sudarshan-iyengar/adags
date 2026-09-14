@@ -1,5 +1,40 @@
 # Gap Map
 
+## Instrument-Validity Update — 2026-09-13: four setup defects caught before any score, and the measure that cannot be matched
+
+Full records: [[operations/absfix-wave2-spec-v2-2026-09-11]] §13.13–13.20,
+[[operations/absfix-wave2-stage1-2026-09-13]].
+
+* **A control must be constructible under the same measure it is scored
+  against.** The mass-matched membership sham of spec v2.0.0 was defined
+  on each row's rendered contribution INSIDE the object silhouette. By
+  construction only the object's rows carry mass there, so no set of
+  non-object rows can match it (the whole non-truth cloud carries
+  0.21–0.48 of the truth mass). On the total-paint measure the same sham
+  exists on 12/12 prefixes. The lesson generalises: a magnitude measure
+  that is defined by the treated region cannot be matched by an untreated
+  control; the control's magnitude must be measured where the control
+  acts.
+* **A precondition designed for the treatment cannot be applied verbatim
+  to a control built to violate it.** The ≥ 100-rows-in-box clause fails
+  the count-matched random shams on 23 of 24 cells; they are non-local by
+  definition. Exempting them from that clause only is the disposition on
+  the table.
+* **An instrument must not be seeded from the estimator whose failure it
+  is supposed to survive.** Votes seeded from each prefix's T1 program
+  admitted zero rows where T1 was late; authored construction-derived
+  boxes fixed it without touching T1.
+* **Silent start-up stalls look like RUNNING.** A job whose log stays at
+  0 bytes longer than its siblings' whole runtime is hung; cancel and
+  resubmit identically (a warden did this for four; the same node hosted
+  two of the four).
+* Membership from a single click through SAM2 reproduces the
+  construction-derived membership at precision ≥ 0.9996 and recall
+  0.978–0.990 on eight of eight admitted prefixes, which makes G13's
+  "membership is the open problem" a matter of ADMISSION (one bad camera
+  mask, one late T1 window) rather than of estimation quality on rigid
+  static objects.
+
 ## Instrument-Validity Update — 2026-08-24
 
 **This block's most transferable result is not about a gap. It is about

@@ -1,0 +1,1188 @@
+{
+ "f50": {
+  "scene": "cut_roasted_beef",
+  "frame": 50,
+  "sheet": "absfix-cut_roasted_beef-clickpacket-nobox-f50.jpg",
+  "sheet_wh": [
+   3440,
+   3712
+  ],
+  "tile_wh": [
+   688,
+   928
+  ],
+  "cols": 5,
+  "rows": 4,
+  "jpeg_quality": 92,
+  "sheet_bytes": 1811013,
+  "raw_images": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/images",
+  "window_source": "deva_bbox+pad120",
+  "box_drawn": false,
+  "note": "crop origin is the FULL-FRAME pixel of the tile's top-left image pixel; grid labels are FULL-FRAME coordinates; NO mask-derived overlay is drawn and no bbox is reported",
+  "per_camera": {
+   "cam01": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1084,
+     742
+    ],
+    "crop_size_wh": [
+     268,
+     272
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     0
+    ]
+   },
+   "cam02": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1018,
+     708
+    ],
+    "crop_size_wh": [
+     321,
+     306
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     0
+    ]
+   },
+   "cam03": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     957,
+     683
+    ],
+    "crop_size_wh": [
+     306,
+     331
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     0
+    ]
+   },
+   "cam05": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     892,
+     674
+    ],
+    "crop_size_wh": [
+     297,
+     340
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     0
+    ]
+   },
+   "cam06": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     797,
+     647
+    ],
+    "crop_size_wh": [
+     289,
+     367
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     0
+    ]
+   },
+   "cam07": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     742,
+     624
+    ],
+    "crop_size_wh": [
+     286,
+     385
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     928
+    ]
+   },
+   "cam08": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     706,
+     602
+    ],
+    "crop_size_wh": [
+     286,
+     378
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     928
+    ]
+   },
+   "cam09": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     655,
+     609
+    ],
+    "crop_size_wh": [
+     289,
+     401
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     928
+    ]
+   },
+   "cam10": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     611,
+     600
+    ],
+    "crop_size_wh": [
+     284,
+     397
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     928
+    ]
+   },
+   "cam11": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     660,
+     609
+    ],
+    "crop_size_wh": [
+     299,
+     405
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     928
+    ]
+   },
+   "cam12": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     626,
+     545
+    ],
+    "crop_size_wh": [
+     299,
+     450
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     1856
+    ]
+   },
+   "cam13": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     913,
+     545
+    ],
+    "crop_size_wh": [
+     305,
+     454
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     1856
+    ]
+   },
+   "cam14": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     915,
+     575
+    ],
+    "crop_size_wh": [
+     301,
+     439
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     1856
+    ]
+   },
+   "cam15": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     852,
+     564
+    ],
+    "crop_size_wh": [
+     295,
+     441
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     1856
+    ]
+   },
+   "cam16": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     831,
+     524
+    ],
+    "crop_size_wh": [
+     292,
+     428
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     1856
+    ]
+   },
+   "cam17": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     755,
+     554
+    ],
+    "crop_size_wh": [
+     286,
+     390
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     2784
+    ]
+   },
+   "cam18": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     723,
+     537
+    ],
+    "crop_size_wh": [
+     284,
+     373
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     2784
+    ]
+   },
+   "cam19": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     913,
+     632
+    ],
+    "crop_size_wh": [
+     291,
+     382
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     2784
+    ]
+   },
+   "cam20": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     839,
+     691
+    ],
+    "crop_size_wh": [
+     295,
+     323
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     2784
+    ]
+   }
+  }
+ },
+ "f92": {
+  "scene": "cut_roasted_beef",
+  "frame": 92,
+  "sheet": "absfix-cut_roasted_beef-clickpacket-nobox-f92.jpg",
+  "sheet_wh": [
+   3440,
+   3712
+  ],
+  "tile_wh": [
+   688,
+   928
+  ],
+  "cols": 5,
+  "rows": 4,
+  "jpeg_quality": 92,
+  "sheet_bytes": 1826464,
+  "raw_images": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef/images",
+  "window_source": "deva_bbox+pad120",
+  "box_drawn": false,
+  "note": "crop origin is the FULL-FRAME pixel of the tile's top-left image pixel; grid labels are FULL-FRAME coordinates; NO mask-derived overlay is drawn and no bbox is reported",
+  "per_camera": {
+   "cam01": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1084,
+     743
+    ],
+    "crop_size_wh": [
+     268,
+     271
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     0
+    ]
+   },
+   "cam02": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1018,
+     708
+    ],
+    "crop_size_wh": [
+     321,
+     306
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     0
+    ]
+   },
+   "cam03": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     957,
+     683
+    ],
+    "crop_size_wh": [
+     306,
+     331
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     0
+    ]
+   },
+   "cam05": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     891,
+     674
+    ],
+    "crop_size_wh": [
+     298,
+     340
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     0
+    ]
+   },
+   "cam06": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     796,
+     646
+    ],
+    "crop_size_wh": [
+     290,
+     368
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     0
+    ]
+   },
+   "cam07": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     741,
+     623
+    ],
+    "crop_size_wh": [
+     288,
+     385
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     928
+    ]
+   },
+   "cam08": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     707,
+     602
+    ],
+    "crop_size_wh": [
+     286,
+     375
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     928
+    ]
+   },
+   "cam09": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     656,
+     608
+    ],
+    "crop_size_wh": [
+     288,
+     402
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     928
+    ]
+   },
+   "cam10": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     611,
+     600
+    ],
+    "crop_size_wh": [
+     284,
+     396
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     928
+    ]
+   },
+   "cam11": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     661,
+     609
+    ],
+    "crop_size_wh": [
+     298,
+     405
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     928
+    ]
+   },
+   "cam12": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     626,
+     545
+    ],
+    "crop_size_wh": [
+     299,
+     449
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     1856
+    ]
+   },
+   "cam13": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     913,
+     545
+    ],
+    "crop_size_wh": [
+     306,
+     454
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     1856
+    ]
+   },
+   "cam14": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     915,
+     575
+    ],
+    "crop_size_wh": [
+     302,
+     439
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     1856
+    ]
+   },
+   "cam15": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     852,
+     565
+    ],
+    "crop_size_wh": [
+     295,
+     440
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     1856
+    ]
+   },
+   "cam16": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     831,
+     523
+    ],
+    "crop_size_wh": [
+     293,
+     430
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     1856
+    ]
+   },
+   "cam17": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     754,
+     554
+    ],
+    "crop_size_wh": [
+     289,
+     392
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     2784
+    ]
+   },
+   "cam18": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     722,
+     536
+    ],
+    "crop_size_wh": [
+     285,
+     374
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     2784
+    ]
+   },
+   "cam19": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     913,
+     632
+    ],
+    "crop_size_wh": [
+     292,
+     382
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     2784
+    ]
+   },
+   "cam20": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     839,
+     691
+    ],
+    "crop_size_wh": [
+     297,
+     323
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "deva_bbox+pad120",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     2784
+    ]
+   }
+  }
+ }
+}

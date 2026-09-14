@@ -1,0 +1,1248 @@
+{
+ "f50": {
+  "scene": "sear_steak",
+  "frame": 50,
+  "sheet": "absfix-sear_steak-clickpacket-nobox-f50.jpg",
+  "sheet_wh": [
+   3420,
+   3680
+  ],
+  "tile_wh": [
+   684,
+   920
+  ],
+  "cols": 5,
+  "rows": 4,
+  "jpeg_quality": 92,
+  "sheet_bytes": 1896211,
+  "raw_images": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/images",
+  "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+  "box_drawn": false,
+  "note": "crop origin is the FULL-FRAME pixel of the tile's top-left image pixel; grid labels are FULL-FRAME coordinates; NO mask-derived overlay is drawn and no bbox is reported",
+  "per_camera": {
+   "cam01": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1061,
+     744
+    ],
+    "crop_size_wh": [
+     291,
+     270
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     0
+    ]
+   },
+   "cam02": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1001,
+     710
+    ],
+    "crop_size_wh": [
+     319,
+     304
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     684,
+     0
+    ]
+   },
+   "cam03": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     943,
+     687
+    ],
+    "crop_size_wh": [
+     309,
+     327
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1368,
+     0
+    ]
+   },
+   "cam04": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     894,
+     689
+    ],
+    "crop_size_wh": [
+     301,
+     325
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2052,
+     0
+    ]
+   },
+   "cam05": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     879,
+     678
+    ],
+    "crop_size_wh": [
+     301,
+     336
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2736,
+     0
+    ]
+   },
+   "cam06": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     786,
+     649
+    ],
+    "crop_size_wh": [
+     295,
+     365
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     920
+    ]
+   },
+   "cam07": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     738,
+     628
+    ],
+    "crop_size_wh": [
+     286,
+     386
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     684,
+     920
+    ]
+   },
+   "cam08": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     706,
+     607
+    ],
+    "crop_size_wh": [
+     282,
+     402
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1368,
+     920
+    ]
+   },
+   "cam09": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     655,
+     613
+    ],
+    "crop_size_wh": [
+     287,
+     401
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2052,
+     920
+    ]
+   },
+   "cam10": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     606,
+     605
+    ],
+    "crop_size_wh": [
+     287,
+     400
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2736,
+     920
+    ]
+   },
+   "cam11": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     645,
+     609
+    ],
+    "crop_size_wh": [
+     301,
+     405
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     1840
+    ]
+   },
+   "cam12": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     613,
+     548
+    ],
+    "crop_size_wh": [
+     301,
+     440
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     684,
+     1840
+    ]
+   },
+   "cam13": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     900,
+     545
+    ],
+    "crop_size_wh": [
+     306,
+     450
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1368,
+     1840
+    ]
+   },
+   "cam14": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     902,
+     573
+    ],
+    "crop_size_wh": [
+     304,
+     441
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2052,
+     1840
+    ]
+   },
+   "cam15": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     843,
+     567
+    ],
+    "crop_size_wh": [
+     297,
+     442
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2736,
+     1840
+    ]
+   },
+   "cam16": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     824,
+     524
+    ],
+    "crop_size_wh": [
+     293,
+     430
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     2760
+    ]
+   },
+   "cam17": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     748,
+     556
+    ],
+    "crop_size_wh": [
+     289,
+     422
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     684,
+     2760
+    ]
+   },
+   "cam18": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     714,
+     539
+    ],
+    "crop_size_wh": [
+     289,
+     411
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1368,
+     2760
+    ]
+   },
+   "cam19": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     911,
+     634
+    ],
+    "crop_size_wh": [
+     295,
+     380
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2052,
+     2760
+    ]
+   },
+   "cam20": {
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     837,
+     693
+    ],
+    "crop_size_wh": [
+     291,
+     321
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2736,
+     2760
+    ]
+   }
+  }
+ },
+ "f92": {
+  "scene": "sear_steak",
+  "frame": 92,
+  "sheet": "absfix-sear_steak-clickpacket-nobox-f92.jpg",
+  "sheet_wh": [
+   3440,
+   3672
+  ],
+  "tile_wh": [
+   688,
+   918
+  ],
+  "cols": 5,
+  "rows": 4,
+  "jpeg_quality": 92,
+  "sheet_bytes": 1911003,
+  "raw_images": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/sear_steak/images",
+  "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+  "box_drawn": false,
+  "note": "crop origin is the FULL-FRAME pixel of the tile's top-left image pixel; grid labels are FULL-FRAME coordinates; NO mask-derived overlay is drawn and no bbox is reported",
+  "per_camera": {
+   "cam01": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1061,
+     744
+    ],
+    "crop_size_wh": [
+     291,
+     270
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     0
+    ]
+   },
+   "cam02": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     1000,
+     710
+    ],
+    "crop_size_wh": [
+     321,
+     304
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     0
+    ]
+   },
+   "cam03": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     943,
+     688
+    ],
+    "crop_size_wh": [
+     310,
+     326
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     0
+    ]
+   },
+   "cam04": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     893,
+     689
+    ],
+    "crop_size_wh": [
+     303,
+     325
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     0
+    ]
+   },
+   "cam05": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     879,
+     678
+    ],
+    "crop_size_wh": [
+     301,
+     336
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     0
+    ]
+   },
+   "cam06": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     785,
+     649
+    ],
+    "crop_size_wh": [
+     296,
+     365
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     918
+    ]
+   },
+   "cam07": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     738,
+     628
+    ],
+    "crop_size_wh": [
+     286,
+     386
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     918
+    ]
+   },
+   "cam08": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     706,
+     607
+    ],
+    "crop_size_wh": [
+     282,
+     402
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     918
+    ]
+   },
+   "cam09": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     656,
+     612
+    ],
+    "crop_size_wh": [
+     286,
+     402
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     918
+    ]
+   },
+   "cam10": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     605,
+     604
+    ],
+    "crop_size_wh": [
+     289,
+     402
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     918
+    ]
+   },
+   "cam11": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     644,
+     607
+    ],
+    "crop_size_wh": [
+     302,
+     407
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     1836
+    ]
+   },
+   "cam12": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     612,
+     547
+    ],
+    "crop_size_wh": [
+     302,
+     442
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     1836
+    ]
+   },
+   "cam13": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     900,
+     545
+    ],
+    "crop_size_wh": [
+     306,
+     449
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     1836
+    ]
+   },
+   "cam14": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     902,
+     573
+    ],
+    "crop_size_wh": [
+     304,
+     441
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     1836
+    ]
+   },
+   "cam15": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     844,
+     567
+    ],
+    "crop_size_wh": [
+     298,
+     442
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     1836
+    ]
+   },
+   "cam16": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     823,
+     526
+    ],
+    "crop_size_wh": [
+     295,
+     428
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     2754
+    ]
+   },
+   "cam17": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     748,
+     555
+    ],
+    "crop_size_wh": [
+     289,
+     422
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     2754
+    ]
+   },
+   "cam18": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     714,
+     539
+    ],
+    "crop_size_wh": [
+     290,
+     410
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     2754
+    ]
+   },
+   "cam19": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     911,
+     634
+    ],
+    "crop_size_wh": [
+     295,
+     380
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     2754
+    ]
+   },
+   "cam20": {
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "crop_origin_xy": [
+     837,
+     693
+    ],
+    "crop_size_wh": [
+     291,
+     321
+    ],
+    "scale": 2,
+    "grid_px": 50,
+    "window_source": "reused_origins:absfix-sear_steak-clickpacket-origins.json",
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     2754
+    ]
+   }
+  }
+ }
+}

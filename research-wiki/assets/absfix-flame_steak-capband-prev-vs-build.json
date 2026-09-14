@@ -1,0 +1,197 @@
+{
+ "band_frac": 0.22,
+ "labels": [
+  "prev_mc8",
+  "prev_mc7",
+  "build_mc8",
+  "build_mc7"
+ ],
+ "dirs": {
+  "prev_mc8": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/preview_id79_deva",
+  "prev_mc7": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/preview_id79_mc7",
+  "build_mc8": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/build_id79_60_89",
+  "build_mc7": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/build_id79_60_89_v2"
+ },
+ "rows": [
+  {
+   "camera": "cam00",
+   "frame": 60,
+   "band_yx": [
+    751,
+    804,
+    955,
+    1028
+   ],
+   "band_px": 3869,
+   "orig_red_px": 270,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 1211,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 1193,
+   "build_mc8_red_px": 283,
+   "build_mc8_changed_px": 1191,
+   "build_mc7_red_px": 280,
+   "build_mc7_changed_px": 1175
+  },
+  {
+   "camera": "cam00",
+   "frame": 75,
+   "band_yx": [
+    751,
+    804,
+    955,
+    1028
+   ],
+   "band_px": 3869,
+   "orig_red_px": 278,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 1161,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 1151,
+   "build_mc8_red_px": 283,
+   "build_mc8_changed_px": 1149,
+   "build_mc7_red_px": 281,
+   "build_mc7_changed_px": 1132
+  },
+  {
+   "camera": "cam00",
+   "frame": 89,
+   "band_yx": [
+    751,
+    804,
+    955,
+    1029
+   ],
+   "band_px": 3922,
+   "orig_red_px": 274,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 1182,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 1148,
+   "build_mc8_red_px": 284,
+   "build_mc8_changed_px": 1167,
+   "build_mc7_red_px": 281,
+   "build_mc7_changed_px": 1134
+  },
+  {
+   "camera": "cam08",
+   "frame": 60,
+   "band_yx": [
+    717,
+    762,
+    816,
+    878
+   ],
+   "band_px": 2790,
+   "orig_red_px": 173,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 830,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 838,
+   "build_mc8_red_px": 178,
+   "build_mc8_changed_px": 796,
+   "build_mc7_red_px": 177,
+   "build_mc7_changed_px": 800
+  },
+  {
+   "camera": "cam08",
+   "frame": 75,
+   "band_yx": [
+    717,
+    762,
+    816,
+    878
+   ],
+   "band_px": 2790,
+   "orig_red_px": 173,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 809,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 814,
+   "build_mc8_red_px": 177,
+   "build_mc8_changed_px": 800,
+   "build_mc7_red_px": 177,
+   "build_mc7_changed_px": 804
+  },
+  {
+   "camera": "cam08",
+   "frame": 89,
+   "band_yx": [
+    717,
+    763,
+    816,
+    878
+   ],
+   "band_px": 2852,
+   "orig_red_px": 173,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 768,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 773,
+   "build_mc8_red_px": 177,
+   "build_mc8_changed_px": 731,
+   "build_mc7_red_px": 177,
+   "build_mc7_changed_px": 733
+  },
+  {
+   "camera": "cam15",
+   "frame": 60,
+   "band_yx": [
+    677,
+    731,
+    953,
+    1032
+   ],
+   "band_px": 4266,
+   "orig_red_px": 258,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 1316,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 1318,
+   "build_mc8_red_px": 272,
+   "build_mc8_changed_px": 1307,
+   "build_mc7_red_px": 270,
+   "build_mc7_changed_px": 1301
+  },
+  {
+   "camera": "cam15",
+   "frame": 75,
+   "band_yx": [
+    677,
+    731,
+    953,
+    1033
+   ],
+   "band_px": 4320,
+   "orig_red_px": 260,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 1302,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 1281,
+   "build_mc8_red_px": 274,
+   "build_mc8_changed_px": 1275,
+   "build_mc7_red_px": 270,
+   "build_mc7_changed_px": 1252
+  },
+  {
+   "camera": "cam15",
+   "frame": 89,
+   "band_yx": [
+    677,
+    732,
+    953,
+    1033
+   ],
+   "band_px": 4400,
+   "orig_red_px": 257,
+   "prev_mc8_red_px": 0,
+   "prev_mc8_changed_px": 1309,
+   "prev_mc7_red_px": 0,
+   "prev_mc7_changed_px": 1295,
+   "build_mc8_red_px": 273,
+   "build_mc8_changed_px": 1290,
+   "build_mc7_red_px": 269,
+   "build_mc7_changed_px": 1279
+  }
+ ]
+}

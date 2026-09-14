@@ -1,5 +1,78 @@
 # Query Pack
 
+## 2026-09-11/13 BLOCK — thesis fixed, kill-argument FAIL folded into spec v2.0.0, fixtures repaired, stage 1 of wave 2 run end to end; stage 2 waits on four decisions
+
+Full records: [[operations/handover-2026-09-14]] (resume here),
+[[operations/absfix-wave2-spec-v2-2026-09-11]] (§11 binding, §13.9–13.20
+the append-only decision trail with hashes),
+[[operations/absfix-wave2-stage1-2026-09-13]],
+[[operations/absfix-wave2-preparation-2026-09-12]],
+[[operations/paper-thesis-v1-2026-09-11]],
+[[operations/paper-thesis-v1-kill-argument-2026-09-11]],
+[[operations/literature-check-absence-return-2026-09-10]]. ≈ 65 A100-h
+on Leonardo (≈ 19 lost to start-up stalls), no gated cell trained.
+
+**(1) THE PAPER THESIS is on the record and was attacked before any new
+number existed.** Four claims ("Occlusion is not absence": a training-time
+total presence gate gives exact-zero presence and a faithful return while
+post-hoc gating does the opposite; visibility gaps are recoverable from
+training views with zero false activations; no ≥ 8-camera public capture
+supplies absence-and-return, so authored fixtures plus an event-window
+metric are the evaluation; membership is the open problem, quantified).
+The cross-model kill-argument returned **FAIL, 4 unresolved** (authored
+fixture ≠ physical scenes; estimated membership vacuous on the wave-1
+fixture; T1 detects invisibility, not exit; "exact absence" false on the
+fixture; NOT_MET stands; one scene, no baseline). Every point became an
+arm, a precondition or an out-of-scope line in spec v2.0.0, which passed
+a 20-item Codex review (all accepted). **PersistGS (2606.03479) owns the
+problem statement; FreeTimeGS/++/RetimeGS have no released training
+code; STG is the pinned external baseline (descriptive only).**
+
+**(2) FIXTURE REPAIR, and the instrument lesson.** The bottle cap floated
+on flame_steak because `run_build` applies a post-vote IQR box that the
+preview does not (240 of 2,230 voted rows dropped; proven by cap-band
+alpha counts); lowering the camera threshold changed nothing and the
+first "repair" compared previews against a build. Fixed by exposing
+`--hull_outlier_factor` (0 = off) and rebuilding both confirmatory scenes
+(`_v3`, byte-verified, cap gone on 21 cameras). **CARRY: compare the
+artefact that will be trained on, never its preview.** The plate census
+(a real-background fixture from a moving object) is NEGATIVE on all three
+scenes: DEVA's segment granularity differs 10–30× across cameras. The
+insertion fixture is the v3 candidate.
+
+**(3) STAGE 1 RAN END TO END (8 prefixes, T1, votes, draws, SAM2 masks,
+S2 votes, preconditions, recount).** SAM2 membership from ONE
+primary-placed click per camera reproduces the construction-derived
+membership almost exactly wherever it runs: precision ≥ 0.9996, recall
+0.978–0.990, on flame_steak 4/4 and calibration 4/4. Blind T1 recovers
+the authored window within one frame on 6 of 8 confirmatory prefixes and
+fails visibly on 2. **Under §11.5 as frozen Claim B is
+DESIGN_WITHOUT_POWER on both confirmatory scenes** (sear: the S2 vote
+refuses on one countertop mask kept by the bounded re-seed rule; flame:
+prefix 3 fails the T1 bound); Claim A is exercisable on both.
+
+**(4) FOUR SETUP DEFECTS CAUGHT BEFORE ANY SCORE, each now a rule.** (i)
+Votes on the new scenes were seeded from each prefix's T1 program and one
+admitted ZERO rows; re-seeded from authored construction-derived boxes
+(the calibration box was T1-derived in wave 1; audited, not amended into
+§11.5; every program recounted against the frozen boxes, all object arms
+≥ 0.9996 in box). (ii) The mass-matched sham is IMPOSSIBLE on the frozen
+measure (contribution inside the object silhouette: the non-truth cloud
+carries 0.21–0.48 of the truth mass at any radius) and CONSTRUCTIBLE on
+the total-paint measure (local rule 0.95–1.60 × truth on 12/12); **a
+magnitude measure defined by the object region cannot be matched by
+non-object rows.** (iii) The count-matched random shams fail the
+≥ 100-rows-in-box clause on 23/24 cells: an object-locality test applied
+to a control defined by non-locality. (iv) Jobs that show RUNNING with a
+0-byte log for longer than their siblings' whole runtime are hung
+(start-up stall, one node twice); a warden that cancels and resubmits
+identically recovered four; three sear prefixes burned 3.75 h each before
+the pattern was named.
+
+**(5) WAITING ON THE USER:** the L-sham measure/rule (recommended: local
+rule on `w_total`), the A/B in-box exemption, acceptance of Claim B =
+DWP on both confirmatory scenes, and the stage-2 go (≈ 250–300 A100-h).
+
 ## 2026-09-10 BLOCK — a gate-off evaluation defect found by a montage; Lane A is a NULL on the real occlusion; the SA4D-edited absence fixture is the first real-footage POSITIVE (+4.2 dB ghost, +2.9 dB return, 4/4 pairs), NOT_MET under its own frozen rule because the random-membership sham also clears the floor
 
 Full record: [[operations/absence-fixture-lane-2026-09-10]]. ~135 A100-h.

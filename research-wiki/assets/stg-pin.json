@@ -1,0 +1,262 @@
+{
+  "_note": "UNTRACKED pin record for the external baseline X = SpacetimeGaussians (STG). Descriptive only. Written 2026-09-13 during the ADAGS STG-baseline preparation block. All values were read from the pinned checkout on Leonardo at $W/repo/stg, not from a summarizing fetch layer, except the two fields explicitly marked source=github_api.",
+  "written_utc": "2026-09-13T00:00Z",
+  "repository": {
+    "name": "oppo-us-research/SpacetimeGaussians",
+    "url": "https://github.com/oppo-us-research/SpacetimeGaussians",
+    "default_branch": "main",
+    "pinned_commit": "427abfc58309a4a5213843dd673fb22c4529306c",
+    "commit_date": "2025-03-30 16:41:48 -0700",
+    "commit_author": "lizhan17",
+    "commit_subject": "fixed pr path bug, make command line override config files; improve comments",
+    "clone_command": "git clone --recursive https://github.com/oppo-us-research/SpacetimeGaussians.git",
+    "submodules_fetched": {
+      "thirdparty/mmcv": "3ba02dfd35c326306346bd9d35a887efc2b30fb0"
+    },
+    "github_api_license_field": {
+      "spdx_id": "NOASSERTION",
+      "name": "Other",
+      "source": "github_api"
+    },
+    "pushed_at": {
+      "value": "2025-03-30T23:41:53Z",
+      "source": "github_api"
+    }
+  },
+  "licence": {
+    "top_level_LICENSE": "MIT License, Copyright (c) 2023 OPPO",
+    "additional_use_limitation_verbatim": "SpacetimeGaussians is subject to the use limitation of Gaussian-Splatting, please refer to Gaussian-Splatting License (./thirdparty/gaussian_splatting/LICENSE.md) for details.",
+    "README_License_Information_verbatim": "The code in this repository (except the thirdparty folder) is licensed under MIT licence, see [LICENSE](LICENSE). thirdparty/gaussian_splatting is licensed under Gaussian-Splatting license, see [thirdparty/gaussian_splatting/LICENSE.md](thirdparty/gaussian_splatting/LICENSE.md). thirdparty/colmap is licensed under new BSD license, see [thirdparty/colmap/LICENSE.txt](thirdparty/colmap/LICENSE.txt).",
+    "practical_reading": "Non-commercial research use. The Gaussian-Splatting (Inria) limitation is inherited by the vendored rasterizers, which ADAGS already carries elsewhere."
+  },
+  "readme_n3v_verbatim": {
+    "_source": "README.md at the pinned commit; line numbers are README.md line numbers.",
+    "installation_L44_L46": [
+      "git clone https://github.com/oppo-us-research/SpacetimeGaussians.git --recursive",
+      "cd SpacetimeGaussians"
+    ],
+    "installation_L51": "bash script/setup.sh",
+    "installation_manual_extensions_L56_L61": [
+      "conda activate feature_splatting",
+      "pip install thirdparty/gaussian_splatting/submodules/gaussian_rasterization_ch9",
+      "pip install thirdparty/gaussian_splatting/submodules/gaussian_rasterization_ch3",
+      "pip install thirdparty/gaussian_splatting/submodules/forward_lite",
+      "pip install thirdparty/gaussian_splatting/submodules/forward_full"
+    ],
+    "point_cloud_init_note_L64": "Note, our paper uses the sparse points that follow 3DGS. Our per frame SfM points only use ```point_triangulator``` in Colmap instead of dense points.",
+    "n3v_dataset_source_L66": "Download the dataset from [here](https://github.com/facebookresearch/Neural_3D_Video.git).",
+    "preprocess_command_L69_L71": [
+      "conda activate colmapenv",
+      "python script/pre_n3d.py --videopath <location>/<scene>"
+    ],
+    "preprocess_example_L76_L78": [
+      "conda activate colmapenv",
+      "python script/pre_n3d.py --videopath /home/Neural3D/cook_spinach/"
+    ],
+    "expected_layout_L83_L90": "<location>\n|---cook_spinach\n|   |---colmap_<0>\n|   |---colmap_<...>\n|   |---colmap_<299>\n|---flame_salmon1",
+    "train_command_L168": "python train.py --quiet --eval --config configs/<dataset>_<lite|full>/<scene>.json --model_path <path to save model> --source_path <location>/<scene>/colmap_0",
+    "train_gpu_memory_L170_L172": [
+      "You need 24GB GPU memory to train on the Neural 3D Dataset.",
+      "You need 48GB GPU memory to train on the Technicolor Dataset.",
+      "The large memory requirement is because training images are loaded into GPU memory."
+    ],
+    "train_lite_example_L176": "python train.py --quiet --eval --config configs/n3d_lite/cook_spinach.json --model_path log/cook_spinach_lite --source_path <location>/cook_spinach/colmap_0",
+    "train_full_example_L182": "python train.py --quiet --eval --config configs/n3d_full/cook_spinach.json --model_path log/cook_spinach/colmap_0 --source_path <location>/cook_spinach/colmap_0",
+    "train_pycache_note_L192": "Note, sometimes pycache file somehow affects the results. Please remove every pycache file and retrain the model without generating BYTECODE by ```PYTHONDONTWRITEBYTECODE=1```.",
+    "test_command_L211": "python test.py --quiet --eval --skip_train --valloader colmapvalid --configpath configs/n3d_<lite|full>/<scene>.json --model_path <path to model> --source_path <location>/<scene>/colmap_0",
+    "viewer_iteration_hint_L240": "./<SIBR install dir>/bin/SIBR_gaussianViewer_app_rwdi.exe --iteration 25000 -m <path to trained model>",
+    "README_DOES_NOT_STATE": [
+      "iteration count (it is a code default, not README text)",
+      "resolution / downscale factor (it is a config field)",
+      "GPU count (no multi-GPU instruction exists; every command is single-process)",
+      "wall time (no training-time figure appears anywhere in README.md)"
+    ]
+  },
+  "published_schedule_values": {
+    "_source": "read from the pinned checkout, file:line given for each",
+    "iterations": {
+      "value": 30000,
+      "where": "thirdparty/gaussian_splatting/arguments/__init__.py:94  self.iterations = 30_000"
+    },
+    "batch": {
+      "value": 2,
+      "where": "thirdparty/gaussian_splatting/arguments/__init__.py:107  self.batch = 2"
+    },
+    "densify_from_iter": {
+      "value": 500,
+      "where": "thirdparty/gaussian_splatting/arguments/__init__.py:117"
+    },
+    "densify_until_iter": {
+      "value": 9000,
+      "where": "thirdparty/gaussian_splatting/arguments/__init__.py:118"
+    },
+    "densify_grad_threshold": {
+      "value": 0.0002,
+      "where": "thirdparty/gaussian_splatting/arguments/__init__.py:119"
+    },
+    "save_iterations_default": {
+      "value": [7000, 10000, 12000, 25000, 30000],
+      "where": "thirdparty/gaussian_splatting/helper3dg.py:41"
+    },
+    "test_iterations_default": {
+      "value": -1,
+      "where": "thirdparty/gaussian_splatting/helper3dg.py:42"
+    },
+    "metric_iteration": {
+      "value": 25000,
+      "where": "configs/n3d_full/*.json field test_iteration"
+    },
+    "gpu_count": {
+      "value": 1,
+      "where": "no multi-GPU path exists; README L170 states a 24 GB single-GPU requirement for N3V"
+    },
+    "stated_wall_time": {
+      "value": null,
+      "note": "README.md states no wall time. The paper text (not read in this block) is recorded in research-wiki/operations/stg-n3v-protocol-parity-2026-08-19.md as 40-60 min per 50-frame model on an A6000, with Table 10 implying ~16.7 min; that discrepancy is unresolved upstream and is NOT re-asserted here."
+    }
+  },
+  "config_files": {
+    "full": {
+      "path": "configs/n3d_full/<scene>.json",
+      "flame_steak_verbatim": {
+        "resolution": 2,
+        "model": "ours_full",
+        "scaling_lr": 0.0015,
+        "preprocesspoints": 0,
+        "test_iteration": 25000,
+        "duration": 50,
+        "rdpip": "train_ours_full",
+        "rgbfunction": "sandwich"
+      },
+      "note": "cut_roasted_beef.json is byte-identical to flame_steak.json at this commit."
+    },
+    "lite": {
+      "path": "configs/n3d_lite/<scene>.json",
+      "flame_steak_verbatim": {
+        "resolution": 2,
+        "model": "ours_lite",
+        "scaling_lr": 0.0015,
+        "preprocesspoints": 3,
+        "test_iteration": 25000,
+        "duration": 50,
+        "rdpip": "train_ours_lite"
+      },
+      "note": "preprocesspoints 3 is the only path that reaches mmcv.ops.knn."
+    }
+  },
+  "resolution_semantics": {
+    "published_route": "native 2704x2028 PNGs decoded by pre_n3d.py (cv2, downscale=1), COLMAP intrinsics at 2704x2028, config resolution:2 -> utils/camera_utils.py halves to 1352x1014 for train AND eval.",
+    "adags_derived_route": "derived frames are ALREADY 1352x1014, so prep passes --downscale 2 to convertdynerftocolmapdb (COLMAP intrinsics 1352x1014, focal 731.0336 = 1462.0671/2) and the config must set resolution:1. Both routes train and evaluate at 1352x1014 with identical field of view.",
+    "trap": "using the stock configs/n3d_full/*.json on the derived frames would train at 676x507 -- a quarter of the published pixel count."
+  },
+  "test_rendering": {
+    "writes_per_frame_pngs": true,
+    "where": "test.py render_set() -> torchvision.utils.save_image(rendering, <model_path>/test/ours_<iteration>/renders/{idx:05d}.png) at test.py:147; ground truth to .../gt/{idx:05d}.png at test.py:148",
+    "which_camera": "with --eval and --valloader colmapvalid, scene/dataset_readers.py:792-793 sets test_cam_infos = cam_infos[:duration] after sorting by image_name, and asserts exactly one distinct camera name. On N3V that is cam00, positionally. Train cameras are the remaining 20 on flame_steak.",
+    "frame_index_mapping": "idx 0..duration-1 corresponds to absolute frames starttime..starttime+duration-1, where starttime is parsed from the colmap_<starttime> directory name (dataset_readers.py:784).",
+    "metrics_written": "<model_path>/<iteration>_runtimeresults.json and <iteration>_runtimeperview.json; PSNR on batched (1,3,H,W) clamped to [0,1]; SSIM (3DGS) and skimage SSIM; LPIPS alex and vgg.",
+    "known_defect": "test.py:142 calls sk_ssim(rendernumpy, gtnumpy, multichannel=True). scikit-image removed `multichannel` in 0.23 and requires an explicit data_range for float input. sk_ssim is called BEFORE save_image, so an unpatched crash there prevents the PNGs being written."
+  },
+  "preprocessing_pipeline": {
+    "script": "script/pre_n3d.py",
+    "default_frame_range": "--startframe 0 --endframe 50 (argparse defaults, pre_n3d.py:136-137); frame extraction itself always decodes 0..299 (extractframes default endframe=300, pre_n3d.py:45)",
+    "steps": [
+      "1. extractframes: cv2.VideoCapture per camXX.mp4 -> <scene>/camXX/<frame>.png (PNG, default compression). OpenCV, not ffmpeg.",
+      "2. preparecolmapdynerf: <scene>/colmap_<offset>/input/camXX.png symlinked to <scene>/camXX/<offset>.png",
+      "3. convertdynerftocolmapdb: poses_bounds.npy -> COLMAP input.db + manual/{cameras,images,points3D}.txt, PINHOLE, cx=W//2, cy=H//2, camera order = sorted(glob('cam*.mp4'))",
+      "4. getcolmapsinglen3d per offset"
+    ],
+    "colmap_commands_verbatim": {
+      "_where": "thirdparty/gaussian_splatting/helper3dg.py:147-204",
+      "feature_extractor": "colmap feature_extractor --database_path <colmap_N>/input.db --image_path <colmap_N>/input",
+      "exhaustive_matcher": "colmap exhaustive_matcher --database_path <colmap_N>/input.db",
+      "point_triangulator": "colmap point_triangulator --database_path <colmap_N>/input.db --image_path <colmap_N>/input --output_path <colmap_N>/distorted/sparse --input_path <colmap_N>/manual --Mapper.ba_global_function_tolerance=0.000001",
+      "image_undistorter": "colmap image_undistorter --image_path <colmap_N>/input --input_path <colmap_N>/distorted/sparse --output_path <colmap_N> --output_type COLMAP",
+      "post": "rm -r <colmap_N>/input ; move <colmap_N>/sparse/* into <colmap_N>/sparse/0/"
+    },
+    "no_mapper_no_dense_mvs": true,
+    "one_colmap_dir_per_frame": true,
+    "how_many_frames_are_triangulated": "one COLMAP triangulation per FRAME in [startframe, endframe). A 50-frame model at colmap_0 needs colmap_0..colmap_49; all 300 frames need 300 COLMAP runs and six models (colmap_0, 50, 100, 150, 200, 250).",
+    "loader_requirements": {
+      "poses_bounds_npy": "REQUIRED at the scene root. dataset_readers.py:83 loads <scene>/poses_bounds.npy and uses it ONLY for near = bounds.min()*0.95 and far = bounds.max()*1.05. Intrinsics and extrinsics come from COLMAP sparse/0.",
+      "per_frame_images": "dataset_readers.py:162 builds each frame's path by string-replacing colmap_<starttime> with colmap_<j>, so every frame's colmap_<j>/images/ must exist.",
+      "points": "dataset_readers.py:825-830 concatenates colmap_<i>/sparse/0/points3D.bin for i in [starttime, starttime+duration) with a normalized time channel into sparse/0/points3D_total<duration>.ply.",
+      "can_it_take_poses_bounds_plus_a_point_cloud_directly": "NO. The reader reads COLMAP binaries for cameras/images and one points3D.bin PER FRAME. There is no code path that consumes poses_bounds.npy plus a single ply, so the per-frame COLMAP step cannot be skipped for this baseline."
+    }
+  },
+  "install_verified_on_leonardo": {
+    "venv": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/envs/stg (5.4 GB)",
+    "python": "3.11.7",
+    "torch": "2.5.1+cu121 (cuda 12.1)",
+    "torchvision": "0.20.1+cu121",
+    "numpy": "1.26.4",
+    "scikit_image": "0.22.0",
+    "opencv_python_headless": "4.11.0.86",
+    "kornia": "0.8.3",
+    "scipy": "1.17.1",
+    "plyfile": "1.1.3",
+    "natsort": "8.4.0",
+    "modules": "profile/base gcc/12.2.0 python/3.11.7 cuda/12.2",
+    "cuda_extensions_built": [
+      "diff_gaussian_rasterization_ch9",
+      "diff_gaussian_rasterization_ch3",
+      "forward_full",
+      "forward_lite",
+      "simple_knn"
+    ],
+    "arch": "TORCH_CUDA_ARCH_LIST=8.0 (A100 sm_80)",
+    "build_job": "57485725, COMPLETED 00:25:43, all five wheels built",
+    "mmcv": "STUBBED (see adags_deviations_recorded)",
+    "pip_freeze": "agent-control/realdata/stg/status/pip_freeze_login.txt"
+  },
+  "environment_traps_found": [
+    "Leonardo COMPUTE nodes have NO outbound network: pip fails with '[Errno 101] Network is unreachable'. The venv and all wheels must be created on the LOGIN node (install_stg_login.sh); only the CUDA builds run in the GPU job.",
+    "LD_PRELOAD of the gcc-12.2.0 libstdc++.so.6 is required, mirroring exp_index/leonardo_env.sh. Prepending its lib64 to LD_LIBRARY_PATH is NOT enough: a gcc-runtime-8.5.0 libstdc++ still wins and every vendored extension raises \"version `GLIBCXX_3.4.29' not found\".",
+    "TWO separate LPIPS downloads must be pre-cached into TORCH_HOME from the login node: the torchvision alexnet/vgg16 backbones, AND the LPIPS linear-layer weights that lpipsPyTorch/modules/utils.py:13-17 fetches from raw.githubusercontent.com via torch.hub. Caching only the backbones is insufficient and killed the first render after training had already succeeded."
+  ],
+  "dry_run_measured": {
+    "_status": "PLUMBING CHECK ONLY, 200 iterations, NOT a result",
+    "jobs": ["57488278 train", "57489307 render"],
+    "gpu": "NVIDIA A100-SXM-64GB",
+    "points_at_initialisation": 197687,
+    "iterations": 200,
+    "train_wall_seconds": 67,
+    "tqdm_first_line": "Training progress:   0%|          | 0/200 [00:34<?, ?it/s, Loss=0.2072266]",
+    "tqdm_last_line": "Training progress: 100%|##########| 200/200 [01:05<00:00,  3.07it/s, Loss=0.1528436]",
+    "instantaneous_rate_end": "~12 it/s (still BEFORE densify_from_iter=500, so this is the cheapest regime)",
+    "renders_written": 50,
+    "render_raster": "1352x1014 RGB",
+    "render_path": "<model_path>/test/ours_200/renders/00000.png .. 00049.png",
+    "metrics_at_200_iterations_untrained": {
+      "PSNR": 16.984777450561523,
+      "SSIM": 0.7401242256164551,
+      "LPIPS_alex": 0.4144349992275238,
+      "ssimsv2": 0.7417014837265015,
+      "LPIPS_vgg": 0.4420951008796692,
+      "inference_seconds_per_frame": 0.0022016961593180895
+    }
+  },
+  "preprocessing_measured": {
+    "job": "57485385, COMPLETED 00:07:34",
+    "scene": "flame_steak_absfix_60_89_v3, frames 0-49",
+    "rate": "~9 s/frame on one A100 with GPU SIFT via the pinned COLMAP 3.11.1 container",
+    "disk": "1.8 GB per 50 frames",
+    "colmap_camera": "PINHOLE w=1352 h=1014 params=[731.0336, 731.0336, 676.0, 507.0], 21 cameras, 21 images",
+    "points_per_frame": {"frame_0": 3933, "frame_25": 3956, "frame_49": 3989},
+    "points_total_50_frames": 197687
+  },
+  "local_patches_to_the_pinned_checkout": {
+    "recorded_diff": "agent-control/realdata/stg/patches/stg_adags.diff",
+    "hunks": [
+      "test.py:142 sk_ssim(..., multichannel=True) -> sk_ssim(..., channel_axis=2, data_range=1.0). REQUIRED: sk_ssim is called before save_image, so the crash prevents any PNG being written.",
+      "thirdparty/gaussian_splatting/utils/general_utils.py safe_state(): seed read from the STG_SEED environment variable, default 0 = upstream behaviour. REQUIRED for a two-seed design: STG hard-codes seed 0 and exposes no --seed flag."
+    ]
+  },
+  "adags_deviations_recorded": [
+    "Derived frames are 1352x1014, so COLMAP SIFT sees half the linear resolution the published pipeline gives it. Fewer features per frame -> a different (smaller) per-frame triangulated cloud than the published run. Unavoidable: the absence edit exists only at 1352x1014.",
+    "config resolution:1 instead of 2, with --downscale 2 in the db conversion; this MATCHES the published effective raster rather than departing from it.",
+    "mp4 files are symlinked in from the original scene purely so convertdynerftocolmapdb can recover camera-name order; they are never decoded.",
+    "NumPy 2.0: thirdparty/colmap/pre_colmap.py:96 calls ndarray.tostring() and :143 uses np.NaN. Both were removed in NumPy 2.0. prep_derived.py monkey-patches them at run time rather than editing the pinned checkout; envs/stg pins numpy<2 so STG's own import chain (helper_train -> script.pre_immersive_distorted -> thirdparty.colmap.pre_colmap) is unaffected.",
+    "mmcv is stubbed in envs/stg (helper_model.py:27 imports it at module level; only ours_lite preprocesspoints==3 calls it)."
+  ]
+}

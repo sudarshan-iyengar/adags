@@ -1,0 +1,402 @@
+{
+ "scene": "flame_steak",
+ "rule": "spec v2.0.0 section 13.6 confirmatory construction rule (_v3)",
+ "base_rows": "all",
+ "mask_min_cams": 8,
+ "mask_cams_total": 20,
+ "mask_cameras": [
+  "cam01",
+  "cam02",
+  "cam03",
+  "cam04",
+  "cam05",
+  "cam06",
+  "cam07",
+  "cam08",
+  "cam09",
+  "cam10",
+  "cam11",
+  "cam12",
+  "cam13",
+  "cam14",
+  "cam15",
+  "cam16",
+  "cam17",
+  "cam18",
+  "cam19",
+  "cam20"
+ ],
+ "mask_frames": "45,60,75,89,104",
+ "mask_source": {
+  "cam15_deva_id": [
+   79
+  ],
+  "cam00_evaluation_id": [
+   65
+  ],
+  "deva_root": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/repo/sa4d/data/dynerf/flame_steak",
+  "harmonised_from": "identity_rows",
+  "extra_ids": "no extra id"
+ },
+ "edit_region": "deva",
+ "dilate": 6,
+ "feather": 2.0,
+ "hull_outlier_factor": 0.0,
+ "iqr_box": {
+  "applied": false,
+  "default_outlier_factor": 1.0,
+  "function": "utils.segment_utils.points_inside_convex_hull",
+  "note": "IQR box on the UNDEFORMED get_xyz; the hull limb is commented out upstream; --hull_outlier_factor <= 0 skips the box (canonical_after_iqr then equals canonical_after_mask_consistency)",
+  "outlier_factor": 0.0
+ },
+ "window": [
+  60,
+  89
+ ],
+ "render_frames": [
+  40,
+  109
+ ],
+ "n_rows_total": 118965,
+ "counts": {
+  "after_majority": 2230,
+  "after_mask_consistency": 2230,
+  "after_iqr_box": 2230,
+  "after_radius": 2227
+ },
+ "rows_removed": 2227,
+ "rows_removed_definition": "the canonical set the build deletes inside [A,B] = canonical_counts.after_radius",
+ "build_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/build_id79_60_89_v3",
+ "derived_root": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/data_derived/absfix/flame_steak_absfix_60_89_v3",
+ "build_job": "57382785",
+ "assemble_verify_job": "57382785 (same job: assemble + verify run in the build sbatch)",
+ "montage_capband_job": "57382787",
+ "event_names": [
+  "BOTTLE_absence_gap",
+  "BOTTLE_return_early",
+  "BOTTLE_return_late",
+  "BOTTLE_pre",
+  "BOTTLE_control"
+ ],
+ "event_boxes": {
+  "BOTTLE_absence_gap": {
+   "bbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "frames": [
+    [
+     63,
+     87
+    ]
+   ]
+  },
+  "BOTTLE_return_early": {
+   "bbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "frames": [
+    [
+     92,
+     99
+    ]
+   ]
+  },
+  "BOTTLE_return_late": {
+   "bbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "frames": [
+    [
+     100,
+     109
+    ]
+   ]
+  },
+  "BOTTLE_pre": {
+   "bbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "frames": [
+    [
+     30,
+     57
+    ]
+   ]
+  },
+  "BOTTLE_control": {
+   "bbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "frames": [
+    [
+     230,
+     259
+    ]
+   ]
+  }
+ },
+ "absence_event_masks": {
+  "schema_version": "ccr-event-ray-masks-v1",
+  "source": "scripts/build_absence_fixture_scene.py (flame_steak_absfix_60_89_v3)",
+  "raster": [
+   1352,
+   1014
+  ],
+  "camera": "cam00",
+  "window_frames": [
+   0,
+   299
+  ],
+  "note": "Counterfactual-absence fixture. The imagery inside the authored window is TEACHER-RENDERED, not observed, so every number scored on 'BOTTLE_absence_gap' is a statement about the representation's ability to render an authored absence and NOT evidence about the world. Boxes are [x0,y0,x1,y1] in the cam00 raster, half-open on the far edge, and are the union silhouette over the whole gap padded by 8 px. 'BOTTLE_control' carries no edit and exists so a reader can tell an effect of the edit from an effect of the window.",
+  "events": [
+   {
+    "name": "BOTTLE_absence_gap",
+    "bbox": [
+     957,
+     753,
+     1027,
+     965
+    ],
+    "frames": [
+     [
+      63,
+      87
+     ]
+    ],
+    "class": "counterfactual_absence",
+    "confidence": "authored",
+    "occluder": "the authored absence: the object is gone from the imagery"
+   },
+   {
+    "name": "BOTTLE_return_early",
+    "bbox": [
+     957,
+     753,
+     1027,
+     965
+    ],
+    "frames": [
+     [
+      92,
+      99
+     ]
+    ],
+    "class": "counterfactual_absence",
+    "confidence": "authored",
+    "occluder": "the first frames after the object returns"
+   },
+   {
+    "name": "BOTTLE_return_late",
+    "bbox": [
+     957,
+     753,
+     1027,
+     965
+    ],
+    "frames": [
+     [
+      100,
+      109
+     ]
+    ],
+    "class": "counterfactual_absence",
+    "confidence": "authored",
+    "occluder": "the settled return"
+   },
+   {
+    "name": "BOTTLE_pre",
+    "bbox": [
+     957,
+     753,
+     1027,
+     965
+    ],
+    "frames": [
+     [
+      30,
+      57
+     ]
+    ],
+    "class": "counterfactual_absence",
+    "confidence": "authored",
+    "occluder": "the object present, before the gap"
+   },
+   {
+    "name": "BOTTLE_control",
+    "bbox": [
+     957,
+     753,
+     1027,
+     965
+    ],
+    "frames": [
+     [
+      230,
+      259
+     ]
+    ],
+    "class": "counterfactual_absence",
+    "confidence": "authored",
+    "occluder": "an unedited window; no counterfactual applied"
+   }
+  ]
+ },
+ "manifest_sha256": {
+  "MANIFEST.absence_edit.json": {
+   "sha256": "a0a9c3690e56085b96105d9465182950146c0986ac4345ab4a458666aa242d7e",
+   "bytes": 344215
+  }
+ },
+ "capband_v3": {
+  "band_frac": 0.22,
+  "labels": [
+   "v3"
+  ],
+  "dirs": {
+   "v3": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/build_id79_60_89_v3"
+  },
+  "rows": [
+   {
+    "camera": "cam00",
+    "frame": 60,
+    "band_yx": [
+     751,
+     804,
+     955,
+     1028
+    ],
+    "band_px": 3869,
+    "orig_red_px": 270,
+    "v3_red_px": 0,
+    "v3_changed_px": 1211
+   },
+   {
+    "camera": "cam00",
+    "frame": 75,
+    "band_yx": [
+     751,
+     804,
+     955,
+     1028
+    ],
+    "band_px": 3869,
+    "orig_red_px": 278,
+    "v3_red_px": 0,
+    "v3_changed_px": 1161
+   },
+   {
+    "camera": "cam00",
+    "frame": 89,
+    "band_yx": [
+     751,
+     804,
+     955,
+     1029
+    ],
+    "band_px": 3922,
+    "orig_red_px": 274,
+    "v3_red_px": 0,
+    "v3_changed_px": 1182
+   },
+   {
+    "camera": "cam08",
+    "frame": 60,
+    "band_yx": [
+     717,
+     762,
+     816,
+     878
+    ],
+    "band_px": 2790,
+    "orig_red_px": 173,
+    "v3_red_px": 0,
+    "v3_changed_px": 830
+   },
+   {
+    "camera": "cam08",
+    "frame": 75,
+    "band_yx": [
+     717,
+     762,
+     816,
+     878
+    ],
+    "band_px": 2790,
+    "orig_red_px": 173,
+    "v3_red_px": 0,
+    "v3_changed_px": 809
+   },
+   {
+    "camera": "cam08",
+    "frame": 89,
+    "band_yx": [
+     717,
+     763,
+     816,
+     878
+    ],
+    "band_px": 2852,
+    "orig_red_px": 173,
+    "v3_red_px": 0,
+    "v3_changed_px": 768
+   },
+   {
+    "camera": "cam15",
+    "frame": 60,
+    "band_yx": [
+     677,
+     731,
+     953,
+     1032
+    ],
+    "band_px": 4266,
+    "orig_red_px": 258,
+    "v3_red_px": 0,
+    "v3_changed_px": 1316
+   },
+   {
+    "camera": "cam15",
+    "frame": 75,
+    "band_yx": [
+     677,
+     731,
+     953,
+     1033
+    ],
+    "band_px": 4320,
+    "orig_red_px": 260,
+    "v3_red_px": 0,
+    "v3_changed_px": 1302
+   },
+   {
+    "camera": "cam15",
+    "frame": 89,
+    "band_yx": [
+     677,
+     732,
+     953,
+     1033
+    ],
+    "band_px": 4400,
+    "orig_red_px": 257,
+    "v3_red_px": 0,
+    "v3_changed_px": 1309
+   }
+  ]
+ }
+}
