@@ -1361,3 +1361,339 @@ instead.
 | `scripts/run_leonardo.sh` (`ADAGS_SAVE_ITERATIONS`) | `226cd824d6ee4c8c7a6cfd925efd56fa1e8beecdf5d45cfa3a4b4020c5a908a2` |
 | stage-2 scripts (`stage2_cell.sbatch`, `submit_stage2.py`, `stage2_warden.sh`, `stage2_montage.py`, `stage2_collect.py`, `u_val_crosscheck.py`, `stg_chain.sh`, `stg_collect.sbatch`, `collect_cam00.py`, `draws_final.sbatch`, `vote_est.sbatch`, `precond_wave1_shams.sbatch`) | in the freeze record |
 | amendment commit carrying this section | recorded in the follow-up commit that adds the freeze record, and in the ledger |
+
+### 13.22 Decision 5 resolved: option (iv), the local-floor L draw; the setup re-frozen; stage-2 GO authorised, submission follows this commit (user decisions 2026-09-15; written 2026-09-15 00:20–01:30 CEST)
+
+Nothing in this section reads a score. Every job named here is in
+`agent-control/realdata/jobs/ledger.txt` with a reason. Every EXISTING
+freeze-relevant input named here (programs, counts, recount reports,
+preconditions, plan, per-cell configs, scripts, templates, manifests,
+the tracked spec files) is hashed in full in the regenerated
+`research-wiki/assets/absfix-stage2-freeze.json`, with these precise
+exceptions: the record contains commit A (this section's commit) but
+cannot contain commit F or its own hash, both of which go into F's
+commit message and the ledger line that records F; artefacts that do
+not yet exist (submission scripts, cell run directories and their
+manifests, the Windows copy of `realdata_gate`) are hashed when they
+are created, in the ledger and the next section. Hashes are
+abbreviated in prose.
+
+**The user's decisions (2026-09-15):** option (iv) for G-wrongmem-L;
+`runs/realdata_gate` (127.1 GB, 29,552 files) is APPROVED for archival
+to the Windows archive (the copy to scratch_large is under way; the D:
+transfer, its verification and the removal follow, in that order);
+stage 2 GO. No STG or stage-2 training job is submitted by this commit
+(the preparation jobs named below already ran); the submission ids go
+to the ledger and to the next section. A fresh-context Codex review
+(gpt-5.6-sol, high) of this text was folded in before it was committed
+(dispositions at the end).
+
+**§11.2 amended (append-only): G-wrongmem-L = the local-floor draw.**
+Same frozen eligible pool as decision 1 (deformed centre inside the
++20 px construction silhouette on ≥ 8 of 19 training cameras at frames
+50 and 95), zero overlap with the construction-derived set, measure
+`w_total` (each row's rendered contribution to the whole cam15 view at
+frame 50). Rows are visited by descending `w_total`, ties by ascending
+frozen row id (the pre-densification integer index); a row is ACCEPTED
+iff the running mass stays ≤ 1.00 × the truth mass (an overshooting row
+is skipped permanently; the walk continues); the walk STOPS at the first
+acceptance at which mass ≥ 0.90 × truth AND n ≥ 1,100 both hold, and is
+REFUSED if the pool is exhausted first. Comparisons inclusive, float64,
+the accepted set sorted by row id. Executable-equivalent pseudocode and
+seven tests: `scripts/draw_membership_shams.py::
+local_floor_contribution_matched_draw` (CLI `--l_mode local_floor
+--l_min_rows 1100 --l_cap 1.0`), commit 846ee1a, script sha256
+`bff08d90…03c5`, tests `c69114c1…ed77` (48 pass locally and on
+Leonardo); the `local` and `radius` modes are unchanged. The 1,100 is
+the §11.4 row floor with a 10 % margin against the ≤ 2.2 % wave-1
+shrink; the cap keeps L's baseline contribution at or below G's. Rows
+accepted once no remaining positive-contribution row fits under the cap
+carry zero `w_total` at the measured view and satisfy the count by
+geometric membership only; the sidecar
+records `rows_with_positive_contribution` and
+`rows_with_zero_contribution`. Construction ACCEPTANCE: the round-5
+recount (rows of the L program inside the frozen mechanism box at frame
+75, deformed centres from the 6k prefix checkpoint `chkpnt6000.pth`; a
+construction check, distinct from the 12k cell precondition) must give
+≥ 100 for every L program; a prefix below it is REFUSED and reported,
+never relaxed.
+Every §11.4 clause is still evaluated on the 12k cell with NO exemption
+(`rows_min_exempt_arms` stays empty); an L cell that fails there is
+excluded and can still make Claim A DWP. The decision-1 draws
+(`draws_prefix<S>_final/`, job 57752673) are preserved unchanged as the
+recorded fallback and are not used for training.
+
+**Draw: job 57765868** (CPU, 76 s, HEAD 846ee1a), inputs identical to
+job 57752673, outputs ONLY in the new `draws_prefix<S>_iv/`; 12/12
+constructed, 0 refused. A and B re-emitted alongside are row-identical
+to the frozen stage-1 A/B on all 24 (`row_ids_sha256` equal, checked in
+the job log); the frozen A/B files stay the training files. **Recount
+round 5: jobs 57766941 (cut_roasted_beef) / 57766942 (flame_steak) /
+57766945 (sear_steak)** (GPU, 2 min each; round-4 reports preserved
+byte-for-byte under `box_recount_round4_L_final/`; the twelve round-5
+report hashes are in the freeze record), L read from `_iv` via
+`L_DRAWS_SUFFIX=_iv`; every other arm's count is unchanged from round 4
+(GMIS included, see below).
+
+| scene | prefix | L rows | rows with positive `w_total` | mass ratio (draw/truth) | L in-box at f75 (6k prefix) | `program_gwrongmem_l.json` sha256 |
+|---|---|---:|---:|---:|---:|---|
+| cut_roasted_beef | 0 / 1 / 2 / 3 | 1,100 × 4 | 504 / 1,100 / 938 / 527 | 1.000000 / 0.936142 / 1.000000 / 1.000000 | 838 / 738 / 741 / 820 | `5b721776…` / `f486c25a…` / `aa568d70…` / `5a38c912…` |
+| flame_steak | 0 / 1 / 2 / 3 | 1,100 × 4 | 221 / 316 / 363 / 327 | 1.000000 × 4 | 793 / 777 / 739 / 765 | `bd681c7a…` / `164f8994…` / `d4eb208b…` / `bd61eb36…` |
+| sear_steak | 0 / 1 / 2 / 3 | 1,100 × 4 | 539 / 460 / 377 / 398 | 1.000000 × 4 | 741 / 793 / 806 / 796 | `efd757d5…` / `2f2b74f3…` / `0ccae8fd…` / `a8a438b6…` |
+
+Acceptance: in-box ≥ 100 on 12/12 (minimum 738), so no prefix is
+refused. Truth rows 6,582–7,676; eligible non-truth rows 4,465–7,134;
+overlap 0 on 12/12. **Pre-run discrepancy against the §13.21 dry
+computation, disclosed and diagnosed.** §13.21 wrote "mass ratio
+1.000000 on 11 prefixes and 0.946 on cut_roasted_beef s1 (its whole
+eligible pool carries 0.95 of the truth mass, §13.20); of the 1,100
+rows, 221–938 carry positive `w_total`". Measured: cut_roasted_beef s1
+stops at 1,100 rows with mass 5,436.38 against a truth mass of 5,807.21
+(ratio 0.936142), and every one of its 1,100 rows carries positive
+`w_total`; the other 11 prefixes are consistent with §13.21's stated
+ratio (1.000000) and positive-row range (221–938). Diagnosis:
+on s1 the cap is never binding, so the walk stops on the row floor at
+the 1,100th row with 3,495 eligible rows unvisited; the §13.21 figure
+0.946 is the mass of the WHOLE eligible pool (0.946368 of truth,
+measured from the frozen `w_total` and eligibility arrays on
+2026-09-15), i.e. the value the walk would reach only if it continued
+past the row floor, and the "221–938" range described the 11 capped
+prefixes and silently omitted s1. Both are approximation errors of the
+dry text, not stale inputs (the job's `contribution_truth` and
+`eligible_n` equal the decision-1 sidecar's) and not an implementation
+difference (the rule stops at the first acceptance where both floors
+hold, which on s1 is the row floor). No parameter was changed after
+seeing the job's values; the job's values are the record. On the 11
+capped prefixes 221–938 rows carry positive contribution and the rest
+(162–879) are geometric members with zero `w_total` at cam15 f50, as
+the rule foresees; the reducer reads none of these counts.
+
+**GMIS box frame (this section fixes a recount/spec disagreement before
+any score exists).** §13.21 and `CELL_PRECONDITION.fbox_frame_by_arm`
+freeze the GMIS in-box frame at **244** (the floor of the [230,259]
+midpoint, the reducer fixture's value); the stage-1 recount helper
+`stage1/box_recount.py` used 245 through round 4. It now uses 244
+(backup `box_recount_round4_gmis245.py`, ledger line, no other change).
+Two explicit results: at frame 244 (round 5) the GMIS in-box count
+equals the GMIS gated-row count on 10 of 12 programs (6,582–7,676) and
+is one row short on two, cut_roasted_beef s3 (6,812 of 6,813) and
+sear_steak s3 (7,535 of 7,536); in the preserved frame-245 reports
+(round 4) every one of the 12 in-box counts is identical to its
+frame-244 value, the same two prefixes one row short. The wave-1
+re-extraction and `submit_stage2.py` already used 244.
+
+**Calibration timing shams re-extracted at their own frame: job
+57761925** (resubmission of 57761259, which failed after 84 s because
+the extractor needs the cell's `meta/train.log`; the sbatch now links
+`meta/`, `cfg_args`, `cameras.json`, `input.ply` and `inputs.sha256`
+from the frozen wave-1 run dir, which is not written): the eight
+`wave1_cells/absfix_{mis,ones}_s{0..3}/precondition.json` at frames
+244 / 291 on the frozen `chkpnt12000.pth`; GMIS 7,002–7,210 gated rows
+in box with 27 zero-presence frames, GONES 7,312–7,326 with 9; every
+hash in the freeze record; the calibration manifest points at these
+directories for GMIS and GONES.
+
+**Pre-registrations (user item a).** The four declared intentions
+(GESTMEM-S3 with SAM 3; the product gate; free boundaries; graded
+membership) are already in §13.21 as rule-only declarations and in the
+JSON's `PREREGISTERED_2026_09_14`; nothing is added or implemented
+here.
+
+**Training-path diff between the wave-1 commit and the frozen commit
+(user item b).** Wave 1 trained at `6b368d2` (freeze_v1). Between it
+and this section's commit exactly one commit touches `main.py`,
+`scene/`, `gaussian_renderer/` or `elgs/`: `bfb8cbb` (2026-09-11),
++52/−5 lines in `main.py` and `scene/gaussian_model.py`;
+`gaussian_renderer/` and `elgs/` are untouched. In `main.py` the change
+is confined to `validation()` (the `--val` path now restores the EL-GS
+runtime); the training loop is not touched, and `--val` is not the
+scored path of any stage-2 cell (it is the cross-check pass, gate-off on
+U and gate-on on gated arms, whose window profile must reproduce the
+evaluator's scored profile to 5e-5 on every arm; see the template
+correction below). In
+`scene/gaussian_model.py` the constructor now declares
+`_appearance_source_idx = None` and `_appearance_share_mode = "dc"`
+and the two render-time reads use the attribute instead of
+`getattr(..., None)`; with no appearance edit installed (every training
+lane) both branches evaluate to the same `None` test and the same
+tensors. Outside those four paths the repo-wide diff `6b368d2..HEAD`
+(excluding `research-wiki/`, `refine-logs/`, `tests/`) touches only
+the spec JSON, evaluation- and preparation-side scripts under `scripts/`
+(evaluator, reducer, draws, vote, census, viz, preconditions) and
+`scripts/run_leonardo.sh` (+16 lines: the `ADAGS_SAVE_ITERATIONS`
+variable of §13.21, which changes which checkpoints are WRITTEN, not
+what is computed); `configs/` (other than the spec JSON), `utils/`,
+`arguments/` and the CUDA submodules are byte-identical, and the cells
+run in the same pinned venv (`exp_index/leonardo_env.sh`). Not compared:
+installed packages beyond the pinned venv, driver and node; no
+deterministic replay was run. **The claim is therefore: no
+training-path change is identified on the inspected training-reachable
+code and configuration between 6b368d2 and the frozen commit**, not a
+proof of bit-identity. The calibration scene pairs wave-1 cells
+(6b368d2) with wave-2 cells (the frozen commit) under that statement;
+the per-cell path cross-check guards the evaluation side only.
+
+**Freeze list (JSON edits in this commit):** `arm_roles.GWRONGMEM_L` →
+the rule above; `FREEZE_LIST_STATUS.programs_wrongmem_L` → the 12 `_iv`
+programs (hashes above); `pending_user_decisions` → `[]`; `stage2_go` →
+the user's go of 2026-09-15; `box_recount_round5` added;
+`SHAM_DRAWS.script_iv` added; `STAGE_2.frozen_commit` set to the
+literal object `{"id": null, "authoritative_source": "the LAST ledger
+line matching '^FROZEN_COMMIT F = <40 hex>'", "written_to":
+["stage2/submit/<tag>.sh", "<run_dir>/inputs.sha256 (frozen_commit=)"],
+"validation": "submit_stage2.py --go refuses unless HEAD ==
+--frozen_commit == that ledger value and the tree is clean; every cell
+re-asserts HEAD == FROZEN_COMMIT at start"}` (the submitter's ledger
+check is a 13.22 addition, `patch_submit_frozen.py`, hashed in the
+record); `STAGE_2.disk` updated;
+`submit_stage2.py` L path → `draws_prefix<S>_iv/program_gwrongmem_l.json`. Plan regenerated at 846ee1a: 84 planned
+cells, sear GESTMEM 0/4 MISSING as in §13.16; against the §13.21 plan
+(preserved as `stage2_plan_13_21.json`) exactly the 12 L cells differ
+and only in program path, program hash and the per-cell YAML hash that
+embeds the path (36 field differences, `plan_diff.out`); `stage2_plan.json`
+`5ab25096…`, `stage2_inputs.sha256` `312e5223…`. One template change,
+recorded: the `--val` cross-check renders go to
+`/leonardo_scratch/large/userexternal/siyengar/proj_adags/stage2_val/`
+instead of scratch_fast, because the scratch_fast project quota stood
+at 841 GB of 1 TB shared with other users and 84 × 1.2 GB would have
+taken it to 94 %; nothing evidence-bearing lives there (the sha256
+manifest of the PNGs stays in the run dir). **A second template
+correction, found by reading the template against commit bfb8cbb
+before any cell ran:** §13.21 described the `--val` cross-check pass as
+"gate off" on every arm and compared it with the evaluator's gate-off
+render; since bfb8cbb `main.py --val` restores the EL-GS runtime whenever
+the config sets `elgs_enable`, which every gated per-cell YAML does, so
+on a gated arm the `--val` render is GATE-ON and the §13.21 comparison
+would have failed on every gated cell (exit 9 after the scored outputs
+were written). The template now compares the `--val` profile with the
+SCORED profile on every arm (U: ungated vs gate-off `--val`; gated arms:
+gated vs gate-on `--val`). This checks that `main.py`'s restore path and
+the evaluator's `--restore_state` path agree on the render that is
+scored; the trade is stated: the per-cell gate-off identity on gated
+cells that §13.21 described is no longer compared, so the guard is a
+different one, not strictly stronger. `u_val_crosscheck.py`, its 5e-5
+tolerance and the fail-on-mismatch rule are unchanged. The tolerance
+is not tight in practice: on the 20 wave-1 gated cells the evaluator's
+gate-off profile (`f_box_profile_gateoff_check.json`, 2026-09-10
+re-evaluation) and the gate-off `--val` profile
+(`f_box_profile_val_nogate.json`, produced by the wave-1 `--val` pass at
+commit 6b368d2, before bfb8cbb, when `--val` never restored the EL-GS
+runtime) agree to `max_abs_diff = 0` on all 3,254 numeric leaves
+(login-node check, 2026-09-15 00:35). The gate-on pairing has no
+precedent. **Frozen
+consequence of a mismatch:** the cell exits 9 after its scored files are
+written; the collector marks a cell complete only if its
+`path_crosscheck.json` exists with `pass = true` (`stage2_collect.py`
+sha256 `1a9deba9…`, the §13.21 collector kept as
+`stage2_collect_13_21.py`), so a mismatching cell is FAILED, excluded
+from the reducer manifest and listed, and a pair it removes makes the
+affected claim DWP under the existing §11 rules. If EVERY gated cell
+mismatches, reduction halts and a diagnosis stage is declared
+separately; frozen now: that diagnosis may read only job logs,
+configurations, `precondition.json` and `path_crosscheck.json`; the
+scored renders, the window profiles, the montages and every table stay
+unread; no failed cell is reinstated in this wave; any repaired rerun
+is a separately pre-registered wave with its own section. Template
+sha256 `27cfe279…` (the §13.21 template preserved as
+`stage2_cell_13_21.sbatch`). The cell template runs
+`gate_cell_precondition.py` on every cell before the evaluator (user
+item g, verified by reading the template).
+
+**Disk (user items e, f).** Composites: all 8 directories
+(`flame_steak/{build_id79_60_89_v2, preview_id79_deva, preview_id79_mc1/5/6/7}`,
+`sear_steak/{build_id114_60_89_v2, preview_id114_deva}`, 14,996 files)
+are on `D:\adags-archive\leonardo\runs\realdata\absfix2\` and verified
+with `sha256sum -c` against their manifests (the last,
+`sear_steak/build_id114_60_89_v2`, 12,498 files, verified 2026-09-15
+00:05 CEST, rc 0); manifests also under `D:\adags-archive\leonardo\
+manifests\`. `runs/realdata_gate`: **archive-copy job 57767135**
+(CPU) writes the per-file manifest, rsyncs to scratch_large
+(`/leonardo_scratch/large/userexternal/siyengar/proj_adags/runs/
+realdata_gate`) and verifies that copy against the manifest; it
+DELETES NOTHING and scratch_large is not the archive. After it
+verifies, the scratch copy is transferred to
+`D:\adags-archive\leonardo\runs\realdata_gate\` and verified there
+with `sha256sum -c` against the same manifest; only then is the
+removal of the verified originals (the 8 composite directories and
+`realdata_gate`) proposed to the user as explicit commands, which wait
+for approval; no job deletes. D: had 483 GB free; the archive would
+grow to ≈ 136 GB, under the 400 GB the user set. Footprint, binary
+units throughout: work quota 3.716 of 4 TiB used (project-wide,
+shared with other users), ≈ 291 GiB free now; per cell 1,890 MiB ≈
+1.85 GiB on work (two 520 MiB checkpoints, `chkpnt12000` and
+`chkpnt_best`, plus the 850 MiB evaluator renders; the 1.2 GB `--val`
+renders go to scratch_large) → 84 cells ≈ 155 GiB; STG ≈ 44 GiB
+(the §13.21 estimate of 47 GB, 21.6 GB of it COLMAP output); total
+≈ 199 GiB against ≈ 291 GiB free: current margin ≈ 92 GiB, projected
+≈ 216 GiB once the two removals (≈ 118 GiB + ≈ 8 GiB) have been
+approved and verified. The chain is to be submitted on the current
+margin; the warden's status file carries `cindata` each cycle.
+
+**Order of execution after this commit** (each id to the ledger with a
+reason), with the commit scheme made non-self-referential: call this
+section's commit A and the follow-up commit F. The freeze record is
+regenerated on Leonardo at A and names A as `amendment_commit_13_22`
+(its parent); F adds that record as
+`research-wiki/assets/absfix-stage2-freeze.json` and changes no other
+tracked file (verified by `git diff --stat A F`). **F is the
+FROZEN_COMMIT every cell asserts.** F's id is not written into any
+tracked file of F (a file cannot name the commit that first contains
+it); it is written FIRST to the ledger as a line of the exact form
+`FROZEN_COMMIT F = <40 hex>` (the authoritative source), then to the
+sbatch line of every cell (`submit/<tag>.sh`) and to every cell's
+`inputs.sha256` (`frozen_commit=`), and it is quoted in the next
+section together with the submission ids. Validation is mechanical:
+`submit_stage2.py --go` refuses unless `HEAD`, `--frozen_commit` and
+the last such ledger line are one and the same id and the tree is
+clean; every cell re-asserts `HEAD == FROZEN_COMMIT` and a clean tree
+before training; so no two parts of the record can name different
+commits. Then: `stg_chain.sh --go` (63 jobs, dependencies);
+`submit_stage2.py --go --frozen_commit F` (84 cells); warden under
+nohup; then §11.8's order of reading: reduce, hash the output, view
+every montage, read the table.
+
+| item | sha256 |
+|---|---|
+| this page, sections 0–13.21 (the file before this section) | `c087c9ee4528f8a3af4680c1500b6218d982ad893adee68064f2fbc854214893` |
+| `configs/n3v/absfix_gate_spec_v2.json` after the 13.22 edits | `18aae16ae3a4772ddcee4f2ee2f801a232e2ecfcae0dde6f7c918e685ce23c16` |
+| `scripts/draw_membership_shams.py` (local_floor, commit 846ee1a) | `bff08d90d58b4823c7d02939b2e2d7ec6b24d34deb89cb8543de26cbc83e03c5` |
+| `tests/test_draw_membership_shams.py` | `c69114c11e8252d17bc3aee59779792028d90c06bde840d9a724c82f79ffed77` |
+| `stage2/stage2_plan.json` / `stage2_inputs.sha256` | `5ab250965c9bf2ccf…` / `312e5223602e9f64c…` |
+| `stage2/stage2_cell.sbatch` (scratch_large, scored-profile cross-check) | `27cfe279a98ce57d521cda7d77cb36520ee87ac19863bffb88e0b898435ad4bd` |
+| `stage2/stage2_collect.py` (cross-check part of completeness) | `1a9deba9fba57a253940cb049212e498522ab552d706a99bfe40b7fec8e94e55` |
+| `research-wiki/assets/absfix-stage2-freeze.json` (regenerated at A) | committed in F; its sha256 is in F's commit message and in the ledger line that records F |
+| commit A (this section) | named as `amendment_commit_13_22` inside the freeze record and in the ledger |
+| commit F (freeze record; FROZEN_COMMIT of every cell) | ledger, every `submit/<tag>.sh`, every cell's `inputs.sha256`, and the next section |
+
+*Codex review (gpt-5.6-sol, reasoning high, fresh thread, two passes on
+this text before commit) — blocking points and dispositions.* Pass 1
+(8 blocking, all accepted): placeholders and unknowable commit ids →
+the A/F scheme above, the record hash in F's message and ledger, the
+opening claim narrowed to existing inputs with precise exceptions;
+self-referential frozen commit → the record names A, F is ledger-first,
+mechanically validated by the submitter and every cell; "go executed" /
+"submitted" → "GO authorised, submission follows", ids in the next
+section; "moved to the Windows archive" → "approved for archival",
+scratch_large named as not the archive, D: verification before any
+removal, margins labelled current vs projected; "numerical training
+path unchanged" → narrowed to "no change identified on the inspected
+training-reachable code and configuration", scope and omissions
+enumerated; cross-check "proves … stronger" → the trade stated, frozen
+consequence of a mismatch added (collector hashed); dry-computation
+discrepancy → measured diagnosis (whole-pool mass 0.946368 vs walk
+0.936142), labelled approximation errors of the dry text; ambiguous
+GMIS sentence → two explicit results with prefixes and paired counts.
+Pass 1 non-blocking, adopted: binary units throughout; "after the cap
+is reached" reworded; `chkpnt6000.pth` construction check distinguished
+from the 12k precondition; recount job-to-scene mapping and report
+hashes in the record. Pass 2 (3 blocking, all accepted): the opening
+"every artefact hashed" claim → existing inputs only, exceptions listed;
+`STAGE_2.frozen_commit` → a literal object with the authoritative
+ledger locator and a submitter check that refuses any disagreement
+among HEAD, `--frozen_commit` and the ledger; the all-gated-mismatch
+branch → diagnosis limited to logs, configs, precondition and
+cross-check files, scored artefacts unread, no reinstatement in this
+wave, repaired reruns a new pre-registered wave. Pass 2 non-blocking,
+adopted: "no STG or stage-2 training job is submitted by this commit";
+"consistent with" instead of "agree exactly"; provenance of the wave-1
+gate-off `--val` profiles stated. Not adopted: none.
