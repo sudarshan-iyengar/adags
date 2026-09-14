@@ -1697,3 +1697,46 @@ wave, repaired reruns a new pre-registered wave. Pass 2 non-blocking,
 adopted: "no STG or stage-2 training job is submitted by this commit";
 "consistent with" instead of "agree exactly"; provenance of the wave-1
 gate-off `--val` profiles stated. Not adopted: none.
+
+### 13.23 Stage 2 SUBMITTED (2026-09-15, 00:45–00:57 CEST): commits A and F, the job ids, the warden; the Leonardo checkout is pinned at F until the chain ends
+
+Append-only record of the execution declared in §13.22; no score is
+read here. Commit A (§13.22) = `ca9dead395a120842f6b2394094abee4339190a1`
+(reducer and draw tests pass on Leonardo at A: 202). The freeze record
+was regenerated at A (345 entries, sha256
+`db3b4f0247b5aed122eff5dfeef56c35fd32fdcd933ce9f0acc457321314d5c7`) and
+committed as `research-wiki/assets/absfix-stage2-freeze.json` in
+**commit F = `dc7b301ee0993f8093015965931cce3666c41bba`**; `git diff
+--stat A F` is that one file (2,700 lines) and the asset is
+byte-identical to the record on Leonardo. Ledger line 391:
+`FROZEN_COMMIT F = dc7b301ee0993f8093015965931cce3666c41bba`; the
+submitter's check printed "frozen commit validated: HEAD ==
+--frozen_commit == ledger". One note on the plan: `--plan` was re-run
+at A after the submitter gained the ledger check (`patch_submit_frozen.py`),
+which rewrote `stage2_plan.json`'s `repo_head` and timestamp fields
+(sha256 now `423c4520…`, the value in the freeze record); the 84 cells
+and every input hash are identical to the plan quoted in §13.22 and
+`stage2_inputs.sha256` is unchanged (`312e5223…`).
+
+**Submitted (each with a ledger line and a reason):** STG chain, 63
+jobs 57769509–57769763 with `afterok` dependencies (prep 11: 57769509–
+57769525; train/render 48; collect 4: 57769568, 57769648, 57769674,
+57769763; the full name→id map is in `stage2/jids_stg/`). Stage-2
+cells, 84 jobs 57769768–57770106 (`stage2/jids/<tag>.txt`, sbatch lines
+in `stage2/submit/<tag>.sh`, each carrying `FROZEN_COMMIT=F`), in the
+order flame_steak (36), sear_steak (32), cut_roasted_beef (16). Warden
+started 00:50:23 CEST on login02, pid 2385710, policy §13.21 plus a
+`cindata` line per cycle. At 00:57 CEST 45 cells and 7 STG jobs were
+RUNNING, 40 cells and 52 STG jobs PENDING; work quota 3.7 of 4 TiB.
+Archive-copy job 57767135 was still copying (manifest of 29,552 files
+written 00:39; a copy of the manifest is at
+`D:\adags-archive\leonardo\manifests\archive_manifest_realdata_gate.sha256`,
+sha256 `08768f23…`).
+
+**Operational rule, binding for the chain:** every cell asserts
+`HEAD == F` and a clean tree at its start, and the warden's identical
+resubmissions do the same, so the Leonardo checkout stays at F until
+the last cell (including any resubmission) has started; commits made
+after F (this section included) are pushed but NOT pulled on Leonardo
+before then. Reduction (§11.8 order) runs at F or at a later commit
+whose diff against F touches no reducer input, stated when it happens.
