@@ -1,0 +1,2700 @@
+{
+ "amendment_commit_13_21": "65b4a075a9f4d6b97771e2a76ba94c36731029da",
+ "amendment_commit_13_22": "ca9dead395a120842f6b2394094abee4339190a1",
+ "artifacts": {
+  "cell/absfix2_cut_roasted_beef_gestmem_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gestmem_s0.yaml",
+   "config_sha256": "54daf03032526a7ed674ae88d8644dbbf4388ba67ca9b08dcfca710e6c8ad4ae",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix0/program_gestmem.json",
+   "program_sha256": "c27b4f653079ed879409882d5391bd554d71499a8250c3e8b240abc760fd8135",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "c6ab27f0fa864d3bf61e038118beda5b00a91653c1f626b98fabfafc0410a876"
+  },
+  "cell/absfix2_cut_roasted_beef_gestmem_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gestmem_s1.yaml",
+   "config_sha256": "51d95de30d6e5a252a58e294269293243464135b2e0196b6b0b09d4b9da4f722",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix1/program_gestmem.json",
+   "program_sha256": "352c7aff35bd5434c1ff5b26ab7286adcd1d4fb0707ea5572b67a13021ec9e92",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "92844150ef7aef206cc46dd572ec0e0a9a32fbba2612cb74a332c2c82ccd3a39"
+  },
+  "cell/absfix2_cut_roasted_beef_gestmem_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gestmem_s2.yaml",
+   "config_sha256": "af7985ffac9312c15924d77357959ab8988c8deb91cad0d736a0b454900884b6",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix2/program_gestmem.json",
+   "program_sha256": "f4880367a88591406af5b22fdaee913c4be222a5d0bf2445b05cfcfbf8d0ef36",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "f211af041443b7cf5153be7dc984e8b0d76818aaf9d77b77a4fefa2e398f2665"
+  },
+  "cell/absfix2_cut_roasted_beef_gestmem_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gestmem_s3.yaml",
+   "config_sha256": "88447eefe2eea2fd7bb4a6632be124f17a7f51aeb4b27501f14c12b28ee32fb8",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/s2vote_prefix3/program_gestmem.json",
+   "program_sha256": "45481b1648817a097f7e63688ee1757a1abac6fddbd093caf8176fb890e975d6",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "2ff4b7866b805033bb472feb193e0db000c4c7a26044fb681027e03b5f9c9271"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_a_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_a_s0.yaml",
+   "config_sha256": "71b990b889652118092c1cee283d7acdd03c3eb3c4187f05ff46b52258191dbc",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_v2/program_gwrongmem_a.json",
+   "program_sha256": "8f9145a7eeff9f64dec4ff54a0716d0c42cb5b38b01d0af9521daf7891b36260",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "c6ab27f0fa864d3bf61e038118beda5b00a91653c1f626b98fabfafc0410a876"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_a_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_a_s1.yaml",
+   "config_sha256": "8e8b06d8ce07ad95350705250c30623ed897eaa421c744ec0b4f925c98b88c07",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_v2/program_gwrongmem_a.json",
+   "program_sha256": "865e23499dd4a015e6b147485ea468a6781a136a4848350d4dffab3878d894d4",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "92844150ef7aef206cc46dd572ec0e0a9a32fbba2612cb74a332c2c82ccd3a39"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_a_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_a_s2.yaml",
+   "config_sha256": "9752a3757150c59c45843340b37b4290d89a7d12b59da6ee2b21387ed6a91093",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_v2/program_gwrongmem_a.json",
+   "program_sha256": "45bc97fee94f1995726d96c64867d94f0e5b8c4e0b1d30bfc21801e8d4a8ed52",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "f211af041443b7cf5153be7dc984e8b0d76818aaf9d77b77a4fefa2e398f2665"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_a_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_a_s3.yaml",
+   "config_sha256": "b4dcab17fd5c6d48e284f9cb23706d5cf583931117e2819806a302408b0a3466",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_v2/program_gwrongmem_a.json",
+   "program_sha256": "94f0c97e43a2a44c33b506cb94ad96e3f229fc482fd05897f10b93e4d9e78b5a",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "2ff4b7866b805033bb472feb193e0db000c4c7a26044fb681027e03b5f9c9271"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_b_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_b_s0.yaml",
+   "config_sha256": "13f9fd338362f610c9066d99610de4d2d48e9f04c5aecf4181f6cb23cf454dfd",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_v2/program_gwrongmem_b.json",
+   "program_sha256": "2cc1732ee0c4fcccbae925f44cdfd620b0f140cb5b1b183e68c4cec45c810ab2",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "c6ab27f0fa864d3bf61e038118beda5b00a91653c1f626b98fabfafc0410a876"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_b_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_b_s1.yaml",
+   "config_sha256": "00736a1938ef7ddedf07c40ab4371fb9662fb46b65502aefd84eaa7c89d6ae21",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_v2/program_gwrongmem_b.json",
+   "program_sha256": "eac9c6e459b9694a9658f5fc676b303211e5f6cb9552b2a13c377f9688434265",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "92844150ef7aef206cc46dd572ec0e0a9a32fbba2612cb74a332c2c82ccd3a39"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_b_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_b_s2.yaml",
+   "config_sha256": "eb4cd25eaad6a4b9f86590ec911be0bece786d13b60a11f3e96a27e2eb43203a",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_v2/program_gwrongmem_b.json",
+   "program_sha256": "248a2559f81a7ca429f473eaa6dabc6ec73adefd0bd09b7ceb0de59eb87344ba",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "f211af041443b7cf5153be7dc984e8b0d76818aaf9d77b77a4fefa2e398f2665"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_b_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_b_s3.yaml",
+   "config_sha256": "7fbcfdfc4a4e7335af3cde2815e8f688810affdb234fa740252fe2b6cfaf1796",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_v2/program_gwrongmem_b.json",
+   "program_sha256": "cb4925905ac639d9ded4816d32bdf5c8bacd704b59eb762e154dd6ff90c0294c",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "2ff4b7866b805033bb472feb193e0db000c4c7a26044fb681027e03b5f9c9271"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_l_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_l_s0.yaml",
+   "config_sha256": "7b6ba17279130afeab52e130aeea31207acf4e787523c16674a84a46f0b4bac6",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/program_gwrongmem_l.json",
+   "program_sha256": "5b721776216cd1f4166f3abd015e987a8d7e824d2316846ce512ef120d9d788b",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "c6ab27f0fa864d3bf61e038118beda5b00a91653c1f626b98fabfafc0410a876"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_l_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_l_s1.yaml",
+   "config_sha256": "62c735fd91ddfdfb94a94485110d82f1c0c2bd64432d6ed7789ead554d5a0e76",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/program_gwrongmem_l.json",
+   "program_sha256": "f486c25a228e5a9f547dce27e27ad1b309b0606e088a3269263d08a4ae932899",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "92844150ef7aef206cc46dd572ec0e0a9a32fbba2612cb74a332c2c82ccd3a39"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_l_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_l_s2.yaml",
+   "config_sha256": "630d0da2ffb1b36a21b0cc6bccc66ad846ea22fae326824aa4760cb6c538a20e",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/program_gwrongmem_l.json",
+   "program_sha256": "aa568d704d38fead325db2be3ad2f6c117353d216182b66752a832d3f68c5b45",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "f211af041443b7cf5153be7dc984e8b0d76818aaf9d77b77a4fefa2e398f2665"
+  },
+  "cell/absfix2_cut_roasted_beef_gwrongmem_l_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/cut_roasted_beef_gwrongmem_l_s3.yaml",
+   "config_sha256": "a21fcc5797167ba14c2babb5b1177e32e27de3a30b4fd42a6354d52511d823ab",
+   "fbox": [
+    964,
+    748,
+    1034,
+    952
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/program_gwrongmem_l.json",
+   "program_sha256": "5a38c912a882d5d54126f8b0ff18a5c9fc01d89b9df0a80ac661c5182e4c5c08",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_034100_cut_roasted_beef_absfix_60_89_absfix_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "2ff4b7866b805033bb472feb193e0db000c4c7a26044fb681027e03b5f9c9271"
+  },
+  "cell/absfix2_flame_steak_g_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_g_s0.yaml",
+   "config_sha256": "18985cfd79b024cfd910db329b33aa55a7f520d9eccf9aad46b1aaf84beffd6a",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_seedbox/program_oracle.json",
+   "program_sha256": "7d1ecee0f7efdc205d78568b2419fa9d81a8e76a95c658053ec7217ad8691e69",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_g_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_g_s1.yaml",
+   "config_sha256": "2bbffadee430523475c49a2c3939ef378caa9326487f16b4ae34066b7ab35d2e",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_seedbox/program_oracle.json",
+   "program_sha256": "013477c126aeb98a0ccc313ce2e3188588667cee86f15e2f0658c7cae44038c0",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_g_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_g_s2.yaml",
+   "config_sha256": "dbcdd65955328b081a01eceb7c9a0c8e64e6b4cd342c0864dcc0192b83749237",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_seedbox/program_oracle.json",
+   "program_sha256": "6c277d329d898b6c2acdc0975b28b91a6f1e87b7329ef81582e5dc02a872e03f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_g_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_g_s3.yaml",
+   "config_sha256": "d75e745c90a5d77d9539c38908305c10ed57b88a16fe2120aecf1e9d209e48e9",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_seedbox/program_oracle.json",
+   "program_sha256": "a9f7305f1bd4c995e22588899f14581fa8c12e45680c01502733bb916231a31f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_gest_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gest_s0.yaml",
+   "config_sha256": "c783aac76f7747ea3adfffc2ca53859e7151c69e2f73b9c741359b61a445d02b",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_est/program_est.json",
+   "program_sha256": "7d1ecee0f7efdc205d78568b2419fa9d81a8e76a95c658053ec7217ad8691e69",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_gest_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gest_s1.yaml",
+   "config_sha256": "11ea7ef26bb956690c48037ea8a7b320d2d184a8e5ff617c5ae903833e484a49",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_est/program_est.json",
+   "program_sha256": "518aa136d0e8135edde6688372f4bf56f8bb1bc2cceea6f026fd4f4818a44a2f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_gest_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gest_s2.yaml",
+   "config_sha256": "27f07d51e65664b7b5c400bee752173bdf27fc29b22912dbae51abf6564c337c",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_est/program_est.json",
+   "program_sha256": "6c277d329d898b6c2acdc0975b28b91a6f1e87b7329ef81582e5dc02a872e03f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_gest_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gest_s3.yaml",
+   "config_sha256": "4bbca078b6e4f408eafdef70eb27cae3468fb64a6a9c425cb88e98ae941d21e9",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_est/program_est.json",
+   "program_sha256": "223cbd11defdb803e1eeeb0c0ceedda90fe85905c8cdd3a92d78cc03cb79666f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_gestmem_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gestmem_s0.yaml",
+   "config_sha256": "35b017924686a9dd5d2e51c099268d9564ce70b987f984ef4f72e544aa4dc613",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix0_seedbox/program_gestmem.json",
+   "program_sha256": "a2c251e76cee9aa5923c5528d0964999225eac90498222e0ee9c027c822a994f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_gestmem_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gestmem_s1.yaml",
+   "config_sha256": "5e9081e3743c147a33bf12ff998ee156793f714273f19e56647d3a4b342d1463",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix1_seedbox/program_gestmem.json",
+   "program_sha256": "1c052f55a851916ab1b0296a5f2a5e907e7469280e7347858ea2ace02974cba3",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_gestmem_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gestmem_s2.yaml",
+   "config_sha256": "49329c464e88e7acc3bb8d848546a9046083ed73a5d84facf87505ac1abe5a66",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix2_seedbox/program_gestmem.json",
+   "program_sha256": "59bc5f4cb5d1f6a1b1d848eae1ad9945737502041465b4b6ef7c7523062806d9",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_gestmem_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gestmem_s3.yaml",
+   "config_sha256": "b9b8f6652bc34be057bf8823bf36f9b65f035c8ad1d5131e4675ee1c99e8ad1e",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/s2vote_prefix3_seedbox/program_gestmem.json",
+   "program_sha256": "8c47657f8ef771710d71ae3816d350e09fa6979a84c74ac865c48e4321483fe4",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_gmis_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gmis_s0.yaml",
+   "config_sha256": "2fd45175f69f5425112a728835657bc2bbfd3f06f25682f654dd2dd8db724341",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_seedbox/program_mis.json",
+   "program_sha256": "003bfbd74b822e27ddc0df7dd77215d732bfa5683aa69c51b5671a82eb783a5c",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_gmis_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gmis_s1.yaml",
+   "config_sha256": "365fd62a77be528340b291b413059270ceb0b3b48401c662fdc70d8622761d71",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_seedbox/program_mis.json",
+   "program_sha256": "5ed6d5df92bc0ef8ed026bb245ed8554330f1da963fac92ed30a8f99fc2d6efd",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_gmis_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gmis_s2.yaml",
+   "config_sha256": "28253dc35800e938a2ea8b2f4a54cf69dda4002d5cf66972e28f577b58301733",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_seedbox/program_mis.json",
+   "program_sha256": "51a17c0cfa87ccd6a517c5ff65ea843a3cd1cf4b125e4f2197753bb30c94634e",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_gmis_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gmis_s3.yaml",
+   "config_sha256": "5dcd20df837dc3d17101d0a12f8ae38a44fbb7f4723c68735fde5dde4d2cb1ec",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_seedbox/program_mis.json",
+   "program_sha256": "e5ab9fda0466940df5ed29929f07fd16935000eb80ad8ddb2ab814efcc3948ed",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_gones_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gones_s0.yaml",
+   "config_sha256": "62aaac1580c0ef55c3cd55166c17f18e45001605e0d89416a315654872b58093",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_seedbox/program_ones.json",
+   "program_sha256": "fe638e66752b9db0092046d0f87b080a1bd0ec0265ccf2e6c519e575059c125d",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_gones_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gones_s1.yaml",
+   "config_sha256": "f0f1428a8a7fbc6b737de505564552052d15477384475db3f4ab756417f8429b",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_seedbox/program_ones.json",
+   "program_sha256": "4a51fa4708c58afe59d069dd90c0b0f018324ad6d4e80e932a9fae7de71c6173",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_gones_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gones_s2.yaml",
+   "config_sha256": "2679cde50ba9cf93fe2fc853b0c3c9d51f2fe85f3a0072062e16c51c2da1b109",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_seedbox/program_ones.json",
+   "program_sha256": "64a6bd259e2d142e842d29ffb726e5740398e6b5b6f1e3962dd0173502a58998",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_gones_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gones_s3.yaml",
+   "config_sha256": "1056f4b13932a8fe84c1909232eb9936d64dda154cc93d98a6e320535e69eab3",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_seedbox/program_ones.json",
+   "program_sha256": "e9f5e19c275f0ebdbfe2b22be9e72b96aadddc0b9f165bda7af4619a5e6baced",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_a_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_a_s0.yaml",
+   "config_sha256": "06c9f5b1af35bb3b8f34294235eeb89e63441c25060106bf9901e1dd70f2f672",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "349bec9eeb37e77fd3905b5b63564b774ee96907eb4627bc018250c5be2771c4",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_a_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_a_s1.yaml",
+   "config_sha256": "f595337ee23ce3040551991bf4850558f8bd50360f3ad27d46a06b4bd3dae9d9",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "311dedc1f26474977b0451403fd7bfd737eb910d73cc3a8d86872802986e1a10",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_a_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_a_s2.yaml",
+   "config_sha256": "a28f282282e15f7e63da4d55f6651f35cd55fdbdca22474821afe0ca651d35dc",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "6c4efa392f123e5935305ad35752d19cac51018fc6117eac50f9c446f59214b1",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_a_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_a_s3.yaml",
+   "config_sha256": "b25957f7f65a12bea104b33bf10f14196f8e425b1c211daab63ba5d0bdc86c64",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "f3300214c9867ee58d5cd74f15dee34bc0398112c9cdb080fe00bacdb1bcbaa8",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_b_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_b_s0.yaml",
+   "config_sha256": "da2e6b2700fa7093a404f9c604581a6d45eaa06625f8aa7c244a07d4358eed22",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "243072e656f0227ded12be1860bbcce65595e4fc15c8dab7cc3f9db73af26cd9",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_b_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_b_s1.yaml",
+   "config_sha256": "2b1cfa93b52fa3a871aa578112678eb58532074676fd7fea7580e421ed6f785b",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "21e92cf1e41033e864527f9be6b7709f643b6ff9b019035226d821571a7cafe9",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_b_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_b_s2.yaml",
+   "config_sha256": "f851859e6cfb409e5a77a11ee886e0068dd6be079245eab8787a1b8bbb708fc8",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "a76b14bc0f6d884b30f854b0be98226f3afeed21ba46567237265e32e8585190",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_b_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_b_s3.yaml",
+   "config_sha256": "857bdc5d9995293fd1f73db2a576dcecfe8f932cc495e4086e23f6fdac7e6dfb",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "ec41966569e36d76ca6b0e0332d2417c4c62e526725d636841f16f231375d41b",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_l_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_l_s0.yaml",
+   "config_sha256": "7dd17bbe0136eddd29967ac10b34e40f53cbc31a56cc4e3df3f2300159284033",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/program_gwrongmem_l.json",
+   "program_sha256": "bd681c7ae894e176cc4322a199c35883763c353869de83d16cab23a21a469f4f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_l_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_l_s1.yaml",
+   "config_sha256": "43aa223ffd613bcf354b7d11f2747f75c5cad61ad7354c2d67fd6cd196f71ca2",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/program_gwrongmem_l.json",
+   "program_sha256": "164f8994980756a5d56b6ceaf2b67b027344cf26d0e0dbfe723b4adc17befed8",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_l_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_l_s2.yaml",
+   "config_sha256": "1f8161674ffe4fbac667ad3b03fc5f45bfa73edf95ed85bcb359e2b5b655dfbc",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/program_gwrongmem_l.json",
+   "program_sha256": "d4eb208b14d73c30563c85b82cd273f5c54049a68545632977565e71ed08a915",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_gwrongmem_l_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/flame_steak_gwrongmem_l_s3.yaml",
+   "config_sha256": "a5e07ac33f480020af6e2cfe77c6e5ce928d07eaba4fc0cc033a65b3156f453b",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/program_gwrongmem_l.json",
+   "program_sha256": "bd61eb36556e858212b977131ea8decb431a9912efa9ae7d7a0237d576c4f711",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_flame_steak_u_s0": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_seedbox/program_oracle.json",
+   "program_sha256": "7d1ecee0f7efdc205d78568b2419fa9d81a8e76a95c658053ec7217ad8691e69",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "29b1e52a6fc7f3d02a5668d20d42d9e5741722f57d4109fbc7c400fb4d6dc49e"
+  },
+  "cell/absfix2_flame_steak_u_s1": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_seedbox/program_oracle.json",
+   "program_sha256": "013477c126aeb98a0ccc313ce2e3188588667cee86f15e2f0658c7cae44038c0",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "5208c4859e369d54e99f558b73bac6b35b7a4f1787041e6ca1f5542f0ae1b7b1"
+  },
+  "cell/absfix2_flame_steak_u_s2": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_seedbox/program_oracle.json",
+   "program_sha256": "6c277d329d898b6c2acdc0975b28b91a6f1e87b7329ef81582e5dc02a872e03f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "9fb17b029bf3596f986fc6c71c92bf364195a3b926835e948363b59c5f612da2"
+  },
+  "cell/absfix2_flame_steak_u_s3": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    753,
+    1027,
+    965
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_seedbox/program_oracle.json",
+   "program_sha256": "a9f7305f1bd4c995e22588899f14581fa8c12e45680c01502733bb916231a31f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/prefixes/20260913_001356_flame_steak_absfix_60_89_v3_absfix2_flame_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "bb43ada29573ae5f5451795080d084917fc91d4a58dafe1ef1523f33f3209e20"
+  },
+  "cell/absfix2_sear_steak_g_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_g_s0.yaml",
+   "config_sha256": "fb464ab89fcf0c9bd6a4216f7da14cc6bbbe3bb1c8964fbbbc19e0f54bd8ad16",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_seedbox/program_oracle.json",
+   "program_sha256": "cc8501f6aaa01aea092c821f61c1c6382dbb83b2b0a4bd97ac3cafb4085b8ed2",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_g_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_g_s1.yaml",
+   "config_sha256": "78b423a1cbfde85af984fabb1160b48cbe34b5edeba3a33be31fd31988645d5d",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_seedbox/program_oracle.json",
+   "program_sha256": "9f889670d197ee9add8b1ea2e0eef12e776c1d6a07027cc84763c9655a85f4a2",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_g_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_g_s2.yaml",
+   "config_sha256": "64d737e794fcf14bc4fc6096ca21b339d7256c2dfcb7c09c2c3d83ef54cab7b7",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_seedbox/program_oracle.json",
+   "program_sha256": "dfd51cd49261f0d569edc7e8c2e4277454e34ab8cd0b55a4c481f7d4d2593b7f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_g_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_g_s3.yaml",
+   "config_sha256": "1e8529025cb453a188abbe84d33c955db04db37c09c8ee1351fc4a2e742ef985",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_seedbox/program_oracle.json",
+   "program_sha256": "9ca61abbed25cc451d86d7e9b51ae7586328e4e538ffe79ed3f60ab55242d1cc",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "cell/absfix2_sear_steak_gest_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gest_s0.yaml",
+   "config_sha256": "0f6f19935f37179f18905ccbf7c5240b293d0059928a17825e1807d64079d727",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_est/program_est.json",
+   "program_sha256": "cc8501f6aaa01aea092c821f61c1c6382dbb83b2b0a4bd97ac3cafb4085b8ed2",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_gest_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gest_s1.yaml",
+   "config_sha256": "f57728cc152427bb01c5c7071203879c62f4a608881192371463f83dd03985d0",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_est/program_est.json",
+   "program_sha256": "9f889670d197ee9add8b1ea2e0eef12e776c1d6a07027cc84763c9655a85f4a2",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_gest_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gest_s2.yaml",
+   "config_sha256": "944b1c02a6f68ab013eb551f47bb43707d6286d400eb60c48f65bf3a083752da",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_est/program_est.json",
+   "program_sha256": "41ff4d8194771fd7d9eb0b000c2f453aa9d108dbd34cc866420c800e901ad9b8",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_gest_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gest_s3.yaml",
+   "config_sha256": "56ad599047913b767df5fa92fe9337964ce84354b73817eac7343681bbb76ff6",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_est/program_est.json",
+   "program_sha256": "daf99005067eb1cde6e71bbffcabd92298c4e69b3a1e63722950c536dee51104",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "cell/absfix2_sear_steak_gmis_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gmis_s0.yaml",
+   "config_sha256": "553f34dfbe2bfb577804598ffd9de5bbe7d874dcd6411c825302c720bc89592e",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_seedbox/program_mis.json",
+   "program_sha256": "80f297b2b229ea810e1b70fc8e1cc6f8469e9ddf2abfea209adffaa96e612698",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_gmis_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gmis_s1.yaml",
+   "config_sha256": "eeeb6cc55b88cdd066933a0787b0f9f4f06e9dce2b8d5d6f3f5294a315dc5fe7",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_seedbox/program_mis.json",
+   "program_sha256": "38f94e4ae62c97fb9058c1919c89a6231112a9905dff8391480e80b438fe2203",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_gmis_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gmis_s2.yaml",
+   "config_sha256": "27ff4faa26c0c917aeac30d03f94b2f56aa910a0708b933bb2698c3e6a6ed4f2",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_seedbox/program_mis.json",
+   "program_sha256": "6a3f0b4659b85ffb717d180f1ba91f3e0c144b3843b3d927a5c3eb47ef037d57",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_gmis_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gmis_s3.yaml",
+   "config_sha256": "3ad21eed8f70bbb874eb8c68c3c84bc4a47d83967fb70f58537567a2bc5ed0ec",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 244,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_seedbox/program_mis.json",
+   "program_sha256": "33803999fda286b80b53c7ade544157b090b4cca9082536591b0a124880787c8",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "cell/absfix2_sear_steak_gones_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gones_s0.yaml",
+   "config_sha256": "16baf6c54ef75ccf7ebc4a1e60784b25a9f2082fdcd27319df63376e4a34f6bb",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_seedbox/program_ones.json",
+   "program_sha256": "833ebb88674db9c71afb93d6a6cfde6067cd54466fb22e0c4393c9b95b5076c5",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_gones_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gones_s1.yaml",
+   "config_sha256": "890585754d0dd212ba1fbd49df1a2d2616810759f397bb4879fa99149879a03b",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_seedbox/program_ones.json",
+   "program_sha256": "adc37139ef241bd6fc939b127511429cc07e5a647b384a91d8cf4246ca5d8eb7",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_gones_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gones_s2.yaml",
+   "config_sha256": "7f393b53202bf8055ef3b78cf1d71f76442cc3b66e9fba2e5066add36156bab2",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_seedbox/program_ones.json",
+   "program_sha256": "0a360d4b1e3c35cb0a7f3666f828dcf3d7b1e12742a603319e2ce89cb5af3f07",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_gones_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gones_s3.yaml",
+   "config_sha256": "c023d09d1cb2f2f4a73dbc5046f1ff824ad4e1b019c49175d698ad2b65508e74",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 291,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_seedbox/program_ones.json",
+   "program_sha256": "d4bbd8a571a8e2b075335b7728d77f741ca28931beee032e31ffd7d8dce03bc1",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_a_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_a_s0.yaml",
+   "config_sha256": "d33d9b9716f6d4b1bf1565e821eadbf4cd617765c3ecfd499f3b82eff9f8678a",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "665b1796e1164dc28b9299c44132d008f75519d6002214e9c47b3cf3f4ab94d6",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_a_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_a_s1.yaml",
+   "config_sha256": "ad888d9972587d49aa42616cd2fa69e11fdfd01bd7d4ce0f96c53175010de1b4",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "d804666648ef6a19851042f0a443927efe59a2b74afa3d124c20d3dcedbe8e49",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_a_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_a_s2.yaml",
+   "config_sha256": "208fafa5b7849d762b58af6dc980989340227b6c20171cebe6cb903fddc4ca91",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "18a72ef7c88d3c3e28f371de357e7e8082c17820ed2c2d7b4817405efbc65942",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_a_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_a_s3.yaml",
+   "config_sha256": "256cfc980a3ff954a8a519f73fc9e5706f9f31750ed4d66c296fa5ad82406301",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_a.json",
+   "program_sha256": "072a947aebd06ab67d3836920987c86f112650673690a3bd104d5ee57f2b383a",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_b_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_b_s0.yaml",
+   "config_sha256": "38963a4fcd34a6ffbf4383ebc05bd3814e122d2d71ca2d63218a90fd7ee15a1d",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "c11b82ce6aad1bb6065b39218baf2e34bfa11d4bd9c544c73e28a58b71f206f7",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_b_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_b_s1.yaml",
+   "config_sha256": "f73398673a39f2b04f3f3d97b9e0f4ae5345ab4d7ffcee636ccc79470430b2be",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "4ee78f99a42fe8cb0e3bac6d4498a5dbbfa74c699a0d5d159ed091ca5576a2a5",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_b_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_b_s2.yaml",
+   "config_sha256": "7859f157cd7b1216ac46f10602b7529cf44a3393f2278be53fb0498a82e4501c",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "911177aa2dd3cda699e348cef136a4d4662de3e8f486d5375f3fd4d78a5c963f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_b_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_b_s3.yaml",
+   "config_sha256": "214bffc23e6a9fe960ab2a0ef8d687ab934c37f325ceb6b5bb2f0dbd2453cbc9",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/program_gwrongmem_b.json",
+   "program_sha256": "dccdbe93fe2e1eab65fef0bfbb09879f4885e2be8d2cc703bcf944ba56bcc662",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_l_s0": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_l_s0.yaml",
+   "config_sha256": "1844f9dbd84cffbaa7093418f785892e2c824164dc82d4a56e4d1e3d07447d8e",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/program_gwrongmem_l.json",
+   "program_sha256": "efd757d5cb8a7b56b533092955fb875b4237adcdef8e3b35cc77f6c24decebeb",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_l_s1": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_l_s1.yaml",
+   "config_sha256": "874ebf531876befebfd5ee15d35e728268ec39df8021c6ee52c503913f99b5e2",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/program_gwrongmem_l.json",
+   "program_sha256": "2f2b74f3e862e1fd201ce77aca7ea3ae7c3b4d7d6d96e00218f591b904d0590f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_l_s2": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_l_s2.yaml",
+   "config_sha256": "7ff6902a3023310c3614c605d0471ae4d0744050295cf493965c093b2369dfcc",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/program_gwrongmem_l.json",
+   "program_sha256": "0ccae8fdaee6769c00c97defe15638ea8c739086164d9cf252e1626bd9952328",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_gwrongmem_l_s3": {
+   "config": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/configs/sear_steak_gwrongmem_l_s3.yaml",
+   "config_sha256": "f3fd98559b85c03788354ada9ffeaa9cb00ce8aeb41c51742045e2a33920ccce",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/program_gwrongmem_l.json",
+   "program_sha256": "a8a438b64d5338a48b907d54b0dc4188c4211afd4cebd22ba4554b23de004544",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "cell/absfix2_sear_steak_u_s0": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_seedbox/program_oracle.json",
+   "program_sha256": "cc8501f6aaa01aea092c821f61c1c6382dbb83b2b0a4bd97ac3cafb4085b8ed2",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s0/chkpnt6000.pth",
+   "resume_sha256": "4127d57b1de523f9ba2c1dbfda883341a7c4293c51b49845871376c1c6f9eba8"
+  },
+  "cell/absfix2_sear_steak_u_s1": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_seedbox/program_oracle.json",
+   "program_sha256": "9f889670d197ee9add8b1ea2e0eef12e776c1d6a07027cc84763c9655a85f4a2",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_001356_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s1/chkpnt6000.pth",
+   "resume_sha256": "3c7b04e7e8a97e64a306cd04b77ae3e2314bb38dd300fe9fc557974c1c897445"
+  },
+  "cell/absfix2_sear_steak_u_s2": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_seedbox/program_oracle.json",
+   "program_sha256": "dfd51cd49261f0d569edc7e8c2e4277454e34ab8cd0b55a4c481f7d4d2593b7f",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s2/chkpnt6000.pth",
+   "resume_sha256": "ce2d668c0d4e5be28406fead7767a639b09e86fde448527cbcda4bd1ec52c9c6"
+  },
+  "cell/absfix2_sear_steak_u_s3": {
+   "config": "configs/n3v/b0c_crb300_12k_rp.yaml",
+   "config_sha256": "9d1f74def4b9796d90d7ae4ef09e1a52bf7373500f3b2a269261f783b1d073d3",
+   "fbox": [
+    957,
+    754,
+    1027,
+    962
+   ],
+   "fbox_frame": 75,
+   "program": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_seedbox/program_oracle.json",
+   "program_sha256": "9ca61abbed25cc451d86d7e9b51ae7586328e4e538ffe79ed3f60ab55242d1cc",
+   "resume": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/prefixes/20260913_040208_sear_steak_absfix_60_89_v3_absfix2_sear_steak_uprefix6k_s3/chkpnt6000.pth",
+   "resume_sha256": "8e067e5437ad497b74fa73abd0ef82291677b21cab8750926016d12573c2b6aa"
+  },
+  "composites/composite_manifest_flame_steak_build_id79_60_89_v2.sha256": {
+   "n_files": 12498,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_flame_steak_build_id79_60_89_v2.sha256",
+   "sha256": "38148e34db508e3fbd2c8b1207747ff1a7d1b403f6c47d3dc21b4885a4becfbb",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "composites/composite_manifest_flame_steak_preview_id79_deva.sha256": {
+   "n_files": 1280,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_flame_steak_preview_id79_deva.sha256",
+   "sha256": "d95b3e553668d04789b5612a85fa79ca8047cf04f733d30cc5e694278f02ae74",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "composites/composite_manifest_flame_steak_preview_id79_mc1.sha256": {
+   "n_files": 56,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_flame_steak_preview_id79_mc1.sha256",
+   "sha256": "c58b514237f59f6241c5ecce09745b887c8a61da02765d435671081d982fa6ba",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "composites/composite_manifest_flame_steak_preview_id79_mc5.sha256": {
+   "n_files": 56,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_flame_steak_preview_id79_mc5.sha256",
+   "sha256": "743cd670ad709aed48feb4e2819f7742d8b83166b7d9cf6f74534e496c4cfbe8",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "composites/composite_manifest_flame_steak_preview_id79_mc6.sha256": {
+   "n_files": 56,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_flame_steak_preview_id79_mc6.sha256",
+   "sha256": "843006dcb38007afd589ffe7e1a09d2a9470c4fdc931d011b98aa34e6cc8bc76",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "composites/composite_manifest_flame_steak_preview_id79_mc7.sha256": {
+   "n_files": 56,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_flame_steak_preview_id79_mc7.sha256",
+   "sha256": "d5c3be32b278ea4850fe760cc98734ed4f495ba905a95b2af46a5052e7c52484",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "composites/composite_manifest_sear_steak_build_id114_60_89_v2.sha256": {
+   "n_files": 12498,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_sear_steak_build_id114_60_89_v2.sha256",
+   "sha256": "cccd25507adf2c69b4697b5c1d9b66ed269b53b6ae046d034576dc65497c363b",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "composites/composite_manifest_sear_steak_preview_id114_deva.sha256": {
+   "n_files": 1280,
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/composite_manifest_sear_steak_preview_id114_deva.sha256",
+   "sha256": "60bf8f9c490b691df3cedf041c7e8df77a3c17997b5308290f592a7ea00f4579",
+   "verified_on_D": "D:/adags-archive/leonardo/runs/realdata/absfix2 (2026-09-14/15, sha256sum -c rc=0 for all 8)"
+  },
+  "cut_roasted_beef/s0/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_round4_L_final/box_recount_prefix0.json",
+   "sha256": "714658e66798ae6bcff8989cc916f526ef6895e72b47dc215cf302a993a2b4c4"
+  },
+  "cut_roasted_beef/s0/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_prefix0.json",
+   "sha256": "b903ccfcf5f13c9f84404c3f3ae596803a8bd60805a3193986df277d9c55a364"
+  },
+  "cut_roasted_beef/s0/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 325,
+   "eligible_n": 4492,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.900524897925043,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "9eb0be2070b2466d3a225e52821e667c66707c601a53f2275fcb0e212aa6a6a4",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1000,
+   "truth_n": 7004
+  },
+  "cut_roasted_beef/s0/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_final/counts_gwrongmem_a.json",
+   "sha256": "e54b0b6d3ace5c52538ef908bbb323d1614fbfc5dbbd829efdabe16abd84e2fe"
+  },
+  "cut_roasted_beef/s0/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_final/counts_gwrongmem_b.json",
+   "sha256": "b2586a48087e3b561ebf534be0e8992c7ef6044ea3865b4b778f35d5231f389c"
+  },
+  "cut_roasted_beef/s0/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_final/counts_gwrongmem_l.json",
+   "sha256": "e3547f7442716679cb5b5e2191bc76cf812e4bb9748f01b40d3359ed514d1983"
+  },
+  "cut_roasted_beef/s0/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_final/program_gwrongmem_a.json",
+   "sha256": "8f9145a7eeff9f64dec4ff54a0716d0c42cb5b38b01d0af9521daf7891b36260"
+  },
+  "cut_roasted_beef/s0/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_final/program_gwrongmem_b.json",
+   "sha256": "2cc1732ee0c4fcccbae925f44cdfd620b0f140cb5b1b183e68c4cec45c810ab2"
+  },
+  "cut_roasted_beef/s0/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_final/program_gwrongmem_l.json",
+   "sha256": "4efc0e067bf34b5e235a0ce020cfdb9b54bb3c34817d4c8312ab768a81b91642"
+  },
+  "cut_roasted_beef/s0/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 4492,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999989297347,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "697e41affc5fd065b7a362325ca15e1813a74a2df5775573a0140a2a3adb3a63",
+   "rows_with_positive_contribution": 504,
+   "rows_with_zero_contribution": 596,
+   "seed": 1000,
+   "truth_n": 7004
+  },
+  "cut_roasted_beef/s0/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/counts_gwrongmem_a.json",
+   "sha256": "e54b0b6d3ace5c52538ef908bbb323d1614fbfc5dbbd829efdabe16abd84e2fe"
+  },
+  "cut_roasted_beef/s0/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/counts_gwrongmem_b.json",
+   "sha256": "b2586a48087e3b561ebf534be0e8992c7ef6044ea3865b4b778f35d5231f389c"
+  },
+  "cut_roasted_beef/s0/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/counts_gwrongmem_l.json",
+   "sha256": "c7f3176c6558a19cf4f924998fd63775ee575a93b855352df3eafb4fb05f1fa1"
+  },
+  "cut_roasted_beef/s0/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/program_gwrongmem_a.json",
+   "sha256": "8f9145a7eeff9f64dec4ff54a0716d0c42cb5b38b01d0af9521daf7891b36260"
+  },
+  "cut_roasted_beef/s0/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/program_gwrongmem_b.json",
+   "sha256": "2cc1732ee0c4fcccbae925f44cdfd620b0f140cb5b1b183e68c4cec45c810ab2"
+  },
+  "cut_roasted_beef/s0/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/program_gwrongmem_l.json",
+   "sha256": "5b721776216cd1f4166f3abd015e987a8d7e824d2316846ce512ef120d9d788b"
+  },
+  "cut_roasted_beef/s1/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_round4_L_final/box_recount_prefix1.json",
+   "sha256": "ed81602dfd9239acfa6342d7cb23eeec11799c049727291f0639b37e0972308c"
+  },
+  "cut_roasted_beef/s1/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_prefix1.json",
+   "sha256": "9a05662763265a20fead8fc4578d051af1a5bb7dd5c9f0e87319f2627b498b05"
+  },
+  "cut_roasted_beef/s1/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 773,
+   "eligible_n": 4595,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.900148756972881,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "958805df13e8c652e9e974ebf53e1cb319ee70ce30672b970148a6839d5778aa",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1001,
+   "truth_n": 6981
+  },
+  "cut_roasted_beef/s1/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_final/counts_gwrongmem_a.json",
+   "sha256": "8feb3f3c9efb5b684cdf05d922eae57509cfc4f2e9b94ea6d29555930426a23e"
+  },
+  "cut_roasted_beef/s1/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_final/counts_gwrongmem_b.json",
+   "sha256": "d7f32fdcd9e08902ae825d85b962bd72fcd1083aa00964bb0a39ebffe2e791b5"
+  },
+  "cut_roasted_beef/s1/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_final/counts_gwrongmem_l.json",
+   "sha256": "f002785b941e388485bd37a0a8b55230abcd1e3c783ac1cb42a3ea61a2ae8dbb"
+  },
+  "cut_roasted_beef/s1/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_final/program_gwrongmem_a.json",
+   "sha256": "865e23499dd4a015e6b147485ea468a6781a136a4848350d4dffab3878d894d4"
+  },
+  "cut_roasted_beef/s1/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_final/program_gwrongmem_b.json",
+   "sha256": "eac9c6e459b9694a9658f5fc676b303211e5f6cb9552b2a13c377f9688434265"
+  },
+  "cut_roasted_beef/s1/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_final/program_gwrongmem_l.json",
+   "sha256": "6f153dd4d90de6c624643d64bcb700402aad8bea7ae5bb817ccf82767724827b"
+  },
+  "cut_roasted_beef/s1/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 4595,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9361421033872506,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "e6dff3bc5619a37cb91f8a451d6739ca02d2efcd7554a581f2072c1e5bae1b73",
+   "rows_with_positive_contribution": 1100,
+   "rows_with_zero_contribution": 0,
+   "seed": 1001,
+   "truth_n": 6981
+  },
+  "cut_roasted_beef/s1/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/counts_gwrongmem_a.json",
+   "sha256": "8feb3f3c9efb5b684cdf05d922eae57509cfc4f2e9b94ea6d29555930426a23e"
+  },
+  "cut_roasted_beef/s1/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/counts_gwrongmem_b.json",
+   "sha256": "d7f32fdcd9e08902ae825d85b962bd72fcd1083aa00964bb0a39ebffe2e791b5"
+  },
+  "cut_roasted_beef/s1/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/counts_gwrongmem_l.json",
+   "sha256": "486e6d3a401c3f0b2f1ba37633e26dc2ed4eb694969d7da06db270beeeb28654"
+  },
+  "cut_roasted_beef/s1/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/program_gwrongmem_a.json",
+   "sha256": "865e23499dd4a015e6b147485ea468a6781a136a4848350d4dffab3878d894d4"
+  },
+  "cut_roasted_beef/s1/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/program_gwrongmem_b.json",
+   "sha256": "eac9c6e459b9694a9658f5fc676b303211e5f6cb9552b2a13c377f9688434265"
+  },
+  "cut_roasted_beef/s1/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/program_gwrongmem_l.json",
+   "sha256": "f486c25a228e5a9f547dce27e27ad1b309b0606e088a3269263d08a4ae932899"
+  },
+  "cut_roasted_beef/s2/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_round4_L_final/box_recount_prefix2.json",
+   "sha256": "663e342dadfc0f75c561ffe7a6ad45b4fa518a3f009d06aa038e20c57e30d72f"
+  },
+  "cut_roasted_beef/s2/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_prefix2.json",
+   "sha256": "6810c9c73b4a86366d6cfea15a402919f21a75bd1110b0397da333b90af973f5"
+  },
+  "cut_roasted_beef/s2/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 504,
+   "eligible_n": 4465,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9000539573571142,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "565234236a4e92e701320415ff120f74d3edcfc1094fc6716b56d00aa4605b96",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1002,
+   "truth_n": 6858
+  },
+  "cut_roasted_beef/s2/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_final/counts_gwrongmem_a.json",
+   "sha256": "f66fa1633f305e30a740c3254cb410b6f1da995c58098f8d221a55af0a3c671b"
+  },
+  "cut_roasted_beef/s2/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_final/counts_gwrongmem_b.json",
+   "sha256": "9f89778f53b56f93b1c18cacc6a632b45e0ded91221d9dc241b37f1b2d7b2538"
+  },
+  "cut_roasted_beef/s2/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_final/counts_gwrongmem_l.json",
+   "sha256": "cb216a74937aecab512f382684166d18630d192f19d43aa43e0a60780de40de1"
+  },
+  "cut_roasted_beef/s2/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_final/program_gwrongmem_a.json",
+   "sha256": "45bc97fee94f1995726d96c64867d94f0e5b8c4e0b1d30bfc21801e8d4a8ed52"
+  },
+  "cut_roasted_beef/s2/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_final/program_gwrongmem_b.json",
+   "sha256": "248a2559f81a7ca429f473eaa6dabc6ec73adefd0bd09b7ceb0de59eb87344ba"
+  },
+  "cut_roasted_beef/s2/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_final/program_gwrongmem_l.json",
+   "sha256": "b6828eea641f2d3935b79445ab453a020c2babdeb7b74e9b2c70fb998d228023"
+  },
+  "cut_roasted_beef/s2/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 4465,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999999876138,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "97d94756728e7d70ec641f51ed6dd40036bc0deda557021cba0a8a02c27ea454",
+   "rows_with_positive_contribution": 938,
+   "rows_with_zero_contribution": 162,
+   "seed": 1002,
+   "truth_n": 6858
+  },
+  "cut_roasted_beef/s2/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/counts_gwrongmem_a.json",
+   "sha256": "f66fa1633f305e30a740c3254cb410b6f1da995c58098f8d221a55af0a3c671b"
+  },
+  "cut_roasted_beef/s2/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/counts_gwrongmem_b.json",
+   "sha256": "9f89778f53b56f93b1c18cacc6a632b45e0ded91221d9dc241b37f1b2d7b2538"
+  },
+  "cut_roasted_beef/s2/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/counts_gwrongmem_l.json",
+   "sha256": "4caf18c65d87a3b66a2b63d12f2c92512ef5ca10f23b4f0dadaa9a80c6f5f024"
+  },
+  "cut_roasted_beef/s2/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/program_gwrongmem_a.json",
+   "sha256": "45bc97fee94f1995726d96c64867d94f0e5b8c4e0b1d30bfc21801e8d4a8ed52"
+  },
+  "cut_roasted_beef/s2/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/program_gwrongmem_b.json",
+   "sha256": "248a2559f81a7ca429f473eaa6dabc6ec73adefd0bd09b7ceb0de59eb87344ba"
+  },
+  "cut_roasted_beef/s2/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/program_gwrongmem_l.json",
+   "sha256": "aa568d704d38fead325db2be3ad2f6c117353d216182b66752a832d3f68c5b45"
+  },
+  "cut_roasted_beef/s3/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_round4_L_final/box_recount_prefix3.json",
+   "sha256": "c5af5c2b25615f35f544d58cf8eb83aaae4e9ab2d021628195afb0261f579b13"
+  },
+  "cut_roasted_beef/s3/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/box_recount_prefix3.json",
+   "sha256": "5a9d35292225a4f2f66f126f291029b263eec2fe6c907303d6c0fb4a6e21a678"
+  },
+  "cut_roasted_beef/s3/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 329,
+   "eligible_n": 4745,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9001916844654189,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "6cd06df81d4372d037b48274d391a573b65ab93563aae8acacc76bbab6beb011",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1003,
+   "truth_n": 6813
+  },
+  "cut_roasted_beef/s3/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_final/counts_gwrongmem_a.json",
+   "sha256": "75f7f28fb06906fb0b36c585288636e94ddea6cc83e8c5bf142f7908f7614f6b"
+  },
+  "cut_roasted_beef/s3/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_final/counts_gwrongmem_b.json",
+   "sha256": "7d01c52824044ac469ce18de45c3db3ee622314dd68b61ce3a1cd0d423ff9b8c"
+  },
+  "cut_roasted_beef/s3/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_final/counts_gwrongmem_l.json",
+   "sha256": "a2bc6c84c61c40226b9205175dbc23645c372c88c1b59c209a61893c372f4c6c"
+  },
+  "cut_roasted_beef/s3/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_final/program_gwrongmem_a.json",
+   "sha256": "94f0c97e43a2a44c33b506cb94ad96e3f229fc482fd05897f10b93e4d9e78b5a"
+  },
+  "cut_roasted_beef/s3/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_final/program_gwrongmem_b.json",
+   "sha256": "cb4925905ac639d9ded4816d32bdf5c8bacd704b59eb762e154dd6ff90c0294c"
+  },
+  "cut_roasted_beef/s3/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_final/program_gwrongmem_l.json",
+   "sha256": "45622d95c05eef3bfa2934aaec855332df0320f7a5fdbc7d3225c539040c3a83"
+  },
+  "cut_roasted_beef/s3/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 4745,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999998975088,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "063a2559d367dd8e4b7f478a298909e32f2f3b0a464c143e162dff1a4af75d27",
+   "rows_with_positive_contribution": 527,
+   "rows_with_zero_contribution": 573,
+   "seed": 1003,
+   "truth_n": 6813
+  },
+  "cut_roasted_beef/s3/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/counts_gwrongmem_a.json",
+   "sha256": "75f7f28fb06906fb0b36c585288636e94ddea6cc83e8c5bf142f7908f7614f6b"
+  },
+  "cut_roasted_beef/s3/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/counts_gwrongmem_b.json",
+   "sha256": "7d01c52824044ac469ce18de45c3db3ee622314dd68b61ce3a1cd0d423ff9b8c"
+  },
+  "cut_roasted_beef/s3/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/counts_gwrongmem_l.json",
+   "sha256": "301e4ea6e35e6b9042a41ff6851ac4b669c658304d9b228477c94e6153880729"
+  },
+  "cut_roasted_beef/s3/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/program_gwrongmem_a.json",
+   "sha256": "94f0c97e43a2a44c33b506cb94ad96e3f229fc482fd05897f10b93e4d9e78b5a"
+  },
+  "cut_roasted_beef/s3/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/program_gwrongmem_b.json",
+   "sha256": "cb4925905ac639d9ded4816d32bdf5c8bacd704b59eb762e154dd6ff90c0294c"
+  },
+  "cut_roasted_beef/s3/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/program_gwrongmem_l.json",
+   "sha256": "5a38c912a882d5d54126f8b0ff18a5c9fc01d89b9df0a80ac661c5182e4c5c08"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_mis_s0/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s0/precondition.json",
+   "sha256": "58512b16b686a8fa88c6e51cc06453caf39f78067dfef26cbb80f8bcba6f7caf"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_mis_s1/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s1/precondition.json",
+   "sha256": "87a10e5fc0038b8b93885156d85a1d87f03185f3a8303f4236b92109f245b740"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_mis_s2/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s2/precondition.json",
+   "sha256": "dfda2dd367e13e0eb06869b96728e95cfead2a6fb9acfe3f2c304c36aeba92ed"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_mis_s3/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s3/precondition.json",
+   "sha256": "2e45eff883e94e1fd16a90fd937874abeb4b73d15b67887c5bd725f003f7d991"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_ones_s0/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s0/precondition.json",
+   "sha256": "7de578279f3b9574a7888ef302ecbbbbf1458d53dce97e180fbe5722be216067"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_ones_s1/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s1/precondition.json",
+   "sha256": "d28d3ced9df969bcea1d0eb99d709d45f188e6c4a9d7771333ff06dc0d79c264"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_ones_s2/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s2/precondition.json",
+   "sha256": "cbdd1469fe28e156839cd0e175cdad5d46fa60b5c990016f1063a53ff005814f"
+  },
+  "cut_roasted_beef/wave1_cells/absfix_ones_s3/precondition.json": {
+   "job": "57761925",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s3/precondition.json",
+   "sha256": "903b7685e9ad2531a2e7d433fe31600a1436b85abc572866bc685b8e16c81a56"
+  },
+  "flame_steak/s0/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_round4_L_final/box_recount_prefix0.json",
+   "sha256": "38e9d91cc0e2260c2c3fa271cd94b36e1b037d71a0e735d70ef7eb678c15264a"
+  },
+  "flame_steak/s0/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_prefix0.json",
+   "sha256": "a90c8dedc1e770ba8812d73ec700946cb0843e1b3a5d147f5a36a35c64bb7041"
+  },
+  "flame_steak/s0/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 152,
+   "eligible_n": 6551,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9009703899199833,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "ee0f341a42e06d9accfc4cc7a47fd35c7749765b751b9b2f63f96c2871c216e1",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1000,
+   "truth_n": 6582
+  },
+  "flame_steak/s0/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_final/counts_gwrongmem_a.json",
+   "sha256": "16da45a8f8650aa721421a02a475d301292527ba2f57562cee4c0fc62a5893f0"
+  },
+  "flame_steak/s0/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_final/counts_gwrongmem_b.json",
+   "sha256": "4364f4e4a3a2035e74dbef13df98cb0ae669985e299f8a43397f83fb5f60afa3"
+  },
+  "flame_steak/s0/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_final/counts_gwrongmem_l.json",
+   "sha256": "b5edcb802c79ee2f15ed314d156a18f12e31481d0dd99806329f35b4ce9ba20e"
+  },
+  "flame_steak/s0/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_final/program_gwrongmem_a.json",
+   "sha256": "baf520fe6aec35a334f2b3f44db92e1eda544d55ae54c892d6d2c287c435f8c6"
+  },
+  "flame_steak/s0/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_final/program_gwrongmem_b.json",
+   "sha256": "b8eed9d4573eac55bcd2051bb8836f9e58c4be7b93534c8c6847634f5f66a7ea"
+  },
+  "flame_steak/s0/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_final/program_gwrongmem_l.json",
+   "sha256": "aa06f9f9629c5f1f1e54247cd606e6f440f9decb85165072b931815a6dc2d694"
+  },
+  "flame_steak/s0/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 6551,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999993480083,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "661869c820f35a226978c8a494580c0ff333d35917b7c7f09c36d9c1843f1ddb",
+   "rows_with_positive_contribution": 221,
+   "rows_with_zero_contribution": 879,
+   "seed": 1000,
+   "truth_n": 6582
+  },
+  "flame_steak/s0/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/counts_gwrongmem_a.json",
+   "sha256": "16da45a8f8650aa721421a02a475d301292527ba2f57562cee4c0fc62a5893f0"
+  },
+  "flame_steak/s0/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/counts_gwrongmem_b.json",
+   "sha256": "4364f4e4a3a2035e74dbef13df98cb0ae669985e299f8a43397f83fb5f60afa3"
+  },
+  "flame_steak/s0/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/counts_gwrongmem_l.json",
+   "sha256": "d9d2805c7e49353662d76fa2e5d7e7e9e679e84e0cd05acb04f0d31cd7afc27f"
+  },
+  "flame_steak/s0/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/program_gwrongmem_a.json",
+   "sha256": "baf520fe6aec35a334f2b3f44db92e1eda544d55ae54c892d6d2c287c435f8c6"
+  },
+  "flame_steak/s0/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/program_gwrongmem_b.json",
+   "sha256": "b8eed9d4573eac55bcd2051bb8836f9e58c4be7b93534c8c6847634f5f66a7ea"
+  },
+  "flame_steak/s0/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/program_gwrongmem_l.json",
+   "sha256": "bd681c7ae894e176cc4322a199c35883763c353869de83d16cab23a21a469f4f"
+  },
+  "flame_steak/s0/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_est/program_est.json",
+   "sha256": "7d1ecee0f7efdc205d78568b2419fa9d81a8e76a95c658053ec7217ad8691e69"
+  },
+  "flame_steak/s0/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix0_est/vote_est.json",
+   "sha256": "dd5909ad7298c30b697eb0a2a6bf8bd7d5d859dac331bd8fda38559909cc66b3"
+  },
+  "flame_steak/s1/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_round4_L_final/box_recount_prefix1.json",
+   "sha256": "aa116fe926d3859d5ad387c39b2e9b7d6852d57978f648c6e5de47ce5a3ac00b"
+  },
+  "flame_steak/s1/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_prefix1.json",
+   "sha256": "c2a72cfc9840a37930077626dad6ecfabecb18a1df73577b19a9b3dc56037818"
+  },
+  "flame_steak/s1/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 224,
+   "eligible_n": 6549,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9004320157753479,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "acda2f96f175ba301254cbac2ca0f1afad96196f462768eb406d4ce3531cca76",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1001,
+   "truth_n": 6584
+  },
+  "flame_steak/s1/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_final/counts_gwrongmem_a.json",
+   "sha256": "d45937e5fd83534727f40008884a601dd85ba21e14e5ecc8df5a31df0a8fed2f"
+  },
+  "flame_steak/s1/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_final/counts_gwrongmem_b.json",
+   "sha256": "6e1292a9e6215a1899e7071c490b23530156a823da4abe7fa9ebc42f2bd859af"
+  },
+  "flame_steak/s1/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_final/counts_gwrongmem_l.json",
+   "sha256": "a078cf0df7136131e03976bdffee60db9c8b3b2138cf25cb8c8f246c3e9e7b5c"
+  },
+  "flame_steak/s1/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_final/program_gwrongmem_a.json",
+   "sha256": "9410555cf0a899acdce567d3e4c12e0822af64882dd6955054a1a9d5d767064c"
+  },
+  "flame_steak/s1/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_final/program_gwrongmem_b.json",
+   "sha256": "eba0070f6d20129417ae46c7a3317d83ac29cd8fe74ea579508cc397263547a5"
+  },
+  "flame_steak/s1/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_final/program_gwrongmem_l.json",
+   "sha256": "13e78f37d86d98626b9f8d530a597fe34776f23506a1a8fa22bbe90a64316571"
+  },
+  "flame_steak/s1/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 6549,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999993627579,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "b6f585c2e3bd778b8260a64e127bb714d93e08475e7be604fec6aa054bc61ace",
+   "rows_with_positive_contribution": 316,
+   "rows_with_zero_contribution": 784,
+   "seed": 1001,
+   "truth_n": 6584
+  },
+  "flame_steak/s1/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/counts_gwrongmem_a.json",
+   "sha256": "d45937e5fd83534727f40008884a601dd85ba21e14e5ecc8df5a31df0a8fed2f"
+  },
+  "flame_steak/s1/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/counts_gwrongmem_b.json",
+   "sha256": "6e1292a9e6215a1899e7071c490b23530156a823da4abe7fa9ebc42f2bd859af"
+  },
+  "flame_steak/s1/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/counts_gwrongmem_l.json",
+   "sha256": "c9993fb4ffee9fae25150b16defa7de33ae79d110e8d01445ec6e140bb57136e"
+  },
+  "flame_steak/s1/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/program_gwrongmem_a.json",
+   "sha256": "9410555cf0a899acdce567d3e4c12e0822af64882dd6955054a1a9d5d767064c"
+  },
+  "flame_steak/s1/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/program_gwrongmem_b.json",
+   "sha256": "eba0070f6d20129417ae46c7a3317d83ac29cd8fe74ea579508cc397263547a5"
+  },
+  "flame_steak/s1/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/program_gwrongmem_l.json",
+   "sha256": "164f8994980756a5d56b6ceaf2b67b027344cf26d0e0dbfe723b4adc17befed8"
+  },
+  "flame_steak/s1/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_est/program_est.json",
+   "sha256": "518aa136d0e8135edde6688372f4bf56f8bb1bc2cceea6f026fd4f4818a44a2f"
+  },
+  "flame_steak/s1/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix1_est/vote_est.json",
+   "sha256": "7642f842d83545bc33246efacdb3b10dbc281f294d56a8a3d3f41d0932997284"
+  },
+  "flame_steak/s2/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_round4_L_final/box_recount_prefix2.json",
+   "sha256": "71d2c7e4eef60362fe6fc74edbb38b2f0a3ce3944904d90a0d2b0fcc6d884bc0"
+  },
+  "flame_steak/s2/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_prefix2.json",
+   "sha256": "7bb4039aad102286b4a3bafd36d4c8d2fe7b8ac77f939dd6b44789d7a5281b51"
+  },
+  "flame_steak/s2/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 255,
+   "eligible_n": 6503,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9000441460668112,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "590d1fc2bd1906494fbecb5d041149801cf256c6ec8b6179fcd0978b4162dc27",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1002,
+   "truth_n": 6648
+  },
+  "flame_steak/s2/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_final/counts_gwrongmem_a.json",
+   "sha256": "77cea824389893a6b4cffe2eff807ac87589efdde9bc5d1f68c2fd99d61d5de2"
+  },
+  "flame_steak/s2/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_final/counts_gwrongmem_b.json",
+   "sha256": "cdb6786f76eb7f00d2069bd840572fd82db5c4d5d55888d2fdb3d41597ac143b"
+  },
+  "flame_steak/s2/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_final/counts_gwrongmem_l.json",
+   "sha256": "09da802ccd0e9b5836618c54004a836f73df6bf1f2dad1dfe8e1a8dac45fa13d"
+  },
+  "flame_steak/s2/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_final/program_gwrongmem_a.json",
+   "sha256": "aeab4cc3bf885aecfdbdea05bd6d449fb86ef33c17cf8d112293d3a91eaa1fad"
+  },
+  "flame_steak/s2/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_final/program_gwrongmem_b.json",
+   "sha256": "6dcdda3412818b7dad140cedb82eb91442e38c86c37adebd3e73c39cdcbeccd6"
+  },
+  "flame_steak/s2/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_final/program_gwrongmem_l.json",
+   "sha256": "5e4abd26921a462e2d071368fbdfc12934e0c77ed421d0701e1a53e081e69ab9"
+  },
+  "flame_steak/s2/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 6503,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999999929405,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "389ce7d998bb53a0f942010010c5f573e4746df4d6b9a2830f094aff056e161b",
+   "rows_with_positive_contribution": 363,
+   "rows_with_zero_contribution": 737,
+   "seed": 1002,
+   "truth_n": 6648
+  },
+  "flame_steak/s2/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/counts_gwrongmem_a.json",
+   "sha256": "77cea824389893a6b4cffe2eff807ac87589efdde9bc5d1f68c2fd99d61d5de2"
+  },
+  "flame_steak/s2/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/counts_gwrongmem_b.json",
+   "sha256": "cdb6786f76eb7f00d2069bd840572fd82db5c4d5d55888d2fdb3d41597ac143b"
+  },
+  "flame_steak/s2/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/counts_gwrongmem_l.json",
+   "sha256": "bd39ad626919275e16fa3bb1342ae6d0084458656874d7c711a55181f5299a4e"
+  },
+  "flame_steak/s2/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/program_gwrongmem_a.json",
+   "sha256": "aeab4cc3bf885aecfdbdea05bd6d449fb86ef33c17cf8d112293d3a91eaa1fad"
+  },
+  "flame_steak/s2/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/program_gwrongmem_b.json",
+   "sha256": "6dcdda3412818b7dad140cedb82eb91442e38c86c37adebd3e73c39cdcbeccd6"
+  },
+  "flame_steak/s2/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/program_gwrongmem_l.json",
+   "sha256": "d4eb208b14d73c30563c85b82cd273f5c54049a68545632977565e71ed08a915"
+  },
+  "flame_steak/s2/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_est/program_est.json",
+   "sha256": "6c277d329d898b6c2acdc0975b28b91a6f1e87b7329ef81582e5dc02a872e03f"
+  },
+  "flame_steak/s2/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix2_est/vote_est.json",
+   "sha256": "1d476b5d8ba3b642add15627305277c53b805d3d443c3596c95394b6f11b78e6"
+  },
+  "flame_steak/s3/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_round4_L_final/box_recount_prefix3.json",
+   "sha256": "0d5aee8daa22d17c8cdf673a7800ad74e9262fee60411b493f798cd57f55c886"
+  },
+  "flame_steak/s3/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/box_recount_prefix3.json",
+   "sha256": "5d75658f0345f42a49c6e5794076c306bec3efb59e32407e9bc6b3e40adc4e1d"
+  },
+  "flame_steak/s3/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 225,
+   "eligible_n": 6479,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9010873109298964,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "9b13abe6daf319369891d137b018fb54f983d249d87654693719b9cc192755d6",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1003,
+   "truth_n": 6641
+  },
+  "flame_steak/s3/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_final/counts_gwrongmem_a.json",
+   "sha256": "1288df8fcd0053553397548febc03d338f5bf76afc5708a1b4e7cc421bf38b8a"
+  },
+  "flame_steak/s3/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_final/counts_gwrongmem_b.json",
+   "sha256": "8cac2a4eddb6b61df44e00689de0159f0466746faccd47565f2d42523ac7b008"
+  },
+  "flame_steak/s3/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_final/counts_gwrongmem_l.json",
+   "sha256": "cee601c1a1ed851c74758d3d922314259e88b1e29d726e2dea60049c5226a732"
+  },
+  "flame_steak/s3/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_final/program_gwrongmem_a.json",
+   "sha256": "22b3c3e8673cf69e73d1ea76796a5cef357e14222e3c961c7773cf6f763b360d"
+  },
+  "flame_steak/s3/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_final/program_gwrongmem_b.json",
+   "sha256": "7789416672a875a6dbd08e7e757432a0265a427f162fbc3e024f9c79ac07d26c"
+  },
+  "flame_steak/s3/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_final/program_gwrongmem_l.json",
+   "sha256": "9734be6a4604e63202a9509a1944e4ece52cd59bcc14be9755464c4cdd6adcf1"
+  },
+  "flame_steak/s3/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 6479,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.999999998143832,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "a90802a5a61c6ff7c8b46773dbfbb5a9c2d439ec18e5b58393d45e5931b32526",
+   "rows_with_positive_contribution": 327,
+   "rows_with_zero_contribution": 773,
+   "seed": 1003,
+   "truth_n": 6641
+  },
+  "flame_steak/s3/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/counts_gwrongmem_a.json",
+   "sha256": "1288df8fcd0053553397548febc03d338f5bf76afc5708a1b4e7cc421bf38b8a"
+  },
+  "flame_steak/s3/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/counts_gwrongmem_b.json",
+   "sha256": "8cac2a4eddb6b61df44e00689de0159f0466746faccd47565f2d42523ac7b008"
+  },
+  "flame_steak/s3/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/counts_gwrongmem_l.json",
+   "sha256": "a0490697c67e71163855fcb2bda36d4fee71b49f87d4414118c2a3edc56eafe5"
+  },
+  "flame_steak/s3/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/program_gwrongmem_a.json",
+   "sha256": "22b3c3e8673cf69e73d1ea76796a5cef357e14222e3c961c7773cf6f763b360d"
+  },
+  "flame_steak/s3/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/program_gwrongmem_b.json",
+   "sha256": "7789416672a875a6dbd08e7e757432a0265a427f162fbc3e024f9c79ac07d26c"
+  },
+  "flame_steak/s3/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/program_gwrongmem_l.json",
+   "sha256": "bd61eb36556e858212b977131ea8decb431a9912efa9ae7d7a0237d576c4f711"
+  },
+  "flame_steak/s3/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_est/program_est.json",
+   "sha256": "223cbd11defdb803e1eeeb0c0ceedda90fe85905c8cdd3a92d78cc03cb79666f"
+  },
+  "flame_steak/s3/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/votes_prefix3_est/vote_est.json",
+   "sha256": "ec550d3ad63bd527de5ded7e2f1a2abae8d5269c1445f43caa19b68b423558d5"
+  },
+  "repo/configs/n3v/absfix_gate_spec_v2.json": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "18aae16ae3a4772ddcee4f2ee2f801a232e2ecfcae0dde6f7c918e685ce23c16"
+  },
+  "repo/main.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "3f0d828210b28bf681fd79060a200b0a6c27a56b143db205286bf11dcd6054dc"
+  },
+  "repo/research-wiki/operations/absfix-wave2-spec-v2-2026-09-11.md": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "170db9df90d37d29658809014622750f7d8c68a9debe9d6e105e5a0c46469264"
+  },
+  "repo/scene/gaussian_model.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "3ce30df009aa2698e55fbbb31d093bcd919a87128201e342cfbc9f4dc7ee51d6"
+  },
+  "repo/scripts/draw_membership_shams.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "bff08d90d58b4823c7d02939b2e2d7ec6b24d34deb89cb8543de26cbc83e03c5"
+  },
+  "repo/scripts/eval_n3v_gated.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "4bdf427fa59264125843b0523b4466b2200383eb76eacf6d196679681cc1b927"
+  },
+  "repo/scripts/event_region_frame_profile.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "8ed4ed59bbbf618c01a0cca1cdfb1e8b428477d8d18a0e28dd644d3dd615bc61"
+  },
+  "repo/scripts/gate_cell_precondition.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "360d5a5832b8bb573e038a625bec01b03c57fea7c3dc8acf17ce844f81fd396b"
+  },
+  "repo/scripts/realdata_gate_analysis.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "7f8b86aef10fd9cd5b28522edb6691907ff0c426dae6802794f197b2cad8ecc7"
+  },
+  "repo/scripts/realdata_membership_vote.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905"
+  },
+  "repo/scripts/run_leonardo.sh": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "226cd824d6ee4c8c7a6cfd925efd56fa1e8beecdf5d45cfa3a4b4020c5a908a2"
+  },
+  "repo/tests/test_draw_membership_shams.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "c69114c11e8252d17bc3aee59779792028d90c06bde840d9a724c82f79ffed77"
+  },
+  "repo/tests/test_realdata_gate_analysis_v2.py": {
+   "commit": "ca9dead395a120842f6b2394094abee4339190a1",
+   "sha256": "7b37bd0d50f7b35f339ffb81d972592993d4308161b1dddf8f6711d637e642f9"
+  },
+  "sear_steak/s0/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_round4_L_final/box_recount_prefix0.json",
+   "sha256": "81d56f01913340ccad44a6e1b330d12c27c7d5490c6834099e4dbabc2b187e2f"
+  },
+  "sear_steak/s0/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_prefix0.json",
+   "sha256": "1650766ac4f266dfac09cd92d502aa9b6fa4a8b31af726e30915afb9f31c29a6"
+  },
+  "sear_steak/s0/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 381,
+   "eligible_n": 6824,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9004173885434735,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "e00f61e263aed397a85fdf08bddf40ba8b4763414d5ea30f605a7d729e830947",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1000,
+   "truth_n": 7676
+  },
+  "sear_steak/s0/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_final/counts_gwrongmem_a.json",
+   "sha256": "42672246dd0dbc013649c9ccfaa0010fc44da8baaea0302a05e7adf6ef3ccd36"
+  },
+  "sear_steak/s0/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_final/counts_gwrongmem_b.json",
+   "sha256": "ce3abef337283a9e275fcf9f259d79097b9c3af986878aea0e6efc9e5ca90195"
+  },
+  "sear_steak/s0/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_final/counts_gwrongmem_l.json",
+   "sha256": "d59f0c88dbe7a22b1a775ed5d0f816b646609e7e68c897a95aabae05cba1c4d7"
+  },
+  "sear_steak/s0/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_final/program_gwrongmem_a.json",
+   "sha256": "5c4179e6192260d834265089a24f69ce288f2cf070eaf7d24e38e8875e9c8adc"
+  },
+  "sear_steak/s0/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_final/program_gwrongmem_b.json",
+   "sha256": "32b95b40a03978e82be663714143fc8260a3ab08f45d8d36fe66afdeba72214d"
+  },
+  "sear_steak/s0/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_final/program_gwrongmem_l.json",
+   "sha256": "2f3461d9bb5a03a70585ebbd401d18bddde25e5a0c1ddac16531e3de65cc193b"
+  },
+  "sear_steak/s0/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 6824,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.999999999665123,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "46b577470614feaa7f5e4fb8404affa13b8b13c01a851dfab8e184c01b4f8e2e",
+   "rows_with_positive_contribution": 539,
+   "rows_with_zero_contribution": 561,
+   "seed": 1000,
+   "truth_n": 7676
+  },
+  "sear_steak/s0/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/counts_gwrongmem_a.json",
+   "sha256": "42672246dd0dbc013649c9ccfaa0010fc44da8baaea0302a05e7adf6ef3ccd36"
+  },
+  "sear_steak/s0/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/counts_gwrongmem_b.json",
+   "sha256": "ce3abef337283a9e275fcf9f259d79097b9c3af986878aea0e6efc9e5ca90195"
+  },
+  "sear_steak/s0/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/counts_gwrongmem_l.json",
+   "sha256": "c2a30d4f4e54b6d6fb9c08a86a7b42b31b9d7604ad1be63645712deeaf3f6c9e"
+  },
+  "sear_steak/s0/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/program_gwrongmem_a.json",
+   "sha256": "5c4179e6192260d834265089a24f69ce288f2cf070eaf7d24e38e8875e9c8adc"
+  },
+  "sear_steak/s0/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/program_gwrongmem_b.json",
+   "sha256": "32b95b40a03978e82be663714143fc8260a3ab08f45d8d36fe66afdeba72214d"
+  },
+  "sear_steak/s0/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/program_gwrongmem_l.json",
+   "sha256": "efd757d5cb8a7b56b533092955fb875b4237adcdef8e3b35cc77f6c24decebeb"
+  },
+  "sear_steak/s0/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_est/program_est.json",
+   "sha256": "cc8501f6aaa01aea092c821f61c1c6382dbb83b2b0a4bd97ac3cafb4085b8ed2"
+  },
+  "sear_steak/s0/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix0_est/vote_est.json",
+   "sha256": "5c9b7356d97a145ed3cd3631280b51484269f7df974be17cffdb6ed15e011ec9"
+  },
+  "sear_steak/s1/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_round4_L_final/box_recount_prefix1.json",
+   "sha256": "9f62af3707c8127ae7927fab3d1138a20319327c1b3f8b97b4b78ad6b59b9126"
+  },
+  "sear_steak/s1/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_prefix1.json",
+   "sha256": "f55f24e2d875faeb5fad615b046ffdb1f6ac4a73a58486c31a4c9a3dc2b44796"
+  },
+  "sear_steak/s1/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 325,
+   "eligible_n": 6941,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9001172149780932,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "99e2890e42a2152d719e11c5b9234c2863f98489e0fa66b41b618a0aca132d4e",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1001,
+   "truth_n": 7434
+  },
+  "sear_steak/s1/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_final/counts_gwrongmem_a.json",
+   "sha256": "8eb226c5eba833ef89db696a79a0723ac629e414e64f22edd4701e80d7e5eb81"
+  },
+  "sear_steak/s1/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_final/counts_gwrongmem_b.json",
+   "sha256": "80a44f405d04342a57e74407cd88d716677f3b7e865f24209ba5c6cba8a3814d"
+  },
+  "sear_steak/s1/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_final/counts_gwrongmem_l.json",
+   "sha256": "6428efadeda8455d4c5dea55cb0e57fa542aa9ece2099a51dda61e19f6d64613"
+  },
+  "sear_steak/s1/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_final/program_gwrongmem_a.json",
+   "sha256": "7bccb160298b71953faa8214a73a8f587c4f47423a7f31481686cdfd02fbd1d2"
+  },
+  "sear_steak/s1/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_final/program_gwrongmem_b.json",
+   "sha256": "9c16bbe7833d97d4a7ff4cc64ff5fb0ec06a0ac111b2e67d753f2fbbe9feabfa"
+  },
+  "sear_steak/s1/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_final/program_gwrongmem_l.json",
+   "sha256": "b8fc63dcac3ee7142ccb173bfdca9c337d5ba54b266e1e6243c28e57117ab140"
+  },
+  "sear_steak/s1/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 6941,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999989505343,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "8bfea35940942845ee2f6e219dcc40eab78f4aa509f76fba761114a208579e66",
+   "rows_with_positive_contribution": 460,
+   "rows_with_zero_contribution": 640,
+   "seed": 1001,
+   "truth_n": 7434
+  },
+  "sear_steak/s1/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/counts_gwrongmem_a.json",
+   "sha256": "8eb226c5eba833ef89db696a79a0723ac629e414e64f22edd4701e80d7e5eb81"
+  },
+  "sear_steak/s1/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/counts_gwrongmem_b.json",
+   "sha256": "80a44f405d04342a57e74407cd88d716677f3b7e865f24209ba5c6cba8a3814d"
+  },
+  "sear_steak/s1/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/counts_gwrongmem_l.json",
+   "sha256": "0111af4ee6facbc5122612d264c67c06a931f3275ac23b9ee6ae7381b4b42fc7"
+  },
+  "sear_steak/s1/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/program_gwrongmem_a.json",
+   "sha256": "7bccb160298b71953faa8214a73a8f587c4f47423a7f31481686cdfd02fbd1d2"
+  },
+  "sear_steak/s1/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/program_gwrongmem_b.json",
+   "sha256": "9c16bbe7833d97d4a7ff4cc64ff5fb0ec06a0ac111b2e67d753f2fbbe9feabfa"
+  },
+  "sear_steak/s1/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/program_gwrongmem_l.json",
+   "sha256": "2f2b74f3e862e1fd201ce77aca7ea3ae7c3b4d7d6d96e00218f591b904d0590f"
+  },
+  "sear_steak/s1/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_est/program_est.json",
+   "sha256": "9f889670d197ee9add8b1ea2e0eef12e776c1d6a07027cc84763c9655a85f4a2"
+  },
+  "sear_steak/s1/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix1_est/vote_est.json",
+   "sha256": "0a2b3c43f2a4823daf9d582abe31776db2a764541cddc36bdfaf3cf869665c99"
+  },
+  "sear_steak/s2/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_round4_L_final/box_recount_prefix2.json",
+   "sha256": "ba68c6a0f8ea98886457039dd1be4d1892ab19bf629432d215d9287fa6f6d3bc"
+  },
+  "sear_steak/s2/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_prefix2.json",
+   "sha256": "6dbdc24f073ce0396ad35bccd172f60e3a752db7392706fc837f486f6a5b1319"
+  },
+  "sear_steak/s2/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 256,
+   "eligible_n": 6942,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9000909603830117,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "e54dcbf3f7b7caf77b5b30dd9e8aa2111f06d8932fb53b84c0e233f93f9f1b3f",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1002,
+   "truth_n": 7656
+  },
+  "sear_steak/s2/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_final/counts_gwrongmem_a.json",
+   "sha256": "f2cef83513635c872e46cd1fd635bb4971e50e84c5b3aa6cc0f9aaa6abc959cf"
+  },
+  "sear_steak/s2/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_final/counts_gwrongmem_b.json",
+   "sha256": "974da3b96dc72b5bab8182152bbad5e902e0147a62cb682e74528dd375a92366"
+  },
+  "sear_steak/s2/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_final/counts_gwrongmem_l.json",
+   "sha256": "7ecfcc86cc9c103855b25afbbd3cf3cd8c5f0eda15f0821b85e66d8565aa98bf"
+  },
+  "sear_steak/s2/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_final/program_gwrongmem_a.json",
+   "sha256": "cba569f93b3ea76051c318721b24151b5ce722b998cb1fe775cf2df26b278663"
+  },
+  "sear_steak/s2/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_final/program_gwrongmem_b.json",
+   "sha256": "aa054fd245c1965c680d1f11e92dff3c318930ae34ce0e0a5d1c252bfe42df9e"
+  },
+  "sear_steak/s2/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_final/program_gwrongmem_l.json",
+   "sha256": "254e386a570ad58cb9218ec5367047becb8a1faf9b0bc635e5b68916d0f60aeb"
+  },
+  "sear_steak/s2/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 6942,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.999999999980675,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "77f812077210b6073d99dc38e34dbf0b426292e398d8888dbea13d9178fa9f93",
+   "rows_with_positive_contribution": 377,
+   "rows_with_zero_contribution": 723,
+   "seed": 1002,
+   "truth_n": 7656
+  },
+  "sear_steak/s2/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/counts_gwrongmem_a.json",
+   "sha256": "f2cef83513635c872e46cd1fd635bb4971e50e84c5b3aa6cc0f9aaa6abc959cf"
+  },
+  "sear_steak/s2/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/counts_gwrongmem_b.json",
+   "sha256": "974da3b96dc72b5bab8182152bbad5e902e0147a62cb682e74528dd375a92366"
+  },
+  "sear_steak/s2/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/counts_gwrongmem_l.json",
+   "sha256": "aca132ca10ddf521ff08612e05ed6c275505edb266461292b0b6cf2e3f622f78"
+  },
+  "sear_steak/s2/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/program_gwrongmem_a.json",
+   "sha256": "cba569f93b3ea76051c318721b24151b5ce722b998cb1fe775cf2df26b278663"
+  },
+  "sear_steak/s2/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/program_gwrongmem_b.json",
+   "sha256": "aa054fd245c1965c680d1f11e92dff3c318930ae34ce0e0a5d1c252bfe42df9e"
+  },
+  "sear_steak/s2/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/program_gwrongmem_l.json",
+   "sha256": "0ccae8fdaee6769c00c97defe15638ea8c739086164d9cf252e1626bd9952328"
+  },
+  "sear_steak/s2/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_est/program_est.json",
+   "sha256": "41ff4d8194771fd7d9eb0b000c2f453aa9d108dbd34cc866420c800e901ad9b8"
+  },
+  "sear_steak/s2/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix2_est/vote_est.json",
+   "sha256": "c4f4a5bb4fc7e7442c9ab985a50c47475c019596e2a46629fe56519a51779ce0"
+  },
+  "sear_steak/s3/box_recount_round4": {
+   "GMIS_frame": 245,
+   "L_from": "_final",
+   "jobs": "57753922/57753925/57753927",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_round4_L_final/box_recount_prefix3.json",
+   "sha256": "34097cbedb7c88cea416b484bdab7928b96fb9aad753f812f21bd4aa94c35524"
+  },
+  "sear_steak/s3/box_recount_round5": {
+   "GMIS_frame": 244,
+   "L_from": "_iv",
+   "jobs": "57766941/57766942/57766945",
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/box_recount_prefix3.json",
+   "sha256": "7f8f0ba4d52e9bc9900b97b2864a6fa54393d3be9589f4458c243ecc272096f1"
+  },
+  "sear_steak/s3/draws_final_fallback/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local",
+   "draw_n": 276,
+   "eligible_n": 7134,
+   "mass_cap": null,
+   "mass_lower_edge": null,
+   "mass_ratio_draw_over_truth": 0.9002375993576064,
+   "min_rows": null,
+   "overlap_n": 0,
+   "row_ids_sha256": "045d66dff42f0594578d8ff2900d18e9acda997b1ce7908d395e38257bb3f0cb",
+   "rows_with_positive_contribution": null,
+   "rows_with_zero_contribution": null,
+   "seed": 1003,
+   "truth_n": 7536
+  },
+  "sear_steak/s3/draws_final_fallback/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_final/counts_gwrongmem_a.json",
+   "sha256": "ff8b33b3d574038a34afcbd50a54d355bd6d46a386042a0944e78d1076ad3727"
+  },
+  "sear_steak/s3/draws_final_fallback/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_final/counts_gwrongmem_b.json",
+   "sha256": "f41d7886c11d9d2882e849ab95e34dd7b5d6e94fbc4d4e77be3e5acfb37c6a71"
+  },
+  "sear_steak/s3/draws_final_fallback/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_final/counts_gwrongmem_l.json",
+   "sha256": "efd3c3b4382cc8790c2629433315e2144d4a500f183d113d8245bb112860de1f"
+  },
+  "sear_steak/s3/draws_final_fallback/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_final/program_gwrongmem_a.json",
+   "sha256": "463c07b1a3cc9ae6a8d1dccb09cffa33447b07be854d16da198c88c99d2c9433"
+  },
+  "sear_steak/s3/draws_final_fallback/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_final/program_gwrongmem_b.json",
+   "sha256": "165494f6afdf54feed0a2fb6182ddb7fc24a782460e38d27788de6b3bf909500"
+  },
+  "sear_steak/s3/draws_final_fallback/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_final/program_gwrongmem_l.json",
+   "sha256": "48f74e2c326c6de2ab2b3492ebf8c96b9ba43a3b7a7a5189bccbebdfaadc3339"
+  },
+  "sear_steak/s3/draws_iv/L_counts": {
+   "contribution_key": "w_total",
+   "draw": "greedy_descending_contribution_local_floor",
+   "draw_n": 1100,
+   "eligible_n": 7134,
+   "mass_cap": 1.0,
+   "mass_lower_edge": 0.9,
+   "mass_ratio_draw_over_truth": 0.9999999990633055,
+   "min_rows": 1100,
+   "overlap_n": 0,
+   "row_ids_sha256": "b99e57a6155285ca4409ba800a23f4d1ba5a587068a95af9e9ba6943184506fe",
+   "rows_with_positive_contribution": 398,
+   "rows_with_zero_contribution": 702,
+   "seed": 1003,
+   "truth_n": 7536
+  },
+  "sear_steak/s3/draws_iv/counts_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/counts_gwrongmem_a.json",
+   "sha256": "ff8b33b3d574038a34afcbd50a54d355bd6d46a386042a0944e78d1076ad3727"
+  },
+  "sear_steak/s3/draws_iv/counts_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/counts_gwrongmem_b.json",
+   "sha256": "f41d7886c11d9d2882e849ab95e34dd7b5d6e94fbc4d4e77be3e5acfb37c6a71"
+  },
+  "sear_steak/s3/draws_iv/counts_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/counts_gwrongmem_l.json",
+   "sha256": "d148fc9dd743289f47cb6bfc3f50b65a0e1211a0233442456da400c4c96c417c"
+  },
+  "sear_steak/s3/draws_iv/program_gwrongmem_a.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/program_gwrongmem_a.json",
+   "sha256": "463c07b1a3cc9ae6a8d1dccb09cffa33447b07be854d16da198c88c99d2c9433"
+  },
+  "sear_steak/s3/draws_iv/program_gwrongmem_b.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/program_gwrongmem_b.json",
+   "sha256": "165494f6afdf54feed0a2fb6182ddb7fc24a782460e38d27788de6b3bf909500"
+  },
+  "sear_steak/s3/draws_iv/program_gwrongmem_l.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/program_gwrongmem_l.json",
+   "sha256": "a8a438b64d5338a48b907d54b0dc4188c4211afd4cebd22ba4554b23de004544"
+  },
+  "sear_steak/s3/est/program_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_est/program_est.json",
+   "sha256": "daf99005067eb1cde6e71bbffcabd92298c4e69b3a1e63722950c536dee51104"
+  },
+  "sear_steak/s3/est/vote_est.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/votes_prefix3_est/vote_est.json",
+   "sha256": "248dc3b9272cd246d42b2fb65778eb04490b7dc055378be2ef8368ec5c834af5"
+  },
+  "stage1_scripts/box_recount.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/box_recount.py",
+   "sha256": "788d52a9b97ce28046880cd8f834d1a44e0b99c2592e9cfde2655ec0c278ff2d"
+  },
+  "stage1_scripts/box_recount_round4_gmis245.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/box_recount_round4_gmis245.py",
+   "sha256": "bfa28900c7658efacfdcac794402a03bb1728d4b1b46b97279870eefb140ff5c"
+  },
+  "stage1_scripts/recount.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage1/recount.sbatch",
+   "sha256": "35818844bbf67bd414ab105d68568e730823d769b21cadd069a6d0261a42d302"
+  },
+  "stage2/stage2_inputs.sha256": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_inputs.sha256",
+   "sha256": "312e5223602e9f646f053a7513b070c24494cdb422c2665945e7c60bfb9bdcfc"
+  },
+  "stage2/stage2_inputs_13_21.sha256": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_inputs_13_21.sha256",
+   "sha256": "030a2c217c57bfb02329e197ae90e94ad389c9856923fdbabef93deda0f03b8b"
+  },
+  "stage2/stage2_plan.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_plan.json",
+   "sha256": "423c45200f742be7034d781dcade0f2e114b15b35ede6a4275ca49410135443f"
+  },
+  "stage2/stage2_plan_13_21.json": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_plan_13_21.json",
+   "sha256": "94bb019e8988e72ab7a672a11e848b7a3d6ad60c35993515c09c7766005da0dd"
+  },
+  "stage2_scripts/archive_realdata_gate.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/archive_realdata_gate.sbatch",
+   "sha256": "a3effc14b685cc5878dbe87ff16a8851aa6361e44ec95761c9a6b1d50aadcb8c"
+  },
+  "stage2_scripts/collect_cam00.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/collect_cam00.py",
+   "sha256": "6633d868b22df761b3f3ddb40296070d0f0a2dda396119024306c6621012226b"
+  },
+  "stage2_scripts/draws_final.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/draws_final.sbatch",
+   "sha256": "a42e9a6d2587cebaddde37f9238634b365c6eefb7e34ff6caeecfe9c53a42990"
+  },
+  "stage2_scripts/draws_iv.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/draws_iv.sbatch",
+   "sha256": "8d562327f1ab9be81e7157011b04e6321c8c1b67df5bfc5876560a58f2ffb4e3"
+  },
+  "stage2_scripts/patch_box_recount_244.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/patch_box_recount_244.py",
+   "sha256": "2ca43e0b113a15972d968347184ee26808584dcce3bffbdd0b0562a1bd3a862b"
+  },
+  "stage2_scripts/patch_submit_iv.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/patch_submit_iv.py",
+   "sha256": "1a7d8b49b727de889edcdfe59232011d08151f9ab28942ce0a72b5862fb8d504"
+  },
+  "stage2_scripts/plan_diff.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/plan_diff.py",
+   "sha256": "2b5830818170151e59ee0d9645ccfc9c0d9c2eeb01be0d4fd3100fc8ce232016"
+  },
+  "stage2_scripts/precond_wave1_shams.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/precond_wave1_shams.sbatch",
+   "sha256": "06bb51da5ff14a19af8d536157da6bfa04a9fe468b081dd3fb6cd2e6a8e44dea"
+  },
+  "stage2_scripts/stage2_cell.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_cell.sbatch",
+   "sha256": "27cfe279a98ce57d521cda7d77cb36520ee87ac19863bffb88e0b898435ad4bd"
+  },
+  "stage2_scripts/stage2_collect.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_collect.py",
+   "sha256": "1a9deba9fba57a253940cb049212e498522ab552d706a99bfe40b7fec8e94e55"
+  },
+  "stage2_scripts/stage2_montage.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_montage.py",
+   "sha256": "5f2b341de252105e10815c1a6682df22e1cf8073a63788f72aa6102ed839e4a0"
+  },
+  "stage2_scripts/stage2_warden.sh": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stage2_warden.sh",
+   "sha256": "aa367321aac7ec09b72e4799779dd076676335c6bf3053e9730189823f4d22f4"
+  },
+  "stage2_scripts/stg_chain.sh": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stg_chain.sh",
+   "sha256": "38a7ba042271640e584642333997eac88495c3e064da8b431e54b0923da56d6a"
+  },
+  "stage2_scripts/stg_collect.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/stg_collect.sbatch",
+   "sha256": "f5e3816679b3435adbfea4dc6b6f97f52d4e9dfcb926d085b46ad56abefb0f9d"
+  },
+  "stage2_scripts/submit_stage2.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/submit_stage2.py",
+   "sha256": "fe0c32dedc7d4a61f58e969513e5fb43d5352931c75c3fb44f05fbaaa23ab977"
+  },
+  "stage2_scripts/u_val_crosscheck.py": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/u_val_crosscheck.py",
+   "sha256": "2e0480ecb81a66723fdde8c1f1e0a4744bd50c0209c9b8a422017dcff5505ccf"
+  },
+  "stage2_scripts/vote_est.sbatch": {
+   "path": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/vote_est.sbatch",
+   "sha256": "c6681cd4b689347ef00f3aba11acf11a2adb05b7e1530e517c6cf7fe68384cbd"
+  }
+ },
+ "draw_script_commit_13_22": "846ee1a182707ce2c39df10994a021d8bfed85cc",
+ "execution_commit_13_21": "bb7ebf66e14fae53f4dbbfa1ed90c0af4913df27",
+ "frozen_commit_for_cells": "ca9dead395a120842f6b2394094abee4339190a1",
+ "note": "full sha256 of every stage-2 setup artefact referenced by spec v2.0.0 sections 13.21-13.22; regenerated in full at the 13.22 amendment commit; decision 5 = option (iv): the L programs are the local-floor draws (draws_prefix<S>_iv, job 57765868); the decision-1 draws (draws_prefix<S>_final, job 57752673) are listed as the recorded fallback; the plan is the post-decision-5 plan",
+ "schema": "adags-absfix2-stage2-freeze-v2",
+ "written": "2026-09-15T00:45:20+0200"
+}
