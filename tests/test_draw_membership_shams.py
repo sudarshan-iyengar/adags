@@ -546,3 +546,94 @@ def test_cli_radius_mode_runs_end_to_end_with_an_npy_xyz(tmp_path):
     assert counts["radius_reached"] > 0
     a = json.loads((out / "counts_gwrongmem_a.json").read_text())
     assert a["contribution_key"] == "w_total"
+
+
+# ---------------------------------------------------------------------------
+# local_floor (spec v2.0.0 section 13.22, decision 5 option iv)
+# ---------------------------------------------------------------------------
+
+
+def _floor_case(local_scale, zero_rows=()):
+    """40 truth rows of mass 1.0 (target 40); 60 local rows of `local_scale`;
+    optional extra eligible rows with ZERO contribution (geometric members)."""
+    values = contribution(local_scale=local_scale)
+    elig = eligible(rows=list(LOCAL_ROWS) + list(zero_rows))
+    return dms.truth_mask(truth_program()), elig, values
+
+
+def test_local_floor_takes_rows_until_both_floors_hold():
+    # 60 rows x 0.7 = 42 of mass; cap 1.0 x 40 admits at most 57 rows (39.9);
+    # min_rows 50 is reached after the mass floor (36.0 at row 52), so the walk
+    # continues past the mass floor until 50 rows... it stops at the first
+    # acceptance where BOTH hold.
+    truth, elig, values = _floor_case(0.7)
+    rows, pool = dms.local_floor_contribution_matched_draw(
+        truth, elig, values, min_rows=50, cap=1.0, lower=0.9)
+    assert pool == 60
+    assert len(rows) == 52  # 52 x 0.7 = 36.4 >= 36.0 and 52 >= 50
+    assert 36.0 <= values[rows].sum() <= 40.0
+    assert set(rows) <= set(LOCAL_ROWS)
+
+
+def test_local_floor_row_floor_can_exceed_the_mass_floor():
+    truth, elig, values = _floor_case(0.7)
+    rows, _ = dms.local_floor_contribution_matched_draw(
+        truth, elig, values, min_rows=55, cap=1.0, lower=0.9)
+    assert len(rows) == 55 and values[rows].sum() <= 40.0
+
+
+def test_local_floor_skips_overshooting_rows_permanently_and_accepts_zero_rows():
+    # 60 rows x 0.7: the 58th row would exceed the cap (40.6 > 40) and is
+    # skipped, as are the remaining 0.7 rows; the 20 zero-contribution
+    # eligible rows then satisfy the row floor by geometric membership only.
+    truth, elig, values = _floor_case(0.7, zero_rows=range(200, 220))
+    rows, pool = dms.local_floor_contribution_matched_draw(
+        truth, elig, values, min_rows=70, cap=1.0, lower=0.9)
+    assert pool == 80
+    assert len(rows) == 70
+    assert values[rows].sum() <= 40.0 + 1e-9
+    assert int((values[rows] > 0).sum()) == 57
+    assert int((values[rows] == 0).sum()) == 13
+
+
+def test_local_floor_refuses_when_the_pool_is_exhausted():
+    truth, elig, values = _floor_case(0.7)
+    with pytest.raises(dms.DrawRefused, match="exhausted"):
+        dms.local_floor_contribution_matched_draw(
+            truth, elig, values, min_rows=61, cap=1.0, lower=0.9)
+    with pytest.raises(dms.DrawRefused, match="exhausted"):
+        dms.local_floor_contribution_matched_draw(
+            truth, elig, contribution(local_scale=0.5), min_rows=10, cap=1.0, lower=0.9)
+
+
+def test_local_floor_is_deterministic_and_sorted():
+    truth, elig, values = _floor_case(0.7, zero_rows=range(200, 220))
+    a, _ = dms.local_floor_contribution_matched_draw(truth, elig, values, min_rows=70)
+    b, _ = dms.local_floor_contribution_matched_draw(truth, elig, values, min_rows=70)
+    assert a.tolist() == b.tolist() == sorted(a.tolist())
+
+
+def test_local_floor_rejects_bad_parameters_and_inputs():
+    truth, elig, values = _floor_case(0.7)
+    with pytest.raises(dms.DrawRefused, match="invalid"):
+        dms.local_floor_contribution_matched_draw(truth, elig, values, min_rows=0)
+    with pytest.raises(dms.DrawRefused, match="invalid"):
+        dms.local_floor_contribution_matched_draw(truth, elig, values, cap=0.8, lower=0.9)
+    bad = values.copy(); bad[LOCAL_ROWS[0]] = np.nan
+    with pytest.raises(dms.DrawRefused, match="non-finite"):
+        dms.local_floor_contribution_matched_draw(truth, elig, bad)
+
+
+def test_draw_all_local_floor_records_the_geometric_rows_in_the_sidecar():
+    program = truth_program()
+    values = contribution(local_scale=0.7)
+    elig = eligible(rows=list(LOCAL_ROWS) + list(range(200, 220)))
+    draws = dms.draw_all(program, values, elig, prefix_seed=0, l_mode="local_floor",
+                         l_min_rows=70, l_cap=1.0)
+    counts = draws[dms.DRAW_L][2]
+    assert counts["draw"] == "greedy_descending_contribution_local_floor"
+    assert counts["min_rows"] == 70 and counts["mass_cap"] == 1.0
+    assert counts["rows_with_positive_contribution"] == 57
+    assert counts["rows_with_zero_contribution"] == 13
+    assert counts["draw_n"] == 70 and counts["overlap_n"] == 0
+    assert 0.9 <= counts["mass_ratio_draw_over_truth"] <= 1.0

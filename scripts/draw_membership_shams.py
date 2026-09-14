@@ -265,6 +265,72 @@ def local_contribution_matched_draw(truth, eligible, contribution,
     return np.sort(np.asarray(taken, dtype=np.int64)), pool.size
 
 
+def local_floor_contribution_matched_draw(truth, eligible, contribution,
+                                          min_rows=1100, cap=1.0,
+                                          lower=0.9):
+    """Spec v2.0.0 section 13.22 (decision 5, option iv): a LOCAL,
+    contribution-matched sham that also meets the row-count clause of 11.4
+    without any exemption.
+
+    Pseudocode (executable-equivalent):
+        target = sum(contribution[truth]); require target > 0, all finite
+        pool   = rows with eligible AND NOT truth; require pool non-empty
+        order  = pool sorted by descending contribution, ties by ascending
+                 frozen row id (the pre-densification integer index)
+        taken = [], mass = 0.0
+        for row in order:
+            if mass + w[row] > cap * target: skip row PERMANENTLY; continue
+            accept row; mass += w[row]
+            if mass >= lower * target and len(taken) >= min_rows: STOP
+        if the loop ends without STOP: REFUSED (pool exhausted)
+    Comparisons are inclusive at both edges; contribution is float64;
+    the accepted set is sorted by row id before it is written. The cap
+    (1.00) keeps the sham's baseline contribution at or below the truth
+    set's; the floor (0.90) is the lower edge of the frozen +-10% band;
+    min_rows (1100) is the 11.4 row floor with a 10% margin frozen before
+    any cell trained. Zero-contribution eligible rows may be accepted once
+    the cap is reached; they satisfy the count by geometric membership
+    only, which the sidecar reports (rows_with_positive_contribution).
+    """
+    if not np.all(np.isfinite(contribution)):
+        raise DrawRefused("contribution carries non-finite values")
+    if np.any(contribution < 0):
+        raise DrawRefused("contribution carries negative values")
+    target = float(contribution[truth].sum())
+    if target <= 0.0:
+        raise DrawRefused(
+            "the truth set carries no contribution mass at the recorded view; "
+            "there is nothing to match")
+    if int(min_rows) < 1 or not (0.0 < float(lower) <= float(cap)):
+        raise DrawRefused("invalid local_floor parameters min_rows=%r lower=%r cap=%r"
+                          % (min_rows, lower, cap))
+    pool = np.flatnonzero(eligible & ~truth)
+    if pool.size == 0:
+        raise DrawRefused(
+            "no row is both locally eligible and outside the truth set")
+    order = pool[np.lexsort((pool, -contribution[pool]))]
+    floor_mass = float(lower) * target
+    cap_mass = float(cap) * target
+    taken, mass, stopped = [], 0.0, False
+    for row in order:
+        value = float(contribution[row])
+        if mass + value > cap_mass:
+            continue
+        taken.append(int(row))
+        mass += value
+        if mass >= floor_mass and len(taken) >= int(min_rows):
+            stopped = True
+            break
+    if not stopped:
+        raise DrawRefused(
+            "local_floor: the eligible pool (%d rows, %.6g mass) is exhausted at "
+            "%d rows and %.6g mass before reaching %d rows and %.6g mass under "
+            "the cap %.6g" % (pool.size, float(contribution[pool].sum()),
+                              len(taken), mass, int(min_rows), floor_mass,
+                              cap_mass))
+    return np.sort(np.asarray(taken, dtype=np.int64)), pool.size
+
+
 def load_xyz(path, n_rows):
     """[n_rows, 3] canonical positions from a .npy or an .npz (key `xyz`)."""
     xyz = _array_from_file(path, ("xyz", "_xyz", "positions"), "xyz",
@@ -387,7 +453,8 @@ def counts_sidecar(arm, truth, rows, eligible_n, contribution, seed,
 
 def draw_all(truth_program, contribution, eligible, prefix_seed,
              draw_index=DEFAULT_DRAW_INDEX,
-             tolerance=DEFAULT_MASS_TOLERANCE, xyz=None, l_mode="local"):
+             tolerance=DEFAULT_MASS_TOLERANCE, xyz=None, l_mode="local",
+             l_min_rows=1100, l_cap=1.0):
     """{arm: (program, program_sha256, counts)} for the three shams.
 
     `l_mode` is "local" (section 11.2 as first frozen: locally eligible rows,
@@ -397,7 +464,7 @@ def draw_all(truth_program, contribution, eligible, prefix_seed,
     computed from `eligible` and recorded as a finding.
     """
     truth = truth_mask(truth_program)
-    if l_mode not in ("local", "radius"):
+    if l_mode not in ("local", "radius", "local_floor"):
         raise DrawRefused("unknown l_mode %r" % (l_mode,))
     if l_mode == "radius" and xyz is None:
         raise DrawRefused("l_mode radius needs the cloud's xyz")
@@ -430,6 +497,21 @@ def draw_all(truth_program, contribution, eligible, prefix_seed,
             "truth_centroid_xyz": info["centroid"],
             "local_only_mass_ratio_retired_rule": local_only_ratio,
             "local_only_eligible_n": int(local_pool.size),
+        }
+    elif l_mode == "local_floor":
+        rows, eligible_n = local_floor_contribution_matched_draw(
+            truth, eligible, contribution, min_rows=l_min_rows, cap=l_cap,
+            lower=1.0 - float(tolerance))
+        extra = {
+            "draw": "greedy_descending_contribution_local_floor",
+            "mass_tolerance": float(tolerance),
+            "mass_lower_edge": 1.0 - float(tolerance),
+            "mass_cap": float(l_cap),
+            "min_rows": int(l_min_rows),
+            "rows_with_positive_contribution": int(
+                (contribution[rows] > 0).sum()),
+            "rows_with_zero_contribution": int(
+                (contribution[rows] <= 0).sum()),
         }
     else:
         rows, eligible_n = local_contribution_matched_draw(
@@ -498,13 +580,20 @@ def main(argv=None):
                         default=DEFAULT_MASS_TOLERANCE,
                         help="the L draw's contribution band (default %.2f)"
                              % DEFAULT_MASS_TOLERANCE)
-    parser.add_argument("--l_mode", choices=("local", "radius"),
+    parser.add_argument("--l_mode", choices=("local", "radius", "local_floor"),
                         default="local",
                         help="L draw rule: 'local' = section 11.2 as first "
                              "frozen (eligible local rows; refuses when they "
                              "cannot reach the band); 'radius' = section "
                              "13.18 (mass matched, locality relaxed by 3D "
                              "radius from the truth centroid; needs --xyz)")
+    parser.add_argument("--l_min_rows", type=int, default=1100,
+                        help="local_floor only: the row floor with margin "
+                             "(section 13.22: 1100)")
+    parser.add_argument("--l_cap", type=float, default=1.0,
+                        help="local_floor only: a row is accepted iff the "
+                             "running mass stays <= cap x truth mass "
+                             "(section 13.22: 1.00)")
     parser.add_argument("--xyz", default=None,
                         help="[n_rows, 3] canonical xyz (.npy, or .npz with "
                              "key xyz); required for --l_mode radius")
@@ -529,7 +618,8 @@ def main(argv=None):
         draws = draw_all(program, contribution, eligible, args.prefix_seed,
                          draw_index=args.draw_index,
                          tolerance=args.mass_tolerance,
-                         xyz=xyz, l_mode=args.l_mode)
+                         xyz=xyz, l_mode=args.l_mode,
+                         l_min_rows=args.l_min_rows, l_cap=args.l_cap)
     except DrawRefused as exc:
         print("REFUSED: %s" % exc, file=sys.stderr)
         return 2
