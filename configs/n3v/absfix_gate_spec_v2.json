@@ -1,7 +1,7 @@
 {
  "spec_id": "absfix_gate_v2",
  "spec_version": "2.0.0",
- "status": "TEXT FROZEN 2026-09-11, amended 2026-09-12 (page section 13); freeze list open (section 11.7); no cell may be submitted while any freeze-list line is pending",
+ "status": "TEXT FROZEN 2026-09-11, amended 2026-09-12 (page section 13); freeze list valued through section 13.21 except decision 5 (GWRONGMEM_L and the row-count / in-box clauses of 11.4); no cell may be submitted while any freeze-list line is pending",
  "supersedes": "configs/n3v/absfix_gate_spec_v1.json (1.2.0), whose wave-1 verdict NOT_MET stands unchanged",
  "note": "Machine-readable instance of spec v2.0.0 for a spec-driven reducer in scripts/realdata_gate_analysis.py. Section 11 of the wiki page is the binding text; where this file and the page disagree the page rules. Keys marked pending are filled BEFORE the first prefix trains on the scene they concern; filling a pending key is the only permitted edit and is recorded append-only on the page.",
  "scenes": {
@@ -307,7 +307,7 @@
   "GMIS": "construction-derived membership, gap moved to the control window (timing sham)",
   "GWRONGMEM_A": "count-matched uniform draw over rows OUTSIDE the construction-derived set, zero overlap, seed 1000+prefix_seed",
   "GWRONGMEM_B": "second independent draw, seed 2000+prefix_seed",
-  "GWRONGMEM_L": "section 13.18: mass-matched sham with locality relaxed by radius: non-truth rows in order of 3D distance from the truth centroid (canonical xyz), greedy by descending contribution within the smallest radius whose rows carry >= 0.9x the truth mass, until the frame-50 cam15 contribution mass is within +-10% of the truth mass; deterministic; radius, n_within_radius and the retired local-only mass ratio recorded per prefix",
+  "GWRONGMEM_L": "section 13.21 (user decision 1, 2026-09-14): the ORIGINAL local rule of 11.2 on the total-paint measure w_total: non-truth rows whose deformed centre projects inside the +20 px construction silhouette on >= 8 of 19 training cameras at frames 50 and 95, greedy by descending rendered contribution (w_total, cam15 frame 50) until the mass is within +-10% of the construction-derived set's; drawn with --l_mode local --contribution_key w_total (job 57752673); 152-773 rows per prefix at mass ratio 0.900-0.901; the 13.18 radius rule is a recorded fallback never used for training",
   "GONES": "construction-derived membership, late gap [286,297] (code-path sham, not a null)"
  },
  "WRONGMEM_OVERLAP_MAX": 0,
@@ -1258,12 +1258,36 @@
  "CELL_PRECONDITION": {
   "gated_rows_at_12k_min": 1000,
   "gated_rows_in_fbox_min": 100,
+  "fbox_min_exempt_arms": [
+   "GWRONGMEM_A",
+   "GWRONGMEM_B"
+  ],
+  "fbox_min_exempt_note": "section 13.21 (user decision 2026-09-14): the count-matched uniform shams are non-local by construction (46-103 rows in the box on 23 of 24 stage-1 cells, 13.19); the >= 100 in-box clause alone is waived for them, every other clause of 11.4 applies, and their in-box counts are recorded descriptively",
   "fbox_frame_rule": "frame 75 for arms gating [60,89]; the midpoint of the arm's own gap for GMIS and GONES",
   "zero_presence_frames_min": 1,
   "zero_presence_window": "the arm's OWN gap interior (edges excluded), for every gated arm including GMIS and GONES",
   "reserved_units_equal_within_prefix": true,
   "program_match_required": true,
-  "on_failure": "reported, in ITT tables, excluded from the mechanism-exercised set"
+  "on_failure": "reported, in ITT tables, excluded from the mechanism-exercised set",
+  "rows_min_exempt_arms": [],
+  "rows_min_exempt_note": "section 13.21 decision 5 (PENDING): arms listed here are exempt from the >= 1000 gated-rows-at-12k clause only; empty until the user decides whether GWRONGMEM_L (152-773 rows by construction of the mass-matched draw) is listed here and in fbox_min_exempt_arms",
+  "exempt_lists_semantics": "section 13.21: an exemption waives a THRESHOLD, never a MEASUREMENT: a missing or non-integer count fails for every arm; the lists are validated against 'arms'; the reason string names the waived clause and carries both counts on pass and on failure",
+  "field_names": "gated_rows_fbox_frame150 is the extractor's LEGACY field name for the in-box count at the cell's --fbox_frame (75, or 245/291 for GMIS/GONES), whose value is recorded beside it in fbox_frame",
+  "fbox_frame_by_arm": {
+   "GMIS": 244,
+   "GONES": 291
+  },
+  "zero_window_by_arm": {
+   "GMIS": [
+    231,
+    258
+   ],
+   "GONES": [
+    287,
+    296
+   ]
+  },
+  "by_arm_note": "section 13.21: the timing shams' own box frame = floor of the midpoint of their gap ([230,259] -> 244, [286,297] -> 291; the reducer's frozen test fixture of 34cc193 already used 244/291, the stage-1 setup recount used 245 for GMIS, a descriptive one-frame difference recorded in 13.21) and own-gap interior (edges excluded) are validated by the reducer for GMIS and GONES; every other gated arm uses the scene's MECHANISM_FBOX_FRAME (75) and the [63,87] zero-presence window. The wave-1 calibration GMIS/GONES cells, extracted at frame 75, are re-extracted at 244/291 on their frozen checkpoints before the calibration reading (13.21)"
  },
  "EVALUATOR": {
   "script": "scripts/eval_n3v_gated.py",
@@ -1450,7 +1474,8 @@
   "commit": "2bc5acf",
   "sha256": "0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485",
   "vote_script_sha256": "69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905 (scripts/realdata_membership_vote.py with --emit_row_weights)",
-  "script_v2": "scripts/draw_membership_shams.py sha256 347233de8872dd7b47a2540ffa355bfbea2fe12353c24fa98b0be8af3dc8d750 (commit e7573a7: --l_mode radius, --xyz; --gap check fixed in 3f09120); the L programs and the re-emitted A/B programs of wave 2 are drawn with this version"
+  "script_v2": "scripts/draw_membership_shams.py sha256 347233de8872dd7b47a2540ffa355bfbea2fe12353c24fa98b0be8af3dc8d750 (commit e7573a7: --l_mode radius, --xyz; --gap check fixed in 3f09120); the L programs and the re-emitted A/B programs of wave 2 are drawn with this version",
+  "script_final": "scripts/draw_membership_shams.py sha256 4ea716ad20d5f32a6ce2443acc2d6fddf19a57743014c97cbc58950558d9f4f1 (commit cb6dd1c): the FINAL L programs (draws_prefix<S>_final/, job 57752673) are drawn with --l_mode local --contribution_key w_total --gap 60 89; A and B re-emitted alongside are row-identical to the frozen stage-1 A/B (24/24) and the frozen files stay the training files"
  },
  "FIXTURE_CONSTRUCTION_SCRIPTS": {
   "sa4d_absence_edit_render.py_sha256": "7648de041d845ef9ab580ed817200ecad0fa0ec5befec20b580ca81e7e4076b0 (commit 3d95d3e)",
@@ -1531,9 +1556,9 @@
   "file": "agent-control/realdata/absfix2/stage1/seed_boxes.json sha256 5fefd68c72f18259aefc17e1af9a8a2d2ac8510dccf224439799b0e709210583; copy research-wiki/assets/absfix-seed-boxes.json"
  },
  "FREEZE_LIST_STATUS": {
-  "date": "2026-09-13 08:40 CEST",
+  "date": "2026-09-14 (section 13.21)",
   "record": "research-wiki/assets/absfix-stage1-record.json (tracked from this commit); table absfix-stage1-record.md; seed boxes absfix-seed-boxes.json",
-  "reducer": "scripts/realdata_gate_analysis.py sha256 a44dcc333b921fd502f9bb661593c689f1bcdc694ce23840ac3e8862a207b64f (commit 34cc193)",
+  "reducer": "scripts/realdata_gate_analysis.py sha256 7f8b86aef10fd9cd5b28522edb6691907ff0c426dae6802794f197b2cad8ecc7 (the amendment commit of 13.21, id in the freeze record; section 13.21 exemption guards driven by CELL_PRECONDITION.fbox_min_exempt_arms / rows_min_exempt_arms; 154 reducer tests pass incl. the wave-1 reproduction fixture)",
   "draw_script": "scripts/draw_membership_shams.py: 0758048da4f3c8d33e9f73e945c7345b548e418e1f0d0fdf344cd8df258e9485 (commit 2bc5acf, the version the stage-1 draws ran) and 442231ae76936648696612dbd0fed11c7563b21281b1b4e985a8ed969a129a44 (commit 3f09120, --gap check fixed; draws omit --gap so the outputs are identical); L programs drawn with 347233de8872dd7b47a2540ffa355bfbea2fe12353c24fa98b0be8af3dc8d750 (commit e7573a7, section 13.18)",
   "vote_script": "scripts/realdata_membership_vote.py sha256 69d1a2b7fd7ac4890ec1ff65ff30fc38c4d397044b9d4aa5cde15495f48f5905",
   "evaluator": "scripts/eval_n3v_gated.py sha256 4bdf427fa59264125843b0523b4466b2200383eb76eacf6d196679681cc1b927",
@@ -1548,16 +1573,47 @@
   "t1_reports_programs": "8/8 hashed; pooled windows flame [60,89],[60,90],[60,89],[60,93]; sear [60,89],[60,89],[57,106],[60,90]",
   "programs_G_mis_ones": "8/8 hashed; members flame 6582/6584/6648/6641, sear 7676/7434/7656/7536; LOCO Jaccard >= 0.998",
   "programs_wrongmem_A_B": "8/8 hashed; count-matched, overlap 0, seeds 1000+s / 2000+s",
-  "programs_wrongmem_L": "pending: radius-mode draws (section 13.18) running on all 12 prefixes",
+  "programs_wrongmem_L": "12/12 drawn and hashed (job 57752673, local rule on w_total, section 13.21): cut_roasted_beef 4efc0e06/6f153dd4/b6828eea/45622d95, flame_steak aa06f9f9/13e78f37/5e4abd26/9734be6a, sear_steak 2f3461d9/b8fc63dc/254e386a/48f74e2c (draws_prefix<S>_final/program_gwrongmem_l.json); rows 325/773/504/329, 152/224/255/225, 381/325/256/276; mass ratio 0.900-0.901",
   "programs_gestmem": "flame_steak 4/4 (6434/6450/6515/6497), cut_roasted_beef 4/4 (6927/6917/6778/6751), sear_steak 0/4 (S2 vote refuses on cam09, 13.16)",
   "membership_precondition": "flame 4/4 PASS (P 0.9998-1.0000, R 0.9775-0.9800); calibration 4/4 PASS; sear: not computable (no S2 program)",
   "t1_precondition_pooled": "flame s0/s1/s2 PASS, s3 FAIL ([60,93], onset err 4, IoU 0.882); sear s0/s1 PASS, s2 FAIL ([57,106], IoU 0.60, onset err 17), s3 PASS on the pooled reading ([60,90]); calibration 4/4 PASS pooled",
   "claim_B_admission_under_11_5": "flame_steak DWP (prefix 3 fails T1), sear_steak DWP (S2 instrument not admitted), cut_roasted_beef admitted (calibration)",
   "external_baseline_X": "SpacetimeGaussians pinned 427abfc58309a4a5213843dd673fb22c4529306c; trains with stage 2",
   "pending_user_decisions": [
-   "G-wrongmem-L rule (recommended: local, count-matched, zero-overlap, greedy by contribution; mass ratio reported)",
-   "accept Claim B = DWP on both confirmatory scenes under 11.5 as frozen, or amend",
-   "stage-2 go"
-  ]
+   "decision 5 (13.21): GWRONGMEM_L as drawn (152-773 rows) vs the >= 1000-rows and >= 100-in-box clauses of 11.4; options (i) exempt L from those two clauses with L-specific substitute floors, (ii) keep 11.4 verbatim, (iii) radius fallback, (iv) RECOMMENDED: a deterministic local draw constructed without any exemption: same eligible pool, zero overlap, descending contribution, a row accepted iff mass + w <= 1.00 x truth, stop when mass >= 0.90 x truth AND n >= 1100, in-box >= 100 recounted as a construction acceptance condition, refused otherwise (constructible 12/12 on the frozen inputs; every 11.4 clause still evaluated on the 12k cell); needs --l_mode local_floor in the draw script, a redraw, a recount and a 13.22 entry",
+   "optional: move runs/realdata_gate (119 GB) to the Windows archive for disk margin"
+  ],
+  "programs_gest": "confirmatory 8/8 (jobs 57753670-57753690, votes_prefix<S>_est/program_est.json, row set identical to program_oracle.json on 8/8): flame [60,89] 7d1ecee0, [60,90] 518aa136, [60,89] 6c277d32, [60,93] 223cbd11; sear [60,89] cc8501f6, [60,89] 9f889670, [57,106] 41ff4d81, [60,90] daf99005; calibration 4/4 from wave 1 (agent-control/realdata/absfix/prefix_s<S>/program_est.json)",
+  "box_recount_round4": "12/12 (jobs 57753922/57753925/57753927; L from _final): object arms >= 0.9996 in box; A/B 46-103 (exempt, decision 2); L in-box/gated crb 190/325, 500/773, 301/504, 185/329; flame 79/152, 118/224, 131/255, 110/225; sear 194/381, 171/325, 137/256, 157/276",
+  "cell_template": "stage2/stage2_cell.sbatch: gated arms no --val pass; ADAGS_SAVE_ITERATIONS=12000 (validated launcher variable, scripts/run_leonardo.sh sha256 226cd824d6ee4c8c7a6cfd925efd56fa1e8beecdf5d45cfa3a4b4020c5a908a2); scored checkpoint chkpnt12000.pth for every arm (chkpnt_best diagnostic only); U scored from the evaluator's ungated render (fresh mode, G program) and cross-checked against main.py --val to 5e-5 per numeric leaf (u_val_crosscheck.py, mismatch fails the cell); gated arms --restore_state; frozen-commit and clean-tree assertions; inputs and outputs hashed",
+  "stage2_plan": "84 cells (68 confirmatory + 16 calibration); stage2/stage2_plan.json 360f42cd..., stage2_inputs.sha256 (252 lines) 030a2c21...; sear GESTMEM 0/4 MISSING (13.16)",
+  "claim_B_decision": "user 2026-09-14: DWP accepted on both confirmatory scenes as 11.5 reads; camera-drop rule untouched; GESTMEM trained where its program exists (flame 4, calibration 4), descriptive",
+  "stage2_go": "user 2026-09-14: GO, conditional on this section being shown with hashes first; not submitted while decision 5 is pending",
+  "freeze_record": "research-wiki/assets/absfix-stage2-freeze.json (full sha256 of every stage-2 setup artefact), regenerated at the amendment commit and committed right after it"
+ },
+ "STAGE_2": {
+  "authorised": "2026-09-14 by the user (decision 4); submission held until decision 5 and the shown hashes are acknowledged",
+  "cells": "68 confirmatory (flame_steak 36, sear_steak 32) + 16 calibration (GESTMEM, GWRONGMEM_A/B/L on the wave-1 prefixes) = 84 continuations 6k->12k; calibration U/G/GEST/GMIS/GONES = the wave-1 cells (gate-faithful re-evals of 2026-09-10)",
+  "scoring": "scripts/eval_n3v_gated.py over frames 0-299 on cam00 on chkpnt12000.pth (chkpnt_best.pth never scored): gated arms --restore_state (gated render, program_match by lineage key); U in fresh mode with the G program, scored from the UNGATED render. PATH CROSS-CHECK on EVERY arm: main.py --val of the same checkpoint (gate off, renders on scratch with a sha256 manifest) must reproduce the evaluator's ungated render's window profile (U: the scored profile; gated arms: the gate-off check profile) on every numeric leaf to 5e-5 with identical key sets; a mismatch fails the cell",
+  "template_differences_from_wave1": [
+   "the --val pass is a cross-check only (renders on scratch, manifest kept); the evaluator's render is scored",
+   "--save_iterations 12000 via the validated launcher variable ADAGS_SAVE_ITERATIONS (asserted == 12000 by the cell)",
+   "U scored through the evaluator; every arm's ungated/gate-off path cross-checked against --val"
+  ],
+  "warden": "stage2/stage2_warden.sh (policy frozen 13.21): HUNG = RUNNING with a 0-byte .out longer than the shortest elapsed of a COMPLETED same-scene cell holding chkpnt12000.pth (floor 3600 s, fallback 12600 s) -> scancel + identical resubmission from stage2/submit/<tag>.sh, max 2 per cell in total across hung and infrastructure failures; NODE_FAIL/BOOT_FAIL one identical resubmission under the same limit; FAILED/TIMEOUT/OOM/externally CANCELLED logged only, no code or config change during the stage; every event ledgered",
+  "order_of_reading": "the collector hashes the reducer inputs and output BEFORE any montage is viewed; the montage is technical QC only: it may record a pixel-reproducible instrument defect; a post-montage re-run is diagnostic; the original reducer result stays authoritative unless a pre-declared automatic integrity check invalidated the artefact before scoring; if the defect reproduces the cell is reported failed; any repair needing changed code, config, crop, frame or program is a separately declared stage",
+  "reducer_cli": "python scripts/realdata_gate_analysis.py --manifest stage2/manifest_stage2.json --spec configs/n3v/absfix_gate_spec_v2.json --paired --wave 2 --out <report>",
+  "external_baseline": "STG chain (stg_chain.sh): 11 prep + 24 train + 24 render + 4 collect jobs with afterok dependencies; descriptive, outside the reducer",
+  "disk": "~2.4 GB per cell (+1.2 GB for U cells) -> 84 cells ~210 GB, STG ~47 GB, against ~300 GB free of a shared 4 TB quota; composites preview_*/build_*_v2 (8 dirs, 9.1 GB) archived to D:/adags-archive with sha256 manifests before removal; runs/realdata_gate (119 GB) proposed for the same treatment (user's call)",
+  "calibration_wave1_shams": "the wave-1 GMIS and GONES cells of cut_roasted_beef were extracted at frame 75; their preconditions are re-extracted at 244 / 291 on the frozen chkpnt12000.pth into new directories (wave1_cells/<tag>/precondition.json beside a link to the frozen profile) so the reducer's arm-specific validation applies to them; the wave-1 files are untouched"
+ },
+ "PREREGISTERED_2026_09_14": {
+  "declared": "section 13.21: DECLARED INTENTIONS, not frozen pre-registrations: rule and arm named before any stage-2 score exists; none implemented or run in the stage-2 task; each becomes a frozen spec section with its own parameters, hashes and kill-argument BEFORE it runs; anything about them declared after a score is read is post hoc and will be labelled so",
+  "a_GESTMEM_S3": "descriptive additional arm on the 8 confirmatory prefixes: T1 pooled gap + SAM 3 membership through the SAME vote and the SAME 11.3 preconditions; concept prompt 'wine bottle', highest-scoring instance per training camera; SAM 3.1 checkpoint (facebook/sam3) sha256, config, commit and prompt string plus the no-detection rule and the tie-break, recorded in this JSON BEFORE any mask is produced; cannot rescue Claim B under v2.0.0; separate session after stage 2",
+  "b_deferred_ablations": {
+   "product_gate": "presence x learned temporal marginal instead of replacing it (targets the C1 cost); flag-gated renderer change on a branch with a verified empty diff when off, only after every stage-2 cell has finished; calibration prefixes, 4 cells",
+   "free_boundaries": "elgs_a_lr > 0 (value to be frozen), intervals initialised from T1's window, otherwise G; calibration prefixes, 4 cells"
+  },
+  "c_optional_graded_membership": "calibration only: row sets of 25/50/75% object rows, count-matched, true window; 12 cells; whether it runs is decided after the verdict; if it runs it is labelled post-verdict exploratory"
  }
 }

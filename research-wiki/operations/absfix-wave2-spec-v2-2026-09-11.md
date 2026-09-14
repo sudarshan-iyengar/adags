@@ -967,3 +967,397 @@ list.
 | item | sha256 |
 |---|---|
 | this page, sections 0-13.20 (before this record) | `8526974f6a8047a8f307488ab37e8cf3699b572180c235e1f0738db081759462` |
+
+### 13.21 The four decisions (user, 2026-09-14), the stage-2 setup they unlock, one conflict found by the setup counts (decision 5, PENDING), and the intentions declared before any stage-2 score exists
+
+Cut-off: 2026-09-15T00:30:00+02:00 (CEST). Every stage-2 preparation
+job named here is in `agent-control/realdata/jobs/ledger.txt` with a
+reason; the full sha256 of every artefact named here is in the tracked
+machine record `research-wiki/assets/absfix-stage2-freeze.json`
+(abbreviated in prose only). No stage-2 cell has been trained; nothing
+in this section reads a score. Commits: the EXECUTION commit of the
+draws, votes and recounts below is `bb7ebf66e14fae53f4dbbfa1ed90c0af4913df27`
+(HEAD when they ran); the AMENDMENT commit is the one carrying this
+section (its id is written into the freeze record and the next
+section). Two fresh-context Codex reviews (gpt-5.6-sol) of the draft
+were folded in before it was appended; their blocking points and
+dispositions are listed at the end.
+
+**Decision 1 — G-wrongmem-L: the ORIGINAL local rule of §11.2 on the
+total-paint measure.** §11.2 is amended append-only: the rule stays
+"non-truth rows whose deformed centre projects inside the +20 px
+construction silhouette on ≥ 8 of 19 training cameras at frames 50 and
+95, taken greedily by descending rendered contribution (a row that would
+overshoot the upper edge is skipped) until the mass is within ±10% of
+the construction-derived set's", and the MEASURE is `w_total` (each
+row's rendered contribution to the whole cam15 view at frame 50) instead
+of `w_in` (its contribution inside the object silhouette), for the
+reason of §13.19: a magnitude defined by the treated region cannot be
+matched by rows outside it. The radius rule of §13.18 is retired to a
+recorded fallback; no radius program was ever used for training. Draw:
+job 57752673 (CPU, 82 s), tracked CLI `scripts/draw_membership_shams.py
+--l_mode local --contribution_key w_total --gap 60 89` at the execution
+commit (script sha256 `4ea716ad…`, introduced in cb6dd1c), outputs ONLY
+in the new dirs `runs/realdata/absfix2/<scene>/draws_prefix<S>_final/`.
+Constructible on 12/12 prefixes. The script re-emits A and B alongside;
+their ROW SETS are identical to the frozen stage-1 A/B on all 24
+(`row_ids_sha256` equal, checked in the job log) and the frozen files
+(`draws_prefix<S>_seedbox/ab_only/` on the confirmatory scenes,
+`draws_prefix<S>_v2/` on the calibration scene) stay the training files.
+
+| scene | prefix | L rows drawn | truth rows | locally eligible non-truth rows | mass ratio draw/truth (`w_total`, cam15 f50) | `program_gwrongmem_l.json` sha256 |
+|---|---|---:|---:|---:|---:|---|
+| cut_roasted_beef | 0 / 1 / 2 / 3 | 325 / 773 / 504 / 329 | 7,004 / 6,981 / 6,858 / 6,813 | 4,492 / 4,595 / 4,465 / 4,745 | 0.9005 / 0.9001 / 0.9001 / 0.9002 | `4efc0e06…` / `6f153dd4…` / `b6828eea…` / `45622d95…` |
+| flame_steak | 0 / 1 / 2 / 3 | 152 / 224 / 255 / 225 | 6,582 / 6,584 / 6,648 / 6,641 | 6,551 / 6,549 / 6,503 / 6,479 | 0.9010 / 0.9004 / 0.9000 / 0.9011 | `aa06f9f9…` / `13e78f37…` / `5e4abd26…` / `9734be6a…` |
+| sear_steak | 0 / 1 / 2 / 3 | 381 / 325 / 256 / 276 | 7,676 / 7,434 / 7,656 / 7,536 | 6,824 / 6,941 / 6,942 / 7,134 | 0.9004 / 0.9001 / 0.9001 / 0.9002 | `2f3461d9…` / `b8fc63dc…` / `254e386a…` / `48f74e2c…` |
+
+Property of the rule, recorded before any score: the locally eligible
+rows are the high-paint shell around the bottle and the walk is greedy
+by contribution, so the band is reached with 9–43× fewer rows than the
+truth set (7,004/325 = 21.6 … 6,582/152 = 43.3; smallest 6,981/773 =
+9.0). What L matches is the baseline whole-view rendered contribution in
+cam15 at frame 50 within ±10%; it is not a claim about paint removed in
+the scored crop, during the gap, or in other cameras. `G − GWRONGMEM_L`
+therefore separates correct membership from "a local, contribution-
+matched wrong set"; it does not separate row count, which A and B do.
+These programs are the ones that decision 5 is about; whether they, or
+the option-(iv) redraw, are the training programs is the user's call.
+
+**Decision 2 — A and B are exempt from the ≥ 100-rows-in-box clause of
+§11.4 ONLY.** Every other clause of §11.4 (gated rows at 12k ≥ 1,000; ≥ 1
+zero-presence frame inside the arm's own gap; reserved units equal;
+`program_match`) applies to them unchanged; their in-box counts are
+recorded descriptively. Implementation: the reducer applied the in-box
+clause to every gated arm with no per-arm mechanism, so
+`scripts/realdata_gate_analysis.py::mechanism_exercised_v2` gains guards
+driven by the spec INSTANCE, never by code constants:
+`CELL_PRECONDITION.fbox_min_exempt_arms` (`["GWRONGMEM_A",
+"GWRONGMEM_B"]` in the JSON) and `CELL_PRECONDITION.rows_min_exempt_arms`
+(EMPTY in the JSON; the key exists so that decision 5 can be a JSON
+edit). Rules of the guards: an exemption waives a THRESHOLD, never a
+MEASUREMENT — a missing, boolean, negative or non-integer count fails
+for every arm; the exempt lists are validated against the spec's arm
+list (an unknown arm raises); the reason string of an exempt arm names
+the waived clause and carries both counts, on failure as well as on
+pass.
+
+In the same change the reducer stops TRUSTING the extractor for the
+timing shams: `CELL_PRECONDITION.fbox_frame_by_arm` (`GMIS: 244, GONES:
+291`, the floor of each gap's midpoint — the values the reducer's own
+frozen test fixture of 34cc193 already used; the stage-1 setup recount
+used 245 for GMIS, a one-frame difference in a descriptive count, noted
+and not repeated) and `zero_window_by_arm` (`GMIS: [231,258], GONES:
+[287,296]`, the gap interiors with the edges excluded, as §11.4 reads)
+are now checked by the reducer for GMIS and GONES exactly as the [63,87]
+window (the P1 core, §11.5) and frame 75 are checked for every other
+gated arm; the pre-13.21 "note and trust" path remains only for spec
+instances that do not name them. Consequence for the calibration scene:
+the wave-1 GMIS/GONES cells were extracted at frame 75, so their
+preconditions are re-extracted at 244 / 291 on their frozen
+`chkpnt12000.pth` with the unchanged extractor into new directories
+(`runs/realdata/absfix2/cut_roasted_beef/wave1_cells/<tag>/`, beside
+symlinks to the frozen profile; job 57761259 in the ledger; the wave-1 run dirs are not
+written), and the calibration manifest points at those directories for
+GMIS and GONES. Two facts about the precondition record: (i) the
+extractor's field `gated_rows_fbox_frame150` is a LEGACY NAME — it holds
+the in-box count at the cell's `--fbox_frame`, whose value is recorded
+in `detail.fbox.frame` and read by the reducer as `fbox_frame`; (ii)
+`frames_presence_zero_list` carries the zero-presence frame ids, and it
+is that list, not the scalar count, that the window tests read.
+
+Tests: six new branch tests (in-box exemption for A/B with L unexempt;
+row-count exemption keeping zero-presence; missing counts fail despite
+exemption; unknown arm refused; GMIS/GONES validated in their own gap
+and refused at the wrong frame or the wrong gap; the stale
+`test_a_scene_whose_anchors_are_still_pending_is_dwp` — which asserted
+that the SHIPPED instance leaves the confirmatory anchors pending, false
+since §13.6 filled them, failing at the execution commit before any edit
+of this block — now constructs the pending state explicitly); the
+wave-1 reproduction fixture and every other reducer test pass (154 in
+the two reducer suites).
+
+**Decision 3 — Claim B is DESIGN_WITHOUT_POWER on both confirmatory
+scenes as §11.5 reads.** The camera-drop rule of §13.9(b)/§11.3 is not
+touched. GESTMEM is trained where its program exists (flame_steak 4/4,
+cut_roasted_beef 4/4) and reported descriptively; sear_steak has no S2
+program (0/4, §13.16), so the confirmatory cell count is 68, not the 72
+of the handover (36 flame + 32 sear).
+
+**Decision 4 — stage 2 GO, with the setup below.** NOT submitted: this
+section is shown to the user with its hashes first, and decision 5 is
+open. Adaptive inputs are disclosed: the setup rules below were written
+after wave 1's cells and stage 1's counts were seen; none reads a
+stage-2 score.
+
+* *Cells:* 68 confirmatory continuations (2 scenes × 4 prefixes × 9 arms
+  minus 4 sear GESTMEM) + 16 calibration additions (GESTMEM, A, B, L on
+  the four wave-1 prefixes of `cut_roasted_beef`) = 84, each the prefix's
+  `chkpnt6000.pth` → 12k under the arm's program. The calibration scene's
+  U, G, GEST, GMIS and GONES are the wave-1 cells (gate-faithful
+  re-evaluations of 2026-09-10; GMIS/GONES with the re-extracted
+  preconditions above) and enter the manifest as such.
+* *G-est programs for the confirmatory prefixes* (jobs 57753670 / 672 /
+  674 / 678 flame s0–s3, 57753680 / 683 / 685 / 690 sear s0–s3, ~4.5 min
+  GPU each): built exactly as wave 1 built `program_est.json` — the
+  stage-1 vote invocation (authored seed box, construction masks,
+  `--id_rule mass`) with `--gap_frames` = T1's pooled window read from
+  the frozen T1 program and asserted against the `--export` value —
+  written to the NEW dirs `votes_prefix<S>_est/`; the row set is
+  asserted IDENTICAL to the frozen `program_oracle.json` on 8/8
+  (n = 599,568–599,686). Windows and sha256: flame [60,89] `7d1ecee0…`,
+  [60,90] `518aa136…`, [60,89] `6c277d32…`, [60,93] `223cbd11…`; sear
+  [60,89] `cc8501f6…`, [60,89] `9f889670…`, [57,106] `41ff4d81…`, [60,90]
+  `daf99005…`.
+* *Scored checkpoint and scoring path, every arm:* the scored checkpoint
+  is `chkpnt12000.pth`; `chkpnt_best.pth` (written by `main.py` at the
+  best in-training test PSNR) is diagnostic only and is never scored.
+  Gated arms: `scripts/eval_n3v_gated.py --restore_state` (the
+  checkpoint's own `elgs_state`, `program_match` by lineage key), scored
+  from the GATED render. U: the same evaluator in fresh mode with the G
+  program (the only mode an ungated checkpoint admits), scored from the
+  UNGATED render (its gated render is the render-time-gate diagnostic of
+  §5, descriptive). **Path cross-check on EVERY arm:** the wave-1
+  `main.py --val` pass of the same `chkpnt12000.pth` (no EL-GS setup,
+  gate off) must reproduce, on every numeric leaf to 5e-5 with IDENTICAL
+  leaf-key sets and no non-finite value, the evaluator's ungated
+  render's window profile — for U the scored profile, for gated arms
+  the gate-off check profile (`f_box_profile_gateoff_check.json`); a
+  mismatch FAILS the cell (`path_crosscheck.json`, exit 9), reported,
+  never repaired in place. This proves the fresh/restore asymmetry inert
+  on every cell, not only on U. The `--val` PNGs are written to the
+  scratch area (`/leonardo_scratch/fast/EUHPC_D36_068/sri/stage2_val/`,
+  purged by policy, not evidence) with a per-file sha256 manifest kept in
+  the run dir; the evaluator's renders stay in the work area. Evaluator
+  sha256 `4bdf427f…` (unchanged since fbf4693).
+* *Cell template* `agent-control/realdata/absfix2/stage2/stage2_cell.sbatch`
+  (same shape as wave 1's continuation template) with three recorded
+  differences: (1) the `--val` pass is a cross-check, its renders on
+  scratch (the evaluator's render is scored; saves 1.2 GB of work-area
+  disk per cell); (2) `ADAGS_SAVE_ITERATIONS=12000`, a new OFF-BY-DEFAULT
+  launcher variable in `scripts/run_leonardo.sh`, validated by
+  `^[1-9][0-9]*( [1-9][0-9]*)*$` and asserted equal to `12000` by the
+  cell, which appends `--save_iterations 12000` after the `--wandb_tags`
+  list (`train` there is a W&B tag from which the mode is inferred, not a
+  positional). Verified against the REAL parser: `main.py`'s own
+  parser-definition block, executed as is, parses the launcher's argv to
+  `wandb_tags=[scene, tag, 'train']`, `save_iterations=[12000]`, and
+  without the option to the default `[3000, 6000, 9000, 10000, 12000,
+  14000, 15000]`; the launcher already records the resolved argv per run
+  (`printf %q` into `meta/`). The only consumer of the schedule in
+  `main.py` is the `if iteration in saving_iterations:` block (a point
+  cloud and checkpoint write), so the training path is untouched and the
+  9k / 10k files are simply not written (~1 GB per cell); (3) the U
+  scoring path above. Every cell refuses to run unless the repo HEAD
+  equals the frozen commit and the tree is clean; inputs (config,
+  evaluator config, program, prefix checkpoint) are hashed into the run
+  dir before training and outputs after. Preconditions use the frozen
+  per-scene `MECHANISM_FBOX` and frame 75 (244 / 291 for GMIS / GONES)
+  on `chkpnt12000.pth`.
+* *Configs:* U runs the tracked `configs/n3v/b0c_crb300_12k_rp.yaml`
+  unchanged; every gated cell runs a per-cell copy of
+  `configs/n3v/elgs_local_crb300_12k.yaml` that differs in the
+  `elgs_oracle_episodes` line only (asserted by diff at plan time).
+  Plan and input hashes: `stage2/stage2_plan.json`, `stage2/
+  stage2_inputs.sha256` (252 lines); `--go` refuses if any input hash
+  moved since the plan. The freeze record names, per cell, the config,
+  program and prefix-checkpoint hashes. The plan is regenerated after
+  decision 5 and refused if its L paths disagree with the chosen option.
+* *Order of reading and the montage rubric:* the collector computes and
+  hashes the reducer's inputs and the reducer's output BEFORE any montage
+  is viewed; the per-prefix montage of the scored crop on every arm
+  (`stage2_montage.py`: rows GT / U ungated / U render-time gate / the
+  gated arms; frames 40, 63, 75, 87, 92, 99, 109, 245, 291; the frozen
+  box ± 60 px; labelled) is then viewed as technical QC whose ONLY
+  permitted consequences are (a) recording a pixel-reproducible
+  instrument defect (a gated arm rendered gate-off, a wrong frame, a
+  wrong crop) and (b) a DIAGNOSTIC identical re-run of the affected
+  step, both ledgered. The original reducer result stays authoritative
+  unless a pre-declared automatic integrity check (`program_match`, the
+  path cross-check, the precondition) invalidated the artefact before
+  scoring; if the re-run reproduces the defect the cell is reported
+  failed; any repair needing changed code, config, crop, frame or program
+  is a separately declared stage and cannot replace a stage-2 result.
+  The reducer is `scripts/realdata_gate_analysis.py --spec configs/n3v/
+  absfix_gate_spec_v2.json --paired --wave 2` on the collector's
+  manifest.
+* *Warden* (`stage2_warden.sh`, login node, 5-min period, policy frozen
+  here): HUNG = RUNNING with a 0-byte `.out` for longer than the shortest
+  elapsed time of a COMPLETED stage-2 cell of the SAME scene whose run
+  dir holds `chkpnt12000.pth` (a verified sibling), floor 3,600 s,
+  fallback 12,600 s before any verified sibling exists → cancel and
+  resubmit the identical recorded sbatch line; NODE_FAIL / BOOT_FAIL →
+  one identical resubmission; at most 2 automatic resubmissions per cell
+  IN TOTAL across both causes; FAILED / TIMEOUT / OOM / externally
+  CANCELLED → logged, never auto-resubmitted, no code or config change
+  during the stage, reported as failed in the manifest if it stays
+  failed. Every event is ledgered.
+* *X = STG:* the chain of `README_stage2.md` verbatim (11 prep, 24
+  training, 24 render, 4 collect-and-profile jobs) with Slurm `afterok`
+  dependencies; the collector reindexes the six 50-frame segments into
+  the evaluator's absolute-frame layout beside the derived scene's own
+  cam00 frames and profiles them with `scripts/event_region_frame_profile.py`
+  on the same masks and ROIs. Descriptive only, outside the reducer.
+* *Disk:* a wave-1 cell occupied 3.7–4.5 GB; a stage-2 cell is ≈ 2.4 GB
+  in the work area (`chkpnt12000` 0.52, `chkpnt_best` 0.52, `point_cloud`
+  0.43, `gated_eval_12000` 0.85) plus 1.2 GB of `--val` renders on
+  scratch, so 84 cells ≈ 200 GB work area + 100 GB scratch, and STG
+  ≈ 47 GB, against ≈ 300 GB free on a 4 TB project quota shared with
+  another member (`cindata` 92.9 %) and ≈ 180 GB free on scratch. The
+  eight composite dirs the user named (`preview_*` and `build_*_v2` on
+  both scenes; no `_v1` exists; 9.16 GB) are being copied to
+  `D:\adags-archive\leonardo\runs\realdata\absfix2\<scene>\` with
+  per-file sha256 manifests written on Leonardo before the copy
+  (`stage2/composite_manifest_*.sha256`, 8 files, 15,540 entries) and are
+  removed from Leonardo only after the copy verifies against them; the
+  `_v3` builds and the training roots are untouched. That alone leaves a
+  thin margin; moving `runs/realdata_gate` (119 GB, the 2026-09-09 lane,
+  every number on the record) the same way is proposed — the user's
+  call.
+
+**Decision 5 — PENDING, found by the setup counts before any score: the
+L programs of decision 1 do not meet the nominal thresholds of two §11.4
+clauses that were written for ~7,000-row programs.** The clauses are
+measured on the 12k cell, so this is an expectation, not a failure: (a)
+gated rows at 12k ≥ 1,000 — L has 152–773 rows at seeding, and in wave 1
+the family ids grew 7,004 → 7,747 (G, +10.6%), 6,981 → 7,595 (G),
+7,004 → 7,726 (GEST), 7,004 → 7,210 (GMIS) and SHRANK 7,004 → 6,849 /
+6,981 → 6,906 (wrongmem, −2.2 % / −1.1 %) from seeding to 12k, so no L
+cell can be expected to reach 1,000; (b) rows in the mechanism box
+≥ 100 — the round-4 setup recount, the authoritative one for this
+section (jobs 57753922 / 925 / 927; the 6k prefix checkpoint, deformed
+centres projected on held-out cam00 at frame 75 inside the frozen
+`MECHANISM_FBOX`; identical to round 3 except that GWRONGMEM_L is read
+from `_final`; round-3 reports preserved under
+`box_recount_round3_L_radius_prov/`) gives L in-box / gated =
+cut_roasted_beef 190/325, 500/773, 301/504, 185/329; flame_steak
+**79/152**, 118/224, 131/255, 110/225; sear_steak 194/381, 171/325,
+137/256, 157/276 (52–65 % of each L set is in the box; flame s0 is under
+the count). Under §11.5 Claim A requires `G − GWRONGMEM_L` in every pair,
+so an L cell excluded from the mechanism-exercised set makes Claim A
+DESIGN_WITHOUT_POWER on that scene whatever G does — a control's
+precondition deciding the treatment claim, the §13.19 category error
+again. Options, recorded before any cell trains, with their
+constructibility computed on the frozen inputs (login node, CPU):
+
+(i) exempt GWRONGMEM_L from the row-count and in-box clauses
+(`rows_min_exempt_arms` and `fbox_min_exempt_arms` gain
+`"GWRONGMEM_L"`). Acceptable ONLY with L-specific substitute floors
+frozen in the same entry — final gated rows ≥ 0.5 × seeded rows and
+final in-box rows ≥ 50 (rationale: the worst wave-1 shrink is 2.2 %, so
+0.5 is a generous retention floor; 50 is half the object arms' in-box
+floor) — because a bare waiver would let an L cell with zero surviving
+or zero in-box rows pass; those floors would need a reducer key and
+test of their own, and Claim A's interpretation would state that its L
+endpoint is guaranteed only under those floors.
+(ii) keep §11.4 verbatim and accept that Claim A will read DWP through L
+on any scene where an L cell ends below the thresholds.
+(iii) fall back to the §13.18 radius rule (2,144–2,602 rows; in-box not
+recounted; locality given up).
+(iv) RECOMMENDED — a deterministic LOCAL draw constructed WITHOUT any
+§11.4 exemption, every §11.4 clause still evaluated on the 12k cell:
+same frozen eligible pool, zero overlap, rows visited by descending
+`w_total` (ties by ascending frozen row id), a row ACCEPTED iff
+mass + w ≤ 1.00 × truth (an overshooting row is skipped permanently, the
+walk continues), STOP after the first acceptance at which mass ≥ 0.90 ×
+truth AND n ≥ 1,100 both hold, REFUSED if the pool is exhausted first;
+the 1,100 gives a 10 % margin over the ≥ 1,000 clause against the ≤ 2.2 %
+wave-1 shrink and is frozen now, not chosen after any L outcome; the cap
+at 1.00 keeps L's dose at or below G's (the walk lands at 1.000 wherever
+the pool allows); a construction ACCEPTANCE condition, in-box ≥ 100 rows
+at frame 75 on the 6k prefix, is recounted before training and refuses
+the draw otherwise. Constructible on 12/12 on the frozen inputs: n = 1,100
+on every prefix; mass ratio 1.000000 on 11 prefixes and 0.946 on
+cut_roasted_beef s1 (its whole eligible pool carries 0.95 of the truth
+mass, §13.20); of the 1,100 rows, 221–938 carry positive `w_total` at
+cam15 f50 and the rest are locally eligible rows with ZERO contribution
+in that view — the ≥ 1,000-row criterion is therefore satisfied by
+geometric membership (inside the dilated silhouette on ≥ 8 cameras),
+not by 1,000 paint-carrying rows, and the paint dose of L is the mass
+ratio; whether those rows paint in other cameras or frames is not
+measured by the frozen measure and is stated as such. Requires
+`--l_mode local_floor --l_min_rows 1100 --l_cap 1.00` in the draw
+script (tracked, with tests, executable pseudocode in the entry), a
+redraw, the acceptance recount (minutes), and a §13.22 entry with the
+new L hashes and a regenerated plan.
+Nothing is submitted until the user decides; the G / GEST / GESTMEM /
+GMIS / GONES setup counts are unaffected (≥ 0.9996 of their rows in the
+box on 12/12), A/B are 46–103 as in §13.19.
+
+**Declared intentions, before any stage-2 score is read.** These are
+NOT frozen pre-registrations: each names the rule and the arm, none is
+implemented or run in the stage-2 task, and each becomes a frozen spec
+section with its own parameters, hashes and kill-argument BEFORE it
+runs. What is fixed now is that they were declared before any score
+existed; anything about them declared after a score is read is post hoc
+and will be labelled so.
+
+a. **GESTMEM-S3** — descriptive additional arm on the 8 confirmatory
+   prefixes: T1's pooled gap + membership from SAM 3 through the SAME
+   vote (`realdata_membership_vote.py`, `--id_rule mass`, same seed box,
+   same anchors) and the SAME §11.3 preconditions, concept prompt "wine
+   bottle", highest-scoring instance per training camera; the SAM 3.1
+   checkpoint from `facebook/sam3` (file sha256), config, code commit,
+   the exact prompt string, the no-detection rule and the tie-break are
+   recorded in this JSON BEFORE any mask is produced. It cannot rescue
+   Claim B under v2.0.0 (a different instrument from the frozen S2); it
+   is reported beside GESTMEM. Separate session after stage 2.
+b. **Deferred ablations, calibration prefixes, four cells each:**
+   (b1) *product gate* — presence MULTIPLIES the learned temporal
+   marginal of a gated row instead of replacing it (targets the C1
+   control-window cost of −0.16..−0.28 dB,
+   [[absence-fixture-lane-2026-09-10]] §7B reading 4); requires a
+   flag-gated renderer change that lands on a branch with a verified
+   empty diff when the flag is off, and only after every stage-2 cell has
+   finished; (b2) *free boundaries* — `elgs_a_lr > 0` (value to be
+   frozen), intervals initialised from T1's window, everything else as
+   G.
+c. **Optional descriptive ablation, calibration only: graded membership**
+   — row sets of 25 / 50 / 75 % object rows, count-matched, true window
+   (12 cells). Whether it runs is decided after the verdict; if it runs
+   it is labelled post-verdict exploratory.
+
+In parallel, no effect on the chain (CPU/web only): the Charge dataset
+(arXiv 2512.13639) is public under CC BY 4.0 on Hugging Face
+(`charge-benchmark`, 8 scenes, Dense 25 + 16 cameras, per-frame uint16
+per-mesh-part segmentation). On scene 050_0130 the per-id census finds
+26 full-multiview absence-and-return events, ALL small rig sub-parts
+(1–306 px peak footprint) under self-occlusion, and every large-
+footprint id present in 93/93 frames; the census of the remaining seven
+scenes with a grouped-object test was interrupted (API limit) and is
+resumed. Interim answer to the user's Sep-25 question: no scene-level
+exit-and-return found yet. To be promoted to its own page.
+
+Also in this commit: `minimal-path-config-2026-09-11` §2 gains the
+`visibility_event_manifest` / `hide_reveal_*` rows (must stay unset).
+
+*Codex reviews (gpt-5.6-sol, fresh thread, two passes on the draft) —
+blocking points and dispositions:* seed-vs-12k conflation in decision 5
+→ reworded as an expectation with the wave-1 growth factors and the
+recount's checkpoint/frame/box named; fail-open exemptions → missing
+counts fail for every arm, lists validated, waivers named on failure,
+option (i) given substitute floors, option (iv) constructed and measured
+with an acceptance condition and a frozen margin; GMIS/GONES trusted
+rather than validated → arm-specific frame and own-gap window in the
+instance, reducer checks them, wave-1 calibration shams re-extracted;
+U-only cross-check → path cross-check on every arm with identical key
+sets and non-finite failure; launcher passthrough → typed, validated,
+asserted, tested against the real parser, argv recorded; provenance →
+full-hash machine record, commits labelled, recount round named; items
+a–c → declared intentions; `w_total` overclaim reworded; montage
+authority and re-run semantics fixed; warden retry semantics fixed;
+9–43× corrected; ISO cut-off. Not adopted: an L construction requiring
+1,000 paint-carrying rows (the pool does not contain them, §13.20:
+0.95–1.60 × truth mass in total) — the geometric reading is stated
+instead.
+
+| item | sha256 |
+|---|---|
+| this page, sections 0–13.20 (before this record) | `6fed1bfb015266c8aadda1aacf9cc7b095398d9bc459f87890e40e82e9da1334` |
+| `configs/n3v/absfix_gate_spec_v2.json` before this record | `19217882d6cb8494a1b90e4108a9dad0635719e8a12b0581cd1a6a2f6e14e6a6` |
+| `configs/n3v/absfix_gate_spec_v2.json` after the 13.21 edits | `55d9f50de2480c5fd523a80be499d883e431ce59c84936bce665a574bf219ec0` |
+| `research-wiki/assets/absfix-stage2-freeze.json` | regenerated at the amendment commit and committed immediately after it; its sha256 and the amendment commit id are in that follow-up commit and in the ledger |
+| `scripts/realdata_gate_analysis.py` (exemption guards, own-gap validation) | `7f8b86aef10fd9cd5b28522edb6691907ff0c426dae6802794f197b2cad8ecc7` |
+| `tests/test_realdata_gate_analysis_v2.py` | `7b37bd0d50f7b35f339ffb81d972592993d4308161b1dddf8f6711d637e642f9` |
+| `scripts/run_leonardo.sh` (`ADAGS_SAVE_ITERATIONS`) | `226cd824d6ee4c8c7a6cfd925efd56fa1e8beecdf5d45cfa3a4b4020c5a908a2` |
+| stage-2 scripts (`stage2_cell.sbatch`, `submit_stage2.py`, `stage2_warden.sh`, `stage2_montage.py`, `stage2_collect.py`, `u_val_crosscheck.py`, `stg_chain.sh`, `stg_collect.sbatch`, `collect_cam00.py`, `draws_final.sbatch`, `vote_est.sbatch`, `precond_wave1_shams.sbatch`) | in the freeze record |
+| amendment commit carrying this section | recorded in the follow-up commit that adds the freeze record, and in the ledger |

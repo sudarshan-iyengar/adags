@@ -65,6 +65,8 @@ no-op, `elgs/trainer_hooks.py:364-366`).
 
 All of these are off by default and are explicitly false in both base
 YAMLs; none may be turned on in a wave-2 cell without a new frozen spec.
+The last two rows (added 2026-09-14) are absent from both base YAMLs
+rather than explicitly false; a wave-2 cell must not set them.
 
 | mechanism | controlling flag | default |
 |---|---|---|
@@ -77,6 +79,8 @@ YAMLs; none may be turned on in a wave-2 cell without a new frozen spec.
 | motion-aware densification | `enable_motion_aware_densify` | `False` (`arguments/__init__.py:185`) |
 | rendered flow | `enable_rendered_flow` | `False` (`arguments/__init__.py:184`) |
 | appearance/opacity pointer edit | `--appearance_edit` (CLI, val-only) | `""` (`main.py:2210`) |
+| visibility-event opacity gate (historical PoC, still called from `render()`) | `visibility_event_manifest` (and its `visibility_event_*` companions) | `""` (`arguments/__init__.py:155`); the renderer gate `_apply_visibility_event_gate` is a no-op while `visibility_event_runtime_events` is unset |
+| hide-reveal opacity gate (historical PoC, still called from `render()`) | the `hide_reveal_*` fields (`hide_reveal_runtime_events` is only attached when a manifest is set) | unset; `_apply_runtime_hide_reveal_gate` is a no-op without `hide_reveal_runtime_events` |
 
 ## 3. Trap 1 — reserved parity on the ungated comparator
 

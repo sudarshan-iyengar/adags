@@ -601,9 +601,14 @@ def test_a_confirmatory_scene_absent_from_the_manifest_is_dwp(tmp_path):
 
 
 def test_a_scene_whose_anchors_are_still_pending_is_dwp(tmp_path):
-    """The shipped instance leaves CA/CB pending; that must fail closed."""
+    """A scene whose CA/CB are still pending must fail closed. (The shipped
+    instance carried pending anchors until section 13.6 filled them, so the
+    pending state is now constructed explicitly; corrected 2026-09-14.)"""
+    pending = copy.deepcopy(_shipped_v2_spec())
+    pending["scenes"]["flame_steak"]["CA"] = "pending"
+    pending["scenes"]["flame_steak"]["CB"] = "pending"
     report = rga.run(build_v2_case(tmp_path), wave=2,
-                     spec=rga.resolve_spec(_shipped_v2_spec()), paired=True)
+                     spec=rga.resolve_spec(pending), paired=True)
     scene = report["v2"]["scenes"]["flame_steak"]
     assert scene["admitted"] is False
     assert any("pending" in r for r in scene["reasons"])
@@ -736,6 +741,106 @@ def test_a_cell_below_the_fbox_floor_leaves_the_mechanism_set(tmp_path):
             if c["arm"] == "G" and c["prefix"] == "sear_steak:3"][0]
     assert cell["mechanism_exercised"] is False
     assert "99 < 100" in cell["mechanism_reason"]
+
+
+def test_the_uniform_shams_are_exempt_from_the_in_box_clause_only(tmp_path):
+    # Section 13.21: A and B are non-local by construction (46-103 rows in
+    # the box on 23 of 24 stage-1 cells); the in-box clause alone is waived
+    # for them, the row-count and zero-presence clauses are not.
+    pre_a = good_precondition("GWRONGMEM_A", fbox=[964, 748, 1034, 952],
+                              fbox_frame=75, zero_frames=list(range(61, 89)))
+    pre_a["gated_rows_fbox_frame150"] = 46
+    pre_b = good_precondition("GWRONGMEM_B", fbox=[964, 748, 1034, 952],
+                              fbox_frame=75, zero_frames=list(range(61, 89)))
+    pre_b["gated_rows_fbox_frame150"] = 46
+    pre_b["gated_rows_final"] = 999
+    pre_l = good_precondition("GWRONGMEM_L", fbox=[964, 748, 1034, 952],
+                              fbox_frame=75, zero_frames=list(range(61, 89)))
+    pre_l["gated_rows_fbox_frame150"] = 46
+    report = run_v2(build_v2_case(tmp_path, preconditions={
+        ("flame_steak", 0): {"GWRONGMEM_A": pre_a, "GWRONGMEM_B": pre_b,
+                             "GWRONGMEM_L": pre_l}}))
+    cells = {c["arm"]: c for c in report["cells"]
+             if c["prefix"] == "flame_steak:0"}
+    assert cells["GWRONGMEM_A"]["mechanism_exercised"] is True
+    assert "in-box clause(s) exempt" in cells["GWRONGMEM_A"]["mechanism_reason"]
+    assert cells["GWRONGMEM_A"]["mechanism_reason"].startswith("precondition satisfied;")
+    assert "gated_rows_fbox_frame150=46" in cells["GWRONGMEM_A"]["mechanism_reason"]
+    assert cells["GWRONGMEM_B"]["mechanism_exercised"] is False
+    assert "999 < 1000" in cells["GWRONGMEM_B"]["mechanism_reason"]
+    assert "46 < 100" not in cells["GWRONGMEM_B"]["mechanism_reason"]
+    assert cells["GWRONGMEM_L"]["mechanism_exercised"] is False
+    assert "46 < 100" in cells["GWRONGMEM_L"]["mechanism_reason"]
+
+
+def test_a_rows_min_exempt_arm_keeps_the_other_clauses(tmp_path):
+    # The row-count clause can be waived per arm by the spec instance only
+    # (CELL_PRECONDITION.rows_min_exempt_arms); zero-presence still applies.
+    spec = v2_spec(CELL_PRECONDITION={"rows_min_exempt_arms": ["GWRONGMEM_L"],
+                                      "fbox_min_exempt_arms": ["GWRONGMEM_L"]})
+    pre_l = good_precondition("GWRONGMEM_L", fbox=[964, 748, 1034, 952],
+                              fbox_frame=75, zero_frames=list(range(61, 89)))
+    pre_l["gated_rows_final"] = 152
+    pre_l["gated_rows_fbox_frame150"] = 79
+    pre_l2 = dict(pre_l); pre_l2["frames_presence_zero"] = 0
+    pre_l2["detail"] = {"presence": {"frames_presence_zero": []},
+                        "fbox": {"box_x0_y0_x1_y1_inclusive": [964, 748, 1034, 952], "frame": 75}}
+    report = run_v2(build_v2_case(tmp_path, preconditions={
+        ("flame_steak", 0): {"GWRONGMEM_L": pre_l},
+        ("flame_steak", 1): {"GWRONGMEM_L": pre_l2}}), spec=spec)
+    cells = {c["prefix"]: c for c in report["cells"] if c["arm"] == "GWRONGMEM_L"}
+    assert cells["flame_steak:0"]["mechanism_exercised"] is True
+    assert "row-count" in cells["flame_steak:0"]["mechanism_reason"]
+    assert "gated_rows_final=152" in cells["flame_steak:0"]["mechanism_reason"]
+    assert cells["flame_steak:1"]["mechanism_exercised"] is False
+    assert "zero-presence" in cells["flame_steak:1"]["mechanism_reason"]
+
+
+def test_an_exempt_arm_with_a_missing_count_still_fails(tmp_path):
+    # An exemption waives the threshold, never the measurement (13.21).
+    spec = v2_spec(CELL_PRECONDITION={"rows_min_exempt_arms": ["GWRONGMEM_A"]})
+    pre_a = good_precondition("GWRONGMEM_A", fbox=[964, 748, 1034, 952],
+                              fbox_frame=75, zero_frames=list(range(61, 89)))
+    del pre_a["gated_rows_final"]
+    pre_a["gated_rows_fbox_frame150"] = None
+    report = run_v2(build_v2_case(tmp_path, preconditions={
+        ("flame_steak", 0): {"GWRONGMEM_A": pre_a}}), spec=spec)
+    cell = [c for c in report["cells"]
+            if c["arm"] == "GWRONGMEM_A" and c["prefix"] == "flame_steak:0"][0]
+    assert cell["mechanism_exercised"] is False
+    assert "gated_rows_final=None missing" in cell["mechanism_reason"]
+    assert "gated_rows_fbox_frame150=None missing" in cell["mechanism_reason"]
+    assert "exempt" in cell["mechanism_reason"]
+
+
+def test_timing_shams_are_validated_in_their_own_gap_when_the_instance_names_it(tmp_path):
+    # Section 13.21: GMIS/GONES box frame and zero-presence window come from the
+    # spec instance and are checked by the reducer, not merely noted.
+    spec = v2_spec(CELL_PRECONDITION={"fbox_frame_by_arm": {"GMIS": 244, "GONES": 291},
+                                      "zero_window_by_arm": {"GMIS": [231, 258], "GONES": [287, 296]}})
+    ok_mis = good_precondition("GMIS", fbox=[964, 748, 1034, 952], fbox_frame=244,
+                               zero_frames=list(range(231, 259)))
+    wrong_frame = good_precondition("GMIS", fbox=[964, 748, 1034, 952], fbox_frame=75,
+                                    zero_frames=list(range(231, 259)))
+    wrong_gap = good_precondition("GONES", fbox=[964, 748, 1034, 952], fbox_frame=291,
+                                  zero_frames=list(range(61, 89)))
+    report = run_v2(build_v2_case(tmp_path, preconditions={
+        ("flame_steak", 0): {"GMIS": ok_mis},
+        ("flame_steak", 1): {"GMIS": wrong_frame},
+        ("flame_steak", 2): {"GONES": wrong_gap}}), spec=spec)
+    cells = {(c["arm"], c["prefix"]): c for c in report["cells"]}
+    assert cells[("GMIS", "flame_steak:0")]["mechanism_exercised"] is True
+    assert "own gap" in cells[("GMIS", "flame_steak:0")]["mechanism_reason"]
+    assert cells[("GMIS", "flame_steak:1")]["mechanism_exercised"] is False
+    assert "frame 75" in cells[("GMIS", "flame_steak:1")]["mechanism_reason"]
+    assert cells[("GONES", "flame_steak:2")]["mechanism_exercised"] is False
+    assert "zero-presence frames inside [287, 296]" in cells[("GONES", "flame_steak:2")]["mechanism_reason"]
+
+
+def test_an_exempt_list_naming_an_unknown_arm_is_refused(tmp_path):
+    spec = v2_spec(CELL_PRECONDITION={"fbox_min_exempt_arms": ["GWRONGMEM_Z"]})
+    with pytest.raises(ValueError, match="GWRONGMEM_Z"):
+        run_v2(build_v2_case(tmp_path), spec=spec)
 
 
 def test_a_cell_with_no_zero_presence_frame_in_the_gap_is_excluded(tmp_path):

@@ -741,17 +741,38 @@ def mechanism_exercised_v2(arm, precondition, spec=None):
         rules.get("zero_presence_frames_min", S["MIN_FRAMES_PRESENCE_ZERO"])
     )
     exempt = arm in SPEC_V2_GAP_EXEMPT_ARMS
+    # Section 13.21: the count-matched uniform shams are non-local by
+    # construction, so the in-box clause alone does not apply to them; the
+    # row-count and zero-presence clauses still do. The list lives in the
+    # spec instance, never here.
+    fbox_exempt_arms = list(rules.get("fbox_min_exempt_arms") or ())
+    rows_exempt_arms = list(rules.get("rows_min_exempt_arms") or ())
+    unknown = [a for a in fbox_exempt_arms + rows_exempt_arms if a not in S["arms"]]
+    if unknown:
+        raise ValueError(
+            "CELL_PRECONDITION exempt lists name arms the spec does not declare: %r"
+            % (unknown,)
+        )
+    fbox_exempt = arm in fbox_exempt_arms
+    rows_exempt = arm in rows_exempt_arms
+    waived = [name for name, on in (("in-box", fbox_exempt), ("row-count", rows_exempt)) if on]
     failures = []
 
     surviving = precondition.get("gated_rows_final")
     total = precondition.get("n_rows_final")
-    if surviving is None or surviving < min_rows:
+    # A missing or non-integer count fails for EVERY arm; an exemption waives
+    # the threshold, never the measurement (section 13.21).
+    if not isinstance(surviving, int) or isinstance(surviving, bool) or surviving < 0:
+        failures.append("gated_rows_final=%r missing or not a count" % (surviving,))
+    elif not rows_exempt and surviving < min_rows:
         failures.append(
             "gated_rows_final=%s < %d (of n_rows_final=%s)"
             % (surviving, min_rows, total)
         )
     fbox = precondition.get("gated_rows_fbox_frame150")
-    if fbox is None or fbox < min_fbox:
+    if not isinstance(fbox, int) or isinstance(fbox, bool) or fbox < 0:
+        failures.append("gated_rows_fbox_frame150=%r missing or not a count" % (fbox,))
+    elif not fbox_exempt and fbox < min_fbox:
         failures.append("gated_rows_fbox_frame150=%s < %d" % (fbox, min_fbox))
     zeros = precondition.get("frames_presence_zero")
     if zeros is None or zeros < min_zeros:
@@ -764,15 +785,26 @@ def mechanism_exercised_v2(arm, precondition, spec=None):
             failures.append(
                 "fbox %r differs from the scene box %r" % (got, list(want_box))
             )
+    # Section 13.21: the timing shams carry their OWN box frame and own-gap
+    # window in the spec instance (CELL_PRECONDITION.fbox_frame_by_arm /
+    # zero_window_by_arm); when the instance names them the reducer validates
+    # them instead of trusting the extractor. Without them the pre-13.21
+    # behaviour (extractor-side reading, reducer note) is kept.
+    frame_by_arm = rules.get("fbox_frame_by_arm") or {}
+    window_by_arm = rules.get("zero_window_by_arm") or {}
     want_frame = S.get("MECHANISM_FBOX_FRAME")
-    if want_frame is not None and not exempt:
+    if arm in frame_by_arm:
+        want_frame = int(frame_by_arm[arm])
+    if want_frame is not None and (not exempt or arm in frame_by_arm):
         got = precondition.get("fbox_frame")
         if got is None or int(got) != int(want_frame):
             failures.append(
-                "fbox measured at frame %r, the scene requires %r" % (got, want_frame)
+                "fbox measured at frame %r, the arm requires %r" % (got, want_frame)
             )
     window = S.get("MECHANISM_ZERO_FRAMES_WINDOW")
-    if window and not exempt:
+    if arm in window_by_arm:
+        window = [int(v) for v in window_by_arm[arm]]
+    if window and (not exempt or arm in window_by_arm):
         zl = precondition.get("frames_presence_zero_list")
         if zl is None:
             failures.append("precondition carries no zero-presence frame list")
@@ -789,10 +821,19 @@ def mechanism_exercised_v2(arm, precondition, spec=None):
                 "program_match is %r, not recorded true by the extractor"
                 % (precondition.get("program_match"),)
             )
+    waiver = ("" if not waived else
+              " [%s clause(s) exempt for this arm (spec CELL_PRECONDITION.*_exempt_arms); "
+              "counts recorded descriptively: gated_rows_final=%s gated_rows_fbox_frame150=%s]"
+              % (" and ".join(waived), surviving, fbox))
     if failures:
-        return False, "; ".join(failures)
+        return False, "; ".join(failures) + waiver
+    if exempt and arm not in window_by_arm:
+        return True, SPEC_V2_GAP_EXEMPT_NOTE + waiver
     if exempt:
-        return True, SPEC_V2_GAP_EXEMPT_NOTE
+        return True, ("precondition satisfied in the arm's own gap %r at frame %r"
+                      % (list(window), want_frame)) + waiver
+    if waived:
+        return True, "precondition satisfied;" + waiver
     return True, "precondition satisfied"
 
 

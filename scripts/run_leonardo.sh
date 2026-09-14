@@ -179,6 +179,22 @@ if [[ "$MODE" == "train" ]]; then
   if [[ -n "${TEACHER_CKPT:-}" ]]; then
     CMD+=("--teacher_ckpt" "$TEACHER_CKPT")
   fi
+  # Optional checkpoint schedule override (main.py --save_iterations), only when
+  # set: a space-separated list of positive integers, validated here. Added
+  # 2026-09-14 for wave-2 stage 2 (ADAGS_SAVE_ITERATIONS=12000 keeps only the
+  # final checkpoint of a continuation cell; scene.save / torch.save are file
+  # writes with no effect on the training state). Unset => the command line is
+  # byte-identical to before this block existed. The option follows the
+  # --wandb_tags list and therefore terminates it exactly as the trailing
+  # "train" tag already does.
+  if [[ -n "${ADAGS_SAVE_ITERATIONS:-}" ]]; then
+    if [[ ! "$ADAGS_SAVE_ITERATIONS" =~ ^[1-9][0-9]*( [1-9][0-9]*)*$ ]]; then
+      echo "ERROR: ADAGS_SAVE_ITERATIONS must be positive integers separated by spaces, got: $ADAGS_SAVE_ITERATIONS" >&2
+      exit 4
+    fi
+    read -r -a ADAGS_SAVE_ITERATIONS_ARRAY <<< "$ADAGS_SAVE_ITERATIONS"
+    CMD+=(--save_iterations "${ADAGS_SAVE_ITERATIONS_ARRAY[@]}")
+  fi
 elif [[ "$MODE" == "eval" ]]; then
   if [[ -z "$CKPT_PATH" ]]; then
     CKPT_PATH="${RUN_DIR}/chkpnt${CKPT_ITER}.pth"
