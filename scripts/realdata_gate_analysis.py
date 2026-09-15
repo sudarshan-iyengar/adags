@@ -716,9 +716,24 @@ def _program_match_flag(data):
         if isinstance(provenance, dict):
             value = provenance.get("program_family_match")
     if value is None:
+        # Where scripts/gate_cell_precondition.py ACTUALLY writes the proof
+        # (2026-09-15, spec 13.30): detail.program_family_match, the dict
+        # returned by check_program_matches_runtime once every program group
+        # has been matched to a family by lineage key (a mismatch raises
+        # there and no precondition file is written). The proof holds iff
+        # no group is without a family and at least one group matched.
+        detail = data.get("detail")
+        if isinstance(detail, dict):
+            value = detail.get("program_family_match")
+    if value is None:
         return None
     if isinstance(value, bool):
         return value
+    if isinstance(value, dict):
+        without = value.get("groups_without_a_family")
+        matched = value.get("matched_groups")
+        return (isinstance(without, list) and not without
+                and isinstance(matched, dict) and len(matched) > 0)
     return bool(value)
 
 

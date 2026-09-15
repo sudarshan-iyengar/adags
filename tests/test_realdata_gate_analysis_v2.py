@@ -1064,3 +1064,20 @@ def test_the_L_sham_is_checked_by_the_frozen_local_floor_rule_not_by_count(tmp_p
     assert not row["passes"] and any("count-matched" in r for r in row["reasons"])
     report = run_v2(build_v2_case(tmp_path))
     assert report["blocking_errors"] == []
+
+
+def test_program_match_is_read_from_the_extractor_detail_block():
+    """2026-09-15 (spec 13.30): gate_cell_precondition.py records the lineage-key
+    proof as detail.program_family_match (a dict), not as a top-level flag; the
+    reducer must read it there, and read it as true only when no program group
+    is without a family and at least one group matched."""
+    proof = {"groups_without_a_family": [], "tolerance_seconds": 0.0001,
+             "matched_groups": {"1": {"family_id": 0, "gaps": [[2.0333, 2.9333]]}}}
+    assert rga._program_match_flag({"detail": {"program_family_match": proof}}) is True
+    bad = dict(proof, groups_without_a_family=["1"])
+    assert rga._program_match_flag({"detail": {"program_family_match": bad}}) is False
+    empty = dict(proof, matched_groups={})
+    assert rga._program_match_flag({"detail": {"program_family_match": empty}}) is False
+    assert rga._program_match_flag({"detail": {"program_family_match": None}}) is None
+    assert rga._program_match_flag({"program_match": True}) is True
+    assert rga._program_match_flag({"provenance": {"program_family_match": False}}) is False

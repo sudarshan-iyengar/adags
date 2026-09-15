@@ -2041,3 +2041,45 @@ a mass ratio; 157 pass. Nothing under `main.py`, `scene/`,
 `gaussian_renderer/`, `elgs/`; the manifest, the sidecars and the
 profiles are unchanged and are re-hashed before the fifth reduction at
 this commit.
+
+### 13.30 Fifth reduction admitted zero pairs: the reducer looked for the program-match proof in two places the extractor never writes; it now reads `detail.program_family_match`; sixth reduction
+
+The fifth attempt (at the §13.29 commit) ran clean (no blocking error,
+no warning), every sham-program check passed, and every gated cell of
+every scene was still excluded from the mechanism-exercised set with
+one reason: `program_match is None, not recorded true by the extractor`
+(the U cells pass by construction, so exactly 4 of 36 / 4 of 32 / 4 of
+36 cells were exercised and every contrast had 0 pairs). **No pair
+value was computed or read.**
+
+**Cause, read from both scripts and the real files:**
+`scripts/gate_cell_precondition.py` records the lineage-key proof that
+the checkpoint's runtime program equals the cell's program as
+`detail.program_family_match`, a dict `{groups_without_a_family: [],
+matched_groups: {<group>: {family_id, gaps}}, tolerance_seconds}`
+returned by `check_program_matches_runtime()` (a mismatch raises a
+ContractError there and no file is written); this is what every gated
+cell of stage 2, the eight re-extracted wave-1 shams and the original
+wave-1 cells carry. The reducer's `_program_match_flag()` read a
+top-level `program_match` (written only by `eval_n3v_gated.py`'s report)
+or `provenance.program_family_match` (written nowhere), so it returned
+None for every real extractor file; `program_match_required` then
+excluded every gated cell. The v2 tests use a synthetic precondition
+with a top-level `program_match: True`, so they never met the real
+shape.
+
+**Fix (reducer only, this commit):** `_program_match_flag()` also reads
+`detail.program_family_match`; a dict there counts as true iff
+`groups_without_a_family` is an empty list and `matched_groups` is a
+non-empty dict, false otherwise; a bool anywhere keeps its value;
+absent everywhere stays None ("not recorded"). Test
+`test_program_match_is_read_from_the_extractor_detail_block` (158
+pass). Spec JSON unchanged (`e58a9281…`); manifest, sidecars and
+profiles unchanged and re-hashed. Sixth reduction at this commit.
+
+Reading rule for what follows: the six attempts are one reduction
+whose instrument was repaired five times before it admitted a single
+pair, each repair a pure plumbing correction (event name, per-scene
+checks, sidecars, the L rule, the proof location) made without any
+pair value having been computed; the first table with values is the
+sixth attempt's, and it is the one reported.
