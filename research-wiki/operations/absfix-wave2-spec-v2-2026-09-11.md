@@ -1920,3 +1920,30 @@ empty frames).
 Order of reading after the fix: reducer → output hashed → montages
 rendered → montages viewed → table read. Ids and hashes in the ledger
 and the verdict page.
+
+### 13.27 Second reduction attempt (at the §13.26 commit) blocked on a cross-scene reserved-units check; the check and the duplicate-key warning are made per scene; reduction re-run at this commit
+
+Read from the reducer's blocking line and the cells' `precondition.json`
+only. At the §13.26 commit the reducer loaded all 104 cells (the event
+name now resolves), then stopped with `BLOCKING: cells disagree on
+reserved_units: [1425, 1500]` and eight `duplicate (arm, seed)`
+warnings, rc 2; no window value was printed. **Not a leak and not a
+disagreement inside any scene:** every cut_roasted_beef cell, wave 1
+and wave 2 alike, reports 1,425 reserved of 5,700 training units (19
+training cameras + held-out cam00; the derived scene's
+`transforms_train.json` lists 5,700 frames), and every flame_steak and
+sear_steak cell reports 1,500 of 6,000 (20 training cameras + cam00;
+6,000 frames). Within each scene and prefix the values agree (the
+per-prefix check of the v2 path, which the spec's
+`reserved_units_equal_within_prefix` names, passes). The blocking line
+came from the v1-era whole-manifest `reserved_unit_check`, which the
+v2 path still ran over all scenes together, and the warnings from a
+duplicate test keyed on (arm, seed) without the scene. **Fix (this
+commit, +27/−5 lines):** in v2 mode both run per scene (the report's
+`reserved_unit_check` gains `per_scene`), a disagreement inside one
+scene still blocks and names the scene; regression test
+`test_reserved_units_may_differ_between_scenes_but_not_within_one`
+(156 pass). Spec JSON untouched; nothing under `main.py`, `scene/`,
+`gaussian_renderer/`, `elgs/`, `configs/`. The reduction runs at this
+commit; the attempt-2 stdout/stderr are kept beside the attempt-1 ones
+and any partial output file of attempt 2 is moved aside unread.

@@ -2999,9 +2999,12 @@ def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
     warnings = []
     seen = set()
     for c in cells:
-        key = (c["arm"], c["seed"])
+        # v2 manifests hold several scenes; (arm, seed) repeats per scene by
+        # design, so the duplicate test keys by scene there (2026-09-15, 13.27).
+        key = (c.get("scene"), c["arm"], c["seed"]) if v2 else (c["arm"], c["seed"])
         if key in seen:
-            warnings.append("duplicate (arm, seed) %s/%s" % key)
+            warnings.append("duplicate (arm, seed) %s/%s" % key[-2:]
+                            + (" in scene %s" % key[0] if v2 else ""))
         seen.add(key)
         if c["status"] == "complete" and c["n_frames"] != S["expected_n_frames"]:
             warnings.append(
@@ -3012,9 +3015,23 @@ def run(manifest_path, last_wave=False, wave=1, spec=None, paired=False):
     complete = [c for c in cells if c["status"] == "complete"]
     failed = [c for c in cells if c["status"] == "failed"]
 
-    ru = reserved_unit_check(complete)
-    if not ru["consistent"]:
-        blocking.append(ru.get("message", "reserved-unit check failed"))
+    if v2:
+        # Reserved units are a per-scene quantity (19 training cameras on the
+        # calibration scene, 20 on the confirmatory ones); the spec requires
+        # them equal WITHIN a prefix, never across scenes (13.27).
+        ru = {"per_scene": {}, "consistent": True, "reported_as": {}, "values": {}}
+        for scene in sorted({c.get("scene") for c in complete}, key=str):
+            sub_ru = reserved_unit_check([c for c in complete if c.get("scene") == scene])
+            ru["per_scene"][scene] = sub_ru
+            ru["reported_as"][scene] = sub_ru["reported_as"]
+            ru["values"].update({"%s:%s" % (scene, k): v for k, v in sub_ru["values"].items()})
+            if not sub_ru["consistent"]:
+                ru["consistent"] = False
+                blocking.append("scene %s: %s" % (scene, sub_ru.get("message", "reserved-unit check failed")))
+    else:
+        ru = reserved_unit_check(complete)
+        if not ru["consistent"]:
+            blocking.append(ru.get("message", "reserved-unit check failed"))
     if S.get("RESERVED_UNITS_REQUIRED", False):
         lacking = [
             "%s/seed%s" % (c["arm"], c["seed"]) for c in complete

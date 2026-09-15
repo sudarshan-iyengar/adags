@@ -1005,3 +1005,34 @@ def test_the_scene_block_event_name_is_carried_into_the_scene_spec():
     bad = rga.deep_merge(spec, {"scenes": {"flame_steak": {"event_name": ""}}})
     sub, problems = rga.scene_spec(bad, "flame_steak")
     assert sub is None and any("event_name" in p for p in problems)
+
+
+def test_reserved_units_may_differ_between_scenes_but_not_within_one(tmp_path):
+    """2026-09-15 (spec 13.27): the calibration scene trains on 19 cameras
+    (5,700 units, 1,425 reserved) and the confirmatory scenes on 20 (6,000,
+    1,500). A multi-scene manifest must not block on that, and (arm, seed)
+    repeating across scenes is by design; a disagreement inside one scene
+    still blocks and names the scene."""
+    pre = {}
+    for scene in SCENES:
+        for prefix in PREFIXES:
+            per_arm = {}
+            for arm in ARMS:
+                p = (u_precondition() if arm == "U" else good_precondition(
+                    arm, fbox=[964, 748, 1034, 952],
+                    fbox_frame=(244 if arm == "GMIS" else 291 if arm == "GONES" else 75),
+                    zero_frames=(list(range(230, 260)) if arm == "GMIS"
+                                 else list(range(286, 298)) if arm == "GONES"
+                                 else list(range(61, 89)))))
+                p["reserved_units"], p["training_units_total"] = 1500, 6000
+                per_arm[arm] = p
+            pre[(scene, prefix)] = per_arm
+    report = run_v2(build_v2_case(tmp_path, preconditions=pre))
+    assert report["blocking_errors"] == []
+    assert not any(w.startswith("duplicate (arm, seed)") for w in report["warnings"])
+    ru = report["reserved_unit_check"]
+    assert ru["consistent"] and ru["per_scene"]["flame_steak"]["reserved_units"] == 1500
+    assert ru["per_scene"]["cut_roasted_beef"]["reserved_units"] == 1425
+    pre[("flame_steak", 1)]["G"]["reserved_units"] = 1400
+    report = run_v2(build_v2_case(tmp_path, preconditions=pre))
+    assert any(b.startswith("scene flame_steak:") and "reserved_units" in b for b in report["blocking_errors"])
