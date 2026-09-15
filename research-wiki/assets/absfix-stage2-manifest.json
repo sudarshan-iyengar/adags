@@ -1,0 +1,976 @@
+{
+ "cells": [
+  {
+   "arm": "U",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005646_flame_steak_absfix_60_89_v3_absfix2_flame_steak_u_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005647_flame_steak_absfix_60_89_v3_absfix2_flame_steak_g_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005655_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gest_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005741_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gestmem_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005731_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gmis_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005732_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_a_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005741_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_b_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005731_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_l_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005731_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gones_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005825_flame_steak_absfix_60_89_v3_absfix2_flame_steak_u_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_g_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005813_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gest_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005813_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gestmem_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005824_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gmis_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_a_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_b_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_l_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gones_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_u_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_g_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gest_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gestmem_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005814_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gmis_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005858_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_a_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005902_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_b_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005902_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_l_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005902_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gones_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005858_flame_steak_absfix_60_89_v3_absfix2_flame_steak_u_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005857_flame_steak_absfix_60_89_v3_absfix2_flame_steak_g_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005857_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gest_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005857_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gestmem_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005857_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gmis_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005857_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_a_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005901_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_b_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005858_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gwrongmem_l_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "flame_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/cells/20260915_005857_flame_steak_absfix_60_89_v3_absfix2_flame_steak_gones_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005901_sear_steak_absfix_60_89_v3_absfix2_sear_steak_u_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005939_sear_steak_absfix_60_89_v3_absfix2_sear_steak_g_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005939_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gest_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005937_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gmis_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005937_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_a_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005943_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_b_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005937_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_l_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_005943_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gones_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_u_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_g_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gest_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gmis_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_a_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_b_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_l_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gones_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_u_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_g_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gest_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gmis_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_a_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010104_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_b_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_l_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gones_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_u_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "G",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_g_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GEST",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010102_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gest_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010103_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gmis_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010145_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_a_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010145_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_b_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010145_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gwrongmem_l_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GONES",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "sear_steak",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/cells/20260915_010154_sear_steak_absfix_60_89_v3_absfix2_sear_steak_gones_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010145_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gestmem_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010145_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_a_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010145_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_b_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010145_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_l_s0",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010159_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gestmem_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010147_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_a_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010145_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_b_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010145_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_l_s1",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010145_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gestmem_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010228_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_a_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010228_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_b_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010230_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_l_s2",
+   "status": "complete"
+  },
+  {
+   "arm": "GESTMEM",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010230_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gestmem_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_A",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010230_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_a_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_B",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010229_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_b_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "GWRONGMEM_L",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/cells/20260915_010228_cut_roasted_beef_absfix_60_89_absfix2_cut_roasted_beef_gwrongmem_l_s3",
+   "status": "complete"
+  },
+  {
+   "arm": "U",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081945_cut_roasted_beef_absfix_60_89_absfix_u_s0",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's U arm"
+  },
+  {
+   "arm": "U",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081946_cut_roasted_beef_absfix_60_89_absfix_u_s1",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's U arm"
+  },
+  {
+   "arm": "U",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_082052_cut_roasted_beef_absfix_60_89_absfix_u_s2",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's U arm"
+  },
+  {
+   "arm": "U",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_105614_cut_roasted_beef_absfix_60_89_absfix_u_s3",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's U arm"
+  },
+  {
+   "arm": "G",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081945_cut_roasted_beef_absfix_60_89_absfix_oracle_s0",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's G arm"
+  },
+  {
+   "arm": "G",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081945_cut_roasted_beef_absfix_60_89_absfix_oracle_s1",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's G arm"
+  },
+  {
+   "arm": "G",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_082052_cut_roasted_beef_absfix_60_89_absfix_oracle_s2",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's G arm"
+  },
+  {
+   "arm": "G",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_105727_cut_roasted_beef_absfix_60_89_absfix_oracle_s3",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's G arm"
+  },
+  {
+   "arm": "GEST",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081945_cut_roasted_beef_absfix_60_89_absfix_est_s0",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GEST arm"
+  },
+  {
+   "arm": "GEST",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081946_cut_roasted_beef_absfix_60_89_absfix_est_s1",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GEST arm"
+  },
+  {
+   "arm": "GEST",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_082052_cut_roasted_beef_absfix_60_89_absfix_est_s2",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GEST arm"
+  },
+  {
+   "arm": "GEST",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_105920_cut_roasted_beef_absfix_60_89_absfix_est_s3",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GEST arm"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s0",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GMIS arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081945_cut_roasted_beef_absfix_60_89_absfix_mis_s0"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s1",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GMIS arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081946_cut_roasted_beef_absfix_60_89_absfix_mis_s1"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s2",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GMIS arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_082052_cut_roasted_beef_absfix_60_89_absfix_mis_s2"
+  },
+  {
+   "arm": "GMIS",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_mis_s3",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GMIS arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_110240_cut_roasted_beef_absfix_60_89_absfix_mis_s3"
+  },
+  {
+   "arm": "GONES",
+   "seed": 0,
+   "prefix": 0,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s0",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GONES arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081945_cut_roasted_beef_absfix_60_89_absfix_ones_s0"
+  },
+  {
+   "arm": "GONES",
+   "seed": 1,
+   "prefix": 1,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s1",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GONES arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_081946_cut_roasted_beef_absfix_60_89_absfix_ones_s1"
+  },
+  {
+   "arm": "GONES",
+   "seed": 2,
+   "prefix": 2,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s2",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GONES arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_082052_cut_roasted_beef_absfix_60_89_absfix_ones_s2"
+  },
+  {
+   "arm": "GONES",
+   "seed": 3,
+   "prefix": 3,
+   "scene": "cut_roasted_beef",
+   "run_dir": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/wave1_cells/absfix_ones_s3",
+   "status": "complete",
+   "note": "wave-1 cell (2026-09-10), gate-faithful re-evaluation; reused as the calibration scene's GONES arm; precondition re-extracted at its own frame (job 57761925), 13.21/13.22",
+   "run_dir_wave1_original": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/absfix/20260910_110737_cut_roasted_beef_absfix_60_89_absfix_ones_s3"
+  }
+ ],
+ "sidecars": {
+  "flame_steak": {
+   "0": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix0_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p0_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p0_t1.json"
+   },
+   "1": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix1_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p1_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p1_t1.json"
+   },
+   "2": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix2_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p2_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p2_t1.json"
+   },
+   "3": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/draws_prefix3_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p3_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/flame_steak_p3_t1.json"
+   }
+  },
+  "sear_steak": {
+   "0": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix0_iv/counts_gwrongmem_l.json"
+    },
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/sear_steak_p0_t1.json"
+   },
+   "1": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix1_iv/counts_gwrongmem_l.json"
+    },
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/sear_steak_p1_t1.json"
+   },
+   "2": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix2_iv/counts_gwrongmem_l.json"
+    },
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/sear_steak_p2_t1.json"
+   },
+   "3": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_seedbox/ab_only/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/sear_steak/draws_prefix3_iv/counts_gwrongmem_l.json"
+    },
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/sear_steak_p3_t1.json"
+   }
+  },
+  "cut_roasted_beef": {
+   "0": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_v2/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_v2/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix0_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p0_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p0_t1.json"
+   },
+   "1": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_v2/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_v2/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix1_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p1_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p1_t1.json"
+   },
+   "2": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_v2/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_v2/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix2_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p2_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p2_t1.json"
+   },
+   "3": {
+    "programs": {
+     "GWRONGMEM_A": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_v2/counts_gwrongmem_a.json",
+     "GWRONGMEM_B": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_v2/counts_gwrongmem_b.json",
+     "GWRONGMEM_L": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/cut_roasted_beef/draws_prefix3_iv/counts_gwrongmem_l.json"
+    },
+    "membership": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p3_membership.json",
+    "t1": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/realdata/absfix2/stage2/sidecars/cut_roasted_beef_p3_t1.json"
+   }
+  }
+ }
+}

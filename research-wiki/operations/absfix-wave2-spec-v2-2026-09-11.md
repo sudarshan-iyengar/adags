@@ -2083,3 +2083,24 @@ pair, each repair a pure plumbing correction (event name, per-scene
 checks, sidecars, the L rule, the proof location) made without any
 pair value having been computed; the first table with values is the
 sixth attempt's, and it is the one reported.
+
+### 13.31 Verdict recorded (2026-09-15, 14:40 CEST)
+
+The sixth reduction attempt is the table of record; the verdict page is
+[[absfix-wave2-stage2-verdict-2026-09-15]] (evidence-bearing). Claim A
+NOT_MET on flame_steak and on sear_steak under §11.5's all-pairs
+0.50 dB rule (P2 return over the floor in 8 of 8 confirmatory pairs
+against U and every sham; P1 ghost core over the floor against U in 7
+of 8, flame prefix 1 at +0.44, and against the wrong-membership shams
+under the floor on six of 24 sham pairs, the smallest margin +0.23 dB;
+no pair has G below any comparator on either endpoint); Claim B
+DESIGN_WITHOUT_POWER on both scenes as decided in §13.21 (flame: T1 not
+admitted on prefix 3; sear: no S2 record); the calibration scene reads
+CLAIM_CONDITIONS_MET on both claims. STG (X) is reported descriptively
+and renders the ghost core 3.4–7.5 dB better than the gated arm while
+sitting below it on the return on seven of eight prefixes. Assets:
+`absfix-stage2-paired.json` (`ed5b9c5d…`), `absfix-stage2-report.md`,
+`absfix-stage2-manifest.json` (`943d0da5…`),
+`absfix-stage2-reducer-inputs.sha256`, twelve montages. The page's
+numbers were audited by a fresh-context Codex pass (ten corrections
+folded). Nothing further is decided in this record.

@@ -1,5 +1,60 @@
 # Query Pack
 
+## 2026-09-15 BLOCK — wave-2 stage 2 RAN AND WAS REDUCED: Claim A NOT_MET on both confirmatory scenes under the all-pairs 0.50 dB rule (return met 8/8, ghost core short on one flame pair and on six sham pairs); Claim B DWP as pre-decided; calibration MET; STG renders the gap core 3–8 dB better than the gate without any gate
+
+Full records: [[operations/absfix-wave2-stage2-verdict-2026-09-15]]
+(verdict, evidence-bearing), spec §13.22–13.31. ≈ 84 cells × 2.3–5.9 h
++ 63 STG jobs + repairs on Leonardo.
+
+**(1) THE RESULT.** 104 cells (84 new + 20 wave-1 calibration cells),
+every one admitted. On the return window P2 the training-time gate G
+beats U and every sham (A/B/L wrong membership, GMIS/GONES timing) in
+8 of 8 confirmatory pairs, +1.7 to +3.2 dB over U. On the ghost core P1
+G beats U in 8 of 8 pairs (+0.44 to +2.8) but flame prefix 1 falls 0.06
+dB short of the floor, and the wrong-membership shams come within 0.50
+dB of G on six of 24 sham pairs (smallest margin +0.23). Under the
+frozen conjunction that is **NOT_MET on both scenes**; no pair has G
+below any comparator. **The membership-specific share of the ghost-core
+benefit is scene-dependent**: small on flame_steak, +0.4–2.7 dB on
+sear_steak, +2.7–5.2 dB on the calibration scene. Control window C1
+cost −0.14..+0.05 dB on the confirmatory scenes (the wave-1 −0.2 dB
+cost reproduces only on cut_roasted_beef). Paired sd of G−U: 1.59 dB
+on P1 (n₂ = 269 pairs, feasibility stop), 0.52 dB on P2 (n₂ = 30).
+
+**(2) THE DESCRIPTIVE FACT THAT OUTRANKS THE VERDICT.**
+SpacetimeGaussians (per-Gaussian temporal opacity, no gate, six
+50-frame models per scene at 25k) renders the authored absence core
+**3.4–7.5 dB better than our gated arm** on both scenes with a
+whole-frame quality only +0.4–1.2 dB above ours; on the return it is
+below G on seven of eight prefixes (1.3–2.5 dB). A temporal-opacity
+primitive reaches the exact-zero presence in the gap without membership
+or window inference; what it lacks is the return. This must enter the
+thesis before anything else is built.
+
+**(3) THE INSTRUMENT LESSON, five times over.** The reducer frozen at
+F could not have reduced the stage: five plumbing defects (per-scene
+event name ignored; whole-manifest reserved-units and duplicate checks;
+no sidecars from the collector; count matching applied to the
+contribution-matched L; the program-match proof read from a place the
+extractor never writes) each produced a clean-looking zero-pair
+DESIGN_WITHOUT_POWER and were caught only because zero pairs is
+visible. Every fix was a tested plumbing change made before any pair
+value existed (§13.26–13.30). **CARRY: a reducer's tests must include
+one real extractor output and one real multi-scene manifest, not only
+synthetic fixtures; a clean DWP with zero pairs is an instrument
+failure until proven otherwise.** Two template defects were found by
+reading before any cell ran (§13.22) and two more by the run (U scored
+through the wrong evaluator mode, §13.24; a `set -e` inherited from the
+sourced env plus a non-matching glob marked 74 complete cells FAILED,
+§13.25); two cells timed out on slow nodes and were scored by a
+declared continuation.
+
+**(4) DISK AND ARCHIVE.** Work quota reached 97.5 %; `runs/realdata_gate`
+(127 GB) copied to scratch_large and verified, and to D: with a
+manifest check; the eight composite directories verified on D:.
+Removal of the originals waits for the user's explicit approval;
+nothing was deleted.
+
 ## 2026-09-11/13 BLOCK — thesis fixed, kill-argument FAIL folded into spec v2.0.0, fixtures repaired, stage 1 of wave 2 run end to end; stage 2 waits on four decisions
 
 Full records: [[operations/handover-2026-09-14]] (resume here),
