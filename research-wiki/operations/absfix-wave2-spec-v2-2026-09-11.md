@@ -1802,3 +1802,66 @@ Consequence for the record: the U scored render comes from `main.py
 gate-off pairing was exact (`max_abs_diff = 0`), which is the evidence
 that the two renderers are the same renderer. This is stated as a
 recorded asymmetry, not hidden.
+
+### 13.25 State of the chain read at 12:20 CEST 2026-09-15: every gated cell complete on disk but marked FAILED by the template's last line; two cells timed out on slow nodes; U repair done; STG done
+
+Read from Slurm states, job logs and run-directory listings only; no
+window profile, table or montage has been opened.
+
+**Slurm says 82 FAILED (exit 1:0) and 2 TIMEOUT; the files say 74 gated
+cells are complete.** Every one of the 74 gated cells that did not time
+out holds `chkpnt12000.pth`, `precondition.json`, the evaluator's gated
+and gate-off renders and their profiles (`f_box_profile.json`,
+`f_box_profile_gateoff_check.json`), the `--val` profile, the PNG
+manifest and `path_crosscheck.json` with `pass = true`; the 74
+cross-checks all report `max_abs_diff = 0` on 3,254 leaves, so the
+gate-on `--val` render and the evaluator's `--restore_state` render are
+identical on every gated cell (the §13.22 "no precedent" pairing now
+has 74 exact agreements). The FAILED state comes from the LAST line of
+`stage2_cell.sbatch`: `sha256sum … $RUN_DIR/meta/*cmd* >>
+outputs.sha256`, whose glob matches nothing (the launcher names those
+files `command_train_*.sh` / `command_eval_*.sh`), and
+`exp_index/leonardo_env.sh`, which the template sources after training,
+sets `-euo pipefail`; the non-zero status ended the script with exit 1
+after `PRECONDITION …` was printed and before `CELL DONE`. The effect
+is one missing line in `outputs.sha256` (the `meta/` command files) and
+the Slurm state; no output is affected. The collector's completeness
+test is file-based (§13.22, §13.24) and records the Slurm state beside
+it; nothing is resubmitted for this. The eight U FAILED states are the
+§13.24 evaluator refusal; all eight U cells were scored by
+`u_score.sbatch` (jobs 57781496–57781506, COMPLETED, 8–11 min each,
+`f_box_profile.json` + `u_score.json` present).
+
+**Two cells timed out at 6 h on slow nodes:** `flame_steak_gones_s1`
+(57769857, lrdn2013: `train rc=0` at 06:22, precondition at 06:37, the
+evaluator cut) and `flame_steak_gwrongmem_l_s3` (57769994, lrdn3263:
+`train rc=0` at 06:56, cut inside the precondition step). Training took
+5.4–5.9 h against 2.3 h on every other node (the same identical sbatch
+line, the same frozen inputs); both run directories hold the
+`chkpnt12000.pth` written by that line. **Declared continuation:**
+`stage2/gated_score.sbatch`, the post-training part of the template
+unchanged in substance (precondition kept if present, evaluator
+`--restore_state`, profiles, `--val` cross-check against the scored
+profile, outputs; its final hashing line lists only files that exist),
+run once per cell on the existing run directory under the same
+`HEAD == F` and clean-tree assertions and refusing to overwrite an
+existing profile. No training, no program, no config, no crop, no frame
+change. The warden's policy (no automatic resubmission of TIMEOUT)
+stands; this is the declared manual step it foresees. Job ids in the
+ledger and the next section.
+
+**STG (X, descriptive):** all 63 jobs COMPLETED; the four collect jobs
+wrote `runs/stg/{flame_steak,sear_steak}_v3_full_seed{0,1}/
+f_box_profile.json` (unread).
+
+**Disk:** work quota rose from 3.716 to 3.9 of 4 TiB (97.5 %); the
+three `cells/` trees hold 162 GB (33 + 68 + 61), as estimated; the
+`--val` renders (96 GB) sit on scratch_large. The `realdata_gate`
+transfer to D: was interrupted at 43 GB when the previous session ended
+(the copy on scratch_large is intact and verified); it is resumed as a
+manifest-driven delta and verified on D: before any removal is
+proposed.
+
+**Order of reading, unchanged:** when the two continuations finish,
+`stage2_collect.py` (file-based completeness, Slurm state recorded), the
+reducer with its output hashed, then every montage, then the table.
