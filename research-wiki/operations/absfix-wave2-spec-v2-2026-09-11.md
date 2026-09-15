@@ -1740,3 +1740,65 @@ the last cell (including any resubmission) has started; commits made
 after F (this section included) are pushed but NOT pulled on Leonardo
 before then. Reduction (§11.8 order) runs at F or at a later commit
 whose diff against F touches no reducer input, stated when it happens.
+
+### 13.24 Declared repair stage (2026-09-15, 03:20 CEST): every U cell dies in the evaluator's fresh mode before any profile exists; U is scored through the wave-1 `--val` path
+
+Declared and committed BEFORE any U profile exists and before any
+score of any arm has been read. At 03:14 CEST the chain watch reported
+the first terminal cells: `absfix2_flame_steak_u_s0/s2/s3` and
+`absfix2_sear_steak_u_s1` (jobs 57769768, 57769863, 57769922,
+57770011) FAILED after 2 h 12–17 min each. Their logs are identical in
+kind: `train rc=0`, `precondition rc=0`, then
+`scripts/eval_n3v_gated.py` (fresh mode, G program) raised
+`ContractError: episode program v2: row_ids membership was computed on
+a 599,6xx-row cloud but seeding sees 599,5xx rows. A fresh
+create_from_pcd run never reproduces a trained cloud`. Cause: the U
+arm's evaluator call was designed in §13.21 to seed the G program on
+the trained U checkpoint in fresh mode so that its UNGATED render could
+be scored beside a render-time-gate diagnostic; the G program's
+membership is `row_ids` on the 6k prefix cloud, and the 12k U cloud has
+a different row count after densification, which the contract refuses
+by design (the same refusal protects every gated arm from a mislabelled
+program). Wave 1 never exercised this path: its U cells were scored by
+`main.py --val`. The remaining four U cells (`flame_steak_u_s1`,
+`sear_steak_u_s0/s2/s3`) will reach the same line and fail identically;
+no U cell has an `f_box_profile.json`. Gated arms are unaffected: they
+run the evaluator in `--restore_state` mode on their own `elgs_state`.
+The warden logged the failures and, by policy, resubmitted nothing.
+
+**Repair, declared here as its own stage (§11.8 / §13.21 "any repair
+needing changed code … is a separately declared stage"):**
+`stage2/u_score.sbatch`, one GPU job per U cell on its EXISTING run
+directory: asserts `HEAD == F` and a clean tree, the frozen commit in
+the cell's `inputs.sha256`, `chkpnt12000.pth` and `precondition.json`
+present and NO `f_box_profile.json` present; runs `main.py --val` on
+that checkpoint through `scripts/run_leonardo.sh eval` with the cell's
+own U config (`b0c_crb300_12k_rp.yaml`; U carries no gate, so this is
+its plain ungated render, the identical path wave 1 scored its U cells
+with, on a training path with no identified change since 6b368d2, §13.22
+item b); profiles it with `event_region_frame_profile.py` exactly as the
+cell would have (`f_box_profile_val.json`), copies that file to
+`f_box_profile.json` (the scored file), writes the PNG manifest and a
+`u_score.json` provenance record (`scored_from: "main.py --val"`, job,
+frozen commit, hashes) and appends to `outputs.sha256`. NOT PRODUCED for
+U, and recorded as such: the evaluator render, the render-time-gate
+diagnostic and the U path cross-check (a single path cannot be
+cross-checked; the gated arms' cross-check stands). `stage2_collect.py`
+now marks a U cell complete iff `chkpnt12000.pth`, `precondition.json`,
+`f_box_profile.json` and `u_score.json` with `scored_from ==
+"main.py --val"` exist (`patch_collect_u.py`); gated arms keep the
+§13.22 rule. Nothing else changes: no training, no program, no config,
+no crop, no frame; frozen commit F unchanged; the eight failed cell jobs
+stay FAILED in the ledger and the warden log; the repair jobs are
+submitted with `afterany` on the four U cells still running so that
+their training output is scored as soon as they finish. Job ids, the
+sbatch and collector hashes and every ledger line are recorded when
+they exist (ledger, then the next section).
+
+Consequence for the record: the U scored render comes from `main.py
+--val` while every gated arm's comes from `eval_n3v_gated.py
+--restore_state`; on every gated cell the two paths are proved equal to
+5e-5 on the gate-on render by the §13.22 cross-check, and on wave 1 the
+gate-off pairing was exact (`max_abs_diff = 0`), which is the evidence
+that the two renderers are the same renderer. This is stated as a
+recorded asymmetry, not hidden.
