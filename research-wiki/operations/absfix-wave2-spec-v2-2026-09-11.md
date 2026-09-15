@@ -1947,3 +1947,52 @@ scene still blocks and names the scene; regression test
 `gaussian_renderer/`, `elgs/`, `configs/`. The reduction runs at this
 commit; the attempt-2 stdout/stderr are kept beside the attempt-1 ones
 and any partial output file of attempt 2 is moved aside unread.
+
+### 13.28 Third reduction attempt admitted zero pairs: the collector's manifest carried none of the per-prefix sidecars the v2 reducer requires; sidecars attached from the frozen stage-1 records; fourth reduction
+
+The third attempt (at the §13.27 commit) ran to completion with no
+blocking error and no warning, and every claim read
+DESIGN_WITHOUT_POWER with `n_pairs 0/4` on every contrast and every
+`pairs` list EMPTY; its per-prefix reasons all read "GWRONGMEM_A/B/L
+program sidecar: the manifest names no sidecar". **No window value was
+computed for any pair**, so none was read; the montages had been
+rendered and viewed before this report was opened, in the frozen
+order, and are unchanged by what follows (the cells are identical).
+
+**Cause:** the v2 reducer admits a pair only after the prefix's three
+§11.3 preconditions are evaluated from their own sidecars named in the
+manifest under `sidecars[scene][prefix]` = `{membership, t1,
+programs{GWRONGMEM_A,B,L}}` (the v2 tests build exactly this). The
+stage-2 collector written in §13.21 (`stage2_collect.py`) emitted only
+`cells`. The records themselves exist from stage 1: the S2 membership
+precondition and the T1 precondition of every prefix
+(`precond_prefix<S>_seedbox/` on the confirmatory scenes,
+`precond_prefix<S>/` on the calibration scene, written by
+`scripts/wave2_preconditions.py`, §13.13–13.16) and the sham programs'
+count sidecars (`counts_gwrongmem_{a,b}.json` in the frozen A/B
+directories, `counts_gwrongmem_l.json` in `draws_prefix<S>_iv/`).
+
+**Fix (collector only; reducer and spec untouched):**
+`stage2_collect.py` gains `build_sidecars()`, which (i) references the
+three program count files directly (they already carry `truth_n`,
+`draw_n`, `overlap_n`, `row_ids_sha256`); (ii) writes a membership
+adapter per prefix with the INTEGERS copied from the stage-1 record
+(`TP`, `FP`, `FN`, `truth_n`, `pred_n`, and `pixel_intersection` /
+`pixel_union` on cam15 at frames 50 and 95) plus the source path and
+its sha256 — the reducer recomputes precision, recall, size ratio and
+IoU from those integers and never reads a stored ratio; sear_steak has
+no membership record (its S2 vote refused, §13.16), so no membership
+sidecar is attached and its GESTMEM legs read DWP as decided; (iii)
+writes a T1 adapter per prefix whose `intervals` is the single POOLED
+interval, the union of the stage-1 `distinct_intervals` (the reading
+frozen in §13.13; the distinct intervals, the source and its sha256 are
+recorded beside it), from which the reducer recomputes the interval
+count, temporal IoU and both boundary errors against the scene's
+authored [A, B] — on flame_steak prefix 3 that union is [60, 93] and
+its offset error of 4 frames fails the frozen bound, as §13.21
+recorded. The attempt-3 manifest, inputs list and report are kept as
+`*_attempt3_no_sidecars*` (read: zero pairs, no value). The reducer
+inputs list now hashes the sidecar files as well.
+
+Fourth reduction at this commit; the ledger line carries the manifest,
+inputs, collector, reducer and output hashes. Nothing else changes.
