@@ -261,10 +261,12 @@ def t1_sidecar(intervals=((60, 89),)):
     return {"intervals": [list(iv) for iv in intervals]}
 
 
-def program_sidecar(overlap_n=0, truth_n=1700, draw_n=1700):
+def program_sidecar(overlap_n=0, truth_n=1700, draw_n=1700, mass_ratio=1.0):
     return {
         "truth_n": truth_n, "draw_n": draw_n, "overlap_n": overlap_n,
         "row_ids_sha256": "0" * 64,
+        # read for GWRONGMEM_L only (WRONGMEM_L_RULE, 13.29); ignored for A and B
+        "mass_ratio_draw_over_truth": mass_ratio,
     }
 
 
@@ -1036,3 +1038,29 @@ def test_reserved_units_may_differ_between_scenes_but_not_within_one(tmp_path):
     pre[("flame_steak", 1)]["G"]["reserved_units"] = 1400
     report = run_v2(build_v2_case(tmp_path, preconditions=pre))
     assert any(b.startswith("scene flame_steak:") and "reserved_units" in b for b in report["blocking_errors"])
+
+
+def test_the_L_sham_is_checked_by_the_frozen_local_floor_rule_not_by_count(tmp_path):
+    """2026-09-15 (spec 13.29): G-wrongmem-L is the 1,100-row local-floor draw of
+    13.22 (mass in [0.90, 1.00] of the truth mass), so the program check reads
+    WRONGMEM_L_RULE for L and keeps the count-match assertion for A and B."""
+    spec = v2_spec()
+    ok = program_sidecar(truth_n=6582, draw_n=1100, mass_ratio=0.95)
+    p = tmp_path / "l_ok.json"; p.write_text(json.dumps(ok), encoding="utf-8")
+    row = rga.wrongmem_program_check(str(p), "GWRONGMEM_L", spec=spec)
+    assert row["passes"] and row["mass_ratio"] == 0.95 and row["draw_n"] == 1100, row
+    exact = program_sidecar(truth_n=6582, draw_n=1100, mass_ratio=1.0000000000000002)
+    p.write_text(json.dumps(exact), encoding="utf-8")
+    assert rga.wrongmem_program_check(str(p), "GWRONGMEM_L", spec=spec)["passes"]
+    for bad in (program_sidecar(truth_n=6582, draw_n=1100, mass_ratio=0.85),
+                program_sidecar(truth_n=6582, draw_n=1000, mass_ratio=0.95),
+                program_sidecar(truth_n=6582, draw_n=1100, mass_ratio=1.02),
+                dict(program_sidecar(truth_n=6582, draw_n=1100), mass_ratio_draw_over_truth=None)):
+        p.write_text(json.dumps(bad), encoding="utf-8")
+        assert not rga.wrongmem_program_check(str(p), "GWRONGMEM_L", spec=spec)["passes"]
+    a = program_sidecar(truth_n=6582, draw_n=1100, mass_ratio=0.95)
+    p.write_text(json.dumps(a), encoding="utf-8")
+    row = rga.wrongmem_program_check(str(p), "GWRONGMEM_A", spec=spec)
+    assert not row["passes"] and any("count-matched" in r for r in row["reasons"])
+    report = run_v2(build_v2_case(tmp_path))
+    assert report["blocking_errors"] == []

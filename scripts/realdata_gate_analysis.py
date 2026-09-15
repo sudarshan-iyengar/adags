@@ -2119,7 +2119,31 @@ def wrongmem_program_check(path, arm, spec=None):
             reasons.append(
                 "%s: overlap with the construction-derived set is %d, "
                 "WRONGMEM_OVERLAP_MAX is %d" % (what, overlap, want))
-    if None not in (truth_n, draw_n):
+    l_rule = S.get("WRONGMEM_L_RULE") if arm == "GWRONGMEM_L" else None
+    if isinstance(l_rule, dict):
+        # 13.22 / 13.29: L is contribution-matched, not count-matched. The
+        # reducer checks the frozen row floor and the mass-ratio band from
+        # the draw sidecar; A and B keep the count-match assertion below.
+        min_rows = int(l_rule.get("min_rows", 0))
+        lo, hi = [float(v) for v in l_rule.get("mass_ratio", [0.0, float("inf")])]
+        tol = float(l_rule.get("mass_ratio_tolerance", 0.0))
+        if draw_n is not None:
+            out["draw_n"] = draw_n
+            if draw_n < min_rows:
+                reasons.append("%s: draw_n %d is below the L row floor %d"
+                               % (what, draw_n, min_rows))
+        mass = data.get("mass_ratio_draw_over_truth")
+        if isinstance(mass, bool) or not isinstance(mass, (int, float)):
+            reasons.append("%s: mass_ratio_draw_over_truth is %r, not a number"
+                           % (what, mass))
+        else:
+            out["mass_ratio"] = float(mass)
+            if not (lo <= float(mass) <= hi + tol):
+                reasons.append("%s: mass ratio %.6f is outside [%.2f, %.2f]"
+                               % (what, float(mass), lo, hi))
+        if None not in (truth_n, draw_n):
+            out["count_match"] = ratio(draw_n, truth_n)
+    elif None not in (truth_n, draw_n):
         out["count_match"] = ratio(draw_n, truth_n)
         if draw_n != truth_n:
             reasons.append("%s: draw_n %d is not count-matched to truth_n %d"

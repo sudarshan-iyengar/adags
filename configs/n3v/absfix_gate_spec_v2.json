@@ -1626,5 +1626,23 @@
    "free_boundaries": "elgs_a_lr > 0 (value to be frozen), intervals initialised from T1's window, otherwise G; calibration prefixes, 4 cells"
   },
   "c_optional_graded_membership": "calibration only: row sets of 25/50/75% object rows, count-matched, true window; 12 cells; whether it runs is decided after the verdict; if it runs it is labelled post-verdict exploratory"
+ },
+ "WRONGMEM_L_RULE": {
+  "section": "13.22 (decision 5, option iv)",
+  "min_rows": 1100,
+  "mass_ratio": [
+   0.9,
+   1.0
+  ],
+  "mass_ratio_tolerance": 1e-09,
+  "measure": "w_total on cam15 at frame 50 (13.19/13.21)",
+  "sidecar_fields": [
+   "draw_n",
+   "truth_n",
+   "overlap_n",
+   "mass_ratio_draw_over_truth",
+   "row_ids_sha256"
+  ],
+  "note": "G-wrongmem-L is contribution-matched, not count-matched (11.2 as amended in 13.21/13.22): the reducer's program check requires overlap_n == WRONGMEM_OVERLAP_MAX, draw_n >= min_rows and mass_ratio_draw_over_truth inside mass_ratio (inclusive, float64, tolerance on the upper edge for the division rounding); A and B stay count-matched. Added 2026-09-15 (13.29) after the fourth reduction admitted zero pairs because the check applied count matching to L; no value had been read."
  }
 }

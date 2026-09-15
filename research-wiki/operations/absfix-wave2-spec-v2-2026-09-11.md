@@ -1996,3 +1996,48 @@ inputs list now hashes the sidecar files as well.
 
 Fourth reduction at this commit; the ledger line carries the manifest,
 inputs, collector, reducer and output hashes. Nothing else changes.
+
+### 13.29 Fourth reduction admitted zero pairs: the reducer's sham-program check applied count matching to G-wrongmem-L; the frozen local-floor rule added as a spec key and read by the check; fifth reduction
+
+The fourth attempt (at the §13.28 commit, sidecars attached) again
+ended with no blocking error and every claim DESIGN_WITHOUT_POWER with
+`n_pairs 0/4` and EMPTY `pairs` lists; the per-prefix reasons on all
+twelve prefixes read "GWRONGMEM_L program sidecar: draw_n 1100 is not
+count-matched to truth_n 6,5xx–7,6xx". **No pair value was computed or
+read.** The two other admission facts the report carried are the
+expected ones: the visibility-gap instrument is not admitted on
+flame_steak prefix 3 (offset error 4 frames > 3, §13.21), and no
+membership instrument is admitted on sear_steak (no S2 record, §13.16),
+which make the GEST/GESTMEM legs of those prefixes DWP by design.
+
+**Cause:** `wrongmem_program_check()` asserts `draw_n == truth_n` for
+all three wrong-membership arms. That is §11.2's rule for A and B
+(count-matched uniform draws) and was never L's: L was a
+contribution-matched local draw in §11.2, its measure and rule were
+amended in §13.21 (decision 1) and re-frozen in §13.22 (option (iv):
+1,100 rows, mass in [0.90, 1.00] of the truth mass on `w_total`), and
+the reducer's check was not updated at either step. The v2 tests did
+not notice because their fixture gives every sham arm a count-matched
+sidecar.
+
+**Fix (this commit):** the spec JSON gains the key `WRONGMEM_L_RULE`
+(`min_rows` 1100, `mass_ratio` [0.90, 1.00] inclusive, an upper-edge
+tolerance of 1e-9 for the division rounding of a capped draw, the
+measure and the sidecar fields named) — an append-only amendment
+carrying the rule §13.22 states in prose, so the reducer reads it from
+the spec rather than from a constant; JSON sha256 now `e58a9281…` (the
+§13.22 value `18aae16a…` is superseded by this one edit only).
+`wrongmem_program_check()` reads that key for `GWRONGMEM_L` only:
+overlap must equal `WRONGMEM_OVERLAP_MAX` as before, `draw_n` must be
+≥ `min_rows`, `mass_ratio_draw_over_truth` must be a number inside the
+band (a missing or non-numeric ratio fails, never passes); A and B keep
+the count-match assertion unchanged; a spec without the key keeps the
+old behaviour. Test
+`test_the_L_sham_is_checked_by_the_frozen_local_floor_rule_not_by_count`
+(passes at 0.95 and at a capped ratio of 1.0000000000000002; fails at
+0.85, at 1,000 rows, at 1.02 and on a missing ratio; A with the same
+sidecar still fails on count) and the fixture's sham sidecars now carry
+a mass ratio; 157 pass. Nothing under `main.py`, `scene/`,
+`gaussian_renderer/`, `elgs/`; the manifest, the sidecars and the
+profiles are unchanged and are re-hashed before the fifth reduction at
+this commit.
