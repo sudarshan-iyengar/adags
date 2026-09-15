@@ -1865,3 +1865,58 @@ proposed.
 **Order of reading, unchanged:** when the two continuations finish,
 `stage2_collect.py` (file-based completeness, Slurm state recorded), the
 reducer with its output hashed, then every montage, then the table.
+
+### 13.26 First reduction attempt refused every wave-2 profile (per-scene event name not carried by the reducer); one-line reducer fix with a regression test; reduction re-run at this commit
+
+Declared before any window value was read. Every scoring job was
+terminal (`gscore` 57828687 / 57828689 and the eight `uscore` jobs
+COMPLETED); the collector built `stage2/manifest_stage2.json` with
+**104 cells, 104 complete** (36 flame_steak, 32 sear_steak, 36
+cut_roasted_beef of which 20 are the wave-1 cells; the calibration GMIS
+and GONES entries redirected to `wave1_cells/<tag>/`, whose
+`precondition.json` is the own-frame re-extraction of §13.22, the
+original wave-1 run dir kept in `run_dir_wave1_original`); manifest
+sha256 `683d7200…`, the 208 reducer inputs (every cell's profile and
+precondition) hashed into `stage2/reducer_inputs.sha256`
+(`04a53055…`). The reducer at F then exited with rc 1 on the FIRST
+cell it loaded: `event 'F_blade_over_beef_reveal' not found; available:
+['BOTTLE_absence_gap', 'BOTTLE_control', 'BOTTLE_pre',
+'BOTTLE_return_early', 'BOTTLE_return_late', 'roi:core', …]`. No
+window value was computed or printed (stdout went to a file that holds
+only the traceback).
+
+**Cause, read from the code:** `scene_spec()` specialises the spec to
+one scene by copying the anchors, `MECHANISM_FBOX` and
+`MECHANISM_FBOX_FRAME` from the scene block and nothing else; the
+block's `event_name` (`BOTTLE_absence_gap` in all three scenes, per
+`EVENT_NAME_RULE`) was never carried, so the frozen SPEC default (the
+wave-1 real-data event `F_blade_over_beef_reveal`) was looked up in
+every wave-2 profile. The v2 tests had masked it: their helper
+`_shipped_v2_spec()` merges `event_name` at the TOP level and its own
+docstring records the gap as "reported as a freeze-list gap". The
+profiles themselves are correct (every one carries the five `BOTTLE_*`
+events and the three ROIs; U's `--val` profile and the gated
+evaluator profiles have identical event sets).
+
+**Fix (this commit):** `scene_spec()` now carries the scene block's
+`event_name` into the specialised spec and reports a non-string or
+empty value as an admission problem instead of falling through to the
+default; regression test
+`test_the_scene_block_event_name_is_carried_into_the_scene_spec`
+(the shipped instance resolves `BOTTLE_absence_gap` for all three
+scenes without any top-level merge; an empty name is refused). 155
+reducer tests pass. The spec JSON is untouched (sha256 `18aae16a…` as
+in §13.22). Diff of this commit against F on reducer-relevant paths:
+`scripts/realdata_gate_analysis.py` (+16 lines in `scene_spec`) and
+its test file; nothing under `main.py`, `scene/`, `gaussian_renderer/`,
+`elgs/`, `configs/`. **The reduction runs at this commit** (stated here
+as §13.23 required); the Leonardo checkout may leave F because every
+cell, repair and continuation job is terminal and no resubmission is
+pending. The montage helper (QC only) gains two path fixes for the
+13.24 U rows and the redirected wave-1 sham rows; the first montage set
+rendered at F is discarded unviewed (its rows for those cells were
+empty frames).
+
+Order of reading after the fix: reducer → output hashed → montages
+rendered → montages viewed → table read. Ids and hashes in the ledger
+and the verdict page.

@@ -1866,6 +1866,22 @@ def scene_spec(spec, scene_name):
         )
     else:
         override["MECHANISM_FBOX_FRAME"] = int(frame)
+    # The scene block also names the bounding-box event its five window
+    # endpoints read (EVENT_NAME_RULE: <prefix>_absence_gap per scene). Until
+    # 2026-09-15 this key was not carried into the specialised spec, so the
+    # frozen SPEC default (the wave-1 real-data event name) was looked up in
+    # every wave-2 profile and refused; the tests had masked it by merging
+    # the name at the top level. A non-string or empty value is a problem,
+    # never a silent fall-through to the default.
+    if "event_name" in block:
+        event_name = block.get("event_name")
+        if not isinstance(event_name, str) or not event_name:
+            problems.append(
+                "scene %s: event_name is %r, not a non-empty string"
+                % (scene_name, event_name)
+            )
+        else:
+            override["event_name"] = event_name
     if problems:
         return None, problems
     merged = resolve_spec(deep_merge(S, override))

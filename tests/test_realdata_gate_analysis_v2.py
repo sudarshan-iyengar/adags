@@ -989,3 +989,19 @@ def test_v2_does_not_disturb_the_v1_paired_verdict_machinery(tmp_path):
     assert "itt" in report["analysis"] and "mechanism_exercised" in report["analysis"]
     assert math.isfinite(
         report["analysis"]["itt"]["contrasts"]["G-U"]["P1"]["median"])
+
+
+def test_the_scene_block_event_name_is_carried_into_the_scene_spec():
+    """2026-09-15 (spec 13.26): the shipped instance names BOTTLE_absence_gap
+    in every scene block and nowhere at the top level; scene_spec must carry
+    it, or every wave-2 profile is refused for lacking the wave-1 default."""
+    spec, _ = rga.load_spec(str(SPEC_V2))
+    # load_spec merges the file onto the frozen SPEC, whose default is the wave-1 name
+    assert spec["event_name"] == "F_blade_over_beef_reveal"
+    for scene in ("cut_roasted_beef", "flame_steak", "sear_steak"):
+        sub, problems = rga.scene_spec(spec, scene)
+        assert problems == [] and sub is not None, (scene, problems)
+        assert sub["event_name"] == "BOTTLE_absence_gap"
+    bad = rga.deep_merge(spec, {"scenes": {"flame_steak": {"event_name": ""}}})
+    sub, problems = rga.scene_spec(bad, "flame_steak")
+    assert sub is None and any("event_name" in p for p in problems)
