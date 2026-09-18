@@ -184,3 +184,58 @@ phases. Neither touches the optimisation; `--checkpoint_iterations` defaults to
 
 *(appended when the runs return; nothing above this line is retracted by what
 follows)*
+
+## 8. Scheduling: Leonardo structurally disfavours single-GPU jobs (2026-09-19)
+
+Recorded because it cost a cancel/resubmit cycle and will recur on every
+substrate lane.
+
+The three repetitions were submitted on `boost_qos_lprod`, the QOS the existing
+`scripts/submit_exploratory_lane.sh` header uses. They sat `PENDING` with reason
+`(Priority)` and never started. The request was not the problem: `gres/gpu:1`,
+8 CPU, 120 G and 1 node are all satisfiable on a 32-CPU / 514 GB / 4-GPU boost
+node, and `scontrol` confirmed `Dependency=(null)`.
+
+**The queue was the problem, and the cause is the priority weighting:**
+
+```
+PriorityWeightJobSize   = 10000000      PriorityFavorSmall = no
+PriorityWeightQOS       = 300000
+PriorityWeightFairShare = 25000
+PriorityWeightAge       = 20000
+```
+
+`JobSize` outweighs everything else by 30x and **favours large jobs**, so a
+one-node GPU cell gets essentially nothing from the dominant term. Measured
+state at 00:23 on 2026-09-19: zero `idle` nodes, 2,677 of 3,254 `alloc`,
+**10,295 pending jobs in `boost_usr_prod`, with 9,424 ahead of ours**. Our jobs
+were at rank ~9,425 with priority 133,220; the top of the queue was 274,300.
+
+**QOS options actually available to a 1-GPU job, measured:**
+
+| QOS | Priority | MaxWall | MinTRES | usable here |
+|---|---|---|---|---|
+| `normal` | 40 | partition 24 h | — | yes |
+| `boost_qos_lprod` | 40 | 4 d | — | yes |
+| `boost_qos_bprod` | 60 | 1 d | **node=65, gres/gpu=260** | **NO** |
+| `boost_qos_dbg` | 80 | **00:30:00** | — | smoke only (max 2 jobs) |
+
+**`boost_qos_bprod` is a big-production lane and refuses a small job outright**
+with `QOSMinCpuNotSatisfied`. An attempt to move the reps there failed on all
+three. And `normal` and `lprod` are *both* priority 40 — **there is no QOS
+upgrade available to a single-GPU job on this cluster.**
+
+The QOS factor itself is real and large, which the debug queue demonstrates: the
+same sbatch submitted to `boost_qos_dbg` scored priority **253,262** against the
+reps' **133,199** (+120,063), moving from rank ~9,448 to ~2,453, and it started
+**within two minutes**. But dbg caps at 30 minutes, so it can only ever host a
+smoke test.
+
+**CARRY AS OPERATIONS:** on Leonardo a single-GPU cell has exactly two levers —
+**walltime** (shorter jobs backfill into gaps; longer ones do not) and **age**.
+Request the shortest walltime the run genuinely needs, which means *measuring*
+the iteration rate on `boost_qos_dbg` before committing the real cells, rather
+than padding a guess. A generous walltime is not free insurance here: it is
+itself the thing that keeps the job from being scheduled. Note the opposing
+constraint that makes this a real trade rather than a preference — Multi4D
+resume is unusable (§3.6), so a walltime kill loses the entire run.
