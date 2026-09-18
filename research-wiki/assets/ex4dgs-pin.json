@@ -1,0 +1,79 @@
+{
+  "_note": "Phase-0 pin record for the SECOND candidate substrate, Ex4DGS. This is a clone-and-pin record only: the repository was cloned and its provenance, licence and declared dependencies read from the checkout on Leonardo. NO environment was built, NO data staged and NO job submitted, and NO static audit of its code has been done yet — those belong to its own phase, which follows the Multi4D reproduction. Written 2026-09-18. Template: stg-pin.json.",
+  "written_utc": "2026-09-18T21:45Z",
+  "phase_status": "cloned and pinned; audit, environment, staging and runs all PENDING",
+  "leonardo_checkout": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/repo/ex4dgs",
+  "repository": {
+    "name": "juno181/Ex4DGS",
+    "url": "https://github.com/juno181/Ex4DGS",
+    "github_description": "Official code of \"Fully Explicit Dynamic Gaussian Splatting (NeurIPS 2024)\"",
+    "default_branch": "main",
+    "pinned_commit": "7fac64997164fde64732c80261e56adf66ca14df",
+    "commit_date": "2025-03-14 15:20:05 +0900",
+    "commit_author": "Juno",
+    "commit_subject": "fix resolution and adjust some colmap arguments",
+    "commit_is_repository_head": true,
+    "pin_provenance": "HEAD of main at clone time (2026-09-18). The repository has not been pushed to since 2025-03-14, so HEAD is stable rather than a moving target; this is nonetheless an agent-chosen pin, not a user-chosen one.",
+    "clone_command": "git clone --recursive https://github.com/juno181/Ex4DGS.git",
+    "submodules": "NONE. --recursive was passed and there is no .gitmodules; submodules/diff_gaussian_rasterization_df and submodules/simple-knn are vendored source trees in-tree.",
+    "checkout_state_at_pin": "git status --porcelain returns 0 lines",
+    "github_api_license_field": {
+      "spdx_id": "NOASSERTION",
+      "name": "Other",
+      "source": "github_api"
+    },
+    "pushed_at": {
+      "value": "2025-03-14T06:20:11Z",
+      "source": "github_api"
+    },
+    "created_at": {
+      "value": "2024-10-10T01:17:13Z",
+      "source": "github_api"
+    },
+    "stargazers_count": {
+      "value": 166,
+      "source": "github_api"
+    }
+  },
+  "paper": {
+    "title": "Fully Explicit Dynamic Gaussian Splatting",
+    "venue": "NeurIPS 2024",
+    "relevance_to_adags": "Per-primitive onset/offset opacity is the K=1 case of multi-interval presence, and its static Gaussians carry NO temporal opacity at all. It is therefore the sharpest available foil for the return claim: a single interval cannot resume after an absence."
+  },
+  "licence": {
+    "LICENSE.txt_first_line": "Attribution-NonCommercial 4.0 International",
+    "reading": "CC BY-NC 4.0 — non-commercial only, and a content licence applied to code. GitHub reports NOASSERTION because CC BY-NC is not in its code-licence list. Not copyleft over derived code the way GPL-3.0 is (contrast multi4d-pin.json), but the NonCommercial term is a distribution constraint that must be settled before release. Recorded so the decision is explicit rather than implicit."
+  },
+  "declared_dependencies_verbatim": {
+    "_source": "requirements.txt at the pinned commit",
+    "requirements_txt": [
+      "joblib",
+      "tqdm",
+      "plyfile",
+      "natsort",
+      "opencv-python",
+      "kornia",
+      "scipy",
+      "scikit-image",
+      "submodules/diff_gaussian_rasterization_df",
+      "submodules/simple-knn"
+    ],
+    "note": "torch/torchvision are not pinned in requirements.txt; environment.yml exists and has not yet been read. No mmcv, unlike Multi4D."
+  },
+  "repository_layout": [
+    "train.py, render.py, convert.py",
+    "arguments/, configs/{N3V,techni}/ (configs/N3V holds a single n3v_base.json)",
+    "scene/, gaussian_renderer/, utils/, dataset_utils/, lpipsPyTorch/, scripts/",
+    "submodules/{diff_gaussian_rasterization_df,simple-knn}"
+  ],
+  "not_yet_established": [
+    "the published cut_roasted_beef number and where it is stated",
+    "the acceptance band for its reproduction (to be frozen BEFORE its first run, as Multi4D's was)",
+    "the data layout it expects and whether it needs a COLMAP step",
+    "its train/test split convention and whether cam00 is the held-out camera",
+    "how it computes PSNR/SSIM/LPIPS and in which conventions",
+    "whether it has any wandb/tensorboard logging",
+    "its GPU and host memory profile",
+    "the full-resolution frame budget (the Phase-0 plan allows about 30 GB for it)"
+  ]
+}
