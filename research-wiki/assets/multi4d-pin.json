@@ -1,0 +1,137 @@
+{
+  "_note": "Pin record for the candidate substrate Multi4D (ECCV 2026). Written 2026-09-18 during Phase 0/1 of the substrate-reproduction block. Every value was read from the pinned checkout on Leonardo at $W/repo/multi4d, not from a summarizing fetch layer, except the fields explicitly marked source=github_api. Follows the template of stg-pin.json.",
+  "written_utc": "2026-09-18T21:30Z",
+  "leonardo_checkout": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/repo/multi4d",
+  "repository": {
+    "name": "BatFaceWayne/Multi4D",
+    "url": "https://github.com/BatFaceWayne/Multi4D",
+    "default_branch": "main",
+    "pinned_commit": "c483e82cd8daa1b4fdc460ed45882fc2fe7a22b0",
+    "commit_date": "2026-08-03 10:38:54 +0200",
+    "commit_author": "ray",
+    "commit_subject": "Add news section",
+    "clone_command": "git clone https://github.com/BatFaceWayne/Multi4D.git",
+    "submodules": "NONE. There is no .gitmodules; submodules/diff-gaussian-rasterization, submodules/simple-knn and diff_gaussian_rasterization_hybrid/ are all vendored source trees in-tree. A --recursive clone is neither needed nor meaningful.",
+    "checkout_state_at_pin": "git status --porcelain returns 0 lines after the extension builds; the .gitignore covers build/ and *.egg-info/. Tracked files are pristine.",
+    "github_api_license_field": {
+      "spdx_id": "GPL-3.0",
+      "name": "GNU General Public License v3.0",
+      "key": "gpl-3.0",
+      "source": "github_api"
+    },
+    "pushed_at": {
+      "value": "2026-08-03T08:42:47Z",
+      "source": "github_api"
+    },
+    "created_at": {
+      "value": "2026-06-20T18:33:48Z",
+      "source": "github_api"
+    }
+  },
+  "paper": {
+    "title": "Multi4D: High-Fidelity Dynamic Gaussian Splatting via Multi-Level Competitive Allocation",
+    "venue": "ECCV 2026",
+    "authors": "Rui Wang, Quentin Lohmeyer, Siyu Tang, Mirko Meboldt (ETH Zurich)",
+    "arxiv": "2606.22197",
+    "project_page": "https://batfacewayne.github.io/Multi4D.io/"
+  },
+  "licence": {
+    "top_level_LICENSE": "GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007",
+    "README_License_section_verbatim": "This project is released under the [GNU GPL-3.0](LICENSE) license.",
+    "practical_reading": "GPL-3.0 is COPYLEFT, unlike the MIT/Inria-limitation mix ADAGS carries elsewhere (see stg-pin.json). Any ADAGS work distributed as a derivative of this code inherits GPL-3.0. This is a licensing constraint on publication/release, not on internal research use, and it must be settled before any Multi4D-derived code is released. Recorded here so the decision is not made implicitly.",
+    "acknowledged_upstreams": [
+      "DeGauss (https://github.com/BatFaceWayne/DeGauss)",
+      "TRASE (https://github.com/yunjinli/TRASE)",
+      "Hybrid 3D-4D Gaussian Splatting (https://github.com/ohsngjun/3D-4DGS)"
+    ]
+  },
+  "readme_n3v_verbatim": {
+    "_source": "README.md at the pinned commit.",
+    "setup_env": [
+      "conda create -n multi4d python=3.11 && conda activate multi4d",
+      "# a plain venv works too:  python3.11 -m venv multi4d && . multi4d/bin/activate",
+      "pip install \"setuptools<66\" wheel",
+      "pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121",
+      "pip install --no-build-isolation -r requirements.txt",
+      "pip install --no-build-isolation submodules/diff-gaussian-rasterization",
+      "pip install --no-build-isolation submodules/simple-knn"
+    ],
+    "authors_verified_stack_verbatim": "Verified from scratch on Python 3.11.6, torch 2.5.1+cu121, numpy 1.26.4, mmcv 1.6.0, CUDA 12.1.",
+    "jit_note_verbatim": "the hybrid rasterizer is JIT-compiled on first import, so the first run takes a few extra minutes on a GPU.",
+    "neu3d_data_layout_verbatim": "<scene>/\n\u251c\u2500\u2500 poses_bounds.npy      LLFF poses, one row per camera\n\u251c\u2500\u2500 fused.ply             dense COLMAP cloud from frame 0 -- inits the static branch\n\u251c\u2500\u2500 cam00.mp4 \u2026 camNN.mp4 one video per camera\n\u2514\u2500\u2500 cam00/images/         frames, auto-extracted from the videos on first run",
+    "neu3d_data_provenance_verbatim": "Prepared the [DeGauss](https://github.com/BatFaceWayne/DeGauss) way -- follow their Neu3D instructions, which produce the layout below. Train with `-s <scene>`.",
+    "train_command_cut_roasted_beef_verbatim": "python train.py -s data/dynerf/cut_roasted_beef --port 6019 --expname cut_roasted_beef --configs arguments/dynerf.py --model_path output/cut_roasted_beef",
+    "config_table_verbatim": "arguments/dynerf.py | Neu3D cut_roasted_beef, flame_steak, sear_steak, cook_spinach; all Technicolor scenes",
+    "outputs_verbatim": "Outputs: the best-PSNR checkpoint is kept in `<model_path>/point_cloud/best/` (overwritten as it improves; `best/per_frame_metrics.json` records which iteration it came from), alongside the final `iteration_<N>/`. Renders and `debug_metrics.json` go to `--saving_folder`, which defaults to `./results/`.",
+    "README_DOES_NOT_STATE": [
+      "any GPU-memory requirement for Neu3D (the only memory figure in the README is the 2.4 GB SAM weights for the optional segmentation stage)",
+      "the number of training repetitions behind the reported table",
+      "which of the two SSIM conventions the code computes is the one the paper tabulates",
+      "that resume via --start_checkpoint restores only the foreground branch"
+    ]
+  },
+  "audited_run_facts": {
+    "_source": "static read of the pinned checkout, 2026-09-18; every item carries a file:line in research-wiki/operations/multi4d-n3v-leonardo-reproduction-2026-09-18.md",
+    "schedule": "coarse 2000 (arguments/dynerf.py) + fine 20000 (arguments/__init__.py default, not overridden) = 22000 optimizer steps, batch_size 2",
+    "held_out_camera": "positional index 0 of sorted(glob('cam*.mp4')), i.e. cam00; 300 test frames, 19x300 training views",
+    "camera_count_guard": "scene/neural_3D_dataset_NDC.py asserts len(videos) == poses_bounds.shape[0]; our cut_roasted_beef ships 20 videos (cam04 absent from the N3V release) and a (20,17) poses_bounds.npy, so the positional zip is correct and the assert passes",
+    "frame_extraction": "cv2.VideoCapture, NOT ffmpeg; writes <scene>/camNN/images/%04d.png at 1352x1014 (native 2704x2028 halved, LANCZOS); exactly 300 frames per camera, guarded by a fail-closed count check",
+    "evaluation_cadence": "every 500 FINE iterations only (coarse never evaluates) = 40 evaluations over all 300 test frames",
+    "best_checkpoint_gate": "best/ is only written when psnr beats the running best AND iteration > 16000, so best/ is the peak over the last 8 evaluations, not over all 40",
+    "metrics_written": "results/<expname>/debug_metrics.json is JSONL, one line per evaluation, APPEND mode; fields iteration, psnr, ssim1, ssim2, lpips_alex, lpips_vgg",
+    "psnr_convention": "per-image PSNR over all three channels pooled, then arithmetic mean over the 300 test frames; both render and GT clamped to [0,1] first",
+    "ssim_conventions": "TWO are computed and both reported: ssim1 = GraphDECO 11x11 gaussian-window SSIM (sigma 1.5), ssim2 = skimage.metrics.structural_similarity(win_size=7, gaussian_weights=False, data_range=1.0)",
+    "lpips_convention": "lpips.LPIPS(net) called on [0,1] inputs with normalize NOT passed; the lpips default normalize=False assumes [-1,1]. The reported number is therefore not standard LPIPS. Flagged, not fixed: it may be exactly what the paper reports.",
+    "seed": "setup_seed(6666) hardcoded in train.py; there is no --seed flag, so repetitions vary only by CUDA kernel nondeterminism, not by seed",
+    "background_init_quirk": "scene/dataset_readers.py divides the ply colours by 255 twice, with an in-source comment saying the released numbers depend on it. Deliberate; not to be corrected.",
+    "foreground_init": "10,000 uniform random points inside the camera-bounded extent, not from the ply",
+    "resume": "--start_checkpoint restores the FOREGROUND branch only; the static/background and transient branches are silently re-initialised. The _gs2_ background checkpoint is written and never read back. Treat resume as unusable; size each run to complete 22000 iterations in one allocation.",
+    "logging": "NO wandb and NO tensorboard anywhere in the repo (repo-wide grep returns zero hits). ADAGS logs to wandb through a sidecar that replays debug_metrics.json, leaving the substrate unmodified.",
+    "port_flag": "--ip and --port are parsed and never consumed; there is no network GUI. The README --port 6019 is inert and cannot clash on a shared node.",
+    "host_memory": "train.py materialises all 19x300 training Cameras into a list, each retaining its decoded uint8 image: about 21.8 GiB of host RAM, plus about 1.15 GiB rebuilt per evaluation. Training images are NOT held on the GPU (batch_size 2 => about 33 MB of GT per step)."
+  },
+  "leonardo_environment_as_built": {
+    "venv": "$W/envs/multi4d (deliberately separate from envs/adags, which carries numpy 2.3.5 and setuptools 82; Multi4D needs numpy<2 for the mmcv 1.6.0 ABI and setuptools<66 to build mmcv at all)",
+    "env_script": "$W/agent-control/substrates/multi4d_env.sh",
+    "modules": "profile/base, gcc/12.2.0, python/3.11.7, cuda/12.2",
+    "python": "3.11.7",
+    "torch": "2.5.1+cu121",
+    "torchvision": "0.20.1+cu121",
+    "numpy": "1.26.4",
+    "mmcv": "1.6.0",
+    "setuptools": "65.5.0",
+    "opencv-python": "4.11.0.86",
+    "scikit-image": "0.26.0",
+    "lpips": "0.1.4",
+    "diff_gaussian_rasterization": "1.0.0+seperate4dgs (built non-editable from submodules/)",
+    "simple_knn": "built non-editable from submodules/",
+    "deviation_from_authors_stack": "python 3.11.7 vs the authors' 3.11.6, and CUDA 12.2 vs their 12.1 (torch itself is the cu121 build in both cases). Everything else matches exactly.",
+    "libstdcxx_trap": "The compiled extensions need GLIBCXX_3.4.29 but the spack module chain puts gcc-runtime-8.5.0 first on the loader path, so both import with an ImportError until LD_PRELOAD points at the gcc-12.2.0 libstdc++. multi4d_env.sh does this, mirroring exp_index/leonardo_env.sh.",
+    "torch_cuda_arch_list": "8.0 exported explicitly. The hybrid rasterizer passes no -gencode flags, so torch derives them from the visible device; with no GPU visible the derivation raises IndexError, and a build warmed on a non-A100 would omit sm_80 SASS. Pinning the variable makes the JIT build deterministic across nodes.",
+    "torch_home": "$W/cache/torch, shared with envs/adags, which already holds alexnet-owt-7be5be79.pth and vgg16-397923af.pth. Compute nodes have no network and LPIPS first fires at fine iteration 500, so these must be cached or the run dies about 2500 steps in."
+  },
+  "data_staging": {
+    "path": "$W/data_staging/multi4d/cut_roasted_beef",
+    "contents": "symlinks to the 20 cam*.mp4 and to poses_bounds.npy in the read-only N3V tree, plus a real fused.ply; frame extraction writes camNN/images/ HERE, never into the raw dataset",
+    "why_symlinks_only": "the whole source dir is never linked: transforms_train.json sitting next to poses_bounds.npy flips some loaders onto a Blender branch, the trap the SA4D reproduction hit",
+    "source_scene": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/cut_roasted_beef",
+    "poses_bounds_shape": "(20, 17) float64",
+    "fused_ply": {
+      "provenance": "DeGauss Neu3D release, unzipped locally by the user at D:/adags/dynerf_fused/cut_roasted_beef/fused.ply and uploaded unchanged",
+      "sha256": "df3572b2b6e77cf79ceb3b4c5d5e4f63b01dc8a4f8d59bb70213efc56023f852",
+      "vertices": 386905,
+      "format": "binary_little_endian 1.0; x,y,z,nx,ny,nz float; red,green,blue uchar",
+      "note": "the scene also ships a points3d.ply with a byte-compatible header and 366,366 vertices. It is NOT used: the paper initialises the static branch from the DeGauss dense cloud, and scene/dataset_readers.py reads the filename fused.ply with no fallback."
+    }
+  },
+  "acceptance_rule_frozen_before_running": {
+    "declared_utc": "2026-09-18T21:30Z",
+    "band": "peak PSNR 33.4 to 34.0, centre about 33.85",
+    "band_source": "the authors' own validate_repro.sh, dropped from the released tree",
+    "paper_value": 34.02,
+    "rule": "PASS if at least 2 of 3 repetitions land inside the band",
+    "reported_quantity": "peak PSNR over the 500-iteration evaluations on cam00. This is selection on the test camera and is reported as such; the final-iteration value is reported alongside it, as is the best/ value (which the code gates to iteration > 16000).",
+    "also_reported": "SSIM in both conventions, LPIPS-alex as the repo computes it (no normalize=True), Gaussian count per subset, model size, wall time",
+    "known_limit": "the three repetitions share the hardcoded seed 6666, so their spread measures CUDA kernel nondeterminism only and is a LOWER bound on run-to-run variance. It is not a seed spread and must not be cited as one."
+  }
+}
