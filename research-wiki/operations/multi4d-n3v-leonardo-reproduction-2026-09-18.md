@@ -1,7 +1,8 @@
 # Multi4D on N3V `cut_roasted_beef` — Leonardo reproduction (2026-09-18)
 
-Status: **setup complete and verified; three repetitions queued.** Results are
-appended below as they land, never rewritten.
+Status: **COMPLETE. Reproduction PASSES the rule frozen before it ran —
+3 of 3 repetitions inside the 33.4-34.0 band.** Results in section 9; nothing
+above that section was rewritten after the fact.
 
 Substrate pin and every environment/licence fact:
 [`research-wiki/assets/multi4d-pin.json`](../assets/multi4d-pin.json).
@@ -182,8 +183,8 @@ phases. Neither touches the optimisation; `--checkpoint_iterations` defaults to
 
 ## 7. Results
 
-*(appended when the runs return; nothing above this line is retracted by what
-follows)*
+*(see section 9 -- appended after the runs returned; nothing above this line is
+retracted by what follows)*
 
 ## 8. Scheduling: Leonardo structurally disfavours single-GPU jobs (2026-09-19)
 
@@ -239,3 +240,97 @@ than padding a guess. A generous walltime is not free insurance here: it is
 itself the thing that keeps the job from being scheduled. Note the opposing
 constraint that makes this a real trade rather than a preference — Multi4D
 resume is unusable (§3.6), so a walltime kill loses the entire run.
+
+## 9. Results — PASS, 3 of 3 (2026-09-19)
+
+Three repetitions, published schedule (coarse 2000 + fine 20000), code
+unmodified, all `COMPLETED` with exit 0 and the full 40/40 evaluations.
+Provenance is identical across all three: commit `c483e82`, `substrate_dirty=0`,
+`train.py` sha `569816dc8cf9`, `arguments/dynerf.py` sha `c7b1093b4f60`,
+`fused.ply` sha `df3572b2b6e7`.
+
+| rep | jid | node | peak PSNR | @iter | peak>16k | final@20000 | SSIM gw | SSIM sk | LPIPS-a | LPIPS-v | FG / BG / TR | wall |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 58156889 | lrdn1886 | **33.4226** | 18000 | 33.4226 | 32.7848 | 0.9367 | 0.9520 | 0.0429 | 0.1427 | 22,895 / 153,379 / 251,867 | 2:42:50 |
+| 2 | 58156890 | lrdn2599 | **33.7672** | 19000 | 33.7672 | 33.5403 | 0.9367 | 0.9524 | 0.0408 | 0.1406 | 25,166 / 150,034 / 198,256 | 2:45:28 |
+| 3 | 58156891 | lrdn3127 | **33.5383** | 13500 | 33.5152 | 32.8575 | 0.9366 | 0.9520 | 0.0426 | 0.1416 | 19,933 / 153,447 / 223,045 | 2:34:36 |
+
+**Verdict under the frozen rule: PASS.** All three peaks lie in 33.4-34.0;
+the rule required 2 of 3. Mean peak **33.576**, spread **0.3445 dB**.
+Paper value 34.02; band centre 33.85.
+
+### What the verdict does not say
+
+* **Every repetition is below the paper and below the band centre.** The mean
+  sits 0.44 dB under 34.02 and 0.27 dB under the band's own centre. The rule is
+  met, and the reproduction is nonetheless consistently on the low side of it.
+* **Rep 1 passes by 0.023 dB** (33.4226 against a floor of 33.4). One rep is
+  effectively on the boundary; a slightly unluckier draw would have made the
+  verdict 2 of 3 rather than 3 of 3. It would still have passed, but the margin
+  is not comfortable and should not be reported as though it were.
+* **`peak` and `best/` are different quantities for rep 3.** Its true peak,
+  33.5383, occurred at iteration 13500, *below* the `iteration > 16000` gate the
+  code applies to `best/`. Its `best/` artefacts therefore come from 16500 at
+  33.5152. The gap is only 0.023 dB here, but the two quantities are not
+  interchangeable in general, and anything reading `best/per_frame_metrics.json`
+  as "the peak" is reading the wrong number. Carrying `peak_after_16000`
+  separately in the collector is what made this visible.
+
+### The result that matters most to the project
+
+**The fixed-seed spread is 0.3445 dB.** These three repetitions share the
+hardcoded `setup_seed(6666)`; they differ only by CUDA kernel nondeterminism.
+So 0.3445 dB is a **lower bound** on run-to-run variance on this substrate, not
+a seed spread.
+
+That number is large, and it is the operative constraint on every comparison
+built on Multi4D: it is the same order as this project's own historical N3V
+noise floor (0.341 dB on the event union at the 50-frame protocol,
+2026-08-23), and it exceeds the 0.20 dB Gate-B event-PSNR target inherited from
+the approved objective. **Any future Multi4D-based claim must clear a
+0.35 dB floor at minimum, established here before any intervention was
+attempted** -- and must establish its own floor with seeds actually varied,
+which requires a code change, since no `--seed` flag exists.
+
+### Secondary observations
+
+* **All three lose PSNR between their peak and iteration 20000** (-0.23, -0.64,
+  -0.68 dB). The published schedule trains past its own optimum on this scene.
+  This reproduces, on a different substrate, the 2026-08-20 finding that both
+  ADAGS capacity regimes peak near 12k iterations and then lose PSNR.
+* **The background branch is pruned to under half its initialisation**:
+  386,905 points in `fused.ply` against 150-153k surviving static Gaussians,
+  while the transient branch grows to 198-252k. Totals 373-428k.
+* **Runtime was 2:34-2:45, well under the 8 h limit** and well under the
+  4.5-5.6 h the smoke run extrapolated. The smoke over-estimated because it
+  measured the early fine-stage rate, when eval cost per call is at its highest
+  relative to a small model.
+
+### Artefacts
+
+Per run under `$W/runs/multi4d/20260918_232132_cut_roasted_beef_rep<N>/`:
+`provenance.txt`, `results/<expname>/debug_metrics.json` (40 JSONL records),
+`results/<expname>/best/per_frame_metrics.json` (300 frames),
+`best/{render,gt,static_persistent,transient}/` (300 PNGs each, all four
+subsets complete on all three runs), and point clouds (612-718 MB per run,
+204-239 MB for `best/`). Collector output:
+`$W/agent-control/substrates/multi4d_report.{json,md}`.
+
+W&B, `models-ku-leuven/adags-multi4d`, group `multi4d-crb-repro`, one run per
+repetition with all 40 evaluations, the 300-frame per-frame table, and five
+sampled frames from each of the four rendered subsets:
+[rep1](https://wandb.ai/models-ku-leuven/adags-multi4d/runs/a72b8062e3c409fe) ·
+[rep2](https://wandb.ai/models-ku-leuven/adags-multi4d/runs/e5d59297d3672fc2) ·
+[rep3](https://wandb.ai/models-ku-leuven/adags-multi4d/runs/fd7a8fbced7dd000).
+
+### Still unresolved, and not resolvable from this run
+
+* **Which SSIM convention the paper tabulates.** Both are carried above
+  (gaussian-window 0.9366-0.9367, skimage 0.9520-0.9524). They differ by
+  ~0.015, which is far larger than the spread between repetitions.
+* **Whether the paper's LPIPS used the same non-normalized convention the code
+  does.** The values above are as the repo computes them, on `[0,1]` inputs
+  without `normalize=True`. They are not standard LPIPS and are not comparable
+  to externally reported LPIPS without recomputation.
+
+Both are repo-external questions. Neither affects the PSNR-based verdict.
