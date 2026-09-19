@@ -334,3 +334,43 @@ sampled frames from each of the four rendered subsets:
   to externally reported LPIPS without recomputation.
 
 Both are repo-external questions. Neither affects the PSNR-based verdict.
+
+## 11. Correction (append-only, 2026-09-19): the effective seed is 0, not 6666
+
+Sections 2 and 9 above state that `train.py` "hardcodes `setup_seed(6666)`" and
+that the three repetitions "share the hardcoded seed 6666". **The seed number is
+wrong.** The prose above is left standing per the append-only rule; this section
+corrects it.
+
+`train.py:1085` does call `setup_seed(6666)`, which sets
+`torch.manual_seed`, `torch.cuda.manual_seed_all`, `np.random.seed`,
+`random.seed` and `torch.backends.cudnn.deterministic = True`
+(`train.py:1072-1078`). But **`train.py:1113` then calls
+`safe_state(args.quiet)`, which re-seeds to 0**:
+
+```
+utils/general_utils.py:125-127
+    random.seed(0)
+    np.random.seed(0)
+    torch.manual_seed(0)
+```
+
+Model construction (`train.py:1005-1013`) and `Scene2gs_mixed` (`:1023`) both
+run after that call, so **the effective training seed is 0**. What survives from
+`setup_seed` is only `cudnn.deterministic = True`, which `safe_state` does not
+touch.
+
+**What does not change.** Every substantive claim in §9 stands: there is exactly
+one fixed seed, no `--seed` flag exists, the three repetitions were seeded
+identically, and their 0.3445 dB spread therefore bounds CUDA kernel
+nondeterminism and remains a lower bound on run-to-run variance. The verdict,
+the band and the noise floor are all unaffected.
+
+**What does change.** A future seed sweep must patch **`safe_state`**, not
+`setup_seed`. Patching the visible `setup_seed(6666)` line would be overwritten
+28 lines later and would produce a sweep in which every arm was still seeded 0 —
+a vacuous treatment of exactly the kind this project has now met five times.
+Recorded in [`multi4d-code-map-2026-09-19`](multi4d-code-map-2026-09-19.md) §7.
+
+Found while producing the code map, and verified directly against the checkout
+before this correction was written.
