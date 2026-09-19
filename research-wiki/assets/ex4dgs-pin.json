@@ -1,7 +1,7 @@
 {
-  "_note": "Phase-0 pin record for the SECOND candidate substrate, Ex4DGS. This is a clone-and-pin record only: the repository was cloned and its provenance, licence and declared dependencies read from the checkout on Leonardo. NO environment was built, NO data staged and NO job submitted, and NO static audit of its code has been done yet — those belong to its own phase, which follows the Multi4D reproduction. Written 2026-09-18. Template: stg-pin.json.",
+  "_note": "Pin record for the SECOND candidate substrate, Ex4DGS. Created 2026-09-18 as a clone-and-pin record; EXTENDED 2026-09-19 with the static audit, the released pretrained model, the environment as built, and the E0 gate. Values were read from the pinned checkout and the release on Leonardo, not from a summarizing fetch layer, except fields marked source=github_api.",
   "written_utc": "2026-09-18T21:45Z",
-  "phase_status": "cloned and pinned; audit, environment, staging and runs all PENDING",
+  "phase_status": "environment built and verified; scene staged; data prep running; E0 gate written and not yet run; training not yet submitted",
   "leonardo_checkout": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/repo/ex4dgs",
   "repository": {
     "name": "juno181/Ex4DGS",
@@ -42,7 +42,7 @@
   },
   "licence": {
     "LICENSE.txt_first_line": "Attribution-NonCommercial 4.0 International",
-    "reading": "CC BY-NC 4.0 — non-commercial only, and a content licence applied to code. GitHub reports NOASSERTION because CC BY-NC is not in its code-licence list. Not copyleft over derived code the way GPL-3.0 is (contrast multi4d-pin.json), but the NonCommercial term is a distribution constraint that must be settled before release. Recorded so the decision is explicit rather than implicit."
+    "reading": "CC BY-NC 4.0 \u2014 non-commercial only, and a content licence applied to code. GitHub reports NOASSERTION because CC BY-NC is not in its code-licence list. Not copyleft over derived code the way GPL-3.0 is (contrast multi4d-pin.json), but the NonCommercial term is a distribution constraint that must be settled before release. Recorded so the decision is explicit rather than implicit."
   },
   "declared_dependencies_verbatim": {
     "_source": "requirements.txt at the pinned commit",
@@ -67,13 +67,125 @@
     "submodules/{diff_gaussian_rasterization_df,simple-knn}"
   ],
   "not_yet_established": [
-    "the published cut_roasted_beef number and where it is stated",
-    "the acceptance band for its reproduction (to be frozen BEFORE its first run, as Multi4D's was)",
-    "the data layout it expects and whether it needs a COLMAP step",
-    "its train/test split convention and whether cam00 is the held-out camera",
-    "how it computes PSNR/SSIM/LPIPS and in which conventions",
-    "whether it has any wandb/tensorboard logging",
-    "its GPU and host memory profile",
-    "the full-resolution frame budget (the Phase-0 plan allows about 30 GB for it)"
-  ]
+    "our COLMAP point count vs the 6141 of the authors (the prep job records it)",
+    "whether E0 passes",
+    "the trained reproduction number and its fixed-seed spread",
+    "Technicolor: main-table windows for Train/Birthday, then Appendix C windows, which need colmap_170/colmap_50, a hand-written config, and a fix for the broken preprocess_all_techni.sh"
+  ],
+  "pretrained_release": {
+    "url": "https://github.com/juno181/Ex4DGS/releases/tag/v0.1",
+    "release_name": "Pretrained Models v0.1",
+    "published_at": "2024-10-30T13:42:15Z",
+    "cut_roasted_beef_zip": {
+      "url": "https://github.com/juno181/Ex4DGS/releases/download/v0.1/cut_roasted_beef.zip",
+      "bytes": 109485709,
+      "sha256": "d3ba00c64323e35f3cd3147c26c66b4c09cd3271b7c464704854dc8a3d2f3b01",
+      "contents": [
+        "all_metrics.json",
+        "cameras.json",
+        "cfg_args",
+        "input.ply",
+        "mean_metrics.json",
+        "point_cloud/iteration_40000/point_cloud.ply",
+        "point_cloud/iteration_40000/dynamic_point_cloud.ply"
+      ],
+      "no_checkpoint": "there is no chkpnt*.pth, so scene/__init__.py takes the load_ply branch, which needs the sibling dynamic_point_cloud.ply (present)"
+    },
+    "also_downloaded_for_technicolor_later": {
+      "Train.zip": "073b54b411abea52f34f3acb0258c98e0503d8e7a73df1b08798cb50e2055f4f",
+      "Birthday.zip": "908dbdcbe340a8c1272053d7bbcdf2524bf97b16a80327116262fe57e2e1ec9b"
+    },
+    "authors_own_metrics_verbatim": {
+      "_source": "mean_metrics.json inside cut_roasted_beef.zip -- the scoring of this exact model by its own authors, and therefore the E0 target",
+      "SSIM": 0.9576548337936401,
+      "PSNR": 33.73290252685547,
+      "LPIPS": 0.04044107347726822,
+      "LPIPSVGG": 0.13221921026706696,
+      "times": 0.011503358371555805
+    },
+    "what_the_release_settles": [
+      "the published PSNR 33.73 and LPIPS 0.040 are reproduced exactly by this file, so the published LPIPS is LPIPS-alex and the published SSIM is the Gaussian-window utils/loss_utils.ssim, not either skimage variant",
+      "all_metrics.json carries PER-FRAME values, so E0 can be a per-frame check rather than a mean-only one",
+      "input.ply has 6141 points -- the first-frame COLMAP triangulation by the authors, and the baseline for the point-count diagnostic against ours"
+    ]
+  },
+  "audited_run_facts": {
+    "_source": "static read of the pinned checkout, 2026-09-19; load-bearing items independently re-verified before being acted on",
+    "config_flag": "--configpath (README says --config, which only works via argparse prefix matching)",
+    "schedule": "40,000 iterations, single stage; configs/N3V/n3v_base.json is the ONLY N3V config and all six scenes share it",
+    "position_lr_horizon": "position_lr_max_steps and dynamic_position_lr_max_steps are both 30000, so both LR schedules saturate 10k iterations before the run ends",
+    "held_out_camera": "hardcoded: train = cameras whose path lacks cam00, test = those containing it. eval and llffhold are ignored on this path. 19 train / 1 test.",
+    "required_tree": "<S>/poses_bounds.npy, <S>/colmap_0/sparse/0/{cameras,images,points3D}.bin, <S>/camXX/<int>.png",
+    "poses_bounds_is_inert_at_train_time": "parsed then discarded; load-bearing only in preprocessing, where row i must correspond to the i-th sorted cam*.mp4",
+    "resolution": "frames must be extracted at NATIVE 2704x2028; resolution=2 halves them to 1352x1014 at load (scene/cameras.py loadCamVideo). Pre-halving would desync the COLMAP intrinsics.",
+    "progressive_window": "training starts on start_duration=10 frames and grows +time_interval=10 every progressive_growing_steps=400 iterations, reaching the full 300 frames near iteration 12000",
+    "in_training_evaluation": "NONE. test_iterations defaults to [7000000] and the two lines that would append args.iterations are commented out, so a default run never prints a held-out PSNR. Evaluation is render.py only.",
+    "saving": "plys and chkpnt*.pth at 30000 and 40000",
+    "metrics": "render.py computes PSNR (unclamped), Gaussian-window SSIM, two skimage SSIMs, and LPIPS alex + vgg via the VENDORED lpipsPyTorch (not the lpips pip package). lpipsPyTorch applies a fixed z-score to [0,1] inputs, equivalent to normalize=True in the reference package -- so unlike Multi4D, this LPIPS is standard.",
+    "skimage_pin_reason": "render.py passes multichannel= to skimage structural_similarity. 0.22.x absorbs it into **kwargs and ignores it; 0.23 removed it. Pinned 0.22.0.",
+    "opacity_reset_interval_IS_DEAD_CODE": {
+      "finding": "declared at arguments/__init__.py:115 and set in every config JSON, but read by NO python code; reset_opacity is defined in scene/gaussian_model.py:210 and scene/c_gaussian_model.py:549 and never called anywhere",
+      "verified_by": "repo-wide grep for both symbols, contrasted against densification_interval which has seven train.py call sites",
+      "consequence": "the planned A/B of shipped 50000 vs released 10000 is VACUOUS -- both values produce bit-identical training. The arm was dropped and replaced with 3 repetitions of the single real configuration. It also explains the 50000-vs-10000 discrepancy between the shipped config and the released cfg_args as cosmetic drift in a field nothing reads."
+    },
+    "preprocessing_extracts_nothing_as_shipped": {
+      "finding": "scripts/pre_n3d_colmap.py extractframes guards with all(os.path.join(...) for i in range(...)). os.path.join returns a non-empty string, always truthy, so all(...) is unconditionally True and the function returns having written nothing. The author meant os.path.exists.",
+      "handling": "the substrate is NOT patched. An external script mirroring the upstream body writes the frames, after which the broken guard correctly skips and steps 2-4 build colmap_0 from real data."
+    },
+    "colmap": "steps feature_extractor -> exhaustive_matcher -> point_triangulator -> image_undistorter, frame 0 only, invoked as a bare colmap through os.system, so it must be on PATH. SIFT extraction and matching default to use_gpu=1 with no override, which is upstream issue #8 on headless nodes; our container wrapper sets QT_QPA_PLATFORM=offscreen and was previously verified to produce inliers.",
+    "writes_into_source_path": "scene/dataset_readers.py writes points3D.ply into <source>/colmap_0/sparse/0/ on first open, at RENDER time as well as train time. --source_path must therefore be a writable staging copy, never the read-only N3V tree.",
+    "render_py_reads_cfg_args": "get_combined_args merges the cfg_args of the model over the CLI, and ModelParams is constructed with sentinel=True so all its defaults are None and come from cfg_args unless passed explicitly. The released cfg_args carries the source_path of the authors, so --source_path MUST be passed at render time.",
+    "render_py_overwrites_metrics": "render.py writes mean_metrics.json and all_metrics.json into --model_path, so it must never be pointed at the pristine unzip; E0 renders from a copy and diffs against the original.",
+    "render_py_timing_loop": "after the metrics, render_set runs 20x500 = 10,000 renders of one camera purely to time them. Slow (minutes), not hung; nothing reported depends on it and --save_img does not change it.",
+    "resume": "CONFIRMED UNUSABLE. --start_checkpoint restores the model, but train.py then unconditionally re-runs the progressive-window setup, resetting sampling to start_duration=10 frames while gaussians.duration stays at 300. A resumed run never gets the window back to 300. Each repetition must be one uninterrupted 40k job.",
+    "memory": "images are NOT held in RAM: lazy_loader streams them through 2 joblib workers, so host RAM is roughly 2-4 GiB, dominated by interpreter and torch footprint rather than pixels. Jobs request 64G, not the 120G Multi4D needed.",
+    "network_gui": "train.py unconditionally binds a loopback TCP listener in an unbounded while True with a port-increment fallback. Harmless under Slurm, but it is a spin loop if binding ever fails for a reason other than the port being taken."
+  },
+  "leonardo_environment_as_built": {
+    "venv": "$W/envs/ex4dgs (separate from BOTH envs/adags and envs/multi4d: Ex4DGS wants torch 2.1.2 where Multi4D wants 2.5.1)",
+    "env_script": "$W/agent-control/substrates/ex4dgs_env.sh",
+    "python": "3.11.7",
+    "torch": "2.1.2+cu121",
+    "torchvision": "0.16.2+cu121",
+    "numpy": "1.26.4",
+    "scikit-image": "0.22.0",
+    "kornia": "0.7.4",
+    "setuptools": "65.7.0",
+    "diff_gaussian_rasterization_df": "built non-editable from submodules/",
+    "simple_knn": "built non-editable from submodules/",
+    "constraints_file": "$W/agent-control/substrates/ex4dgs_constraints.txt",
+    "env_defects_found_and_fixed": [
+      "numpy<2 was pinned in one step and silently undone by the next: opencv-python 5.0.0.93 and kornia 0.8.3 both pull numpy>=2, and the extension build then failed. A sequence of pins is not a pin -- a constraints file is now applied to EVERY install, with a hard precondition asserting numpy 1.x, scikit-image<0.23 and torch 2.1.2 before any extension is built.",
+      "pip install --upgrade setuptools broke the build with No module named pkg_resources; setuptools >= 81 no longer ships it and these legacy setup.py files import it. Pinned <66.",
+      "kornia 0.8.3 is incompatible with torch 2.1.2: it calls .any(dim=(-2,-1)) with a tuple dim, which torch 2.1.2 cannot script. Pinned <0.8 (0.7.4). The repo uses kornia for exactly one symbol, create_meshgrid."
+    ],
+    "lpips_precache": {
+      "torch_home": "$W/cache/torch (shared with the other lanes); torch.hub uses $TORCH_HOME/hub/checkpoints -- note the extra hub/ level",
+      "files_required": [
+        "alexnet-owt-7be5be79.pth",
+        "vgg16-397923af.pth",
+        "alex.pth",
+        "vgg.pth"
+      ],
+      "status": "all four already present. The two richzhang LPIPS linear-weight files were hash-verified against fresh downloads and are identical: alex.pth df73285e35b22355a2df87cdb6b70b343713b667eddbda73e1977e0c860835c0, vgg.pth a78928a0af1e5f0fcb1f3b9e8f8c3a2a5a3de244d830ad5c1feddc79b8432868",
+      "why_it_matters": "compute nodes have no network and render.py fetches all four on its LPIPS path; the two small linear-weight files are the ones usually missed"
+    }
+  },
+  "acceptance_rules_frozen_before_running": {
+    "declared_utc": "2026-09-19T09:30Z",
+    "E0_eval_stack_gate": {
+      "target": "the mean_metrics.json shipped with the release, for this exact model",
+      "rule": "PASS = PSNR within +/-0.05 of 33.73290 AND LPIPS(alex) within 0.002 of 0.04044",
+      "added_clause": "per-frame PSNR max absolute deviation <= 0.20 dB. This clause is ours, not from the plan: the release ships all_metrics.json, and a matching mean with disagreeing frames would be two errors cancelling, not a pass.",
+      "consequence_of_failure": "do NOT train. A mismatch here is data, resolution or metric convention, and would be misread later as an optimisation difference."
+    },
+    "training_reproduction": {
+      "paper": 33.73,
+      "context": "no third party has reproduced this by training; community reports 31.9-33.3",
+      "rule": "PASS = E0 passes AND the best variant >= 33.3",
+      "partial": "32.5 to 33.3 = partial, consistent with community, reported with the point-count diagnostic",
+      "investigate": "below 32.5 = investigate before use",
+      "design_change": "the 2 variants x 2 reps of the plan became 3 reps of ONE configuration, because opacity_reset_interval is dead code (see audited_run_facts)"
+    }
+  }
 }
