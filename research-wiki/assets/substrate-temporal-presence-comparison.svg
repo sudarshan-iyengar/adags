@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 700" width="1180" height="700" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="1180" height="700" fill="#ffffff"/>
+
+  <text x="24" y="34" font-size="20" font-weight="700" fill="#111">Where the temporal gate lives, and where the gradient dies</text>
+  <text x="24" y="56" font-size="13" fill="#555">Per-primitive opacity as a function of time. This is the difference that decides which substrate can host a resuming lineage.</text>
+
+  <!-- ============ PANEL A : MULTI4D ============ -->
+  <g>
+    <rect x="24" y="76" width="548" height="500" rx="8" fill="#fdf6f3" stroke="#e0b8a8"/>
+    <text x="44" y="104" font-size="16" font-weight="700" fill="#9c3d1c">Multi4D — transient subset</text>
+    <text x="44" y="124" font-size="12" fill="#7a4a34">temporal factor computed in <tspan font-family="Consolas,monospace">CUDA</tspan>, forward.cu:280-285</text>
+
+    <!-- plot frame -->
+    <line x1="90" y1="180" x2="90" y2="450" stroke="#999" stroke-width="1.2"/>
+    <line x1="90" y1="450" x2="520" y2="450" stroke="#999" stroke-width="1.2"/>
+    <text x="70" y="186" font-size="11" fill="#666" text-anchor="end">1.0</text>
+    <text x="70" y="454" font-size="11" fill="#666" text-anchor="end">0</text>
+    <text x="58" y="320" font-size="12" fill="#444" text-anchor="middle" transform="rotate(-90 58 320)">alpha</text>
+    <text x="305" y="476" font-size="12" fill="#444" text-anchor="middle">scene time t</text>
+
+    <!-- cull shading -->
+    <rect x="90" y="180" width="53" height="270" fill="#d94f2b" opacity="0.13"/>
+    <rect x="437" y="180" width="83" height="270" fill="#d94f2b" opacity="0.13"/>
+
+    <!-- 0.05 threshold -->
+    <line x1="90" y1="436.5" x2="520" y2="436.5" stroke="#d94f2b" stroke-width="1.6" stroke-dasharray="6 4"/>
+    <text x="524" y="440" font-size="11" fill="#d94f2b" font-weight="600">0.05</text>
+
+    <!-- gaussian bump: alpha = exp(-0.5 ((t-290)/60)^2), y = 450 - 270*alpha -->
+    <path d="M 90 448.2 L 110 445.6 L 130 440.1 L 143 436.5 L 160 428.3 L 180 413.4 L 200 391.4 L 220 358.2 L 240 315.4 L 260 266.1 L 275 226.8 L 290 180 L 305 226.8 L 320 266.1 L 340 315.4 L 360 358.2 L 380 391.4 L 400 413.4 L 420 428.3 L 437 436.5 L 455 442.4 L 480 446.7 L 520 449.1"
+          fill="none" stroke="#c0392b" stroke-width="2.6"/>
+
+    <!-- hard cull markers -->
+    <line x1="143" y1="180" x2="143" y2="450" stroke="#d94f2b" stroke-width="1.6"/>
+    <line x1="437" y1="180" x2="437" y2="450" stroke="#d94f2b" stroke-width="1.6"/>
+
+    <text x="116" y="212" font-size="11" font-weight="700" fill="#b03a1f" text-anchor="middle">HARD</text>
+    <text x="116" y="226" font-size="11" font-weight="700" fill="#b03a1f" text-anchor="middle">CULL</text>
+    <text x="478" y="212" font-size="11" font-weight="700" fill="#b03a1f" text-anchor="middle">HARD</text>
+    <text x="478" y="226" font-size="11" font-weight="700" fill="#b03a1f" text-anchor="middle">CULL</text>
+
+    <text x="290" y="160" font-size="12" fill="#7a4a34" text-anchor="middle" font-family="Consolas,monospace">marginal_t = exp(-0.5 dt&#178; / cov_t)</text>
+
+    <!-- zero gradient callout -->
+    <rect x="96" y="496" width="404" height="62" rx="6" fill="#fdeae4" stroke="#d94f2b"/>
+    <text x="108" y="516" font-size="12" font-weight="700" fill="#a8321a">ZERO GRADIENT outside the bump</text>
+    <text x="108" y="533" font-size="11.5" fill="#6b3a28" font-family="Consolas,monospace">if (marginal_t &lt;= 0.05) return;</text>
+    <text x="108" y="550" font-size="11.5" fill="#6b3a28">in <tspan font-family="Consolas,monospace">forward.cu:282</tspan> AND <tspan font-family="Consolas,monospace">backward.cu:690</tspan></text>
+
+    <text x="44" y="592" font-size="12" fill="#8a2f14" font-weight="600">Consequence: a primitive that is absent receives no gradient, so it cannot learn to return.</text>
+  </g>
+
+  <!-- ============ PANEL B : EX4DGS ============ -->
+  <g>
+    <rect x="608" y="76" width="548" height="500" rx="8" fill="#f2f7fb" stroke="#a9c6dd"/>
+    <text x="628" y="104" font-size="16" font-weight="700" fill="#1a5480">Ex4DGS — dynamic bank</text>
+    <text x="628" y="124" font-size="12" fill="#37607e">temporal factor computed in <tspan font-family="Consolas,monospace">Python</tspan>, interpolations.py:55-61 (7 lines)</text>
+
+    <line x1="674" y1="180" x2="674" y2="450" stroke="#999" stroke-width="1.2"/>
+    <line x1="674" y1="450" x2="1104" y2="450" stroke="#999" stroke-width="1.2"/>
+    <text x="654" y="186" font-size="11" fill="#666" text-anchor="end">1.0</text>
+    <text x="654" y="454" font-size="11" fill="#666" text-anchor="end">0</text>
+    <text x="642" y="320" font-size="12" fill="#444" text-anchor="middle" transform="rotate(-90 642 320)">alpha</text>
+    <text x="889" y="476" font-size="12" fill="#444" text-anchor="middle">scene time t</text>
+
+    <!-- 1/255 threshold -->
+    <line x1="674" y1="448.9" x2="1104" y2="448.9" stroke="#2f7fb8" stroke-width="1.4" stroke-dasharray="6 4"/>
+    <text x="1108" y="452" font-size="11" fill="#2f7fb8" font-weight="600">1/255</text>
+
+    <!-- left tail (BUGGED: measured from c1) : alpha = exp(-((t-894)/70)^2) -->
+    <path d="M 674 450 L 700 449.9 L 724 449.7 L 750 448.9 L 774 445.7 L 794 436.2"
+          fill="none" stroke="#1f6fa8" stroke-width="2.6"/>
+    <!-- discontinuity jump at c0 -->
+    <line x1="794" y1="436.2" x2="794" y2="180" stroke="#1f6fa8" stroke-width="2.6" stroke-dasharray="5 3"/>
+    <!-- plateau exactly 1.0 -->
+    <line x1="794" y1="180" x2="914" y2="180" stroke="#1f6fa8" stroke-width="3.4"/>
+    <!-- right tail from c1 -->
+    <path d="M 914 180 L 934 199.4 L 954 244.6 L 974 305.4 L 994 362.6 L 1014 404.1 L 1034 428.7 L 1054 441.3 L 1074 446.9 L 1104 449.4"
+          fill="none" stroke="#1f6fa8" stroke-width="2.6"/>
+
+    <line x1="794" y1="180" x2="794" y2="450" stroke="#7fa8c6" stroke-width="1" stroke-dasharray="3 3"/>
+    <line x1="914" y1="180" x2="914" y2="450" stroke="#7fa8c6" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="794" y="466" font-size="11" fill="#1a5480" text-anchor="middle" font-family="Consolas,monospace">c0</text>
+    <text x="914" y="466" font-size="11" fill="#1a5480" text-anchor="middle" font-family="Consolas,monospace">c1</text>
+    <text x="854" y="170" font-size="11.5" fill="#1a5480" text-anchor="middle" font-weight="600">plateau = exactly 1.0</text>
+
+    <!-- asymmetry bug callout -->
+    <circle cx="794" cy="436.2" r="7" fill="none" stroke="#e08a1e" stroke-width="2.4"/>
+    <text x="700" y="410" font-size="11" font-weight="700" fill="#b8700f">defect: left tail is</text>
+    <text x="700" y="424" font-size="11" font-weight="700" fill="#b8700f">measured from c1</text>
+    <text x="700" y="398" font-size="11" fill="#b8700f">discontinuity here</text>
+
+    <text x="889" y="148" font-size="12" fill="#37607e" text-anchor="middle" font-family="Consolas,monospace">where((c0-t)(c1-t) &lt; 0, 1.0, exp(-m&#178;/sigma&#178;))</text>
+
+    <!-- gradient callout -->
+    <rect x="680" y="496" width="404" height="62" rx="6" fill="#e8f2f9" stroke="#2f7fb8"/>
+    <text x="692" y="516" font-size="12" font-weight="700" fill="#14567f">GRADIENT FLOWS EVERYWHERE</text>
+    <text x="692" y="533" font-size="11.5" fill="#33566d">alpha never reaches exactly zero; it decays asymptotically.</text>
+    <text x="692" y="550" font-size="11.5" fill="#33566d">Only the per-pixel <tspan font-family="Consolas,monospace">alpha &lt; 1/255</tspan> test drops it (forward.cu:380).</text>
+
+    <text x="628" y="592" font-size="12" fill="#14567f" font-weight="600">Consequence: an absent primitive still receives gradient, so it can learn to return.</text>
+  </g>
+
+  <!-- ============ FOOTER: the structural fact ============ -->
+  <rect x="24" y="612" width="1132" height="68" rx="8" fill="#f6f6f4" stroke="#c9c9c2"/>
+  <text x="44" y="636" font-size="13" font-weight="700" fill="#222">Both are K = 1. Neither can represent two disjoint presence intervals at any parameter value.</text>
+  <text x="44" y="656" font-size="12" fill="#444">Multi4D: one Gaussian bump in t, by construction unimodal.   Ex4DGS: the plateau test <tspan font-family="Consolas,monospace">(c0-t)(c1-t) &lt; 0</tspan> is true on exactly one interval for any (c0, c1).</text>
+  <text x="44" y="673" font-size="12" fill="#444">The difference is not what they represent, but what it costs to extend them — and whether an absent primitive can still be taught to come back.</text>
+</svg>

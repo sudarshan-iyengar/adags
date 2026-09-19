@@ -16,6 +16,29 @@ render concatenates **static-first, dynamic-second**; `static_num =
 gaussians._xyz.shape[0]` is the split index used downstream (`train.py:204`,
 `:229`, `:278`).
 
+## 0. Figures
+
+![One training iteration](../assets/ex4dgs-iteration-dataflow.svg)
+
+*Ex4DGS, one training iteration: the progressive temporal window, the two banks,
+the single rasterization, and the fact that CUDA receives an already-evaluated
+scalar opacity. Detail in §1 and §4.*
+
+![K=1 to K change surface](../assets/ex4dgs-k-interval-change-surface.svg)
+
+*What changes to go from one presence interval to K, what does not, and the four
+places that would silently undo it. Detail in §2 and §6.*
+
+![Temporal presence and gradient, both substrates](../assets/substrate-temporal-presence-comparison.svg)
+
+*The comparison that decides the substrate choice: Ex4DGS's temporal factor is
+smooth and never exactly zero, so an absent primitive still receives gradient.
+Detail in §2, §4 and §10.*
+
+![Lineage column hazard map](../assets/lineage-column-hazard-map.svg)
+
+*Every site a new per-primitive column must survive. Detail in §7.*
+
 ## 1. One training iteration
 
 Loop body `train.py:92-282`.

@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 760" width="1180" height="760" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="1180" height="760" fill="#ffffff"/>
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#666"/>
+    </marker>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#c0392b"/>
+    </marker>
+  </defs>
+
+  <text x="24" y="34" font-size="20" font-weight="700" fill="#111">Multi4D — one training iteration</text>
+  <text x="24" y="56" font-size="13" fill="#555">train.py:384-992. Three subsets, four rasterizations in phase 2 collapsing to one in phase 3.</text>
+
+  <!-- legend -->
+  <g font-size="11.5">
+    <rect x="812" y="22" width="14" height="12" fill="#e8f0d8" stroke="#8aa85a"/><text x="832" y="32" fill="#4a5c30">FG persistent-dynamic</text>
+    <rect x="812" y="40" width="14" height="12" fill="#dfe9f5" stroke="#7fa0c4"/><text x="832" y="50" fill="#3a5170">BG static</text>
+    <rect x="812" y="58" width="14" height="12" fill="#fae3d8" stroke="#d1905f"/><text x="832" y="68" fill="#8a4a1f">TR transient 4D</text>
+  </g>
+
+  <!-- 1. camera draw -->
+  <rect x="40" y="92" width="210" height="52" rx="6" fill="#f4f4f0" stroke="#aaa"/>
+  <text x="145" y="114" font-size="13" font-weight="600" text-anchor="middle" fill="#222">draw camera + GT</text>
+  <text x="145" y="131" font-size="11" text-anchor="middle" fill="#666" font-family="Consolas,monospace">train.py:410-417</text>
+
+  <line x1="145" y1="144" x2="145" y2="176" stroke="#666" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- PHASE 2 box -->
+  <rect x="40" y="178" width="700" height="288" rx="8" fill="#fbfbf8" stroke="#bbb" stroke-dasharray="5 4"/>
+  <text x="56" y="200" font-size="13" font-weight="700" fill="#444">PHASE 2 &#8212; iteration &lt; 10000 : FOUR rasterizations per camera</text>
+
+  <!-- render 1 mask -->
+  <rect x="58" y="214" width="150" height="70" rx="6" fill="#e8f0d8" stroke="#8aa85a"/>
+  <text x="133" y="234" font-size="12" font-weight="600" text-anchor="middle" fill="#3f5228">1. render_mask</text>
+  <text x="133" y="250" font-size="10.5" text-anchor="middle" fill="#4a5c30">FG only</text>
+  <text x="133" y="265" font-size="10" text-anchor="middle" fill="#607a3c" font-family="Consolas,monospace">__init__.py:248</text>
+  <text x="133" y="278" font-size="10" text-anchor="middle" fill="#607a3c">&#8594; foreground_mask_prob</text>
+
+  <!-- render 2 fg -->
+  <rect x="222" y="214" width="150" height="70" rx="6" fill="#e8f0d8" stroke="#8aa85a"/>
+  <text x="297" y="234" font-size="12" font-weight="600" text-anchor="middle" fill="#3f5228">2. render_foreground</text>
+  <text x="297" y="250" font-size="10.5" text-anchor="middle" fill="#4a5c30">FG, prob_mask</text>
+  <text x="297" y="265" font-size="10" text-anchor="middle" fill="#607a3c" font-family="Consolas,monospace">__init__.py:121</text>
+
+  <!-- render 3 bg -->
+  <rect x="386" y="214" width="150" height="70" rx="6" fill="#dfe9f5" stroke="#7fa0c4"/>
+  <text x="461" y="234" font-size="12" font-weight="600" text-anchor="middle" fill="#2f4a68">3. render_background</text>
+  <text x="461" y="250" font-size="10.5" text-anchor="middle" fill="#3a5170">BG, 1-prob_mask</text>
+  <text x="461" y="265" font-size="10" text-anchor="middle" fill="#4f6d8f" font-family="Consolas,monospace">__init__.py:18</text>
+  <text x="461" y="278" font-size="10" font-weight="700" text-anchor="middle" fill="#b03a1f">forced stage=coarse</text>
+
+  <!-- render 4 hybrid -->
+  <rect x="550" y="214" width="172" height="70" rx="6" fill="#f0eaf6" stroke="#9b82b8"/>
+  <text x="636" y="234" font-size="12" font-weight="600" text-anchor="middle" fill="#4e3a68">4. render_rawall3pc</text>
+  <text x="636" y="250" font-size="10.5" text-anchor="middle" fill="#5c4678">(FG+BG) static | TR dynamic</text>
+  <text x="636" y="265" font-size="10" text-anchor="middle" fill="#6f5a8a" font-family="Consolas,monospace">__init__.py:351</text>
+  <text x="636" y="278" font-size="10" font-weight="700" text-anchor="middle" fill="#4e3a68">the hybrid rasterizer</text>
+
+  <!-- composition -->
+  <rect x="150" y="318" width="470" height="52" rx="6" fill="#f4f4f0" stroke="#aaa"/>
+  <text x="385" y="339" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">composite = image_dy &#183; fg_weight + image_sta &#183; (1 - mask)</text>
+  <text x="385" y="357" font-size="10.5" text-anchor="middle" fill="#666" font-family="Consolas,monospace">train.py:627-628, :673</text>
+
+  <line x1="133" y1="284" x2="133" y2="308" stroke="#666" stroke-width="1.3" marker-end="url(#ar)"/>
+  <line x1="297" y1="284" x2="297" y2="308" stroke="#666" stroke-width="1.3" marker-end="url(#ar)"/>
+  <line x1="461" y1="284" x2="461" y2="308" stroke="#666" stroke-width="1.3" marker-end="url(#ar)"/>
+  <line x1="636" y1="284" x2="636" y2="300" stroke="#666" stroke-width="1.3"/>
+  <path d="M 636 300 L 636 396 L 440 396" fill="none" stroke="#666" stroke-width="1.3" marker-end="url(#ar)"/>
+
+  <!-- loss -->
+  <rect x="150" y="400" width="470" height="56" rx="6" fill="#fff8e6" stroke="#d9b45a"/>
+  <text x="385" y="421" font-size="12.5" font-weight="600" text-anchor="middle" fill="#6b5518">loss: 4&#183;L1 + 0.2&#183;(1-SSIM) + hybrid L1/SSIM + soft_dxv</text>
+  <text x="385" y="438" font-size="11" text-anchor="middle" fill="#7a6222">+ depth-order + HexPlane TV/time/L1 + fg/bg sep + diversity + alpha reg</text>
+  <text x="385" y="452" font-size="10" text-anchor="middle" fill="#8a7333" font-family="Consolas,monospace">declared at train.py:636-666</text>
+
+  <!-- PHASE 3 box -->
+  <rect x="760" y="178" width="396" height="288" rx="8" fill="#f7f4fb" stroke="#b9a5cf" stroke-dasharray="5 4"/>
+  <text x="776" y="200" font-size="13" font-weight="700" fill="#4e3a68">PHASE 3 &#8212; iteration &#8805; 10000</text>
+  <rect x="800" y="230" width="316" height="86" rx="6" fill="#f0eaf6" stroke="#9b82b8"/>
+  <text x="958" y="254" font-size="13" font-weight="600" text-anchor="middle" fill="#4e3a68">ONLY render 4 runs</text>
+  <text x="958" y="274" font-size="11" text-anchor="middle" fill="#5c4678">per-branch stats are zero-filled</text>
+  <text x="958" y="291" font-size="10.5" text-anchor="middle" fill="#6f5a8a" font-family="Consolas,monospace">train.py:448-502</text>
+  <text x="958" y="307" font-size="10.5" text-anchor="middle" fill="#6f5a8a">renders 1-3 are skipped entirely</text>
+
+  <rect x="800" y="336" width="316" height="112" rx="6" fill="#fdeae4" stroke="#d94f2b"/>
+  <text x="958" y="358" font-size="12" font-weight="700" text-anchor="middle" fill="#a8321a">a presence multiplier must attach to ALL of</text>
+  <text x="812" y="378" font-size="11" fill="#6b3a28" font-family="Consolas,monospace">__init__.py:468  FG hybrid</text>
+  <text x="812" y="394" font-size="11" fill="#6b3a28" font-family="Consolas,monospace">__init__.py:198  FG standalone</text>
+  <text x="812" y="410" font-size="11" fill="#6b3a28" font-family="Consolas,monospace">__init__.py:314  FG mask  &#8592; silent bypass</text>
+  <text x="812" y="426" font-size="11" fill="#6b3a28" font-family="Consolas,monospace">__init__.py:475/:86  BG</text>
+  <text x="812" y="442" font-size="11" fill="#6b3a28" font-family="Consolas,monospace">__init__.py:419  TR</text>
+
+  <line x1="385" y1="456" x2="385" y2="486" stroke="#666" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- backward -->
+  <rect x="235" y="488" width="300" height="46" rx="6" fill="#f4f4f0" stroke="#aaa"/>
+  <text x="385" y="509" font-size="12.5" font-weight="600" text-anchor="middle" fill="#222">one loss.backward()</text>
+  <text x="385" y="526" font-size="10.5" text-anchor="middle" fill="#666" font-family="Consolas,monospace">train.py:840 &#183; NaN &#8594; os.execv restart</text>
+
+  <line x1="385" y1="534" x2="385" y2="562" stroke="#666" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- density control then step -->
+  <rect x="40" y="564" width="1116" height="120" rx="8" fill="#fbfbf8" stroke="#bbb"/>
+  <text x="56" y="586" font-size="13" font-weight="700" fill="#444">density control THEN optimizer step, per branch, inside torch.no_grad()</text>
+
+  <rect x="58" y="598" width="340" height="72" rx="6" fill="#e8f0d8" stroke="#8aa85a"/>
+  <text x="228" y="617" font-size="12" font-weight="600" text-anchor="middle" fill="#3f5228">FG maintain_foreground &#8594; step</text>
+  <text x="228" y="633" font-size="10.5" text-anchor="middle" fill="#4a5c30">densify &#183; weight-prune &#183; opacity prune &#183; partial reset</text>
+  <text x="228" y="649" font-size="10" text-anchor="middle" fill="#607a3c" font-family="Consolas,monospace">train.py:945 &#8594; :951   (pre-phase-3 only)</text>
+  <text x="228" y="663" font-size="10" text-anchor="middle" fill="#607a3c">cap 90k</text>
+
+  <rect x="410" y="598" width="336" height="72" rx="6" fill="#dfe9f5" stroke="#7fa0c4"/>
+  <text x="578" y="617" font-size="12" font-weight="600" text-anchor="middle" fill="#2f4a68">BG maintain_background &#8594; step</text>
+  <text x="578" y="633" font-size="10.5" text-anchor="middle" fill="#3a5170">densify &#183; opacity prune &#183; weight-prune &#183; reset</text>
+  <text x="578" y="649" font-size="10" text-anchor="middle" fill="#4f6d8f" font-family="Consolas,monospace">train.py:956 &#8594; :961</text>
+  <text x="578" y="663" font-size="10" text-anchor="middle" fill="#4f6d8f">cap 960k</text>
+
+  <rect x="758" y="598" width="380" height="72" rx="6" fill="#fae3d8" stroke="#d1905f"/>
+  <text x="948" y="617" font-size="12" font-weight="600" text-anchor="middle" fill="#8a4a1f">TR maintain_transient &#8594; step</text>
+  <text x="948" y="633" font-size="10.5" text-anchor="middle" fill="#8a4a1f">densify+prune &#183; weight-prune from 6000</text>
+  <text x="948" y="649" font-size="10" text-anchor="middle" fill="#a0602c" font-family="Consolas,monospace">train.py:966 &#8594; :974   cap 1M</text>
+  <text x="948" y="663" font-size="10" font-weight="700" text-anchor="middle" fill="#b03a1f">fed by the FG&#8594;TR lift (a COPY, not a move)</text>
+
+  <!-- footnote -->
+  <text x="24" y="710" font-size="12" fill="#333"><tspan font-weight="700">Two things a reader should carry away.</tspan> BG is rendered with <tspan font-family="Consolas,monospace">stage=coarse</tspan> (train.py:543), so the deformation net never touches it.</text>
+  <text x="24" y="728" font-size="12" fill="#333">And the FG&#8594;TR lift copies rows without removing the FG originals, so a lineage id must be carried across branches or the identity is lost at the lift.</text>
+  <text x="24" y="748" font-size="11.5" fill="#777">Full detail, with every schedule and call site: research-wiki/operations/multi4d-code-map-2026-09-19.md</text>
+</svg>

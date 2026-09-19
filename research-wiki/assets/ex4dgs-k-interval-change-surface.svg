@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 700" width="1180" height="700" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="1180" height="700" fill="#ffffff"/>
+
+  <text x="24" y="34" font-size="20" font-weight="700" fill="#111">Ex4DGS: the change surface for K = 1 &#8594; K intervals</text>
+  <text x="24" y="56" font-size="13" fill="#555">What has to change, what does not, and the four places that would silently undo it.</text>
+
+  <!-- CUDA layer : unchanged -->
+  <rect x="24" y="80" width="1132" height="92" rx="8" fill="#eef4ee" stroke="#6a9e5c" stroke-width="1.6"/>
+  <text x="48" y="106" font-size="15" font-weight="700" fill="#3c6b30">CUDA layer &#8212; NO CHANGE</text>
+  <text x="48" y="128" font-size="12" fill="#456f3a">The extension receives one already-evaluated scalar opacity per primitive and has no time concept at all. K is invisible to it.</text>
+  <text x="48" y="148" font-size="11.5" fill="#5d8352" font-family="Consolas,monospace">rasterize_points.cu:41   &#183;   only cull is the per-pixel alpha &lt; 1/255 at forward.cu:380   &#183;   sorts on the ORIGINAL primitive index</text>
+  <text x="48" y="165" font-size="11.5" fill="#3c6b30" font-weight="600">This is the single biggest reason to build here rather than on Multi4D, where the temporal gate is inside the kernel.</text>
+
+  <!-- PYTHON layer -->
+  <rect x="24" y="188" width="1132" height="270" rx="8" fill="#f2f7fb" stroke="#2f7fb8" stroke-width="1.6"/>
+  <text x="48" y="214" font-size="15" font-weight="700" fill="#14567f">Python layer &#8212; where the work is</text>
+
+  <!-- (a) -->
+  <rect x="48" y="228" width="256" height="118" rx="6" fill="#ffffff" stroke="#7fa0c4"/>
+  <text x="176" y="250" font-size="12.5" font-weight="700" text-anchor="middle" fill="#1a5480">(a) parameterisation</text>
+  <text x="64" y="272" font-size="11" fill="#33566d" font-family="Consolas,monospace">_opacity_duration_center [N,2,1]</text>
+  <text x="64" y="288" font-size="11" fill="#33566d" font-family="Consolas,monospace">_opacity_duration_var    [N,2,1]</text>
+  <text x="64" y="306" font-size="11.5" fill="#33566d">&#8594; <tspan font-family="Consolas,monospace">[N,K,2,1]</tspan>, and bump</text>
+  <text x="64" y="322" font-size="11.5" fill="#33566d" font-family="Consolas,monospace">self.opacity_degree = 2</text>
+  <text x="64" y="339" font-size="10.5" fill="#5f7d95">every literal [:,0] / [:,1] must follow</text>
+
+  <!-- (b) -->
+  <rect x="320" y="228" width="300" height="118" rx="6" fill="#ffffff" stroke="#7fa0c4"/>
+  <text x="470" y="250" font-size="12.5" font-weight="700" text-anchor="middle" fill="#1a5480">(b) the alpha(t) evaluation</text>
+  <text x="470" y="270" font-size="11.5" text-anchor="middle" fill="#33566d" font-family="Consolas,monospace">utils/interpolations.py:55-61</text>
+  <text x="470" y="290" font-size="13" font-weight="700" text-anchor="middle" fill="#14567f">SEVEN LINES. That is the whole gate.</text>
+  <text x="336" y="310" font-size="11" fill="#33566d">&#183; max / noisy-OR over per-interval plateaus</text>
+  <text x="336" y="326" font-size="11" fill="#b03a1f">&#183; do NOT inherit <tspan font-family="Consolas,monospace">.min(dim=1)</tspan> &#8212; already</text>
+  <text x="346" y="340" font-size="11" fill="#b03a1f">wrong on the left tail at K=1</text>
+
+  <!-- (c) -->
+  <rect x="636" y="228" width="248" height="118" rx="6" fill="#ffffff" stroke="#7fa0c4"/>
+  <text x="760" y="250" font-size="12.5" font-weight="700" text-anchor="middle" fill="#1a5480">(c) keyframe layout</text>
+  <text x="760" y="274" font-size="14" font-weight="700" text-anchor="middle" fill="#3c6b30">NO CHANGE NEEDED</text>
+  <text x="652" y="296" font-size="11" fill="#33566d">trajectories are indexed by absolute time,</text>
+  <text x="652" y="311" font-size="11" fill="#33566d">not by interval &#8212; a primitive re-enters at</text>
+  <text x="652" y="326" font-size="11" fill="#33566d">whatever pose it has interpolated to</text>
+  <text x="652" y="341" font-size="10.5" fill="#5f7d95" font-family="Consolas,monospace">_xyz_motion [N,37,3]</text>
+
+  <!-- (d) hazard -->
+  <rect x="900" y="228" width="234" height="118" rx="6" fill="#fdecd2" stroke="#d1905f"/>
+  <text x="1017" y="250" font-size="12.5" font-weight="700" text-anchor="middle" fill="#8a5a1f">(c) is also the hazard</text>
+  <text x="916" y="272" font-size="11" fill="#6b4a20">nothing optimises the trajectory</text>
+  <text x="916" y="287" font-size="11" fill="#6b4a20">across a gap &#8212; no gradient</text>
+  <text x="916" y="302" font-size="11" fill="#6b4a20">reaches it there &#8212; yet</text>
+  <text x="916" y="317" font-size="11" fill="#6b4a20"><tspan font-family="Consolas,monospace">expand_duration</tspan> and <tspan font-family="Consolas,monospace">motion_reg</tspan></text>
+  <text x="916" y="332" font-size="11" fill="#6b4a20">extrapolate smoothly THROUGH it</text>
+
+  <!-- silent bypasses -->
+  <rect x="48" y="360" width="1086" height="84" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="64" y="382" font-size="13" font-weight="700" fill="#8a2f14">Four places that would silently undo a multi-interval presence &#8212; in priority order</text>
+  <text x="64" y="403" font-size="11.5" fill="#7a3a28"><tspan font-weight="700">1.</tspan> <tspan font-family="Consolas,monospace">densify_and_split:945</tspan> / <tspan font-family="Consolas,monospace">densify_and_clone:1007</tspan> reset <tspan font-family="Consolas,monospace">var</tspan> to the constant 2 and jitter <tspan font-family="Consolas,monospace">center</tspan>. A naive <tspan font-family="Consolas,monospace">repeat</tspan> at K&gt;1 duplicates all intervals identically</text>
+  <text x="80" y="418" font-size="11.5" fill="#8a2f14" font-weight="700">&#8594; multi-interval structure destroyed every 300 iterations. This is the one most likely to eat the mechanism without any error.</text>
+  <text x="64" y="436" font-size="11.5" fill="#7a3a28"><tspan font-weight="700">2.</tspan> <tspan font-family="Consolas,monospace">adjust_temp_opa:1338</tspan> uses <tspan font-family="Consolas,monospace">.any(dim=1)</tspan> &#8212; one edge-abutting interval doubles the variance of all of them. &#160;<tspan font-weight="700">3.</tspan> <tspan font-family="Consolas,monospace">extract_..._from_static:1180</tspan> hardcodes a 2-element stack, so new primitives are born K=1. &#160;<tspan font-weight="700">4.</tspan> <tspan font-family="Consolas,monospace">load_ply:633</tspan> allocates from <tspan font-family="Consolas,monospace">opacity_degree</tspan>; extra intervals are discarded.</text>
+
+  <!-- the structural claim -->
+  <rect x="24" y="474" width="558" height="146" rx="8" fill="#f6f6f4" stroke="#c9c9c2"/>
+  <text x="44" y="498" font-size="14" font-weight="700" fill="#222">Why K=1 is structural, not a tuning limit</text>
+  <text x="44" y="522" font-size="11.5" fill="#444">The plateau is selected by a sign test:</text>
+  <text x="44" y="544" font-size="12.5" fill="#14567f" font-family="Consolas,monospace">where((c0 - t) &#183; (c1 - t) &lt; 0, 1.0, tail)</text>
+  <text x="44" y="568" font-size="11.5" fill="#444">That product is negative on <tspan font-weight="700">exactly one</tspan> interval for any</text>
+  <text x="44" y="584" font-size="11.5" fill="#444">(c0, c1), and the tails are monotone away from it.</text>
+  <text x="44" y="606" font-size="12" font-weight="700" fill="#8a2f14">Two disjoint presence intervals are not representable</text>
+  <text x="44" y="606" font-size="12" font-weight="700" fill="#8a2f14" dy="0"></text>
+  <text x="44" y="614" font-size="12" font-weight="700" fill="#8a2f14" dy="8">at any parameter value. This is the claim the thesis rests on.</text>
+
+  <!-- effort summary -->
+  <rect x="598" y="474" width="558" height="146" rx="8" fill="#e8f2f9" stroke="#2f7fb8"/>
+  <text x="618" y="498" font-size="14" font-weight="700" fill="#14567f">Effort summary</text>
+  <text x="618" y="522" font-size="11.5" fill="#33566d">CUDA kernels to edit ................. <tspan font-weight="700" fill="#3c6b30">0</tspan></text>
+  <text x="618" y="542" font-size="11.5" fill="#33566d">core gate function .................... <tspan font-weight="700">1 file, ~7 lines</tspan></text>
+  <text x="618" y="562" font-size="11.5" fill="#33566d">parameter shape + index sites ......... <tspan font-weight="700">~6 call sites</tspan></text>
+  <text x="618" y="582" font-size="11.5" fill="#33566d">structural ops to make K-aware ........ <tspan font-weight="700" fill="#8a2f14">4 (the bypasses above)</tspan></text>
+  <text x="618" y="604" font-size="11.5" fill="#14567f" font-weight="600">Contrast Multi4D: the gate is in CUDA, hard-culls at 0.05 in</text>
+  <text x="618" y="604" font-size="11.5" fill="#14567f" font-weight="600" dy="16">forward AND backward, so an absent primitive gets no gradient.</text>
+
+  <text x="24" y="654" font-size="11.5" fill="#777">Source: research-wiki/operations/ex4dgs-code-map-2026-09-19.md &#167;2, &#167;6 &#183; verified against the checkout at commit 7fac649</text>
+  <text x="24" y="676" font-size="12" fill="#333"><tspan font-weight="700">Caveat worth keeping in view:</tspan> none of this speaks to whether K&gt;1 <tspan font-style="italic">helps</tspan>. It says only what the edit costs and where it would silently fail.</text>
+</svg>

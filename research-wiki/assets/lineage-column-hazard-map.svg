@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 720" width="1180" height="720" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect width="1180" height="720" fill="#ffffff"/>
+  <defs>
+    <marker id="a3" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">
+      <path d="M0,0 L7,3.2 L0,6.4 z" fill="#666"/>
+    </marker>
+  </defs>
+
+  <text x="24" y="34" font-size="20" font-weight="700" fill="#111">Adding a per-primitive lineage column: where it silently disappears</text>
+  <text x="24" y="56" font-size="13" fill="#555">A new column must survive everything that reorders, grows, shrinks or serializes the primitive tensors. Failure mode by site, both substrates.</text>
+
+  <!-- legend -->
+  <g font-size="11.5">
+    <rect x="24" y="72" width="14" height="12" fill="#f8d7d0" stroke="#c0392b"/><text x="44" y="82" fill="#8a2f14">SILENT DROP &#8212; no error, wrong results later</text>
+    <rect x="360" y="72" width="14" height="12" fill="#fdecd2" stroke="#d1905f"/><text x="380" y="82" fill="#8a5a1f">SILENTLY ZEROED &#8212; survives but with garbage values</text>
+    <rect x="740" y="72" width="14" height="12" fill="#dff0dc" stroke="#6a9e5c"/><text x="760" y="82" fill="#3c6b30">CRASH &#8212; the safe failure</text>
+  </g>
+
+  <!-- pipeline spine -->
+  <g>
+    <rect x="40" y="110" width="150" height="44" rx="6" fill="#eef1f6" stroke="#8fa2bd"/>
+    <text x="115" y="130" font-size="12.5" font-weight="700" text-anchor="middle" fill="#2f4a68">1. creation</text>
+    <text x="115" y="146" font-size="10.5" text-anchor="middle" fill="#4f6d8f">create_from_pcd</text>
+
+    <line x1="190" y1="132" x2="228" y2="132" stroke="#666" stroke-width="1.6" marker-end="url(#a3)"/>
+
+    <rect x="230" y="110" width="180" height="44" rx="6" fill="#eef1f6" stroke="#8fa2bd"/>
+    <text x="320" y="130" font-size="12.5" font-weight="700" text-anchor="middle" fill="#2f4a68">2. grow / shrink</text>
+    <text x="320" y="146" font-size="10.5" text-anchor="middle" fill="#4f6d8f">clone &#183; split &#183; prune</text>
+
+    <line x1="410" y1="132" x2="448" y2="132" stroke="#666" stroke-width="1.6" marker-end="url(#a3)"/>
+
+    <rect x="450" y="110" width="200" height="44" rx="6" fill="#eef1f6" stroke="#8fa2bd"/>
+    <text x="550" y="130" font-size="12.5" font-weight="700" text-anchor="middle" fill="#2f4a68">3. optimizer surgery</text>
+    <text x="550" y="146" font-size="10.5" text-anchor="middle" fill="#4f6d8f">cat_tensors / _prune_optimizer</text>
+
+    <line x1="650" y1="132" x2="688" y2="132" stroke="#666" stroke-width="1.6" marker-end="url(#a3)"/>
+
+    <rect x="690" y="110" width="170" height="44" rx="6" fill="#eef1f6" stroke="#8fa2bd"/>
+    <text x="775" y="130" font-size="12.5" font-weight="700" text-anchor="middle" fill="#2f4a68">4. cross-branch</text>
+    <text x="775" y="146" font-size="10.5" text-anchor="middle" fill="#4f6d8f">lift / promotion</text>
+
+    <line x1="860" y1="132" x2="898" y2="132" stroke="#666" stroke-width="1.6" marker-end="url(#a3)"/>
+
+    <rect x="900" y="110" width="240" height="44" rx="6" fill="#eef1f6" stroke="#8fa2bd"/>
+    <text x="1020" y="130" font-size="12.5" font-weight="700" text-anchor="middle" fill="#2f4a68">5. serialization</text>
+    <text x="1020" y="146" font-size="10.5" text-anchor="middle" fill="#4f6d8f">capture / restore / save_ply / load_ply</text>
+  </g>
+
+  <!-- MULTI4D row -->
+  <rect x="24" y="176" width="1132" height="236" rx="8" fill="#fdf6f3" stroke="#e0b8a8"/>
+  <text x="44" y="200" font-size="15" font-weight="700" fill="#9c3d1c">Multi4D &#8212; three banks means THREE copies of every helper</text>
+
+  <rect x="44" y="212" width="146" height="82" rx="6" fill="#dff0dc" stroke="#6a9e5c"/>
+  <text x="117" y="232" font-size="11" font-weight="700" text-anchor="middle" fill="#3c6b30">crash if missing</text>
+  <text x="117" y="250" font-size="10" text-anchor="middle" fill="#456f3a" font-family="Consolas,monospace">:263 FG</text>
+  <text x="117" y="264" font-size="10" text-anchor="middle" fill="#456f3a" font-family="Consolas,monospace">:938 BG</text>
+  <text x="117" y="278" font-size="10" text-anchor="middle" fill="#456f3a" font-family="Consolas,monospace">:1306 TR</text>
+
+  <rect x="206" y="212" width="196" height="82" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="304" y="230" font-size="11" font-weight="700" text-anchor="middle" fill="#8a2f14">no assert on N anywhere</text>
+  <text x="304" y="248" font-size="10.5" text-anchor="middle" fill="#7a3a28">a missed path does NOT crash here</text>
+  <text x="304" y="264" font-size="10.5" text-anchor="middle" fill="#7a3a28">it mis-slices later, or throws at</text>
+  <text x="304" y="278" font-size="10.5" text-anchor="middle" fill="#7a3a28">the NEXT prune_points</text>
+
+  <rect x="418" y="212" width="214" height="82" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="525" y="230" font-size="11" font-weight="700" text-anchor="middle" fill="#8a2f14">key in dict but not a param group</text>
+  <text x="525" y="248" font-size="10.5" text-anchor="middle" fill="#7a3a28">&#8594; silently ignored, no error</text>
+  <text x="525" y="266" font-size="10.5" text-anchor="middle" fill="#7a3a28">a lineage id must NOT be optimized:</text>
+  <text x="525" y="281" font-size="10.5" text-anchor="middle" fill="#7a3a28">carry it like max_radii2D instead</text>
+
+  <rect x="648" y="212" width="238" height="82" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="767" y="230" font-size="11" font-weight="700" text-anchor="middle" fill="#8a2f14">THE FG&#8594;TR LIFT &#8212; highest risk</text>
+  <text x="767" y="248" font-size="10.5" text-anchor="middle" fill="#7a3a28">select_fg_to_transient:412-481</text>
+  <text x="767" y="265" font-size="10.5" text-anchor="middle" fill="#7a3a28">without a lineage slice, every lifted</text>
+  <text x="767" y="280" font-size="10.5" text-anchor="middle" fill="#7a3a28">primitive gets a FRESH id</text>
+
+  <rect x="902" y="212" width="234" height="82" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="1019" y="230" font-size="11" font-weight="700" text-anchor="middle" fill="#8a2f14">capture() is a positional tuple</text>
+  <text x="1019" y="248" font-size="10.5" text-anchor="middle" fill="#7a3a28">omission = silent loss on restore</text>
+  <text x="1019" y="266" font-size="10.5" text-anchor="middle" fill="#7a3a28">this is exactly how _packet_ids</text>
+  <text x="1019" y="281" font-size="10.5" text-anchor="middle" fill="#7a3a28">was lost in August 2026</text>
+
+  <rect x="44" y="306" width="1092" height="42" rx="6" fill="#fdecd2" stroke="#d1905f"/>
+  <text x="60" y="324" font-size="11.5" font-weight="700" fill="#8a5a1f">Asymmetry to match:</text>
+  <text x="186" y="324" font-size="11.5" fill="#6b4a20">FG <tspan font-family="Consolas,monospace">densification_postfix</tspan> RESETS xyz_gradient_accum/denom to zeros (:720-722), while TR's <tspan font-family="Consolas,monospace">_nodenom</tspan> variant CONCATENATES (:1417-1418).</text>
+  <text x="60" y="341" font-size="11.5" fill="#6b4a20">A lineage column must always concatenate. Modelled on the wrong one, it is silently zeroed rather than dropped.</text>
+
+  <rect x="44" y="358" width="1092" height="42" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="60" y="376" font-size="11.5" font-weight="700" fill="#8a2f14">Two more:</text>
+  <text x="130" y="376" font-size="11.5" fill="#7a3a28"><tspan font-family="Consolas,monospace">GaussianModelTransient</tspan> has NO capture()/restore() at all &#8212; transient state is in no checkpoint, only in ply.</text>
+  <text x="60" y="393" font-size="11.5" fill="#7a3a28">And TR <tspan font-family="Consolas,monospace">load_ply</tspan> filters by prefix, so a column named <tspan font-family="Consolas,monospace">scale*</tspan>, <tspan font-family="Consolas,monospace">rot*</tspan> or <tspan font-family="Consolas,monospace">f_rest*</tspan> is swallowed into the wrong tensor and corrupts it.</text>
+
+  <!-- EX4DGS row -->
+  <rect x="24" y="428" width="1132" height="212" rx="8" fill="#f2f7fb" stroke="#a9c6dd"/>
+  <text x="44" y="452" font-size="15" font-weight="700" fill="#1a5480">Ex4DGS &#8212; two banks, two plys</text>
+
+  <rect x="44" y="464" width="146" height="82" rx="6" fill="#dff0dc" stroke="#6a9e5c"/>
+  <text x="117" y="484" font-size="11" font-weight="700" text-anchor="middle" fill="#3c6b30">crash if missing</text>
+  <text x="117" y="504" font-size="10" text-anchor="middle" fill="#456f3a" font-family="Consolas,monospace">:385 static</text>
+  <text x="117" y="520" font-size="10" text-anchor="middle" fill="#456f3a">create alongside</text>
+  <text x="117" y="534" font-size="10" text-anchor="middle" fill="#456f3a" font-family="Consolas,monospace">max_radii2D</text>
+
+  <rect x="206" y="464" width="196" height="82" rx="6" fill="#fdecd2" stroke="#d1905f"/>
+  <text x="304" y="484" font-size="11" font-weight="700" text-anchor="middle" fill="#8a5a1f">densification_postfix</text>
+  <text x="304" y="502" font-size="10.5" text-anchor="middle" fill="#6b4a20">REALLOCATES accum/denom/</text>
+  <text x="304" y="517" font-size="10.5" text-anchor="middle" fill="#6b4a20">error_accum/max_radii2D to zeros</text>
+  <text x="304" y="534" font-size="10.5" text-anchor="middle" fill="#6b4a20">:830-844 &#8594; zeroed, not dropped</text>
+
+  <rect x="418" y="464" width="214" height="82" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="525" y="482" font-size="11" font-weight="700" text-anchor="middle" fill="#8a2f14">cat_tensors_to_optimizer:765-787</text>
+  <text x="525" y="500" font-size="10.5" text-anchor="middle" fill="#7a3a28">the <tspan font-family="Consolas,monospace">continue</tspan> at :770-771 skips any</text>
+  <text x="525" y="515" font-size="10.5" text-anchor="middle" fill="#7a3a28">group absent from tensors_dict</text>
+  <text x="525" y="533" font-size="10.5" font-weight="700" text-anchor="middle" fill="#8a2f14">carries the author&#39;s own warning comment</text>
+
+  <rect x="648" y="464" width="238" height="82" rx="6" fill="#f8d7d0" stroke="#c0392b"/>
+  <text x="767" y="482" font-size="11" font-weight="700" text-anchor="middle" fill="#8a2f14">static &#8594; dynamic promotion</text>
+  <text x="767" y="500" font-size="10.5" text-anchor="middle" fill="#7a3a28">appends to 8 motion_* tensors then</text>
+  <text x="767" y="515" font-size="10.5" text-anchor="middle" fill="#7a3a28">DELETES the donor static rows (:1227)</text>
+  <text x="767" y="533" font-size="10.5" text-anchor="middle" fill="#7a3a28">the id must cross the bank boundary</text>
+
+  <rect x="902" y="464" width="234" height="82" rx="6" fill="#dff0dc" stroke="#6a9e5c"/>
+  <text x="1019" y="482" font-size="11" font-weight="700" text-anchor="middle" fill="#3c6b30">restore() crashes &#8212; safe</text>
+  <text x="1019" y="500" font-size="10.5" text-anchor="middle" fill="#456f3a">positional unpack raises ValueError</text>
+  <text x="1019" y="518" font-size="10.5" text-anchor="middle" fill="#8a2f14">but capture() omission is SILENT</text>
+  <text x="1019" y="534" font-size="10.5" text-anchor="middle" fill="#456f3a">append to BOTH sides</text>
+
+  <rect x="44" y="558" width="1092" height="66" rx="6" fill="#e8f2f9" stroke="#2f7fb8"/>
+  <text x="60" y="578" font-size="11.5" font-weight="700" fill="#14567f">Two plys, and a precision limit.</text>
+  <text x="256" y="578" font-size="11.5" fill="#33566d"><tspan font-family="Consolas,monospace">point_cloud.ply</tspan> holds the static bank, <tspan font-family="Consolas,monospace">dynamic_point_cloud.ply</tspan> the dynamic one.</text>
+  <text x="60" y="596" font-size="11.5" fill="#33566d">A lineage that survives promotion must exist in <tspan font-weight="700">both</tspan>. All ply attributes are written <tspan font-family="Consolas,monospace">&#39;f4&#39;</tspan>, so an integer id is exact only below 2&#178;&#8308; &#8212; beyond ~16.7M primitives, ids silently collide.</text>
+  <text x="60" y="615" font-size="11.5" fill="#14567f"><tspan font-weight="700">CUDA needs nothing:</tspan> the rasterizer sorts on the ORIGINAL primitive index and nothing is compacted, so per-primitive arrays stay index-aligned end to end.</text>
+
+  <text x="24" y="664" font-size="12.5" fill="#222"><tspan font-weight="700">The general rule this diagram encodes:</tspan> the dangerous sites are the ones that fail <tspan font-style="italic">open</tspan>. A crash costs an hour; a silent drop costs a block of experiments</text>
+  <text x="24" y="683" font-size="12.5" fill="#222">and may not be noticed at all. Before adding any per-primitive column, write a test that asserts every per-primitive tensor has the same length after each mutation.</text>
+  <text x="24" y="706" font-size="11.5" fill="#777">Sources: research-wiki/operations/multi4d-code-map-2026-09-19.md &#167;6 &#183; ex4dgs-code-map-2026-09-19.md &#167;7</text>
+</svg>

@@ -17,6 +17,26 @@ with `rot_4d=True`, `sh_degree_t=2`, `gaussian_dim=4`. Coarse 2000 then fine
 restarting the counter. Phase boundaries: `transient_merging_iter=3000`,
 `phase3_start_iter=10000`, `densify_until_iter=16000`.
 
+## 0. Figures
+
+![One training iteration](../assets/multi4d-iteration-dataflow.svg)
+
+*Multi4D, one training iteration: the three subsets, the four rasterizations of
+phase 2 collapsing to one in phase 3, and the five sites a presence multiplier
+must attach to. Detail in §1 and §5.*
+
+![Temporal presence and gradient, both substrates](../assets/substrate-temporal-presence-comparison.svg)
+
+*Where the temporal gate lives in each substrate and where the gradient dies.
+Multi4D's transient bump is hard-culled at `marginal_t > 0.05` in both
+`forward.cu` and `backward.cu`, so an absent primitive receives no gradient.
+Detail in §2 and §3.*
+
+![Lineage column hazard map](../assets/lineage-column-hazard-map.svg)
+
+*Every site a new per-primitive column must be threaded through, coloured by
+failure mode. The dangerous ones fail open. Detail in §6.*
+
 ## 1. One fine-stage iteration
 
 Loop body `train.py:384-992`.
