@@ -1,0 +1,42 @@
+{
+  "gate": "E0 -- evaluation stack validated against the authors' released model",
+  "frozen_rule": {
+    "psnr_abs_tol_vs_authors": 0.05,
+    "lpips_alex_abs_tol_vs_authors": 0.002,
+    "per_frame_psnr_max_abs_dev": 0.2,
+    "note": "the per-frame clause is ours, not the plan's: the release ships all_metrics.json, and a matching mean with disagreeing frames would be two errors cancelling, not a pass"
+  },
+  "authors_mean": {
+    "SSIM": 0.9576548337936401,
+    "PSNR": 33.73290252685547,
+    "LPIPS": 0.04044107347726822,
+    "LPIPSVGG": 0.13221921026706696,
+    "times": 0.011503358371555805
+  },
+  "ours_mean": {
+    "SSIM": 0.9576467871665955,
+    "SKSSIM": 0.9534022808074951,
+    "SKSSIM2": 0.9771175980567932,
+    "PSNR": 33.731346130371094,
+    "LPIPS": 0.04043768346309662,
+    "LPIPSVGG": 0.13221746683120728,
+    "times": 0.01756925694644451
+  },
+  "mean_delta_ours_minus_authors": {
+    "PSNR": -0.001556396484375,
+    "SSIM": -8.046627044677734e-06,
+    "LPIPS": -3.390014171600342e-06,
+    "LPIPSVGG": -1.7434358596801758e-06
+  },
+  "psnr_within_tol": true,
+  "lpips_within_tol": true,
+  "per_frame_keys_ours": 300,
+  "per_frame_keys_authors": 300,
+  "per_frame_keys_shared": 0,
+  "per_frame_matched_by": "position (filename conventions differ)",
+  "per_frame_psnr_max_abs_dev": 0.012989044189453125,
+  "per_frame_psnr_mean_abs_dev": 0.002456626892089844,
+  "per_frame_n_compared": 300,
+  "per_frame_within_tol": true,
+  "verdict": "PASS"
+}

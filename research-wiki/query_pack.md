@@ -1,5 +1,88 @@
 # Query Pack
 
+## 2026-09-19 BLOCK 2 — Ex4DGS: the EVALUATION STACK is validated against the authors' own released model to 0.0016 dB, and the TRAINED reproduction still falls 0.59 dB short with a 0.62 dB fixed-seed noise floor that is LARGER than the shortfall it would explain
+
+Full record: [[operations/ex4dgs-n3v-leonardo-reproduction-2026-09-19]],
+[[assets/ex4dgs-pin.json]]. ~5 A100-h.
+
+**(1) E0 PASSES ESSENTIALLY EXACTLY, and it is the most valuable thing this
+block produced.** Rendering the authors' released 40k model against OUR staged
+scene reproduces THEIR own shipped metrics to **PSNR −0.0016 dB**, SSIM
+−8.0e−06, LPIPS-alex −3.4e−06, with a **per-frame max deviation of 0.0130 dB
+over all 300 held-out frames** (so the mean is not matching by cancellation).
+This validates the staged images, the native-resolution extraction, the
+`resolution: 2` halving, the COLMAP cameras, and both metric conventions —
+**a check the Multi4D lane cannot perform at all**, because no released model
+exists there. It does NOT validate the point cloud: E0 renders their trained
+Gaussians.
+
+**(2) THE TRAINED REPRODUCTION IS PARTIAL: 32.5202 / 33.1426 / 32.6767 against
+a published 33.7329.** Best is 0.59 dB short, inside the 32.5–33.3 band the
+spec pre-declared as "consistent with community" (31.9–33.3) and below the
+33.3 PASS threshold. All three ran 40k unmodified, exit 0, ~1h10 each.
+
+**(3) THE NUMBER THAT OUTRANKS THE VERDICT: the fixed-seed spread is 0.6224 dB,
+which EXCEEDS the 0.5903 dB gap it would be used to interpret.**
+`utils/general_utils.py:158-160` hardcodes seed 0 with no `--seed` flag, so
+these reps differ only by CUDA nondeterminism. **A single Ex4DGS run cannot
+distinguish "reproduced" from "0.6 dB short"** — rep2 alone reads as a near
+reproduction, rep1 alone sits 0.02 dB from the *investigate* threshold. Any
+Ex4DGS-based claim must clear ~0.62 dB: **3× the 0.20 dB Gate-B target** and
+nearly double Multi4D's 0.3445 dB. Established before any intervention.
+
+**(4) THE CONVENIENT EXPLANATION IS REFUTED IN ADVANCE.** The spec expected the
+`input.ply` point count to be the maintainer's explanation of community
+shortfalls. Measured: authors **6,141**, ours **8,206**, ratio **1.336** — we
+have 34% MORE points, not fewer. With E0 passing, data, resolution, metric
+convention and sparse initialisation are all excluded. **The remaining 0.59 dB
+is in training and is NOT diagnosed.**
+
+**(5) A FOURTH VACUITY CATCH, and it was in the plan itself.** The specified
+A/B arm (`opacity_reset_interval` shipped 50000 vs released 10000, 2 reps each)
+is **dead config**: no python reads the key and `reset_opacity` is defined in
+two model files and never called, against `densification_interval`'s seven
+`train.py` call sites. The two arms would have trained **bit-identically** and
+been reported as a hyperparameter ablation. Dropped for 3 reps of the one real
+configuration. **CARRY: read whether a knob is consumed before spending GPU on
+varying it** — this joins the 2026-08-24 block's three catches, and unlike
+those it was caught by reading code, not by a precondition firing.
+
+**(6) THE SHIPPED PREPROCESSOR EXTRACTS NOTHING.**
+`scripts/pre_n3d_colmap.py` guards extraction with
+`all(os.path.join(...) for i in range(...))` — non-empty strings, always truthy
+— so `extractframes` returns having written no frames and COLMAP then finds no
+images. The author meant `os.path.exists`. The substrate was NOT patched; an
+external script mirroring the upstream body supplies the frames and the broken
+guard then correctly skips.
+
+**(7) THE REFERENCE ALMOST OVERWROTE ITSELF.** `render.py` writes
+`mean_metrics.json` and `all_metrics.json` into `--model_path`, so running E0
+against the pristine unzip would have destroyed the very numbers being checked
+against. E0 renders from a copy and sha256-verifies the originals unchanged.
+**CARRY: a validation that writes into its own reference is not a validation.**
+
+**(8) OPERATIONAL.** The scene must be a WRITABLE copy (`points3D.ply` is
+written into `--source_path` at render time too); the flag is `--configpath`,
+not the README's `--config`; there is NO in-training evaluation
+(`test_iterations` defaults to `[7000000]` and the appending lines are
+commented out), so each run yields exactly ONE held-out number and there is no
+curve; resume is unusable (the progressive window resets to 10 frames while
+`duration` stays 300); `render.py` runs a 10,000-render timing loop that is
+slow, not hung; host RAM is ~2–4 GiB because `lazy_loader` streams. Rate
+measured at 11.9 it/s on `boost_qos_dbg` BEFORE committing the real cells.
+Three env defects, two self-inflicted: a sequence of pins is not a pin (numpy<2
+undone by opencv/kornia; now a constraints file with a precondition gate),
+setuptools ≥81 drops `pkg_resources`, and kornia 0.8.3 is unscriptable under
+torch 2.1.2.
+
+**(9) TECHNICOLOR IS BLOCKED ON DATA.** The local `data/Train` and
+`Birthday` are unzipped Ex4DGS **pretrained models**, not raw footage; their
+`cfg_args` point at the authors' own paths. They do give the main-table windows
+(Train `start_timestamp=151/end 201`, `duration=50`, `resolution=1`, PSNR
+31.774; Birthday 32.381) — and note the main-table Train window is
+`colmap_151`, not the `colmap_170` named for Appendix C. The InterDigital
+footage is on neither the workstation nor Leonardo.
+
 ## 2026-09-19 BLOCK — the project moved onto an external substrate, and Multi4D REPRODUCES: 3 of 3 repetitions inside the authors' own band, with a 0.3445 dB fixed-seed noise floor that now bounds every claim built on it
 
 Full records: [[operations/multi4d-n3v-leonardo-reproduction-2026-09-18]]

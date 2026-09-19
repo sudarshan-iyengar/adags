@@ -1,0 +1,173 @@
+{
+  "scene": "cut_roasted_beef",
+  "substrate": "Ex4DGS @ 7fac649, code unmodified",
+  "frozen_rule": {
+    "declared_utc": "2026-09-19T09:30Z",
+    "paper_psnr": 33.73290252685547,
+    "pass_at": 33.3,
+    "partial_band": [
+      32.5,
+      33.3
+    ],
+    "rule": "PASS = E0 passed AND best >= 33.3; 32.5-33.3 = partial, consistent with community reports of 31.9-33.3; below 32.5 = investigate",
+    "e0_is_a_precondition": true
+  },
+  "design_deviation": "the plan specified 2 as-is variants (opacity_reset_interval 50000 vs 10000) x 2 reps. opacity_reset_interval is DEAD CODE: no python reads it and reset_opacity is never called, so the two arms would train bit-identically. Replaced with 3 reps of the one real configuration.",
+  "declared_limit": "there is no --seed flag and no in-training evaluation; each run yields exactly one held-out measurement from render.py at 40000. The spread across reps bounds nondeterminism, not seed variance.",
+  "e0_gate": {
+    "gate": "E0 -- evaluation stack validated against the authors' released model",
+    "frozen_rule": {
+      "psnr_abs_tol_vs_authors": 0.05,
+      "lpips_alex_abs_tol_vs_authors": 0.002,
+      "per_frame_psnr_max_abs_dev": 0.2,
+      "note": "the per-frame clause is ours, not the plan's: the release ships all_metrics.json, and a matching mean with disagreeing frames would be two errors cancelling, not a pass"
+    },
+    "authors_mean": {
+      "SSIM": 0.9576548337936401,
+      "PSNR": 33.73290252685547,
+      "LPIPS": 0.04044107347726822,
+      "LPIPSVGG": 0.13221921026706696,
+      "times": 0.011503358371555805
+    },
+    "ours_mean": {
+      "SSIM": 0.9576467871665955,
+      "SKSSIM": 0.9534022808074951,
+      "SKSSIM2": 0.9771175980567932,
+      "PSNR": 33.731346130371094,
+      "LPIPS": 0.04043768346309662,
+      "LPIPSVGG": 0.13221746683120728,
+      "times": 0.01756925694644451
+    },
+    "mean_delta_ours_minus_authors": {
+      "PSNR": -0.001556396484375,
+      "SSIM": -8.046627044677734e-06,
+      "LPIPS": -3.390014171600342e-06,
+      "LPIPSVGG": -1.7434358596801758e-06
+    },
+    "psnr_within_tol": true,
+    "lpips_within_tol": true,
+    "per_frame_keys_ours": 300,
+    "per_frame_keys_authors": 300,
+    "per_frame_keys_shared": 0,
+    "per_frame_matched_by": "position (filename conventions differ)",
+    "per_frame_psnr_max_abs_dev": 0.012989044189453125,
+    "per_frame_psnr_mean_abs_dev": 0.002456626892089844,
+    "per_frame_n_compared": 300,
+    "per_frame_within_tol": true,
+    "verdict": "PASS"
+  },
+  "point_count_diagnostic": {
+    "authors_input_ply_points": 6141,
+    "our_points3D_count": 8206,
+    "ratio_ours_over_authors": 1.336,
+    "note": "the maintainer attributes community shortfalls to the first-frame triangulation differing; this is that number"
+  },
+  "n_runs": 3,
+  "psnr_values": [
+    32.520198822021484,
+    33.142635345458984,
+    32.67665481567383
+  ],
+  "best_psnr": 33.142635345458984,
+  "psnr_spread": 0.6224,
+  "psnr_mean": 32.7798,
+  "verdict": "PARTIAL_CONSISTENT_WITH_COMMUNITY",
+  "runs": [
+    {
+      "run_id": "20260919_121607_cut_roasted_beef_rep1",
+      "slurm_job_id": "58200326",
+      "node": "lrdn0384.leonardo.local",
+      "substrate_commit": "7fac64997164fde64732c80261e56adf66ca14df",
+      "substrate_dirty": "0",
+      "config_sha256": "8e99f18023e9bea1c4ed169eb331f2b956a15692b119c66da29a017270236185",
+      "trainpy_sha256": "987b057557516721ea6c249b95b44985eac8d109b4108960da26ffd6d3cd3af8",
+      "points3D_sha256": "968b12eb1688b15e6afd2c0044eb570acac3296e7e5e5898f6e2afa95c7b6be3",
+      "train_exit_code": "0",
+      "render_exit_code": "0",
+      "started": "2026-09-19T12:17:49+02:00",
+      "train_finished": "2026-09-19T13:14:52+02:00",
+      "render_finished": "2026-09-19T13:29:04+02:00",
+      "metrics": {
+        "SSIM": 0.9569896459579468,
+        "SKSSIM": 0.9525120258331299,
+        "SKSSIM2": 0.9766729474067688,
+        "PSNR": 32.520198822021484,
+        "LPIPS": 0.045624952763319016,
+        "LPIPSVGG": 0.1366344839334488,
+        "times": 0.01833513379096985
+      },
+      "psnr": 32.520198822021484,
+      "delta_vs_paper": -1.2127,
+      "lpips_alex": 0.045624952763319016,
+      "ssim_gaussian_window": 0.9569896459579468,
+      "per_frame_n": 300,
+      "per_frame_psnr_min": 32.0083,
+      "per_frame_psnr_max": 32.7963,
+      "train_wall_hours": 0.951
+    },
+    {
+      "run_id": "20260919_121607_cut_roasted_beef_rep2",
+      "slurm_job_id": "58200328",
+      "node": "lrdn0843.leonardo.local",
+      "substrate_commit": "7fac64997164fde64732c80261e56adf66ca14df",
+      "substrate_dirty": "0",
+      "config_sha256": "8e99f18023e9bea1c4ed169eb331f2b956a15692b119c66da29a017270236185",
+      "trainpy_sha256": "987b057557516721ea6c249b95b44985eac8d109b4108960da26ffd6d3cd3af8",
+      "points3D_sha256": "968b12eb1688b15e6afd2c0044eb570acac3296e7e5e5898f6e2afa95c7b6be3",
+      "train_exit_code": "0",
+      "render_exit_code": "0",
+      "started": "2026-09-19T12:17:49+02:00",
+      "train_finished": "2026-09-19T13:13:52+02:00",
+      "render_finished": "2026-09-19T13:27:55+02:00",
+      "metrics": {
+        "SSIM": 0.9572132229804993,
+        "SKSSIM": 0.9530689716339111,
+        "SKSSIM2": 0.9769233465194702,
+        "PSNR": 33.142635345458984,
+        "LPIPS": 0.045371025800704956,
+        "LPIPSVGG": 0.13460934162139893,
+        "times": 0.0173393152654171
+      },
+      "psnr": 33.142635345458984,
+      "delta_vs_paper": -0.5903,
+      "lpips_alex": 0.045371025800704956,
+      "ssim_gaussian_window": 0.9572132229804993,
+      "per_frame_n": 300,
+      "per_frame_psnr_min": 32.6171,
+      "per_frame_psnr_max": 33.4896,
+      "train_wall_hours": 0.934
+    },
+    {
+      "run_id": "20260919_121607_cut_roasted_beef_rep3",
+      "slurm_job_id": "58200329",
+      "node": "lrdn3101.leonardo.local",
+      "substrate_commit": "7fac64997164fde64732c80261e56adf66ca14df",
+      "substrate_dirty": "0",
+      "config_sha256": "8e99f18023e9bea1c4ed169eb331f2b956a15692b119c66da29a017270236185",
+      "trainpy_sha256": "987b057557516721ea6c249b95b44985eac8d109b4108960da26ffd6d3cd3af8",
+      "points3D_sha256": "968b12eb1688b15e6afd2c0044eb570acac3296e7e5e5898f6e2afa95c7b6be3",
+      "train_exit_code": "0",
+      "render_exit_code": "0",
+      "started": "2026-09-19T12:20:10+02:00",
+      "train_finished": "2026-09-19T13:16:08+02:00",
+      "render_finished": "2026-09-19T13:29:04+02:00",
+      "metrics": {
+        "SSIM": 0.9569742679595947,
+        "SKSSIM": 0.9528664350509644,
+        "SKSSIM2": 0.9766523241996765,
+        "PSNR": 32.67665481567383,
+        "LPIPS": 0.04533768072724342,
+        "LPIPSVGG": 0.13585253059864044,
+        "times": 0.017780791968107224
+      },
+      "psnr": 32.67665481567383,
+      "delta_vs_paper": -1.0562,
+      "lpips_alex": 0.04533768072724342,
+      "ssim_gaussian_window": 0.9569742679595947,
+      "per_frame_n": 300,
+      "per_frame_psnr_min": 32.0305,
+      "per_frame_psnr_max": 33.1188,
+      "train_wall_hours": 0.933
+    }
+  ]
+}
