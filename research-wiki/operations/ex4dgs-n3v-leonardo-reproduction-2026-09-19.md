@@ -235,3 +235,74 @@ E0 under `$W/runs/ex4dgs/e0_20260919_113909_cut_roasted_beef/` with
   `colmap_170` named for Appendix C. **The InterDigital footage itself is on
   neither this workstation nor Leonardo, so Technicolor is blocked on data
   acquisition.**
+
+## 11. The point-cloud swap (2026-09-19, appended): the hypothesis is refuted, and the point estimate runs the other way
+
+§4 left the 0.59 dB shortfall undiagnosed, with the first-frame triangulation
+the one variable E0 could not exclude. It has now been tested directly.
+
+**Design.** One variable. A second staging tree with **symlinked camera
+directories and hash-identical `cameras.bin`/`images.bin`**, differing only in
+`colmap_0/sparse/0/points3D.ply`, which was replaced by the authors' own
+6,141-point `input.ply` from the release (sha256 verified identical to the
+release copy). The loader prefers an existing `points3D.ply` over the `.bin`
+(`scene/dataset_readers.py:562-568`), so this is the whole intervention.
+
+Frame compatibility was checked before relying on it: the two clouds share a
+coordinate frame (centroids 1.45 apart, near-identical minimum bounds), and E0
+had already proved our cameras sit in the authors' frame by rendering their
+trained Gaussians through them. Our cloud differs by a **far-field tail** —
+max z 284.7 against 129.4, extents ~2× in every axis.
+
+**Baseline was simultaneously extended from n=3 to n=6** so that σ was estimated
+well enough for the contrast to mean anything.
+
+| arm | n | mean | sd | min | max | range |
+|---|---|---|---|---|---|---|
+| ours, 8,206 pts | 6 | **32.6731** | 0.3564 | 32.2298 | 33.1426 | 0.9128 |
+| authors, 6,141 pts | 3 | **32.1337** | 0.3699 | 31.7655 | 32.5053 | 0.7398 |
+
+**Difference (ours − authors) = +0.5394 dB — our cloud is the BETTER one.**
+Welch t = 2.087, p = 0.106; pooled t = 2.117, p = 0.072, df 7;
+95% CI on the difference **[−0.063, +1.142]**.
+
+### Reading
+
+* **The point-cloud hypothesis is not supported, and the point estimate has the
+  opposite sign to the one it predicts.** Swapping in the authors' own
+  initialisation did not recover the shortfall; it produced runs 0.54 dB
+  *lower*. The confidence interval includes zero, so the claim "their cloud is
+  worse" is **not** established at n=6 vs 3 — but the claim the experiment was
+  run to test, that our triangulation explains the gap, has no support at all.
+* Combined with E0 passing and with our having *more* points rather than fewer,
+  every cheap explanation is now closed: not the data, not the resolution, not
+  the metric convention, not a sparse initialisation, and not the specific point
+  cloud. **The remaining 0.59 dB is in training and stays undiagnosed.** No
+  further targeted experiment is queued, because none of comparable cost remains.
+* **Do not read this as "the authors' cloud is harmful."** At p = 0.07 with a CI
+  spanning zero, the responsible statement is that the swap changed nothing we
+  can resolve, in a direction opposite to the hypothesis.
+
+### The noise floor is confirmed and slightly worse
+
+σ at n=6 is **0.3564 dB**, against 0.3238 at n=3 — stable, so the estimate can
+now be used. The observed **range across six identical runs is 0.9128 dB**,
+larger than the 0.6224 dB seen at n=3, which is what a growing sample does to a
+range and is worth stating so the earlier number is not read as a ceiling.
+
+Sample sizes for an unpaired two-arm comparison at 80% power, α = 0.05, using
+the pooled sd 0.3603 (~1.2 GPU-h per run, so two arms cost):
+
+| detectable effect | n per arm | two-arm cost |
+|---|---|---|
+| 1.0 dB | 3 | ~7 GPU-h |
+| 0.5 dB | 9 | ~22 GPU-h |
+| 0.3 dB | 23 | ~55 GPU-h |
+
+All affordable against the remaining allocation. The binding constraint on any
+Ex4DGS-based claim is design and replication, not budget.
+
+### Verdict unchanged
+
+Best over all nine runs is **33.1426** (baseline rep2), still below the 33.3
+PASS threshold. The reproduction remains **PARTIAL, consistent with community**.
