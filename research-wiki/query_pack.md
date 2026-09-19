@@ -1,5 +1,85 @@
 # Query Pack
 
+## 2026-09-19 BLOCK — the project moved onto an external substrate, and Multi4D REPRODUCES: 3 of 3 repetitions inside the authors' own band, with a 0.3445 dB fixed-seed noise floor that now bounds every claim built on it
+
+Full records: [[operations/multi4d-n3v-leonardo-reproduction-2026-09-18]]
+(setup, audit, scheduling, results), [[assets/multi4d-pin.json]],
+[[assets/ex4dgs-pin.json]]. ~9 A100-h on Leonardo.
+
+**(1) WHY THE SUBSTRATE CHANGED.** The 2026-09-17/18 reading pass established
+that exact-zero absence is FREE for every temporal-opacity method (the
+rasterizer culls at `alpha < 1/255`; Multi4D additionally hard-culls
+`p(t) < 0.05` in CUDA). The claim therefore no longer lives on absence. It
+lives on the **return**: whether the same primitive lineages resume after a
+full-multiview absence, where single-interval temporal opacity ghosts or
+respawns. Two released codebases are the candidate substrates: **Multi4D**
+(ECCV 2026, GPL-3.0, static / persistent-dynamic / transient subsets) and
+**Ex4DGS** (NeurIPS 2024, CC BY-NC 4.0, onset/offset opacity = the K=1 case of
+multi-interval presence). Neither novelty test means anything until each
+reproduces its published number with code UNMODIFIED.
+
+**(2) MULTI4D REPRODUCES — PASS, 3 of 3.** Peak PSNR **33.4226 / 33.7672 /
+33.5383** on `cut_roasted_beef`, mean **33.576**, against a band of
+**33.4–34.0** frozen BEFORE submission (the authors' own band from the
+`validate_repro.sh` they dropped from the release; paper 34.02). The rule
+required 2 of 3. All three ran the published schedule (coarse 2000 + fine
+20000) to completion, exit 0, 40/40 evaluations, identical provenance, ~2.7 h
+each. **But every repetition is below the paper and below the band centre**
+(mean 0.44 dB under 34.02), and **rep 1 passes by 0.023 dB** — on the boundary,
+not comfortably inside.
+
+**(3) THE NUMBER THAT OUTRANKS THE VERDICT: the fixed-seed spread is
+0.3445 dB.** `train.py` hardcodes `setup_seed(6666)` and exposes no `--seed`,
+so the three repetitions differ ONLY by CUDA kernel nondeterminism. 0.3445 dB
+is therefore a **LOWER BOUND** on run-to-run variance, not a seed spread. It is
+the same order as this project's own historical N3V floor (0.341 dB on the
+event union, 2026-08-23) and **exceeds the 0.20 dB Gate-B event-PSNR target**.
+**CARRY: any Multi4D-based claim must clear ~0.35 dB, and this floor was
+established before any intervention was attempted** — which is the discipline
+the 2026-08-23 flow screen had to learn retrospectively. Establishing a real
+seed spread needs a code change, since no seed flag exists.
+
+**(4) AN INSTRUMENT DISTINCTION THAT WOULD HAVE SILENTLY CORRUPTED A READING.**
+`peak` and `best/` are DIFFERENT quantities. Multi4D gates its `best/`
+checkpoint to `iteration > 16000`, but rep 3's true peak fell at iteration
+13500. Its `best/per_frame_metrics.json` therefore reports 33.5152 @ 16500, not
+its peak of 33.5383 @ 13500. The gap is 0.023 dB here and there is no reason it
+must stay small. **Anything reading `best/per_frame_metrics.json` as "the peak"
+reads the wrong number.** It was caught only because the collector carried
+`peak_after_16000` as a separate column — a frozen reading rule plus the
+quantity it is NOT.
+
+**(5) LEONARDO STRUCTURALLY DISFAVOURS SINGLE-GPU CELLS, and this will recur on
+every lane.** `PriorityWeightJobSize = 10000000` with `PriorityFavorSmall = no`
+— 30× every other term. With zero idle nodes and 10,295 pending jobs, three
+1-GPU cells sat at rank ~9,425 and would not start. **`boost_qos_bprod` does
+NOT rescue this**: it enforces `MinTRES node=65, gres/gpu=260` and refuses a
+small job outright with `QOSMinCpuNotSatisfied`; `normal` and `lprod` are BOTH
+priority 40, so **no QOS upgrade exists for a small job**. **Walltime is the
+only usable lever** — cutting 12 h → 8 h got all three backfilled within
+~13 min. `boost_qos_dbg` (+120,063 priority, starts in ~2 min, 30 min cap, max
+2 jobs) is where an iteration rate should be MEASURED before committing real
+cells, against the opposing constraint that Multi4D resume is unusable
+(it restores the foreground branch only and silently re-initialises the static
+and transient branches), so a walltime kill loses the whole run.
+
+**(6) TWO CONVENTIONS REMAIN UNRESOLVED AND ARE NOT RESOLVABLE FROM THE RUN.**
+The code computes TWO SSIMs and reports both (gaussian-window 0.9366–0.9367 vs
+skimage 0.9520–0.9524 — differing by ~0.015, far more than the inter-rep
+spread), and it computes LPIPS on `[0,1]` inputs WITHOUT `normalize=True`,
+while the `lpips` default assumes `[-1,1]`. The reported LPIPS is therefore not
+standard LPIPS. Both were flagged and deliberately NOT corrected: correcting
+either would break the reproduction. Any cross-method comparison must recompute
+on a common convention.
+
+**(7) SECONDARY.** All three runs LOSE 0.23–0.68 dB between their peak and
+iteration 20000 — the published schedule trains past its own optimum on this
+scene, reproducing on a different substrate the 2026-08-20 finding that both
+ADAGS capacity regimes peak near 12k. The background branch prunes from 386,905
+init points to 150–153k survivors while the transient branch grows to
+198–252k. **Ex4DGS is cloned and pinned (7fac649) but NOTHING else** — no env,
+no data, no audit, and its acceptance band is not yet frozen.
+
 ## 2026-09-15 BLOCK — wave-2 stage 2 RAN AND WAS REDUCED: Claim A NOT_MET on both confirmatory scenes under the all-pairs 0.50 dB rule (return met 8/8, ghost core short on one flame pair and on six sham pairs); Claim B DWP as pre-decided; calibration MET; STG renders the gap core 3–8 dB better than the gate without any gate
 
 Full records: [[operations/absfix-wave2-stage2-verdict-2026-09-15]]
