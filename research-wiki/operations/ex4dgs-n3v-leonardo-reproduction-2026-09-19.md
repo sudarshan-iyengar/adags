@@ -306,3 +306,36 @@ Ex4DGS-based claim is design and replication, not budget.
 
 Best over all nine runs is **33.1426** (baseline rep2), still below the 33.3
 PASS threshold. The reproduction remains **PARTIAL, consistent with community**.
+
+## 12. Provenance blemish on the six later runs (appended 2026-09-20)
+
+The six runs submitted from 20:04 on 2026-09-19 — baseline reps 4–6 and the
+three `authorsply` reps — record **`substrate_dirty=1`** in their
+`provenance.txt`, where reps 1–3 record `0`. Recorded rather than quietly
+cleaned, because an unexplained dirty flag on an evidence-bearing run is exactly
+the kind of thing that should not be discovered later.
+
+**Cause, identified.** A single **0-byte untracked file named `=460`** in
+`$W/repo/ex4dgs/`, created 2026-09-19 20:04 — a stray shell redirect from the
+environment work earlier that evening (a `>=` in an unquoted pip argument). It
+is the only entry in `git status --porcelain`, which reads exactly `?? =460`.
+
+**Why the runs are unaffected.** `substrate_dirty` is computed as
+`git status --porcelain | wc -l`, which counts untracked files. The stronger
+check, `git diff --stat HEAD`, is **empty** — no tracked file differs from
+commit `7fac649`. The `train.py` and `render.py` sha256 values recorded in all
+nine provenance files are identical across every run, including across the
+dirty/clean boundary, which independently confirms the executed source was the
+same. The flag reflects a junk file in the working directory, not a modified
+substrate.
+
+**Disposition.** The file was removed after this note was written. The
+`substrate_dirty=1` values stand in the affected `provenance.txt` files and are
+not edited — the runs recorded what was true at submission.
+
+**Carry:** `git status --porcelain | wc -l` is the wrong dirtiness probe for a
+provenance record, because it conflates "someone edited the substrate" with
+"a stray file exists in the directory". A future provenance line should record
+both, e.g. `substrate_tracked_diff=$(git diff --stat HEAD | wc -l)` alongside
+the porcelain count, so the two failure modes are distinguishable without a
+forensic pass.
