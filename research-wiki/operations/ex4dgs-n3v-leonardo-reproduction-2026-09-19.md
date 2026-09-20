@@ -339,3 +339,34 @@ provenance record, because it conflates "someone edited the substrate" with
 both, e.g. `substrate_tracked_diff=$(git diff --stat HEAD | wc -l)` alongside
 the porcelain count, so the two failure modes are distinguishable without a
 forensic pass.
+
+
+## 13. Correction (append-only, 2026-09-21): the headline gap is 1.06 dB, not 0.59 dB
+
+Sections 4 and 11 above, and the query-pack block, report the reproduction
+shortfall as **0.59 dB**. That figure is **best-of-six against the published
+number**, i.e. selection on the maximum of our own cohort. Prior prose is left
+standing per the append-only rule; this section corrects the number.
+
+* published: **33.7329**
+* our best of six: 33.1426 -> gap **0.5903 dB**  (what was reported)
+* our mean of six: 32.6731 -> gap **1.0598 dB**  (the honest headline)
+
+Caught by the round-1 cross-model review of the K>1 plan and confirmed
+arithmetically before acceptance
+([`ex4dgs-multi-interval-review-round1-2026-09-21`](ex4dgs-multi-interval-review-round1-2026-09-21.md)).
+
+**What does not change.** The PARTIAL verdict stands: the frozen rule was
+stated on the best arm (`PASS = E0 passes AND best >= 33.3`), and best = 33.1426
+is below 33.3 either way. The noise floor, the point-cloud refutation and the
+E0 result are untouched.
+
+**What does change.** Any statement of the form "we reproduce to within 0.6 dB"
+is selection-inflated and must not be made. The substrate reproduces to within
+**1.06 dB on average**, with a 0.9128 dB range across six identical runs.
+
+**Carry:** when a cohort is compared against a single published number, the
+headline must be the cohort **mean**; the best is reportable only alongside it
+and labelled as a maximum. This is the same class of error as reading `best/`
+as "the peak" (see the Multi4D lane), and it went undetected here through
+several progress reports.
