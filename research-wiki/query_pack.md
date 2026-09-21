@@ -1,5 +1,57 @@
 # Query Pack
 
+## 2026-09-21 BLOCK — two papers, not one: a dependable workshop paper from the EL-GS record, and an object-permanence paper whose CVPR attempt is gated on physical events that may not exist
+
+Full record: [[operations/two-paper-plan-2026-09-21]] (consolidated),
+[[assets/two-paper-2026-09-21/]] (all four rounds and the orchestrator's checks).
+Earlier the same day: [[operations/ex4dgs-multi-interval-plan-v0.3-2026-09-21]]
+and its two reviews.
+
+**(1) THE SPLIT.** Paper **W**, "Occlusion Is Not Absence": the real-occlusion
+null (gate inert within 0.1 dB) paired with the authored-counterfactual positive
+(12/12, +2.40 ghost / +2.49 return), as a diagnostic benchmark. Built almost
+entirely from the record; ~15–21 GPU-h to finish. Paper **C**: persistent object
+memory on Multi4D, return-censored segmentation/re-ID as headline. Produced by a
+Fable 5.1 → gpt-5.6-sol xhigh → Fable → Sol exchange; Sol's attestation checked
+four times, all exact.
+
+**(2) ODDS.** W: PhysWorldAI 4-page abstract 65–75%, full CVPR-2027-workshop
+paper 55–65%. C: authored-only at CVPR ≤10% (do not submit); CVPR with all gates
+passed 30–40%; ICCV 2027 with 3–5 physical events 40–55%. **Probability all CVPR
+gates pass by Oct 12: 15–25%.** W is the dependable paper.
+
+**(3) THE STOP RULE, agreed by both models.** No two certified physical events
+by **Oct 12** → C goes to ICCV 2027. Gates A Sep 28 / B Oct 5 / C Oct 12. **The
+thing most likely to cost a paper is not obeying it** — scaling an authored-only
+C past a failed gate consumes the calendar and starves W.
+
+**(4) DUAL SUBMISSION, verified verbatim** from the CVPR 2026 Author Guidelines
+(2027 page HTTP 404): a >4-page peer-reviewed workshop paper IS a publication
+EVEN IF NON-ARCHIVAL; arXiv is not; 20% = substantially similar. So W's only
+pre-Nov-16 outing is the ≤4-page PhysWorldAI abstract (non-archival window Sep
+29–Oct 29, verified). Full W arXiv on **Nov 24** only under three conditions,
+else Feb 26.
+
+**(5) M2 MUST BE LEAK-FREE.** Multi4D's FG→TR lift COPIES rows and leaves the
+donor alive, so a naive episode split leaks. Exact-zero rendered presence is not
+enough: dormant rows must be excluded from lift donor selection, densification,
+KNN semantic smoothing, regularisation, contribution statistics and post-return
+optimisation.
+
+**(6) THIS WEEK: the physical-event census, before building M1.** Existing
+flame/sear DEVA masks (CPU) → DEVA on the remaining N3V scenes → a scout of
+**Panoptic Sports, already on Leonardo and never censused** (6 sequences, 31
+cameras × 150 frames). Certification: gap ≥ 30 synced frames or 1 s; raw-RGB
+human adjudication in every camera; a second method agreeing.
+
+**(7) FACTS CORRECTED OR ESTABLISHED.** **Compute is ≈15,500 GPU-h**, measured
+(8 billing-h per GPU-h, matching saldo exactly) — the brief's 124k and Fable's
+35k were both wrong. Mask-Benchmark covers all three fixture scenes and can
+score fixture RETURN windows (frames outside [60,89] are byte-identical to the
+originals) but not the gap. TRASE is public. Multi4D's `train_semantic.py` is
+fail-open as well as `eval_seg.py`. A reviewer claim about ImViD availability
+came from Codex's own memory store, not this workspace — nearly carried forward.
+
 ## 2026-09-19 BLOCK 2 — Ex4DGS: the EVALUATION STACK is validated against the authors' own released model to 0.0016 dB, and the TRAINED reproduction still falls 0.59 dB short with a 0.62 dB fixed-seed noise floor that is LARGER than the shortfall it would explain
 
 Full record: [[operations/ex4dgs-n3v-leonardo-reproduction-2026-09-19]],
