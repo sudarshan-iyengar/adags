@@ -427,3 +427,24 @@ That reframes the project from “make Gaussian support disconnected in time” 
 The second half of the opportunity is the randomized lineage-sketch loss. Round 1 used the auxiliary channel only for contribution measurement; using hashed root codes makes contribution identity trainable with no one-hot feature field and no CUDA rewrite.
 
 Together—persistent roots plus hashed contribution supervision—this is substantially stronger than another temporal gate. It offers a single mechanism connecting re-ID, segmentation, fast return, compression, and interpretable identity attribution.
+---
+
+## Addendum (2026-09-21): the three unverified Multi4D claims, checked against the pinned checkout
+
+The certificate was renewed, so the claims recorded above as unverified were
+checked against `$W/repo/multi4d` @ `c483e82`.
+
+| claim | substance | location in our checkout | reviewer's citation |
+|---|---|---|---|
+| semantic stage excludes the transient bank | **TRUE** | `train_semantic.py:98-99` — `# Initialize Scene - No transient`, `gaussians_transient=None` | `train_semantic.py#L1407-L1509` |
+| `eval_seg.py` is fail-open | **TRUE** | `:35-38` silently `continue`s on a missing prediction; `:14` is full-image pixel accuracy; `:46-47` exits cleanly on zero matched frames | (upstream URL) |
+| semantic dimension defaults to 16 | **TRUE** | `:517`, `--semantic_dim default=16` | `train_semantic.py#L2079-L2087` |
+
+**All three hold in substance. Two of the cited line ranges do not exist:**
+`train_semantic.py` is roughly 520 lines, so lines 1407–1509 and 2079–2087 point
+past the end of the file. The reviewer's *local* citations in both rounds were
+checked and were exact; its citations into the *upstream GitHub* tree were not.
+
+**Carry:** treat this reviewer's upstream line numbers as unverified pointers
+and re-locate them in the pinned checkout before quoting them anywhere durable.
+The substance has been reliable; the line numbers into remote sources have not.
