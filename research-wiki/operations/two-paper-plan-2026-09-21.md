@@ -189,3 +189,18 @@ Each checked by the orchestrator, not taken from either model.
   that ImViD Opera and Puppy are "fully available" came from Codex's own memory
   store, not this workspace. ImViD is on Apollo, not Leonardo. Treat as
   unverified.
+
+## 10. Principal's decision, 2026-09-21 (appended; supersedes §1, §6 route, §7.6, §8)
+
+The principal chose **one 8-page PhysWorldAI paper, done by ~Oct 15**, "at any
+cost". The W/C split is dropped: the next main-venue paper will be a separate,
+novel project (to be discussed Sep 28), so feasible Paper C, Multi4D and Ex4DGS
+ideas are **incorporated into this paper** rather than reserved. No title is
+fixed — "Occlusion Is Not Absence" is not adopted; the title follows the
+results. Work starts from the authored counterfactual fixtures. Baselines run at
+their own published regimes under one common evaluation; a matched-schedule
+baseline is not required. The §5 honesty conditions (authored-counterfactual
+wording, NOT_MET first, scene clustering, independent mask re-scoring) carry
+over. Current handoff:
+[neurips-workshop-paper-handoff-2026-09-21](neurips-workshop-paper-handoff-2026-09-21.md)
+(revision 2).
