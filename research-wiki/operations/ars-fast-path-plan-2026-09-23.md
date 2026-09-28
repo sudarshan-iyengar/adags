@@ -372,3 +372,531 @@ immediately.**
 | **E10** proof readout (Mon 28) | montages of every scored region and arm; contribution gates; the proof-rule tables from the frozen evaluator | tables and montages delivered; the principal reads |
 | **E11** wave 2 and extensions (Sep 29 – Oct 3) | wave-2 scenes frozen by Sep 29; base/CER ×3, STG/Multi4D ×1, notch ablation; Multi4D port if §4b's gate passes; CER ×3 on the real fixtures | as E5–E10 per item |
 | **E12** data freeze (Oct 4) | every figure and table regenerated from frozen artefacts | handoff rev 3 §5 |
+
+## 9. Execution log (append-only)
+
+### 2026-09-23 evening: E1–E3
+
+Leonardo state for this plan lives in `$W/agent-control/ars/`:
+
+- `ledger.txt`, the ledger for every job below;
+- `checks/`, the check reports;
+- `sbatch/`, `configs/`, and the scripts, whose sha256 are in the session record.
+
+`$W = /leonardo_work/EUHPC_D36_068/sri/proj_adags`.
+
+**E1 Stage 0 (CPU, crb, 5 frames: cam00 f0/75/299, cam07 f60, cam15 f150).**
+Report `checks/stage0_crb.json`, sha256 `24b40b4c…`.
+
+- **Decoding is identical.** ffmpeg and cv2 decodes are bit-identical (max abs diff 0).
+- **A premise in rev 2 §8.1 is wrong.** It says both routes halve with "the same PIL
+  call and default filter". Ex4DGS's `PILtoTorch` passes `resample=2` (**bilinear**,
+  `utils/general_utils.py:23`), while the fixture builder's `img.resize()` uses PIL's
+  default (bicubic). The halving filter is the whole route difference:
+
+  | route difference | max abs diff | mean abs diff | PSNR between routes |
+  |---|---|---|---|
+  | Ex4DGS 1352 vs native | 33/255 | 0.38/255 | ≥ 47.8 dB |
+  | Multi4D 1352 vs native (its extraction uses LANCZOS) | 18/255 | 0.20/255 | ≥ 53.2 dB |
+
+- **Same-size resizes are exact copies** (Pillow 12.3). On the 1352 route, both
+  methods train and evaluate on the fixtures' own pixels.
+
+**E1 `fused.ply`: no upload needed.** The premise that flame/sear exist only
+locally is wrong: `data_staging/multi4d/_fused_ply/{flame,sear}_steak.ply` were
+uploaded 2026-09-18. Their sha256 `bbc5988f…` / `6a013735…` equal the local
+`D:\adags\dynerf_fused` copies (all six scenes match).
+
+**E1 trees.** `data_staging/{ex4dgs,multi4d}/<name>_1352`:
+
+- built for the unedited crb and the three fixtures;
+- symlinks into the 1352 frame stores;
+- `colmap_0` intrinsics halved from the native `colmap_0`;
+- flame/sear `colmap_0` built by job 58478098: cv2 native frame 0, then Ex4DGS
+  `pre_n3d_colmap.py` unmodified.
+
+Loader checks, through each method's own reader, pass on all 4 trees × 2 methods:
+
+- Ex4DGS: 19/20 train cameras + cam00, 300 frames each, raster 1352×1014; on crb,
+  FoV, R and T equal to the native tree exactly;
+- Multi4D: focal = `poses_bounds` focal / 2, no extraction triggered.
+
+Fixture frame 0 is byte-identical to the unedited frame 0 in every camera:
+crb 20/20, flame 21/21, sear 21/21.
+
+**E2 submitted.** 32 jobs, ids 58478205–58478249: 6 prep, 12 train, 12 render,
+2 collect. The chain is stage 2's, with walltime set to the measured max × 1.3.
+
+**E3.**
+
+- **dbg rate check (58478131).** 12.76 it/s on the 1352 route vs 12.47 on the
+  native route over the same span. It TIMED OUT at the cap, as expected.
+- **Ex4DGS golden ×3:** 58479271–58479273, walltime 1:40, with `--save_img`.
+- **Multi4D golden ×1:** 58478135, walltime 3:40.
+- **G-route: pending.**
+
+**E2 result (22:05).** All 32 jobs COMPLETED; training took at most 48:22.
+
+| seed | renders | `f_box_profile.json` sha256 |
+|---|---|---|
+| 0 | 300/300 | `e164580c…` |
+| 1 | 300/300 | `614f1893…` |
+
+**E3 G-route result (22:05; `checks/g_route.json`, sha256 `adcab961…`).**
+
+**Ex4DGS: PASS.**
+
+- Runs: 32.7737 / 32.4163 / 33.0964.
+- Mean 32.7621 (sd 0.3402, range 0.6801) against the native n = 6 mean 32.6731.
+- Δ = +0.089 dB, inside the 0.50 dB tolerance.
+- Exit 0, commit `7fac649`, tracked diff 0.
+
+**Multi4D: FAIL.**
+
+- Peak 32.1748 at iteration 16,500 (`best/` is the same).
+- Final 31.3849 at 20,000.
+- The band is 33.4–34.0; the reproduction peaks were 33.4226 / 33.7672 / 33.5383.
+- So the peak is 1.25 dB below the lowest reproduction run, while that run-to-run
+  range is 0.3445 dB (n = 3, fixed seed).
+- Exit 0, commit `c483e82`, clean.
+
+Diagnostics, read-only:
+
+- The tree differs from the native staging only in its frames (`fused.ply` and
+  `poses_bounds.npy` are the same files).
+- The evaluation curve matches the reproduction runs at iterations 500 and 1000,
+  then sits 1.2–1.6 dB below all three from 13,500 on.
+- The background bank is 141k vs 150–153k; the transient bank 188k vs 198–252k.
+
+Whether this is the halving filter (Stage 0: ≥ 53.2 dB between routes) or run
+variance cannot be told from n = 1. **Stopped for the principal.**
+
+### 2026-09-23/24 night: Multi4D disambiguation (principal-approved) and E4
+
+**Multi4D route disambiguation.** Chosen by the principal after the G-route FAIL.
+
+- 58486985: a second 1352-route golden.
+- 58486986: a native-staging rerun (rep 4).
+- **Hybrid fixture trees built, CPU, all pass the Multi4D loader check.**
+  `data_staging/multi4d/<fixture>_hybrid` holds Multi4D's own cv2 + LANCZOS
+  frames, with the fixture's pixels pasted inside each edited file.
+  - crb: 600 composites; flame and sear: 630 each.
+  - Edit masks cover 6.7k–14.5k px per frame.
+  - Outside the masks, the native and fixture frames differ by at most 16–18/255.
+  - The first crb build (58487051) failed closed before writing anything: the
+    fixture manifest lists only its margin-window files. Rebuilt as 58488724, with
+    every unlisted file now verified sha-identical to the unedited frame.
+- New unedited native stagings (58487049/50): `data_staging/multi4d/{flame,sear}_steak`.
+
+**E4, the common evaluator (uncommitted).**
+
+- **Files:**
+  - `scripts/eval_event_windows.py`, the evaluator, with rev 2 §8.3's conventions;
+  - `scripts/make_window_package_absfix.py`, the fixture window packages, windows
+    from spec v2 plus T;
+  - `tests/test_eval_event_windows.py`.
+- **Where it ran:** on Leonardo from `agent-control/ars/eval/tree`, which is
+  `git archive 3a104ab` plus these three files.
+- **Unit tests:** 12 pass locally with LPIPS skipped (no torch); all 13 pass on
+  Leonardo.
+- **Golden 1 (58488677): the stage-2 table of record, from the saved renders.**
+  - 84 of 104 cells re-scored. The other 20, the wave-1 crb cells, have no
+    profile at their recorded run dir, since `runs/realdata_gate` was archived.
+  - All six endpoints P1/P2/S1/H1/H2/C1 match `absfix-stage2-paired.json`
+    within max |Δ| **6.8e-7 dB**.
+  - The 6 STG runs match the reducer's pooling within 4.9e-7 dB.
+  - The package GT is byte-identical to each scene's cell GT.
+  - Output: `out/golden_record.json`, sha256 `79c54c4a…`.
+- **Golden 2 (58488678): whole frame against each native evaluator, on the same
+  PNGs.** Output: `out/golden_native.json`, sha256 `c7fe313b…`.
+
+  | method | PSNR, mine − native | SSIM, mine − native | LPIPS, mine − native |
+  |---|---|---|---|
+  | Ex4DGS | −0.010 mean, max \|Δ\| 0.0117 dB | −0.00095 | +0.045 |
+  | Multi4D | −0.009, max 0.0117 dB | +0.019 | +0.043 |
+  | STG | −0.013, max 0.0174 dB | +0.018 | +0.039 |
+
+  - **The PSNR offset is 8-bit quantisation:** the natives score float renders.
+  - **LPIPS: all three natives are half-contrast.** Ex4DGS and STG use the vendored
+    `lpipsPyTorch`, whose `z_score` applies LPIPS's own [-1,1] shift and scale to
+    [0,1] inputs. Multi4D calls `lpips` on [0,1] without `normalize`.
+  - **SSIM** was probed on a dbg GPU (58492995):
+    - the evaluator equals the GraphDECO formula in fp32 on CPU and on GPU
+      without TF32, to 1e-5, under both torch 2.5.1 and 2.1.2;
+    - TF32 moves SSIM by +0.004 to +0.005 under cudnn 9 and not at all under cudnn 8;
+    - STG's and Multi4D's natives sit 0.019 **below** the exact value on their own
+      saved PNGs, cause **not identified**.
+- **Frozen tolerances:**
+  - reproduction of the frozen reference chain: |Δ| ≤ 1e-5 dB (measured 6.8e-7);
+  - whole-frame PSNR against a native evaluator on the same PNGs: per-frame
+    |Δ| ≤ 0.025 dB (measured 0.0174).
+  - SSIM and LPIPS are not gated against natives. Cross-method SSIM and LPIPS
+    come only from this evaluator.
+- **E4 check: PASS.** The analytic unit tests pass, and the evaluator reproduces
+  `event_region_frame_profile.py` + reducer P1/P2 (and S1/H1/H2/C1) on the
+  stage-2 renders within the measured tolerance.
+
+**Multi4D disambiguation, first result (06:48).**
+
+- **1352 golden rep2 (58486985):**
+  - peak **33.4959** at iteration 12,500, **inside** the 33.4–34.0 band;
+  - final **30.8244** at 20,000;
+  - `best/` 32.7039.
+- **The two 1352 runs disagree on the peak reading.** The peaks are 32.17 and 33.50,
+  1.32 dB apart, against a 0.3445 dB range for the native reproduction at n = 3.
+- **They agree on the final-iteration reading, which the plan makes primary.** Both
+  finals, 31.38 and 30.82, sit 1.4–2.7 dB below the reproduction's finals of
+  32.785 / 33.540 / 32.858.
+- **Native rerun 58486986:** running since 05:03; not yet read, because the CINECA
+  certificate expired at 06:53.
+
+### 2026-09-24: E5 renderer built; two bottle-layout checkpoints; E6 COLMAP admission on the bottle layout
+
+**Renderer (uncommitted):** `scripts/build_absence_suite_scene.py` (specs, render, gt, check,
+montage, manifest), `tests/test_build_absence_suite_scene.py` (10 tests pass, including a
+byte-identity test of the optimised render against brute force), and the nine wave-1 specs in
+`configs/ars/wave1/`. `build_synthetic_reveal_scene.py` is untouched. Outputs are outside the repo,
+in `D:\adags-ars\checkpoint*`.
+
+**Checkpoint 1 → principal's changes.** The first look had a thin cook and a busy high-frequency
+wall. The principal asked for:
+- a cook with human proportions (torso ~4 units wide, two-joint arms working over the back of the
+  table);
+- a calm, large-scale wall (no fine speckle) with sparse strong features: a window with a blind, a
+  poster, a shelf;
+- COLMAP admission run together with every render (E5 and E6 hand in hand).
+
+They accepted:
+- resting contacts in the collision check (V10);
+- the pass-through occupant (G1) being present all sequence;
+- the region definitions, subject to revision.
+
+Frame PNGs dropped from 1.6 MB to 0.5 MB.
+
+**Checkpoint 2, bottle layout (L1), all three events (same-pose A0, moved R2, pass-through G1):**
+visibility, absence, move, pass-through coverage, collision/contact, pixel denominators, no-leak
+(on frames 0 and 50–100 in all 20 cameras) and fast-vs-brute all pass. Collision/contact passes on
+all nine specs after two fixes it caught in the carton/mug layouts: a shelf box poking 0.02 into the
+wall, a 0.044 gap, and the mug-layout cook's head 0.07 from the window sill.
+
+**Nearest visible surface ≥ 7.7 units in every camera of every layout.** Ex4DGS culls Gaussians
+nearer than `near = 4.0` (CUDA `min_depth`; code map). Real N3V's nearest surfaces are 5.6–7.8. A
+NEAR check (floor 5.0) is now in the specs.
+
+**COLMAP admission (E6), jobs 58543652 / 58545179 / 58545180, each tool's own preprocessing:**
+
+| scene | Ex4DGS `colmap_0` | Multi4D `fused.ply` | STG frames 50–99 |
+|---|---|---|---|
+| bottle, same-pose | 9,169 pts, 20/20 cams, 0.32 px | 198,470 pts | 50/50 triangulated |
+| bottle, moved | 9,178, 20/20, 0.32 px | 198,549 | 50/50 |
+| bottle, pass-through | 9,698, 20/20, 0.31 px | 200,376 | 50/50 |
+
+- Real crb references: 8,206 sparse and 386,905 dense.
+- Against the exact geometry, 93–94% of sparse and 95% of dense points lie within 0.10 units of a
+  true surface (dense median 0.008).
+- The bottle carries 310 sparse and ~2,600 dense points.
+- STG finds points on the bottle exactly in the frames where it is present (~265 vs 0).
+- The ~6% off-surface points are ordinary mismatches: reprojection error 1.1 px vs 0.14 px
+  overall, and shorter tracks.
+- Multi4D's cloud follows the 4DGaussians `colmap.sh llff` commands and flags, with poses from
+  Ex4DGS's converter. 4DGaussians' `llff2colmap.py` is not on Leonardo.
+
+**Side questions (Blender; must ARS look like N3V?).** Memo and an independent gpt-5.6-sol xhigh
+review are in `research-wiki/assets/ars-side-questions-2026-09-24/`. The review's verdict was
+MATERIAL DEFECT. Its catches, all verified:
+- the aggregate `all_pass` failed open on missing checks (fixed: fail-closed);
+- Ex4DGS's effective near cull is 4.0, not the 0.01 projection near (measured safe; checked now);
+- STG's published protocol is the first 50 frames, so six tiled segments are an adaptation;
+- the physical N3V rig is a control choice, not a loader requirement;
+- the repeated trainings of the proof rule are pseudoreplicates of three scenes.
+
+It also suggested a textured "revealed backplane". Measured: one third of the bottle's gap region
+in cam00 is calm wall with pixel std 1–2.
+
+### 2026-09-24 evening: principal's decisions after checkpoint 2 (recorded before S0)
+
+- **Go:** render all 9 wave-1 scenes at full resolution. Each scene gets three COLMAP admission
+  jobs, one per tool (Ex4DGS `colmap_0`, Multi4D `fused.ply`, STG per-frame on all 300 frames),
+  scored against admission criteria A1–A4 as declared in `analyse_colmap.py` (checkpoint 2).
+  Stop and ask only if a check fails.
+- **Textured band behind the table: not now.** Revisit only if results look distorted by the
+  calm wall behind the targets.
+- **Shadows stay deferred.**
+
+**Proof-rule amendment (§4), before the S0 freeze.** §4 stands as written, with two additions:
+
+1. **Scope of the claim.** The causal test (CER vs Ex4DGS base) treats repeated trainings as
+   measuring training noise on these specific scenes. Every claim is worded as holding "on these
+   nine synthetic scenes", never for scenes in general.
+2. **Consistency across layouts.** An event type (same-pose, moved, pass-through) passes only if,
+   in addition to the §4 criteria, CER's mean gap improvement over Ex4DGS base is positive in each
+   of the three layouts (bottle, carton, mug) separately. Per-layout differences are reported for
+   every endpoint.
+
+**Combining future scenes.** Before any runs start on added layouts, the real fixtures or our own
+capture, the rule for combining them is written into this log. The real fixtures are always
+reported separately and never pooled with the synthetic scenes.
+
+**Wave 2 addition: a dense-initialisation variant**, labelled as a variant and not part of the proof.
+- **Scene:** ARS-L1-A0 (bottle, same-pose return).
+- **Runs:** Ex4DGS base ×3 and CER ×3, each started from the scene's Multi4D `fused.ply` (dense
+  COLMAP of frame 0) instead of the sparse `colmap_0` points. Compute ≈ 6 × 1.2 GPU-h.
+- **Precondition (setup, not score):** the logged initial Gaussian count of every run equals the
+  point count of the dense cloud it was given. The loader path that reads the initial cloud is
+  verified in Ex4DGS's code before submission. If the precondition fails, the variant is reported
+  as not exercised.
+- **Robustness criterion, declared before any result exists.** Let Δ_dense = mean(CER) −
+  mean(base) under dense init (3 vs 3), and Δ_sparse the same difference from the wave-1 runs on
+  the same scene. The result is called robust to initialisation iff all three hold:
+  - Δ_dense on the gap window is > 0;
+  - Δ_dense on the return window is > −0.25 dB (the §4 non-inferiority margin);
+  - Δ_dense and Δ_sparse on the gap window have the same sign.
+
+  The report is descriptive only: all 12 per-run values and both Δs for every endpoint, with no
+  significance test at 3 vs 3.
+
+**Independent identity check (V8), 2026-09-24 22:35.**
+- **Setup:** an independent agent wrote `D:\adags-ars\verifier\verify_identity.py` (sha256
+  `415a1b3f…`) from `configs/ars/ARS_SPEC_FORMAT.md` and the spec/rig/identity files only. It
+  confirmed it never opened the renderer or its tests.
+- **Checkpoint-2 bottle scenes (20 random camera-frame pairs each, seeds 1001–1003):** 60/60 full
+  frames agree on every pixel, edges included. Its planted-defect controls show the declared
+  criterion (≥ 99.9% agreement away from edges) would miss a half-pixel centre shift and a reversed
+  joint order; overall agreement catches both.
+- **Wave 1, declared now, before any wave-1 run:** a scene passes the identity check iff
+  away-from-edge agreement ≥ 0.999 on every pair and pooled, AND overall agreement ≥ 0.9999 pooled.
+
+### 2026-09-25 03:15: wave 1 rendered in full; every scene check passes; COLMAP admission misses one declared criterion on 3 of 2,700 frames
+
+**Rendered.** All 9 wave-1 scenes at full resolution: 20 or 21 cameras × 300 frames, ~3.2 GB each.
+Stored in `D:\adags-ars\wave1\<scene>`, each with a MANIFEST (sha256 of every file). Uploaded to
+`/leonardo_scratch/large/userexternal/siyengar/ars/wave1/` and verified file by file against the
+MANIFEST.
+
+**Scene checks: all pass on all 9, with no applicable check missing.**
+
+| check | result |
+|---|---|
+| visibility | held-out camera 4,985–5,839 px; target in 19/19 or 20/20 training cameras |
+| absence | 0 target pixels anywhere over frames 60–89 |
+| move | IoU 0 |
+| pass-through coverage | ≥ 4 frames at ≥ 50% coverage; 77–100% of the former volume crossed |
+| no-leak | 26–98 M changed pixels per scene, 0 outside the event objects' outlines (+1 px) |
+| nearest surface | 7.72–8.06 units, above Ex4DGS's 4.0 cull and above STG's per-rig near plane of 5.35–7.42 |
+| collision / contact | pass |
+| pixel denominators | pass |
+| fast-vs-brute | 8/8 sampled frames byte-identical |
+
+**Independent identity verifier (V8), criterion strengthened before the runs:** 9/9 scenes pass,
+100.0000% overall pixel agreement on 20 random camera-frame pairs each, and every identity file it
+read matched the MANIFEST.
+
+**COLMAP admission (each tool's own preprocessing):**
+- **Ex4DGS `colmap_0`:** all cameras registered; 8,365–11,062 points; 0.30–0.37 px reprojection
+  error.
+- **Multi4D `fused.ply`:** 194,626–204,473 points.
+- **STG:** all 300 frames triangulated in every scene.
+- **Two transient COLMAP aborts** ("Camera model does not exist" in two-view verification) were
+  retried: L1-G1, and L2-R2 with resume. Later jobs retry inside the job.
+
+**Loader checks (E1 scripts) and V7:**
+- Ex4DGS and Multi4D loaders pass on all 9: cam00 held out, 300 frames, 1352×1014, tensors equal to
+  the files.
+- The 1,000-point reprojection through each method's own camera representation passes for Ex4DGS,
+  Multi4D and STG on all 9 (max 1.3e-10 px).
+
+**V9, static half:** passes on all 9. No adapter-tree link resolves into `gt/`. The instrumented
+half (log what the optimizer actually consumes) has NOT been run.
+
+**The one failure: admission criterion A3.** A3 is declared in `analyse_colmap.py`: ≥ 90% of a
+product's points within 0.10 units of a true surface. It is missed on 3 of 2,700 STG frames, all
+gap frames of the mug layout:
+- L3-A0 frame 89: 89.75%;
+- L3-R2 frames 60 and 89: 89.60% at lowest.
+
+Context:
+- Every other STG frame is ≥ 90.16%. Per-scene medians are 91.1–92.0% (mug), 92.2–93.1% (bottle)
+  and 93.5–93.7% (carton).
+- The off-surface points are ordinary mismatches: reprojection error ~1.2 px against ~0.15 px for
+  on-surface points.
+- All cameras are registered, and there are correctly no points on the absent target.
+- The misses fall where the mug's ~300 accurate points are absent. The pass-through scene, whose
+  occupant fills that spot, has none.
+
+Reported to the principal (stop-and-ask rule). Not yet decided.
+
+**Infrastructure defects found and fixed during the run (none touched a scene):**
+- Git Bash `tar` read `D:/…` as a remote host (`--force-local`).
+- The shared COLMAP container binds only `/leonardo_work`. An ARS wrapper also binds
+  `/leonardo_scratch`. Jobs 58564657/58/60 failed on this and were resubmitted.
+- The STG walltime was raised 45 → 60 min, since a 21-camera scene needs up to 48 min.
+- `v7_reproject.py` was missing STG's `thirdparty/gaussian_splatting` import path.
+- The first static leakage script had an incomplete allow-list and was too slow; it was replaced by
+  `v9_static.py`.
+
+### 2026-09-26: principal's decision on the admission criterion A3 (logged exception)
+
+**Decision (principal):** admit all 9 wave-1 scenes as they are, and log the A3 miss as a documented
+exception.
+
+**The exception:**
+- **Criterion:** A3, ≥ 90% of a COLMAP product's points within 0.10 units of a true surface,
+  declared in checkpoint 2.
+- **Where it is missed:** STG per-frame COLMAP on 3 of 2,700 frames, all gap frames of the mug
+  layout: ARS-L3-A0 frame 89 (89.75%); ARS-L3-R2 frames 60 and 89 (89.60% at lowest).
+- **Everything else holds on those frames:** every camera registered, no points on the absent
+  target, and the off-surface points are ordinary mismatches.
+- **Not changed:** the criterion itself, the scenes, and the COLMAP products. Future scenes are held
+  to A3 as declared, and any new exception is logged the same way.
+
+**Next:** the instrumented half of the leakage check (V9) runs next, per method on one scene.
+
+**V9, instrumented half, 2026-09-26: PASS for all three methods on ARS-L1-A0.**
+
+**How it was run.** `agent-control/ars/v9_run.py` runs each method's own `train.py` unmodified (via
+runpy) with runtime wrappers only:
+- It wraps the method's render function(s), recording the camera and whether autograd is on.
+- For Ex4DGS and STG it also wraps the scene's train/test camera lists. Ex4DGS reads each step's GT
+  image from that list's paths.
+- cam00 is identified by its camera centre, within 1e-3 of the rig's cam00; rig cameras are ≥ 0.98
+  apart.
+- The runs are short and labelled non-evidence; only the iteration count was shortened (config
+  copies in `agent-control/ars/configs/v9/`).
+
+**Pass rule:**
+- no cam00 render with autograd;
+- no cam00 in any training camera list;
+- ≥ 100 gradient renders from ≥ 10 cameras;
+- a positive control showing the detector recognises the method's own cam00 objects.
+
+| method (job) | renders with gradients | cam00 with gradients | positive control |
+|---|---|---|---|
+| Ex4DGS (58679159, 4,500 it) | 4,500 from 19 training cameras | 0; 10 training lists (209–589 cameras), 0 cam00 | 111/111 of its test cameras recognised as cam00 |
+| STG (58679160, 3,000 it, segment 0–49) | 6,000 from 19 | 0; training list of 950, 0 cam00 | 50/50 test cameras recognised |
+| Multi4D (58679161, coarse 300 + fine 3,500) | 30,400 across all four render paths, from 19 | 0 | 3,300 cam00 renders, all gradient-free, all from its periodic evaluation |
+
+Multi4D's evaluation of cam00 selects its `best/` checkpoint; that is test-camera selection, not
+optimiser leakage. The final iteration remains the primary reading (rev 2 §8.1).
+
+With this, E6's done-when is met on wave 1:
+- COLMAP admission (with the A3 exception);
+- loader checks and V7;
+- V8;
+- V9, static and instrumented.
+
+**Next:** E7 (S0 freeze and wave-1 baseline submission), on the principal's go.
+
+### 2026-09-28: S0 freeze of wave 1 (principal's go), recorded before any baseline or CER output exists
+
+Glossary for this entry: same-pose return (A0), moved return (R2), pass-through (G1); bottle, carton and mug
+layouts (L1, L2, L3); gap window (P1), return window (P2), whole frame (H2), ordinary region (ORD); independent
+identity check (V8); leakage check (V9).
+
+**Frozen scenes.** Nine spec files in `configs/ars/wave1/`, rendered by `scripts/build_absence_suite_scene.py`
+(sha256 `ea827198f08128b29b459f8f0c1299750dad920dabb32bdb646163bfeba24bef`, uncommitted; every MANIFEST records this
+generator hash, git head `c45a5c3`). Each spec file is byte-identical to the scene's `event_spec.json`. The MANIFEST
+of every scratch copy on Leonardo (`/leonardo_scratch/large/userexternal/siyengar/ars/wave1/<scene>`) was re-hashed
+today and equals the local one.
+
+| scene | spec file sha256 | trajectory sha256 | MANIFEST sha256 | files |
+|---|---|---|---|---|
+| ARS-L1-A0 (bottle, same-pose) | `c88bb84a5cc01956d11e278b455a8fec88e175c9a4637fe6da7f56608e52d7e7` | `543b4a70023fb970881a2dec7f3176c793e54c203d53a39a4740a8d13fb3d790` | `a73e6b0a89ac05783897b821382ea673a049dd1d572b724be1907f8c34cdfb47` | 7,247 |
+| ARS-L1-R2 (bottle, moved) | `38413fa5941f99f8a08e4d53b02a370f262f8d522db38a4d0def9b191de000f2` | `016174ae4966e56bea8451cf3951f82dac2331b04777ea1d031b836f74f52bf9` | `1468c2eeadef7fae755d784d009bdb45aeb5b3bd025a0d5b2071c9d99dfb870b` | 7,547 |
+| ARS-L1-G1 (bottle, pass-through) | `68f258d6b07995c24b2db63b82d5c138628b8ab4dd6f3befc365bd9db270d7db` | `47b965fda82ab1badb1c2cdecfb04a00715898b1899587a86d84e3d5b5842bb0` | `c6a9ea764981c5a0e31e0d4c3d2aa40b9a58ae37248e0af811368ce35ef09b1f` | 7,547 |
+| ARS-L2-A0 (carton, same-pose) | `349aeb896e122413a4e7a4e15b9f07ce60c058311714c0f107991c6022b6bbb0` | `fde58ed09773273544c24c9995c46e698b787b6b3434f4fb89ac852dbce055b5` | `6d686ccb7121d8cee0c16294b97ee6aeb94b878d8b2da83f31408a5e8d4df664` | 7,549 |
+| ARS-L2-R2 (carton, moved) | `ae74d72f8582e85b4bf0183a0eac55aeba7331fced362e263eb4fbc118100ff2` | `afb4982a7bf7663da93a697813d72a346f8b58d772c40923a008786f60d19af2` | `2e1350cd786d2d24d2997cc6123a529ffe28a12c9e0c37af3895bf3797dd7afd` | 7,849 |
+| ARS-L2-G1 (carton, pass-through) | `66025a6427f5137fcca065e800de9a29699e4451f72b9d522336f510951aa8e0` | `da7b40980494351f46eaf95c220c4aaa43eb0964e0558f091fca8dad3bf98e82` | `6e65f6f6d45b9a3b4456dab05b3de5d61e5c8388869dcfe46285aa1a5c17d171` | 7,849 |
+| ARS-L3-A0 (mug, same-pose) | `00cbc5c6e017e99c5a796357ff2c47aea21fa4d557e3defe710f09f361ab7d72` | `7da9f4aa83ef7324e5354743b4873469c2a847a4d2ec938d4f3a4fe2f7e3c39d` | `d996e3643f2d7f544ff4306572425eb438800b618e060a74cce9b5a991f77d3d` | 7,549 |
+| ARS-L3-R2 (mug, moved) | `146363ee10ba91af48b3449c464e3df97b23ee2a085b297ec27223ca2f642fa0` | `517835d010c9e3c688aba684bd44e0ac994f7865862ee8f2fb9acbd487d0609a` | `652cfe620b3c8e6c0833c15d55c410e8241587ca62df525e34cb50bfe4dab14d` | 7,849 |
+| ARS-L3-G1 (mug, pass-through) | `96d8a9f01be6fd0f0fef1cc24fb92a9f3bff6fc3faecaa9b1b1c05ebb1856e1a` | `4509bc477e29d245774171eace3a515982caed0762c51ba97fe1423452c9b74e` | `854adfe750e8c9f5e2ed5be493d90178ba3ff598bc77bfa5b0c8e630cfa89873` | 7,849 |
+
+**Frozen scoring inputs.** Each scene's `gt/window_package.json` (in its MANIFEST) defines the regions and windows the
+proof rule reads; sha256: L1-A0 `2521e275…`, L1-R2 `4b961874…`, L1-G1 `a1d592e7…`, L2-A0 `6ab155ba…`, L2-R2
+`720d5c76…`, L2-G1 `db24769a…`, L3-A0 `73dbd575…`, L3-R2 `30da089e…`, L3-G1 `27e128f3…`. The common evaluator is
+`scripts/eval_event_windows.py` sha256 `30f0e4b467e360ae4e3836232a01632e68b67eead3ee639bd12935590e760404` (identical
+locally and in the E4-validated tree on Leonardo). Also frozen: `configs/ars/ARS_SPEC_FORMAT.md` `183011cd…`, the
+renderer tests `d625e962…`, the evaluator tests `9c88baff…`.
+
+**Frozen rules (as amended; nothing below changes after this line without a new dated entry).**
+
+1. **Causal proof, CER against Ex4DGS base.** Six endpoints: the gap window and the return window, for each of
+   same-pose, moved and pass-through. Pooled over the three layouts, 9 runs against 9; two-way fixed effects (arm +
+   layout); Holm correction over the 6 endpoints. An event type passes when (a) its gap improvement is
+   Holm-significant, (b) the one-sided 95% lower bound of CER − base on its return window exceeds −0.25 dB, and
+   (c) *(amendment 2026-09-24)* CER's mean gap improvement over base is positive in each of the three layouts
+   separately. Causal proof: at least 2 of the 3 event types pass, one of them same-pose.
+2. **Against the benchmarks (descriptive).** Per scene, CER (mean of 3 runs) Pareto-dominates a benchmark when it is
+   ≥ that benchmark on both gap and return windows. Counts out of 9 are reported against STG, Multi4D and the Ex4DGS
+   base mean. Benchmark proof: CER dominates both STG and Multi4D on ≥ 6 of 9 scenes, including at least one of each
+   event type.
+3. **Do-no-harm.** Whole-frame and ordinary-region PSNR, CER − base, one-sided 95% lower bound > −0.2 dB, pooled.
+4. **Preconditions.** A method arm is scored on a scene only if it passes that scene's contribution gates; a failure
+   is reported as DESIGN_WITHOUT_POWER for that scene, never dropped.
+5. **Scope** *(amendment 2026-09-24)*: repeated trainings measure training noise on these scenes; every claim holds
+   "on these nine synthetic scenes". Per-layout differences are reported for every endpoint. The real fixtures are
+   always reported separately and never pooled with synthetic scenes; any other combination is written here before
+   its runs start.
+6. **Multi4D port census threshold (§4b gate 2):** persistent foreground + background carry ≥ 50% of the
+   target-region contribution mass over the pre-gap frames, in every layout, on the wave-1 Multi4D same-pose runs.
+7. **Independent identity check, strengthened criterion (2026-09-24):** a scene passes iff away-from-edge agreement
+   ≥ 0.999 on every pair and pooled, and overall agreement ≥ 0.9999 pooled. Measured on wave 1: 9/9 at 100.0000%.
+8. **Dense-initialisation variant (wave 2, not part of the proof):** precondition and robustness criterion exactly as
+   written in the 2026-09-24 evening entry.
+9. **COLMAP criterion A3:** unchanged; the wave-1 miss (3 of 2,700 STG frames, mug-layout gap frames) stands as the
+   logged exception of 2026-09-26.
+
+**Readings frozen with the baselines.** Ex4DGS: `render.py` at 40,000 iterations, cam00. Multi4D: final iteration
+20,000 is primary (`best/` is not read). STG seed 0: the 25,000-iteration checkpoint of each 50-frame segment, scored
+with `--segment_len 50` so no window value pools two segment models. Every run is scored only after a check that the
+method's own saved cam00 ground truth equals the frozen frame on every pixel for all 300 frames (render file *f* is
+frame *f*).
+
+**E7 submission, 2026-09-28 (after the S0 entry above).** Every job ID is in `agent-control/ars/ledger.txt` and
+`jids/`, written at submission.
+
+- **Rate checks first, on the debug queue, on the carton pass-through scene (the most sparse points, 21 cameras):**
+
+  | method | synthetic scene | real-beef reference | walltime (reference job × 1.3) |
+  |---|---|---|---|
+  | Ex4DGS (58902948) | 20,000 it in 20:45; 24,700 in 25:26 | 24,530 in 32:02 | 1:11:18 → **1:35** |
+  | Multi4D (58902549) | coarse 1,500 in 13:23; fine 990 in 10:35 | 13:24; 11:21 | 2:48:03 → **3:40** |
+  | STG (58905317), segment 50–99 | 25,000 in 27:12 | 20,000 in 28:05 | train 49:11 → **1:05**; render 4:11 → **0:06** |
+
+  The first Ex4DGS check (58902548) failed in 32 s on `import torch` on one node; the environment verified intact
+  against the torch wheel's own record, and the retry ran normally. Logged in the ledger as a transient node fault.
+- **Submitted:** Ex4DGS base × 3 on each of the 9 scenes (27 jobs, render at 40,000 for cam00 in the same job);
+  Multi4D × 1 on each scene (9); STG seed 0 on each scene, six 50-frame segments each (54 training + 54 render jobs).
+- **Multi4D final-iteration renders.** Multi4D writes cam00 images only for its `best/` checkpoint and has no render
+  script. `agent-control/ars/m4d_final_render.py` runs Multi4D's own `train.py` unmodified and, after Multi4D's own
+  evaluation at iteration 20,000, renders the test camera with the same call and saves the PNGs. Smoke test at
+  iteration 500: 300 frames, mean PSNR 28.174176 against Multi4D's own 28.1741758.
+- **Scoring.** `agent-control/ars/ars_score.py` scores a run only after checking its provenance (exit codes, pinned
+  commit, clean tree, config hash), the 300 renders at 1352×1014, and that the method's own saved cam00 ground truth
+  equals the frozen frame on every pixel for all 300 frames. It then runs the common evaluator. The serial queue
+  admits only 10 queued jobs per user, so the 10 per-run scoring jobs first queued were cancelled before they started.
+  Two self-resubmitting scoring workers (`ars_score_worker.py`, jobs `ars_w1_scoreworker_A1`/`B1`) now score each run
+  as its training completes; failed trainings are marked, never scored.
+
+**Scoring defects found and fixed, 2026-09-28 afternoon (all in my scoring instrument; no run was affected).**
+
+1. **Ex4DGS saves no ground-truth images.** `render.py` creates `gt/` but writes only renders, so the first alignment
+   check (method GT equals frozen GT) found nothing on the first 8 runs. Replaced for Ex4DGS by a comparison with
+   Ex4DGS's own per-frame PSNR record (`all_metrics.json`) within the E4 tolerance of 0.025 dB, with a positive
+   control that a one-frame shift fails.
+2. **8-bit rounding.** Ex4DGS scores its float render; the evaluator reads the saved PNG. Rounding adds a nearly
+   constant squared error, Q = 1/(12·255²), so the PSNR offset grows with quality: 0.005–0.011 dB near 31 dB, 0.04–0.06
+   dB near 40 dB. The E4 tolerance was calibrated on real footage near 33 dB. The predicted offset
+   −10·log10(1 + Q/MSE) matched the observed one within 0.0015 dB (31 dB run) and 0.0127 dB (40 dB run); neighbouring
+   frames sit ≥ 0.137 dB away (median 2.28 dB). The check now subtracts the predicted offset before the 0.025 dB test.
+3. **Two scoring workers claimed one run at once** (a claim whose owner had not yet written its job id was treated as
+   stale). The collision hit the carton pass-through runs 2 and 3; one good score was renamed by the second worker.
+   Fixed: such claims are live, takeover is atomic, and scores are written to a private file and moved into place.
+   Both runs are rescored; the 16 scores that existed then were re-validated.
+4. **Serial-queue limits.** `lrd_all_serial` allows 10 queued jobs, 2 running and 30,800 MB per user, so per-run scoring
+   jobs could not be queued; scoring runs in self-resubmitting workers (two on the serial queue, two more on GPU-partition
+   nodes scoring on CPU).
+
+**Open, for the principal:** the corrected alignment check still misses on 6 and 20 frames of the Ex4DGS runs 2 and 3
+on the mug moved-return scene, by 0.0003–0.0025 dB over the tolerance, on gap frames near 43 dB. On those frames the
+correct frame's discrepancy is 0.016–0.028 dB and the frames one or two away are 2.6–8.7 dB off, so the file-to-frame
+mapping is not in doubt; the rounding model is approximate at that quality. The two runs are not scored until decided.

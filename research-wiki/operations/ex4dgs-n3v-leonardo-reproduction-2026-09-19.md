@@ -370,3 +370,24 @@ headline must be the cohort **mean**; the best is reportable only alongside it
 and labelled as a maximum. This is the same class of error as reading `best/`
 as "the peak" (see the Multi4D lane), and it went undetected here through
 several progress reports.
+
+## 14. Correction (append-only, 2026-09-24): Ex4DGS's LPIPS is NOT standard LPIPS
+
+§8's table says "LPIPS convention: standard", and `ex4dgs-pin.json` says the vendored
+`lpipsPyTorch` z-score is "equivalent to normalize=True". Both are wrong:
+
+- **The constants are LPIPS's own.** `lpipsPyTorch/modules/networks.py:42-51` uses
+  shift [-.030, -.088, -.188] and scale [.458, .448, .450], which belong to the
+  [-1,1] input range. They are not ImageNet mean/std.
+- **The inputs are [0,1].** `render.py:80` passes [0,1] renders, so the network
+  sees half-contrast inputs.
+- **The effect.** On the same PNGs, standard LPIPS (the `lpips` package, AlexNet
+  v0.1, [-1,1]) reads about 2× higher: a mean offset of +0.045 on the 1352-route
+  golden run.
+- **Scope.** It is the same class of defect as the one already flagged for Multi4D.
+  STG's vendored copy has it too.
+- **Evidence.** `agent-control/ars/eval/out/golden_native.json` (ARS fast-path plan
+  §9, E4).
+
+Published and reproduced LPIPS values are unaffected as numbers; they are simply
+not standard LPIPS. Cross-method LPIPS must come from the common evaluator.
