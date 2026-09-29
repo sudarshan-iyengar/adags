@@ -900,3 +900,93 @@ frame *f*).
 on the mug moved-return scene, by 0.0003–0.0025 dB over the tolerance, on gap frames near 43 dB. On those frames the
 correct frame's discrepancy is 0.016–0.028 dB and the frames one or two away are 2.6–8.7 dB off, so the file-to-frame
 mapping is not in doubt; the rounding model is approximate at that quality. The two runs are not scored until decided.
+
+**Principal's decisions, 2026-09-28 afternoon.** (1) Ex4DGS alignment check: a frame outside the rounding-corrected
+0.025 dB tolerance still passes when its discrepancy is at least 1 dB below that of every frozen frame within ±2
+frames. Applied to all Ex4DGS runs; the runs scored earlier passed the absolute test on every frame. On the mug
+moved-return runs 2 and 3 it passed exactly the 6 and 20 gap frames, with the nearest neighbour ≥ 3.6 dB away.
+(2) Commit of the E5–E7 work: done as `3f5efd2`, before this entry.
+
+### 2026-09-28 evening: Ex4DGS base replicate spreads (G-floor, E9), recorded before any CER output exists
+
+No CER run has been submitted and no CER score exists (`scores/wave1/` holds only `ex4dgs`, `multi4d`, `stg`; the
+reducer refuses to run otherwise). Source: the 27 verified scores `agent-control/ars/scores/wave1/ex4dgs/*.json`
+(their sha256 are inside the output), reduced by `agent-control/ars/g_floor.py`. Output
+`agent-control/ars/checks/wave1/g_floor.json`, sha256 `99c548697c79253c3b3951bd839bf539d596a7e5389935415ed04b0093e4816f`.
+
+PSNR in dB of runs 1 / 2 / 3, then the sample standard deviation (sd) and range. Gap window = the ghost region in the
+middle of the absence; return window = the target just after it comes back; whole frame = all pixels, all 300 frames;
+static background = everything outside the moving and event objects; ordinary region = the other moving objects.
+
+| scene | gap window: runs; sd; range | return window: runs; sd; range | whole frame: runs | static background: runs | ordinary region: runs |
+|---|---|---|---|---|---|
+| bottle, same-pose | 26.53 / 27.05 / 26.55; 0.30; 0.52 | 23.04 / 23.27 / 23.01; 0.14; 0.26 | 31.39 / 38.73 / 40.55 | 31.31 / 40.11 / 43.03 | 34.38 / 34.16 / 34.51 |
+| bottle, moved | 35.73 / 36.52 / 35.10; 0.72; 1.43 | 19.34 / 20.60 / 20.60; 0.72; 1.25 | 40.21 / 38.88 / 38.43 | 43.15 / 40.78 / 39.96 | 34.53 / 34.15 / 34.47 |
+| bottle, pass-through | 23.16 / 23.33 / 22.52; 0.43; 0.81 | 23.44 / 24.39 / 24.19; 0.50; 0.95 | 39.74 / 39.11 / 39.76 | 43.38 / 42.02 / 43.40 | 34.33 / 33.97 / 34.40 |
+| carton, same-pose | 27.64 / 28.89 / 28.58; 0.65; 1.25 | 32.77 / 32.12 / 31.41; 0.68; 1.37 | 40.89 / 41.14 / 27.68 | 42.36 / 42.95 / 27.41 | 34.67 / 34.31 / 34.35 |
+| carton, moved | 35.68 / 36.18 / 35.93; 0.25; 0.50 | 23.87 / 23.82 / 23.75; 0.06; 0.12 | 39.13 / 41.22 / 41.22 | 40.19 / 43.48 / 43.43 | 34.50 / 34.50 / 34.63 |
+| carton, pass-through | 19.77 / 19.52 / 20.05; 0.26; 0.52 | 32.54 / 31.92 / 32.34; 0.32; 0.62 | 32.66 / 39.45 / 38.77 | 32.78 / 43.56 / 41.98 | 34.55 / 34.29 / 34.39 |
+| mug, same-pose | 27.46 / 28.13 / 29.49; 1.03; 2.02 | 26.17 / 25.64 / 26.22; 0.32; 0.59 | 41.98 / 27.12 / 37.49 | 43.86 / 26.86 / 37.78 | 36.14 / 35.19 / 36.31 |
+| mug, moved | 36.52 / 36.06 / 36.16; 0.24; 0.45 | 20.59 / 20.50 / 20.06; 0.28; 0.53 | 40.82 / 41.40 / 41.32 | 43.05 / 43.91 / 43.97 | 36.36 / 36.30 / 36.26 |
+| mug, pass-through | 22.70 / 22.13 / 22.99; 0.44; 0.87 | 26.53 / 26.25 / 26.41; 0.14; 0.28 | 40.46 / 34.12 / 40.84 | 43.33 / 34.24 / 44.17 | 36.24 / 35.98 / 36.20 |
+
+Descriptive facts, not interpreted here:
+
+- The gap-window spread is 0.24–1.03 dB sd (range 0.45–2.02 dB). The return-window spread is 0.06–0.72 dB sd (range
+  0.12–1.37 dB).
+- On 5 of 9 scenes, one of the three runs sits 6–15 dB below the other two on the whole frame and on the static
+  background, while its gap, return and ordinary-region values stay close to its siblings'. The runs are: bottle
+  same-pose run 1 (9.2 dB below the best sibling), carton same-pose run 3 (13.5), carton pass-through run 1 (6.8), mug
+  same-pose run 2 (14.9; its run 3 is a further 4.5 dB below run 1), mug pass-through run 2 (6.7). The do-no-harm
+  rule (§4 rule 3) reads the whole frame and the ordinary region.
+- Every one of these runs passed provenance, output and alignment checks; none was dropped or rerun.
+
+### 2026-09-29: diagnosis of the Ex4DGS whole-frame drops (non-evidence diagnostics; nothing re-scored or dropped)
+
+- **Where.** In every flagged run the damage is one static region seen from the held-out camera: the dark panes of
+  the window behind the cook, rendered as light grey cloud-like blobs (on the mug same-pose run 2 also the poster).
+  Everything else matches the good siblings. The drop is flat over all 300 frames (a static-model defect, not the
+  time machinery). Figures: `D:\adags-ars\wave1\diag\` (per-frame curves, bad-vs-good montage).
+- **Training views are unaffected.** End-of-training PSNR on the training cameras and the static/dynamic Gaussian
+  counts of the bad runs equal their siblings' (e.g. bottle same-pose 41.34 vs 41.38/41.29; 29,697 vs 29,726/30,541
+  static Gaussians).
+- **The trained model is bad, not the render.** Re-rendering the saved 40k models of three bad runs on three other
+  nodes reproduces their scores to 2e-5 dB (jobs 59019955/58/62).
+- **Node trend.** All 5 Ex4DGS runs trained on `lrdn0066` are degraded (4 severe, 1 by 2.2 dB); of the 22 runs on
+  other nodes, 2 are (mug same-pose runs 2 and 3, on `lrdn3254` and `lrdn0088`). Under no node effect, all five
+  `lrdn0066` runs falling among the 7 degraded runs has probability ≈ 2.6e-4. No Multi4D or STG job ran there.
+  This is a trend, not a proven hardware fault; the decisive test (repeat trainings pinned to `lrdn0066`) is proposed,
+  not run.
+- **Rendering is not bit-deterministic either:** the same saved model rendered on two GPUs differs by up to 36/255 at
+  single pixels.
+- **Visual run reports** now exist for all 45 runs (`runs/<method>/<run>/report/`: stats.json, per-frame curves,
+  key-frame montages with error maps and zooms) and one comparison image per scene
+  (`agent-control/ars/reports/wave1/`); the scoring worker writes one for every run it scores from now on.
+
+### 2026-09-29 evening: baseline completion batch (principal: CER will be built on both Ex4DGS and Multi4D)
+
+Submitted so that no baseline needs rerunning once CER exists; every job ID is in the ledger.
+
+1. **Multi4D runs 2 and 3 on all 9 wave-1 scenes** (18 jobs, 59036033–59036051): the same design as Ex4DGS (3
+   repeated trainings per scene), so §4 rule 1 applies unchanged to CER on Multi4D. Identical to run 1.
+2. **Ex4DGS and the `lrdn0066` question.**
+   - Replacements on other nodes for the 5 runs trained on `lrdn0066` (59036052–56). The originals stay on the
+     record; whether a replacement stands in for its original in the proof is the principal's decision after the
+     node test.
+   - Node test: 3 trainings of the bottle pass-through scene pinned to `lrdn0066` (59036057/58/60). That scene's
+     three existing runs, on other nodes, are within 0.66 dB of each other.
+   - Every other job now excludes `lrdn0066`.
+3. **Dense-initialisation variant (wave 2, bottle same-pose), base arm.** A trap was caught before submission.
+   Ex4DGS divides its sparse points by a scene normalisation radius when it builds `points3D.ply`
+   (`scene/dataset_readers.py:499-503`), so a dense cloud copied in unscaled would have loaded at the wrong scale while
+   still passing the frozen precondition (initial count = dense count). `agent-control/ars/build_dense_tree.py`
+   therefore:
+   - recovers the radius from the sparse ply against the bin (1.0000 on this rig, consistent to 1e-7);
+   - checks that the dense cloud sits on the sparse points after normalisation (median nearest-point distance 0.023,
+     scene extent 64.5);
+   - writes the 198,546 points in those units (`checks/wave2/dense_tree_ARS-L1-A0.json`).
+
+   A debug-queue speed check (59036061) runs before the 3 base runs.
+
+**Dense-initialisation base runs submitted** (59036768/70/72). The speed check (59036061) logged 198,546 initial
+points, equal to the dense cloud, so the frozen precondition holds; its training speed equals the sparse runs'.
