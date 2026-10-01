@@ -990,3 +990,218 @@ Submitted so that no baseline needs rerunning once CER exists; every job ID is i
 
 **Dense-initialisation base runs submitted** (59036768/70/72). The speed check (59036061) logged 198,546 initial
 points, equal to the dense cloud, so the frozen precondition holds; its training speed equals the sparse runs'.
+
+### 2026-09-30: principal's decisions (recorded before any CER code exists)
+
+1. **CER is built on both Ex4DGS and Multi4D, in parallel.** This changes §4b, which made the Multi4D port wait for
+   the Ex4DGS causal proof (§4b gate 1). Gate 1 no longer applies.
+2. **The Multi4D census runs first.** §4b gate 2, with the 50% threshold frozen at S0: persistent foreground +
+   background must carry ≥ 50% of the target-region contribution mass over the pre-gap frames, in every layout. It
+   runs on the existing wave-1 Multi4D run 1 of the three same-pose scenes (bottle, carton, mug). CER-Multi4D is built
+   only if the census passes.
+3. **CER code lives in a separate git worktree per substrate, on a `cer` branch.** The pinned baseline checkouts
+   (`repo/ex4dgs` @ `7fac649`, `repo/multi4d` @ `c483e82`) are never modified.
+4. **Wave 2 is on hold until the wave-1 proof reads out.** The "no new datasets after Sep 30" rule is to be revisited
+   then.
+
+Note (mine, not part of the decisions): the wave-2 dense-initialisation base runs submitted on 2026-09-29
+(59036768/70/72) were already running when wave 2 was put on hold; they are left to finish and be scored.
+
+### 2026-09-30 01:50: Multi4D census (§4b gate 2, frozen rule 6): PASS in every layout
+
+Wave-1 Multi4D run 1 of the three same-pose scenes, final iteration 20,000, pre-gap frames 0–59, training cameras
+only (cam00 never read). Share of the target-region contribution mass (Σ αT inside the target's front-most mask),
+measured by rendering Multi4D's own final hybrid pass with each bank's colour set to a one-hot indicator through the SH
+constant term (the hybrid rasterizer takes no precomputed colours for the persistent set):
+
+| same-pose scene | persistent foreground | static background | transient | foreground + background | ≥ 0.50 | per camera min / median / max |
+|---|---|---|---|---|---|---|
+| bottle | 0.0002 | 0.9904 | 0.0094 | 0.9906 | pass | 0.986 / 0.991 / 0.992 |
+| carton | 0.0056 | 0.9848 | 0.0096 | 0.9904 | pass | 0.971 / 0.992 / 0.992 |
+| mug | 0.0001 | 0.9833 | 0.0166 | 0.9834 | pass | 0.958 / 0.984 / 0.986 |
+
+- Self-checks: re-rendering cam00 at frames 0/30/59/150 reproduces the saved final renders byte for byte on all three
+  scenes; the three bank channels sum to the rendered alpha within 1.01e-6; permuting the bank-to-channel assignment
+  permutes the masses exactly. The carton scene's cam01 sees no target pixel before the gap; its 60 camera-frames carry
+  no mass and are excluded.
+- Jobs: 59049323 failed in 19 s on the script's own config comparison (`saving_folder`, an output path that no model or
+  render code reads); 59049518 is the run of record. Script `agent-control/ars/m4d_census.py` sha256 `98d6e782…`;
+  outputs `agent-control/ars/checks/wave1/m4d_census_ARS-L{1,2,3}-A0.json` (`81fc5c54…`, `5b03bd9e…`, `2db216a9…`) and
+  `m4d_census_summary.json` (`ae6d45f4…`, `gate_pass_all_layouts: true`).
+- **Descriptive fact that shapes the port (not interpreted further):** the target is painted by the static background
+  bank, not the persistent foreground bank (≤ 0.6%). CER on Multi4D therefore gates background rows at both background
+  render sites (standalone and hybrid) in addition to the three foreground paths §4b names.
+
+### 2026-09-30 03:40: CER built on both substrates; Ex4DGS diff ready for the principal's review; Multi4D blocked on an upstream defect
+
+Glossary: memory cohort = existing rows that paint the target before it leaves (switched off in the gap); residual
+cohort = new gap-only rows; gap = frames 60–89.
+
+**Ex4DGS (branch `cer`, worktree `repo/ex4dgs-cer`; pinned `repo/ex4dgs` untouched at 7fac649, 0 porcelain).**
+- Spec [cer-ex4dgs-spec-2026-09-30](cer-ex4dgs-spec-2026-09-30.md) rev 2, after GPT-6.1 Sol (high, material defect, 7
+  findings) and Fable 5.1 (ready after fixes) on rev 1; code reviewed by both (Sol: material defect in tests and one
+  guard; Fable: ready after one launcher fix). Every finding applied; reviews in `assets/cer-ex4dgs-2026-09-30/`.
+- Commits, tests before code: f37694c tests → cd5ef1e code → 73e9b65 tests strengthened → f71c1b0 code fixes. Diff for
+  review: `assets/cer-ex4dgs-2026-09-30/cer_ex4dgs_7fac649..f71c1b0.diff` (substrate: 48 changed lines in 5 files, plus
+  `scene/cer.py` 157 lines and `test_cer.py`). No CUDA change.
+- Tests on Leonardo, bottle same-pose, wave-1 base run 2: on the tests-only commit T0/T1 pass and T2 fails with
+  ImportError (59050085); on f71c1b0 every test passes (59051055): renders with q = 0 byte-identical to unmodified
+  Ex4DGS on all 300 frames with 299 residual rows present; exact factors; renders outside the gap byte-identical at
+  q = 1; zero rendering gradient to the switched-off cohort (positive control at q = 0); birth leaves every existing
+  row and all 15 RAdam groups untouched; instrument conservation 5.7e-5; checkpoint round trip incl. optimizer state;
+  ply fallback and a CER directory without CER state both refuse; prune alignment; non-finite opacity caught.
+- Membership forecast on the nine wave-1 run-1 base models (59050133): memory share 0.88–0.95 of the pre-gap target
+  mass (mostly dynamic-bank rows), 217–434 residual rows, donors paint 0.36–0.81 of the gap region at birth.
+- T7 integration (shortened 17,200 iterations, not evidence; cd5ef1e 59050242/59050304 and f71c1b0 59051056/59051057):
+  both pass; render.py's cam00 image equals a direct gated render. **Descriptive: in both smoke runs the residual share of
+  the gap region ended at 0.10 and 0.09, below the pre-declared 0.20 gate**; memory 0.92–0.93 before, 0.91 after; upstream
+  pruning at 17,101 removed about 70% of the memory rows while the rest still carried the target.
+- Scoring deployed: `ars_score.py` method `ex4dgs_cer` accepts only commit f71c1b0 on branch `cer` with a clean worktree
+  at training and at render and the 40,000 render iteration, and carries `cer_gates.json` into the score (every run
+  scored; rule 4 in the reducer); 27 CER runs added to `ars_score_worker.py`. Negative check on the T7 run: refused
+  (render iteration 17,200), nothing written. Originals kept as `*.pre_cer.py`. Launcher
+  `agent-control/ars/sbatch/train_ex4dgs_cer.sbatch`. **Nothing submitted; waits for "submit".**
+
+**Multi4D.** Census PASS (entry above). Spec [cer-multi4d-spec-2026-09-30](cer-multi4d-spec-2026-09-30.md) rev 2
+after Sol and Fable; worktree `repo/multi4d-cer` (pinned `repo/multi4d` untouched at c483e82); commits bf838c6 tests →
+c5ac11e code; own JIT extensions directory `build/torch_extensions_multi4d_cer`. Tests: on bf838c6 T0/T1 pass, T2 fails
+with ImportError (59051214); on c5ac11e (59051536) T0/T1 pass and **`begin` stops on its per-render conservation
+assertion: the contribution mass is exactly 0 against 1.37e6 on the first render**.
+
+**Upstream defect found (Multi4D hybrid rasterizer, not CER):** `max_contrib` is allocated
+(`diff_gaussian_rasterization_hybrid/cuda_rasterizer/rasterizer_impl.cu:189`) and passed to the forward kernel but never
+written (the forward writes only `n_contrib`, `forward.cu:722`), while the launched backward returns early for every
+bucket with `bucket_idx·32 ≥ max_contrib[tile]` (`backward.cu:1229`). Every gradient of the hybrid render therefore
+depends on uninitialised memory: zero-filled memory drops a whole tile (here all tiles), large garbage computes it. This
+affects Multi4D training itself, baselines included; its size in training is not measured. Decision put to the principal.
+
+### 2026-10-01: principal's decisions on CER (recorded before any CER run is submitted)
+
+1. **Residual gate frozen (Ex4DGS and Multi4D):** the primary threshold of the "residual active inside the gap" gate is
+   **0.20** (residual share of the gap-region contribution mass over the gap window, training cameras, final model), as
+   declared in the CER specs. **Stated with it: two shortened smoke runs (T7, not evidence) were already seen, with
+   residual shares 0.10 (cd5ef1e) and 0.09 (f71c1b0).** The reducer also reports the verdicts at 0.10, 0.20 and 0.30 as a
+   descriptive table; only 0.20 is primary. The other gate thresholds stand as declared (memory ≥ 0.50 before the gap
+   and after the return; exact zeros as guards).
+2. **Residual donors measured on the memory-gated model (Fable F1): confirmed.**
+3. **Multi4D instrument, option (a):** the training kernel stays unmodified in both arms; a separately built copy of
+   the hybrid rasterizer that writes `max_contrib` is used only inside the contribution-mass instrument, with the
+   per-render conservation check kept. It is a CUDA change on the `cer` branch, in its own commit, through the same
+   two-model code review.
+4. **The `max_contrib` defect's effect on the baselines:** not now. Later, on the principal's yes, as a diagnostic only
+   (fraction of tiles skipped in a real training process at a few iterations); no reruns.
+5. **Multi4D round-trip test:** replaced as proposed (saved CER state equals the in-memory state; a saved CER model
+   refuses to reload).
+6. **Before "submit" on Ex4DGS:** (a) forecast the donor count and gap mass by bank (static / dynamic) on the three
+   pass-through scenes, since residual copies are frozen snapshots at frame 74 and a moving donor would leave a
+   stationary ghost; report, no design change; (b) a montage of the smoke renders at frames 59, 74, 90 beside the base
+   run, gap region zoomed; (c) whether the base arm loses a similar share of the same memory rows to upstream pruning
+   over 30k–40k (descriptive, from existing checkpoints).
+7. **Wave-2 ablations, recorded, not now:** residual initialisation (low opacity at birth; a donor→copy swap in the gap;
+   dynamic copies for moving donors); start iteration (20k vs 30k, with the label plumbing an earlier start needs); the
+   0.5 majority rule. The doubled layer at birth (donor and copy both render in the gap) is a known design point, not a
+   bug.
+
+### 2026-10-01 01:20: Ex4DGS CER diagnostics requested before "submit" (descriptive, not evidence)
+
+Job 59077300 (script `agent-control/ars/cer/cer_diag.py`, run on the `cer` worktree at f71c1b0; outputs
+`agent-control/ars/cer/diag/*.json`). Scene units; the scene extent is ≈ 6.5.
+
+**(a) Pass-through scenes, residual donors by bank** (wave-1 base run 1 at 30k, `begin()` as in training):
+
+| pass-through scene | donors static / dynamic | gap-region mass carried by donors, static / dynamic | gap-region mass of all rows, static / dynamic | dynamic donors' largest move across the gap: median / 90th pct / max |
+|---|---|---|---|---|
+| bottle | 15 / 255 | 0.001 / 0.360 | 0.031 / 0.969 | 0.31 / 1.48 / 3.44 |
+| carton | 4 / 239 | 0.003 / 0.743 | 0.152 / 0.848 | 0.27 / 1.26 / 3.83 |
+| mug | 2 / 369 | 0.001 / 0.746 | 0.097 / 0.903 | 0.34 / 1.77 / 4.91 |
+
+On the pass-through scenes almost every donor is a dynamic row, and many move during the gap by up to ≈ 0.5–0.75 of
+the scene extent; the residual copies are static snapshots at frame 74. Reported only; no design change (principal).
+
+**(b) Pruning of the memory rows in the base arm, 30k → 40k** (27 wave-1 base runs; memory rows by the `begin()` rule on
+chkpnt30000, ungated). `prune_invisible` reads per-row timestamps frozen after 30k and `prune_small` a running minimum
+radius, so rows with timestamp < 0 or minimum radius < 5 px at 30k are certainly removed by 40k; the row counts at 40k
+bound the rest, but the bound is loose (5–9k dynamic removals per run are not explained by the 30k state, so the upper
+bound exceeds 100%). Certainly removed share of the memory rows, lower bounds:
+
+| bank | across the 27 runs |
+|---|---|
+| dynamic memory rows | 0.44–0.77 (same-pose 0.56–0.76, moved 0.44–0.63, pass-through 0.57–0.77) |
+| static memory rows | 0.00–0.21 |
+
+For comparison, the CER smoke run lost 71% of its dynamic memory rows and 16% of its static ones after `begin`. The base
+arm therefore loses at least a similar share of the same rows; the loss is upstream behaviour, not caused by CER. Not
+measured: how much target mass the removed rows carried (the smoke run's remaining memory rows still carried 0.92 of it).
+
+### 2026-10-01 02:20: pass-through residuals, option (a) taken (principal's recommendation); spec amendment under review
+
+- **Decision:** residual copies become verbatim copies in the donor's own bank (dynamic donors into the dynamic bank with
+  their keyframes, so a copy moves exactly as its donor; static donors copied with their displacement), gated to the gap,
+  instead of rev 2's static snapshot at frame 74. Spec decision proposed in the amendment: a dynamic copy keeps its own
+  temporal opacity inside the gap. Option (b), keeping the snapshot, was rejected because it would knowingly handicap the
+  pass-through third of the proof.
+- **Amendment:** [cer-ex4dgs-spec-amendment-a-2026-10-01](cer-ex4dgs-spec-amendment-a-2026-10-01.md), sent alone to both
+  reviewers; then tests → code → code review → tests, as before. The Ex4DGS diff under the principal's review
+  (`f71c1b0`) therefore changes in `begin()`'s birth step only; the scorer pin moves with the final commit.
+- **Requested descriptive check:** donor-by-bank forecast on the same-pose and moved-return scenes, job 59078436.
+
+### 2026-10-01 03:05: Ex4DGS donor forecast on all nine scenes; Multi4D residual-cohort forecast (decision for the principal)
+
+**Ex4DGS, donors by bank** (job 59078436 for same-pose and moved-return, 59077300 for pass-through; base run 1 at 30k):
+every scene has donors in both banks, mostly dynamic (static / dynamic: same-pose 19/351, 7/243, 3/355; moved-return
+18/199, 36/398, 34/189; pass-through 15/255, 4/239, 2/369, bottle / carton / mug), and the dynamic donors move during the
+gap on every condition (median of each donor's largest move 0.26–0.52, maximum 1.8–4.9 scene units, extent ≈ 6.5). This
+motivated amendment (a) beyond the pass-through scenes.
+
+**Multi4D, residual cohort** (wave-1 Multi4D run 1, `begin()` at fine 16,000; jobs 59078553/59078592 bottle, 59078606
+carton and mug): with the memory rows off, the **transient bank paints 0.88–0.96 of the gap region** (bottle 0.96, carton
+0.88, mug 0.91); background rows 0.02–0.10, foreground 0.001–0.07. Background donors (the only donors the Multi4D spec
+copies) are **6, 0 and 1 rows** on the three same-pose scenes, carrying ≤ 0.0004 of the gap-region mass, while transient
+rows meeting the donor rule carry 0.87–0.90. Multi4D already represents the revealed background with transient rows, so
+on Multi4D CER reduces to its memory gate; the frozen residual gate (≥ 0.20 of the gap region) is forecast to fail on all
+three same-pose scenes, which under rule 4 would make every CER-Multi4D scene DESIGN_WITHOUT_POWER. Not interpreted
+further; the choice is the principal's (the Multi4D port is otherwise implemented and its tests pass except one test bug,
+fixed in 00357aa, not yet re-run).
+
+### 2026-10-01 04:10: CER test status on both substrates (nothing submitted)
+
+- **Ex4DGS, amendment (a) implemented and tested.** Commits 7e3ccf7 / 319b1e4 (tests) and 4a92369 / 5b82ae7 (code) on
+  `cer`, after the amendment's spec review (Sol, Fable; rev 2) and code review (Sol: material defect in the tests,
+  fixed; Fable: ready). Tests-only commit: T2c failed with KeyError as designed (59078802). On 5b82ae7 every test passes
+  (59078863), incl. q = 0 byte identity with residual rows in both banks (12 static, 287 dynamic), copies equal to their
+  donors in every parameter and evaluated input (also for begin() driven to static-only / dynamic-only / mixed donors
+  across the bank boundary), the donor-swap diagnostic 0 differing values, exact birth state, round trip and pruning with
+  residuals in both banks. T7 smoke (59078864/65): passes; descriptive gates: memory 0.93 / 0.92, residual share 0.060
+  (residual rows 12 / 284 at birth, 8 / 80 after the 17,101 pruning). Scorer pin moved to 5b82ae7. Review diffs:
+  `assets/cer-ex4dgs-2026-09-30/cer_ex4dgs_7fac649..5b82ae7.diff` and `..._f71c1b0..5b82ae7_amendment_a.diff`.
+- **Multi4D.** Commits through 7d8c5e2 (code) and 00357aa (tests), incl. the CUDA instrument commit 33215f1 and both code
+  reviews (Sol: material defect in tests and plumbing, fixed; Fable: code ready). Tests: T0–T2 (59078492), T2b–T3
+  (59078553), T4–T4b (59078592; the training build breaks conservation in a fresh process, the instrument build
+  conserves), T5–T6 (59079481, after a test-ordering fix; the first run 59078600 failed on that test bug) all pass; T7
+  (59078493/94, smoke schedule) passes, gates descriptive: memory 0.94 / 0.94, residual share 0.024. The residual-cohort
+  question above is the open decision.
+- **Queue incidents, recorded:** a JIT build lock left by a job I cancelled mid-build (59077345) blocked 59078050 (timed
+  out) and 59078060 (failed after 35 min); the lock was removed and the extensions are now built once by a dedicated job
+  (`sbatch/cer_m4d_build.sbatch`) before any user of them.
+
+### 2026-10-01 (later): principal's decisions on the contribution gates and on Multi4D (recorded before any real CER run)
+
+Glossary: memory gate = the memory cohort switched off inside the gap; residual copies = the gap-only copies of the
+donors; gap content = whatever paints the gap region during the gap.
+
+1. **(a) The residual share becomes descriptive, not a design-without-power gate (amendment, proposed before any real
+   CER run).** The share of the gap-region mass carried by the residual copies is reported as the attribution between
+   the memory gate and the residual copies; it no longer decides whether a scene is scored. The preconditions that stay
+   (plan §4 rule 4): memory share ≥ 0.50 of the target mass before the gap and after the return, and the exact zeros
+   (memory mass in the gap, residual mass outside it). **Stated with it:** the residual shares of the shortened smoke
+   runs (integration tests, not evidence) were already seen, 0.06–0.10 on Ex4DGS (0.10 and 0.09 with the rev-2
+   snapshot birth, 0.06 with amendment (a)) and 0.024 on Multi4D. This supersedes the 2026-10-01 freeze of the residual
+   gate at 0.20 as a precondition; the reducer's 0.10 / 0.20 / 0.30 table stays, as a description.
+2. **(b) Multi4D is treated as a memory-gate arm:** the exact memory gate on its persistent banks, with Multi4D's native
+   transient bank as the gap content. On Multi4D the gap-content gate counts residual or transient rows (the census and
+   forecast show the transient bank paints 0.88–0.96 of the gap region once the memory rows are off).
+3. **(c) Exploratory Multi4D work** (for example transient donors, or gating the transient bank) comes only after the
+   confirmatory design is frozen, and is labelled exploratory.
+
+Not yet done (open items in [cer-handoff-2026-10-01](cer-handoff-2026-10-01.md)): writing (a) and (b) into both CER specs,
+the code that reports instead of gating, and the reducer.
