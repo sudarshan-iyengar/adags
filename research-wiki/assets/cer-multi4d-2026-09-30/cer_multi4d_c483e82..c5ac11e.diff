@@ -1,0 +1,840 @@
+diff --git a/arguments/__init__.py b/arguments/__init__.py
+index 4372373..c2f7cfc 100644
+--- a/arguments/__init__.py
++++ b/arguments/__init__.py
+@@ -57,6 +57,7 @@ class ModelParams(ParamGroup):
+         # Add a 50k-point sky sphere to the dynerf init point cloud. Helps wide outdoor
+         # scenes, hurts sky-less indoor ones — only the dynerf_w config enables it.
+         self.use_dynerf_sky_pc = False
++        self.cer_scene = ""
+         super().__init__(parser, "Loading Parameters", sentinel)
+ 
+     def extract(self, args):
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 040d4d2..6baec64 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -13,6 +13,7 @@ import math
+ from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
+ from scene.gaussian_model import GaussianModel
+ from .diff_gaussian_rasterization_hybrid import GaussianRasterizationSettings_hybrid, GaussianRasterizer_hybrid
++from utils import cer_gate
+ 
+ 
+ def render_background(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor, scaling_modifier=1.0,
+@@ -84,6 +85,7 @@ def render_background(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch
+     scales_final = pc.scaling_activation(scales_final)
+     rotations_final = pc.rotation_activation(rotations_final)
+     opacity = pc.opacity_activation(opacity_final)
++    opacity = cer_gate.apply(pc, viewpoint_camera, opacity)
+     if dropout_use:
+         compensation = torch.ones(opacity.shape[0], dtype=torch.float32, device="cuda")
+ 
+@@ -196,6 +198,7 @@ def render_foreground(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch
+     scales_final = pc.scaling_activation(scales_final)
+     rotations_final = pc.rotation_activation(rotations_final)
+     opacity = pc.opacity_activation(opacity_final)
++    opacity = cer_gate.apply(pc, viewpoint_camera, opacity)
+ 
+     # (Assume the rest of the 3DGS pipeline is already set up)
+     # Create initial compensation factor (1 for each Gaussian)
+@@ -312,6 +315,7 @@ def render_mask(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tenso
+     scales_final = pc.scaling_activation(scales_final)
+     rotations_final = pc.rotation_activation(rotations_final)
+     opacity = pc.opacity_activation(opacity_final)
++    opacity = cer_gate.apply(pc, viewpoint_camera, opacity)
+     if dropout_use:
+         compensation = torch.ones(opacity.shape[0], dtype=torch.float32, device="cuda")
+ 
+@@ -466,6 +470,7 @@ def render_rawall3pc(viewpoint_camera, pc_foreground: GaussianModel, pc_backgrou
+     screenspace_points_fg_filtered = screenspace_points_fg
+ 
+     opacity_fg = pc_foreground.opacity_activation(opacity_fg)
++    opacity_fg = cer_gate.apply(pc_foreground, viewpoint_camera, opacity_fg)
+     scales_fg = pc_foreground.scaling_activation(scales_fg)
+     rotations_fg = pc_foreground.rotation_activation(rotations_fg)
+     shs_fg = shs_fg_full[:, :16, :]
+@@ -473,6 +478,7 @@ def render_rawall3pc(viewpoint_camera, pc_foreground: GaussianModel, pc_backgrou
+     # --- 5. Prepare Background (Static) ---
+     means3D_bg = pc_background.get_xyz
+     opacity_bg = pc_background.get_opacity  # Already activated
++    opacity_bg = cer_gate.apply(pc_background, viewpoint_camera, opacity_bg)
+     scales_bg = pc_background.get_scaling  # Already activated
+     rotations_bg = pc_background.get_rotation  # Already activated
+     shs_bg_full = pc_background.get_features
+diff --git a/scene/__init__.py b/scene/__init__.py
+index 8cbba84..5236160 100644
+--- a/scene/__init__.py
++++ b/scene/__init__.py
+@@ -33,6 +33,7 @@ class Scene2gs_mixed:
+         self.gaussians = gaussians
+         self.gaussians_second =gaussians_second
+         self.gaussians_transient = gaussians_transient
++        self.cer_scene = getattr(args, "cer_scene", "")
+ 
+         if load_iteration:
+             self.loaded_iter = searchForMaxIteration(os.path.join(load_iteration, "point_cloud"))
+@@ -59,6 +60,8 @@ class Scene2gs_mixed:
+ 
+ 
+         if self.loaded_iter:
++            assert not os.path.exists(os.path.join(load_iteration, "point_cloud", "iteration_" + str(self.loaded_iter), "cer_state.pt")), \
++                "a CER Multi4D model is evaluated in memory; reload is unsupported"
+             self.gaussians.load_ply(os.path.join(load_iteration,
+                                                  "point_cloud",
+                                                  "iteration_" + str(self.loaded_iter),
+@@ -117,6 +120,11 @@ class Scene2gs_mixed:
+         self.gaussians.save_ply(os.path.join(point_cloud_path, "point_cloud.ply"))
+         if self.gaussians_transient is not None:
+             self.gaussians_transient.save_ply(os.path.join(point_cloud_path, "point_cloud_transient.ply"))
++        if hasattr(self.gaussians_second, "cer_labels"):
++            torch.save({"fg_labels": self.gaussians.cer_labels, "bg_labels": self.gaussians_second.cer_labels,
++                        "clock": self.gaussians_second.cer_clock, "q": self.gaussians_second.cer_q,
++                        "active_sh_degree_t": self.gaussians_transient.active_sh_degree_t},
++                       os.path.join(point_cloud_path, "cer_state.pt"))
+ 
+         try:
+             self.gaussians_second.save_deformation(point_cloud_path)
+diff --git a/scene/cer.py b/scene/cer.py
+new file mode 100644
+index 0000000..faf2fff
+--- /dev/null
++++ b/scene/cer.py
+@@ -0,0 +1,180 @@
++#
++# Complementary Episode Residuals (CER) for Multi4D.
++# Spec: research-wiki/operations/cer-multi4d-spec-2026-09-30.md (ADAGS repository).
++#
++# A memory cohort (foreground/background rows that paint the target before it leaves) is switched off inside the
++# gap [A, B]; a residual cohort (copies of the background rows that paint the gap region once the memory rows are
++# off) exists only inside it. Both are set once, at the end of fine iteration densify_until_iter, after which no
++# bank changes its rows (sentinels enforce it).
++#
++import json
++import os
++
++import numpy as np
++import torch
++
++from gaussian_renderer import render_rawall3pc
++from utils import cer_gate
++from utils.sh_utils import C0
++
++LIFECYCLE = ("prune_points", "_prune_optimizer", "densify_and_clone", "densify_and_split", "densify_and_prune",
++             "densify", "densification_postfix", "add_points_from_dict", "weight_prune", "prune",
++             "reset_opacity", "reset_opacity_partially", "cat_tensors_to_optimizer", "replace_tensor_to_optimizer")
++
++
++def event(scene_dir):
++    """Clock (A, B) and target part ids from the canonical scene's event_spec.json."""
++    spec = json.load(open(os.path.join(scene_dir, "event_spec.json")))
++    ids = [p["id"] for o in spec["objects"] if o.get("role") == "target" for p in o["parts"]]
++    return spec["clock"]["A"], spec["clock"]["B"], sorted(set(ids))
++
++
++def cam_number(cam):
++    """Camera number parsed from the camera's image path."""
++    return cer_gate.parse(cam.image_path)[0]
++
++
++def train_views(scene, frames):
++    """Training cameras (never cam00) whose frame is in `frames`, built only for the frames asked for."""
++    frames, ds = set(frames), scene.getTrainCameras()
++    for i, path in enumerate(ds.dataset.image_paths):
++        c, f = cer_gate.parse(path)
++        if f in frames:
++            assert c != 0
++            yield ds[i]
++
++
++def target_mask(scene_dir, ids, cam_no, frame):
++    """[H, W] float mask of the target's front-most pixels in camera cam_no at frame."""
++    ident = np.load(os.path.join(scene_dir, "gt", "identity", "cam%02d.npz" % cam_no))["f%04d" % frame]
++    return torch.from_numpy(np.isin(ident, ids)).float().cuda()
++
++
++def _region(scene, frames, mask_frame=None):
++    """(camera, target mask) for training views at `frames`; mask taken at mask_frame if given."""
++    A, B, ids = event(scene.cer_scene)
++    for cam in train_views(scene, frames):
++        t = cer_gate.frame(cam) if mask_frame is None else mask_frame
++        yield cam, target_mask(scene.cer_scene, ids, cam_number(cam), t)
++
++
++def mass(fg, bg, tr, pipe, views):
++    """Per-row contribution mass sum(alpha*T) inside each view's mask and over all pixels, per bank.
++
++    Every bank's SH is swapped for a DC-only colour of 1.0 for the duration; the gradient of the final hybrid render
++    with respect to the DC leaves, divided by SH_C0, is alpha*T. Asserts conservation on every render (the upstream
++    backward reads an uninitialised max_contrib). Returns ([fg, bg, tr] inside, [fg, bg, tr] total), float64.
++    """
++    banks = (fg, bg, tr)
++    saved = [(m._features_dc, m._features_rest) for m in banks]
++    inside, total = [0, 0, 0], [0, 0, 0]
++    black = torch.zeros(3, device="cuda")
++    try:
++        with torch.enable_grad():
++            leaves = []
++            for m in banks:
++                leaves.append(torch.full_like(m._features_dc, 0.5 / C0).requires_grad_(True))
++                m._features_dc, m._features_rest = leaves[-1], torch.zeros_like(m._features_rest)
++            for cam, mask in views:
++                img = render_rawall3pc(cam, fg, bg, tr, pipe, bg_color=black, stage="fine")["render"]
++                assert img.shape[1:] == mask.shape
++                grads = torch.autograd.grad((img[0] * mask).sum() + img[1].sum(), leaves)
++                per = [g[:, 0].double() / C0 for g in grads]
++                got, ref = sum(p[:, 1].sum() for p in per).item(), img[1].double().sum().item()
++                assert abs(got - ref) <= 1e-4 * ref, "CER mass not conserved on %s (%g vs %g)" % (cam.image_path, got, ref)
++                inside = [x + p[:, 0] for x, p in zip(inside, per)]
++                total = [x + p[:, 1] for x, p in zip(total, per)]
++    finally:
++        for m, (dc, rest) in zip(banks, saved):
++            m._features_dc, m._features_rest = dc, rest
++    return inside, total
++
++
++def check_finite(fg, bg):
++    """A NaN opacity times a 0 factor renders at alpha 0.99; Multi4D has no NaN prune."""
++    for m in (fg, bg):
++        assert torch.isfinite(torch.sigmoid(m._opacity)).all(), "non-finite opacity"
++
++
++def _refuse(name):
++    """A lifecycle method that may not run after CER has begun."""
++    def refuse(*args, **kwargs):
++        raise AssertionError("CER sentinel: %s called after begin" % name)
++    return refuse
++
++
++def begin(fg, bg, tr, scene, pipe, opt, iteration):
++    """Label the memory cohort, append the residual cohort to the background, arm the gate; writes cer_begin.json."""
++    A, B, ids = event(scene.cer_scene)
++    assert iteration == opt.densify_until_iter and iteration >= getattr(opt, "phase3_start_iter", 10000)
++    check_finite(fg, bg)
++    report = open(os.path.join(scene.model_path, "cer_begin.json"), "x")  # a NaN restart must not begin twice
++    inside, total = mass(fg, bg, tr, pipe, _region(scene, range(0, A)))
++    memory = [(t > 0) & (i >= 0.5 * t) for i, t in zip(inside[:2], total[:2])]
++    for m, mem in zip((fg, bg), memory):
++        m.cer_labels, m.cer_clock, m.cer_q = mem.to(torch.uint8), (A, B), 1.0
++    cer_gate.ARMED = True
++    # donors: background rows that paint the gap region during the gap once the memory cohort is off
++    g_in, g_tot = mass(fg, bg, tr, pipe, _region(scene, range(A, B + 1), mask_frame=A - 1))
++    majority = [(t > 0) & (i >= 0.5 * t) for i, t in zip(g_in, g_tot)]
++    donors = majority[1].nonzero().squeeze(1)
++
++    with torch.no_grad():
++        new = {"xyz": bg._xyz[donors], "f_dc": bg._features_dc[donors], "f_rest": bg._features_rest[donors],
++               "opacity": bg._opacity[donors], "scaling": bg._scaling[donors], "rotation": bg._rotation[donors]}
++    t = bg.cat_tensors_to_optimizer(new)
++    bg._xyz, bg._features_dc, bg._features_rest = t["xyz"], t["f_dc"], t["f_rest"]
++    bg._opacity, bg._scaling, bg._rotation = t["opacity"], t["scaling"], t["rotation"]
++    k = donors.shape[0]
++    bg.max_radii2D = torch.cat([bg.max_radii2D, torch.zeros(k, device="cuda")])
++    bg.xyz_gradient_accum = torch.cat([bg.xyz_gradient_accum, torch.zeros((k, 1), device="cuda")])
++    bg.denom = torch.cat([bg.denom, torch.zeros((k, 1), device="cuda")])
++    bg.cer_labels = torch.cat([bg.cer_labels, torch.full((k,), 2, dtype=torch.uint8, device="cuda")])
++    for m in (fg, bg, tr):
++        for name in LIFECYCLE:
++            if hasattr(m, name):
++                setattr(m, name, _refuse(name))
++
++    gap = sum(x.sum() for x in g_in)
++    json.dump({"A": A, "B": B, "target_ids": ids, "iteration": iteration,
++               "memory_rows": {"fg": int(memory[0].sum()), "bg": int(memory[1].sum())},
++               "memory_share_pregap": ((inside[0][memory[0]].sum() + inside[1][memory[1]].sum())
++                                       / sum(x.sum() for x in inside)).item(),
++               "residual_rows": k,
++               "gap_region_share_by_bank": {b: (g_in[i].sum() / gap).item() for i, b in enumerate(("fg", "bg", "tr"))},
++               "majority_donor_share_by_bank": {b: (g_in[i][majority[i]].sum() / gap).item()
++                                                for i, b in enumerate(("fg", "bg", "tr"))},
++               "rows_after_birth": {"fg": fg.get_xyz.shape[0], "bg": bg.get_xyz.shape[0], "tr": tr.get_xyz.shape[0]}},
++              report, indent=1)
++    report.close()
++
++
++def gates(fg, bg, tr, scene, pipe):
++    """Contribution gates of spec section 6 on the final in-memory model; writes cer_gates.json."""
++    assert cer_gate.ARMED, "CER never began"
++    A, B = bg.cer_clock
++    check_finite(fg, bg)
++    pre_in, pre_tot = mass(fg, bg, tr, pipe, _region(scene, range(0, A)))
++    gap_in, gap_tot = mass(fg, bg, tr, pipe, _region(scene, range(A, B + 1), mask_frame=A - 1))
++    ret_in, ret_tot = mass(fg, bg, tr, pipe, _region(scene, range(B + 1, B + 31)))
++
++    def cohort(x, c):
++        """Mass of cohort c over the foreground and background banks."""
++        return (x[0][fg.cer_labels == c].sum() + x[1][bg.cer_labels == c].sum()).item()
++
++    def whole(x):
++        """Mass of every row of every bank."""
++        return sum(v.sum() for v in x).item()
++
++    out = {"memory_share_pregap": cohort(pre_in, 1) / whole(pre_in),
++           "memory_share_return": cohort(ret_in, 1) / whole(ret_in),
++           "memory_mass_gap": cohort(gap_tot, 1),
++           "residual_share_gap": cohort(gap_in, 2) / whole(gap_in),
++           "residual_mass_outside_gap": cohort(pre_tot, 2) + cohort(ret_tot, 2),
++           "transient_share_gap_region": gap_in[2].sum().item() / whole(gap_in),
++           "memory_rows": {"fg": int((fg.cer_labels == 1).sum()), "bg": int((bg.cer_labels == 1).sum())},
++           "rows_at_end": {"fg": fg.get_xyz.shape[0], "bg": bg.get_xyz.shape[0], "tr": tr.get_xyz.shape[0]}}
++    out["pass"] = (out["memory_share_pregap"] >= 0.5 and out["memory_share_return"] >= 0.5
++                   and out["memory_mass_gap"] == 0.0 and out["residual_share_gap"] >= 0.2
++                   and out["residual_mass_outside_gap"] == 0.0)
++    json.dump(out, open(os.path.join(scene.model_path, "cer_gates.json"), "w"), indent=1)
+diff --git a/test_cer.py b/test_cer.py
+new file mode 100644
+index 0000000..b428f67
+--- /dev/null
++++ b/test_cer.py
+@@ -0,0 +1,468 @@
++"""Tests for Complementary Episode Residuals (CER) on Multi4D, written before the CER code.
++
++Spec: research-wiki/operations/cer-multi4d-spec-2026-09-30.md (ADAGS repository), section 7.
++Run from the root of this worktree on one GPU node:
++
++    python test_cer.py --run <wave-1 Multi4D run dir> --tree <multi4d tree> --cer_scene <canonical scene> \
++        --pinned <unmodified multi4d checkout> --out <scratch dir> --tests T0,T1,T2,T2b,T3,T4,T5,T6
++
++The model is the run's saved iteration-20000 point clouds, loaded as the ARS census loaded them (Multi4D's own load
++path, then the transient time-SH degree set to its trained maximum), as a stand-in for the model at CER start.
++Nothing is written into the run, the tree or the pinned checkout. Exits non-zero if any requested test fails.
++"""
++import hashlib
++import json
++import os
++import re
++import subprocess
++import sys
++from argparse import ArgumentParser, Namespace
++
++import torch
++
++HERE = os.path.dirname(os.path.abspath(__file__))
++PROBES = [0, 59, 60, 74, 89, 90, 299]
++
++# Loads the model with the census loader and dumps the sha256 of every cam00 render (the final-render call).
++LOADER = r'''
++import os, random, sys
++from argparse import ArgumentParser
++import numpy as np, torch, mmcv
++from arguments import ModelParams, PipelineParams, OptimizationParams, ModelHiddenParams
++from utils.params_utils import merge_hparams
++from scene import GaussianModel, GaussianModel_dynamic, Scene2gs_mixed
++from scene.gaussian_model import GaussianModelTransient
++
++
++def load_model(run_dir, tree):
++    """Build arguments and the three banks as train.py does, and load the run's saved iteration-20000 state."""
++    parser = ArgumentParser()
++    lp, op, pp, hp = ModelParams(parser), OptimizationParams(parser), PipelineParams(parser), ModelHiddenParams(parser)
++    parser.add_argument("--expname", type=str, default="")
++    parser.add_argument("--configs", type=str, default="")
++    model_dir = os.path.join(run_dir, "model")
++    args = parser.parse_args(["-s", tree, "--model_path", model_dir, "--configs", "arguments/dynerf.py"])
++    args = merge_hparams(args, mmcv.Config.fromfile(args.configs))
++    random.seed(0); np.random.seed(0); torch.manual_seed(0)
++    torch.backends.cudnn.deterministic = True
++    d, o, p, h = lp.extract(args), op.extract(args), pp.extract(args), hp.extract(args)
++    d.sh_degree = 3
++    fg = GaussianModel_dynamic(d.sh_degree, h)
++    bg = GaussianModel(d.sh_degree)
++    tr = GaussianModelTransient(d.sh_degree, gaussian_dim=4, time_duration=list(getattr(o, "transient_time_duration", [0.0, 10.0])),
++                                rot_4d=True, sh_degree_t=2)
++    d.model_path = model_dir
++    scene = Scene2gs_mixed(d, fg, load_iteration=model_dir, gaussians_second=bg, gaussians_transient=tr)
++    assert scene.loaded_iter == 20000, scene.loaded_iter
++    tr.active_sh_degree_t = tr.max_sh_degree_t  # load_ply restores only the spatial degree
++    for m in (fg, bg, tr):
++        m.training_setup(o)
++    return d, o, p, fg, bg, tr, scene
++'''
++
++DUMP = LOADER + r'''
++import hashlib, json
++from gaussian_renderer import render_rawall3pc
++run_dir, tree, out = sys.argv[1], sys.argv[2], sys.argv[3]
++d, o, p, fg, bg, tr, scene = load_model(run_dir, tree)
++black = torch.zeros(3, device="cuda")
++digests = {}
++with torch.no_grad():
++    for cam in scene.getTestCameras():
++        img = render_rawall3pc(cam, fg, bg, tr, p, bg_color=black, stage="fine")["render"]
++        digests[int(cam.image_name)] = hashlib.sha256(img.cpu().numpy().tobytes()).hexdigest()
++json.dump(digests, open(out, "w"))
++'''
++
++exec(LOADER)  # load_model in this process (code under test = this tree)
++
++
++def dump(root, a, out):
++    """Run DUMP with `root` as the code under test; return {frame: sha256}."""
++    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
++    if root != HERE:  # the pinned tree builds its extension in its own directory, never the CER one
++        env["TORCH_EXTENSIONS_DIR"] = os.environ["TORCH_EXTENSIONS_DIR_PINNED"]
++    subprocess.run([sys.executable, "-c", DUMP, a.run, a.tree, out], cwd=root, env=env, check=True)
++    return {int(k): v for k, v in json.load(open(out)).items()}
++
++
++def digest(fg, bg, tr, scene, p, frames=None):
++    """sha256 of the cam00 final-call renders at `frames` (default all)."""
++    from gaussian_renderer import render_rawall3pc
++    black = torch.zeros(3, device="cuda")
++    out = {}
++    with torch.no_grad():
++        for cam in scene.getTestCameras():
++            f = int(cam.image_name)
++            if frames is None or f in frames:
++                img = render_rawall3pc(cam, fg, bg, tr, p, bg_color=black, stage="fine")["render"]
++                out[f] = hashlib.sha256(img.cpu().numpy().tobytes()).hexdigest()
++    return out
++
++
++_n = [0]
++
++
++def begun(a, q):
++    """Load the run in this process and start CER on it (reports go to a fresh scratch dir), strength q."""
++    from scene import cer
++    d, o, p, fg, bg, tr, scene = load_model(a.run, a.tree)
++    _n[0] += 1
++    scene.model_path = os.path.join(a.out, "begin_%d" % _n[0])
++    os.makedirs(scene.model_path)
++    scene.cer_scene = a.cer_scene
++    cer.begin(fg, bg, tr, scene, p, o, o.densify_until_iter)
++    for m in (fg, bg):
++        m.cer_q = q
++    return d, o, p, fg, bg, tr, scene
++
++
++def check(name, ok, detail, R):
++    """Record one criterion."""
++    R.append({"test": name, "pass": bool(ok), "detail": detail})
++    print(("PASS " if ok else "FAIL ") + name + ": " + json.dumps(detail, default=str), flush=True)
++
++
++def test_cam(scene, frame):
++    """The cam00 camera of `frame` (the test set is cam00 in frame order)."""
++    cam = scene.getTestCameras()[frame]
++    assert int(cam.image_name) == frame
++    return cam
++
++
++def t0_t1(a, R):
++    """T0: the unmodified checkout renders twice identically. T1: this tree with CER off matches it."""
++    base = dump(a.pinned, a, os.path.join(a.out, "t0_a.json"))
++    again = dump(a.pinned, a, os.path.join(a.out, "t0_b.json"))
++    check("T0 pinned render repeatable", base == again and len(base) == 300, {"frames": len(base)}, R)
++    ours = dump(HERE, a, os.path.join(a.out, "t1.json"))
++    check("T1 CER off == unmodified", ours == base, {"differing": [f for f in base if ours.get(f) != base[f]][:10]}, R)
++    return base
++
++
++def t2(a, base, R):
++    """T2: q = 0 renders equal the unmodified ones; at q = 1 a gap frame differs."""
++    d, o, p, fg, bg, tr, scene = begun(a, 0.0)
++    got = digest(fg, bg, tr, scene, p)
++    k = int((bg.cer_labels == 2).sum())
++    for m in (fg, bg):
++        m.cer_q = 1.0
++    on = digest(fg, bg, tr, scene, p, [74])
++    check("T2 q=0 == unmodified", got == base and k > 0 and on[74] != base[74],
++          {"differing": [f for f in base if got.get(f) != base[f]][:10], "residual_rows": k}, R)
++
++
++def t_birth(a, R):
++    """T2b: begin leaves existing rows' parameters, buffers and Adam moments untouched; new rows are consistent."""
++    from scene import cer
++    d, o, p, fg, bg, tr, scene = load_model(a.run, a.tree)
++    scene.model_path = os.path.join(a.out, "birth")
++    os.makedirs(scene.model_path)
++    scene.cer_scene = a.cer_scene
++    for m in (fg, bg, tr):  # one step with small gradients so every group has Adam moments to preserve
++        for gr in m.optimizer.param_groups:
++            gr["params"][0].grad = torch.full_like(gr["params"][0], 1e-6)
++        m.optimizer.step()
++        m.optimizer.zero_grad(set_to_none=True)
++    snap = {}
++    for name, m in (("fg", fg), ("bg", bg), ("tr", tr)):
++        snap[name] = ({k: v.detach().clone() for k, v in vars(m).items() if torch.is_tensor(v)},
++                      {gr["name"]: {s: t.clone() for s, t in m.optimizer.state.get(gr["params"][0], {}).items() if torch.is_tensor(t)}
++                       for gr in m.optimizer.param_groups})
++    n_bg = bg.get_xyz.shape[0]
++    cer.begin(fg, bg, tr, scene, p, o, o.densify_until_iter)
++    k = int((bg.cer_labels == 2).sum())
++    bad = []
++    for name, m in (("fg", fg), ("bg", bg), ("tr", tr)):
++        tensors, moments = snap[name]
++        for key, old in tensors.items():
++            new = getattr(m, key)
++            if name == "bg" and old.dim() > 0 and old.shape[0] == n_bg:
++                ok = new.shape[0] == n_bg + k and torch.equal(new[:n_bg], old)
++            else:
++                ok = torch.equal(new, old)
++            if not ok:
++                bad.append((name, key))
++        for gr in m.optimizer.param_groups:
++            st = m.optimizer.state.get(gr["params"][0], {})
++            if not moments[gr["name"]]:
++                bad.append((name, gr["name"], "no moments to compare"))
++            for s, old in moments[gr["name"]].items():
++                new = st.get(s)
++                if name == "bg" and old.dim() > 0 and old.shape[0] == n_bg:
++                    ok = new is not None and new.shape[0] == n_bg + k and torch.equal(new[:n_bg], old) and bool((new[n_bg:] == 0).all())
++                else:
++                    ok = new is not None and torch.equal(new, old)
++                if not ok:
++                    bad.append((name, gr["name"], s))
++            if name == "bg" and getattr(bg, "_" + {"f_dc": "features_dc", "f_rest": "features_rest"}.get(gr["name"], gr["name"])) is not gr["params"][0]:
++                bad.append(("bg attribute not the optimizer's parameter", gr["name"]))
++    check("T2b birth state", not bad and k > 0, {"residual_rows": k, "bad": bad[:10]}, R)
++
++
++def t3(a, R):
++    """T3: the four render functions gate identically (-inf logit reference, captured rasterizer inputs), gradients."""
++    import gaussian_renderer as gr_mod
++    from gaussian_renderer import render_background, render_foreground, render_mask, render_rawall3pc
++    from utils import cer_gate
++    d, o, p, fg, bg, tr, scene = begun(a, 1.0)
++    A, B = bg.cer_clock
++    black = torch.zeros(3, device="cuda")
++    if not bool((fg.cer_labels == 1).any()):  # foreground witness: label the most opaque foreground rows memory
++        fg.cer_labels[torch.topk(fg._opacity.squeeze(1), min(200, fg._opacity.shape[0])).indices] = 1
++        print("T3: labelled 200 foreground rows memory as a witness")
++    captured = []
++    originals = (gr_mod.GaussianRasterizer.forward, gr_mod.GaussianRasterizer_hybrid.forward)
++
++    def cap_plain(self, *args, **kw):
++        captured.append(("plain", kw["opacities"].detach().clone()))
++        return originals[0](self, *args, **kw)
++
++    def cap_hybrid(self, *args, **kw):
++        captured.append(("hybrid", kw["opacities_static"].detach().clone(), kw["opacities"].detach().clone()))
++        return originals[1](self, *args, **kw)
++
++    def calls(cam):
++        """The four render functions, as the training/evaluation code calls them (dropout off)."""
++        ones = torch.ones((int(cam.image_height), int(cam.image_width)), device="cuda")
++        return {"background": lambda: render_background(cam, bg, p, black, stage="coarse", prob_mask=ones)["render"],
++                "foreground": lambda: render_foreground(cam, fg, p, black, stage="fine", prob_mask=ones)["render"],
++                "mask": lambda: render_mask(cam, fg, p, black, stage="fine")["render"],
++                "hybrid": lambda: render_rawall3pc(cam, fg, bg, tr, p, bg_color=black, stage="fine")["render"]}
++
++    def reference(cam, off_fg, off_bg, fn):
++        """The same call with CER off after setting the switched-off rows' logits to -inf."""
++        saved = (fg._opacity.data.clone(), bg._opacity.data.clone())
++        fg._opacity.data[off_fg] = -float("inf")
++        bg._opacity.data[off_bg] = -float("inf")
++        cer_gate.ARMED = False
++        try:
++            return fn()
++        finally:
++            cer_gate.ARMED = True
++            fg._opacity.data.copy_(saved[0])
++            bg._opacity.data.copy_(saved[1])
++
++    bad = []
++    for frame in [(A + B) // 2, A - 1]:
++        cam = test_cam(scene, frame)
++        inside = A <= frame <= B
++        off_fg = (fg.cer_labels == 1) if inside else (fg.cer_labels == 2)
++        off_bg = (bg.cer_labels == 1) if inside else (bg.cer_labels == 2)
++        for name, fn in calls(cam).items():
++            with torch.no_grad():
++                on = fn()
++                ref = reference(cam, off_fg, off_bg, fn)
++                cer_gate.ARMED = False
++                plain = fn()
++                cer_gate.ARMED = True
++            if not torch.equal(on, ref):
++                bad.append((frame, name, "differs from the -inf reference"))
++            if inside and torch.equal(ref, plain):
++                bad.append((frame, name, "reference equals the ungated render (vacuous)"))
++    check("T3 four render functions gate identically", not bad, {"bad": bad}, R)
++
++    gr_mod.GaussianRasterizer.forward, gr_mod.GaussianRasterizer_hybrid.forward = cap_plain, cap_hybrid
++    try:
++        cam = test_cam(scene, (A + B) // 2)
++        with torch.no_grad():
++            for name, fn in calls(cam).items():
++                fn()
++            cer_gate.ARMED = False
++            for name, fn in calls(cam).items():
++                fn()
++            cer_gate.ARMED = True
++    finally:
++        gr_mod.GaussianRasterizer.forward, gr_mod.GaussianRasterizer_hybrid.forward = originals
++    on, off = captured[:4], captured[4:]
++    f_fg = cer_gate.factor(fg, cam)
++    f_bg = cer_gate.factor(bg, cam)
++    want = [off[0][1] * f_bg, off[1][1] * f_fg, off[2][1] * f_fg, torch.cat([off[3][1][:f_fg.shape[0]] * f_fg, off[3][1][f_fg.shape[0]:] * f_bg])]
++    ok = [torch.equal(on[i][1], want[i]) for i in range(4)] + [torch.equal(on[3][2], off[3][2])]
++    check("T3 rasterizer inputs are factor x ungated (transient untouched)", all(ok), {"per_call": ok}, R)
++
++    leaks, control = {}, None
++    for frame, cohort in [((A + B) // 2, 1), (A - 1, 2)]:
++        cam = test_cam(scene, frame)
++        for m in (fg, bg, tr):
++            m.optimizer.zero_grad(set_to_none=True)
++        render_rawall3pc(cam, fg, bg, tr, p, bg_color=black, stage="fine")["render"].sum().backward()
++        for name, m in (("fg", fg), ("bg", bg)):
++            for pname in ("_xyz", "_features_dc", "_features_rest", "_opacity", "_scaling", "_rotation"):
++                g = getattr(m, pname).grad
++                if g is None or bool((g[m.cer_labels == cohort] != 0).any()):
++                    leaks.setdefault(frame, []).append((name, pname, None if g is None else "nonzero"))
++    for m in (fg, bg):
++        m.cer_q = 0.0
++    cam = test_cam(scene, (A + B) // 2)
++    for m in (fg, bg, tr):
++        m.optimizer.zero_grad(set_to_none=True)
++    render_rawall3pc(cam, fg, bg, tr, p, bg_color=black, stage="fine")["render"].sum().backward()
++    control = bool((bg._opacity.grad[bg.cer_labels == 1] != 0).any())
++    check("T3 zero rendering gradient to the switched-off cohort", not leaks and control,
++          {"leaks": leaks, "control_q0_memory_gets_gradient": control}, R)
++
++    bad = []
++    ds, ts = scene.getTrainCameras(), scene.getTestCameras()
++    for cam in [ds[i] for i in range(0, len(ds), 150)] + [ts[i] for i in range(0, 300, 60)]:
++        if cer_gate.frame(cam) != round(cam.time * 300):
++            bad.append(cam.image_path)
++    malformed = Namespace(image_path="/x/cam01/images/60.png")
++    try:
++        cer_gate.frame(malformed)
++        raised = False
++    except AssertionError:
++        raised = True
++    check("T3 frame parse", not bad and raised, {"mismatch": bad[:5], "malformed_raises": raised}, R)
++
++
++def t4(a, R):
++    """T4: split identity, memory share, exact zeros (per-render conservation is asserted inside mass)."""
++    from scene import cer
++    d, o, p, fg, bg, tr, scene = begun(a, 1.0)
++    A, B, ids = cer.event(a.cer_scene)
++    views = cer.train_views(scene, range(0, A, 7))
++    worst = 0.0
++    for cam in views:
++        m = cer.target_mask(a.cer_scene, ids, cer.cam_number(cam), cer_frame(cam))
++        (i_fg, i_bg, i_tr), (t_fg, t_bg, t_tr) = cer.mass(fg, bg, tr, p, [(cam, m)])
++        (c_fg, c_bg, c_tr), _ = cer.mass(fg, bg, tr, p, [(cam, 1 - m)])
++        tot = t_fg.sum() + t_bg.sum() + t_tr.sum()
++        err = (i_fg + c_fg - t_fg).abs().sum() + (i_bg + c_bg - t_bg).abs().sum() + (i_tr + c_tr - t_tr).abs().sum()
++        worst = max(worst, (err / tot).item())
++    check("T4 mask split", worst < 1e-5, {"max_rel": worst, "views": len(views)}, R)
++    rep = json.load(open(os.path.join(scene.model_path, "cer_begin.json")))
++    check("T4 memory share pre-gap (ungated) >= 0.5", rep["memory_share_pregap"] >= 0.5, rep, R)
++    tot = {}
++    for w, frames in {"pre": range(0, A), "gap": range(A, B + 1), "ret": range(B + 1, B + 31)}.items():
++        vm = [(cam, torch.ones((int(cam.image_height), int(cam.image_width)), device="cuda")) for cam in cer.train_views(scene, frames)]
++        _, (t_fg, t_bg, t_tr) = cer.mass(fg, bg, tr, p, vm)
++        tot[w] = {c: (t_fg[fg.cer_labels == c].sum() + t_bg[bg.cer_labels == c].sum()).item() for c in (0, 1, 2)}
++    check("T4 exact zeros at q=1", tot["gap"][1] == 0.0 and tot["pre"][2] == 0.0 and tot["ret"][2] == 0.0
++          and tot["gap"][2] > 0.0 and tot["pre"][1] > 0.0, tot, R)
++
++
++def cer_frame(cam):
++    """Frame of a camera, via the gate's parser."""
++    from utils import cer_gate
++    return cer_gate.frame(cam)
++
++
++def forecast(a, R):
++    """T4-forecast: memory share, residual count and donor mass by bank, reported."""
++    d, o, p, fg, bg, tr, scene = begun(a, 1.0)
++    rep = json.load(open(os.path.join(scene.model_path, "cer_begin.json")))
++    check("T4-forecast (reported)", True, rep, R)
++
++
++def t5(a, R):
++    """T5: the saved CER state equals the in-memory state; a saved CER model refuses to reload; armed gate fails closed."""
++    from utils import cer_gate
++    d, o, p, fg, bg, tr, scene = begun(a, 1.0)
++    save_dir = os.path.join(a.out, "t5_save")
++    scene.model_path = save_dir
++    scene.save(20000, "fine")
++    st = torch.load(os.path.join(save_dir, "point_cloud", "iteration_20000", "cer_state.pt"))
++    same = (torch.equal(st["fg_labels"].cuda(), fg.cer_labels) and torch.equal(st["bg_labels"].cuda(), bg.cer_labels)
++            and tuple(st["clock"]) == bg.cer_clock and st["q"] == bg.cer_q and st["active_sh_degree_t"] == tr.active_sh_degree_t)
++    refused = refuses_reload(save_dir, a)
++    fresh = GaussianModel(3)
++    try:
++        cer_gate.apply(fresh, test_cam(scene, 74), torch.ones((1, 1), device="cuda"))
++        armed_raises = False
++    except (AssertionError, AttributeError):
++        armed_raises = True
++    check("T5 persistence", same and refused and armed_raises,
++          {"state_equal": same, "reload_refused": refused, "armed_gate_raises": armed_raises}, R)
++
++
++def refuses_reload(save_dir, a):
++    """True when Multi4D's own load path refuses a directory holding a CER save."""
++    run = os.path.join(a.out, "t5_run")
++    os.makedirs(run, exist_ok=True)
++    link = os.path.join(run, "model")
++    if not os.path.exists(link):
++        os.symlink(save_dir, link)
++    try:
++        load_model(run, a.tree)
++    except AssertionError as e:
++        return "CER" in str(e)
++    return False
++
++
++def t6(a, R):
++    """T6: every row-changing call in train.py sits inside maintain_* (or begin); the sentinels raise after begin."""
++    src = open(os.path.join(HERE, "train.py")).read().splitlines()
++    pat = re.compile(r"\.(prune_points|densify\w*|densification_postfix|add_points_from_dict|weight_prune|prune|"
++                     r"reset_opacity\w*|cat_tensors_to_optimizer|replace_tensor_to_optimizer|_prune_optimizer)\(")
++    owner, stray = None, []
++    for i, line in enumerate(src, 1):
++        m = re.match(r"def (\w+)\(", line)
++        if m:
++            owner = m.group(1)
++        if pat.search(line) and not (owner or "").startswith("maintain_"):
++            stray.append((i, owner, line.strip()))
++    check("T6 static: row-changing calls only in maintain_*", not stray, {"stray": stray[:10]}, R)
++    d, o, p, fg, bg, tr, scene = begun(a, 1.0)
++    fired = []
++    for name, m in (("fg", fg), ("bg", bg), ("tr", tr)):
++        for meth in ("prune_points", "densification_postfix", "cat_tensors_to_optimizer", "replace_tensor_to_optimizer"):
++            if hasattr(type(m), meth):
++                try:
++                    getattr(m, meth)()
++                    fired.append((name, meth, "did not raise"))
++                except AssertionError as e:
++                    if "CER" not in str(e):
++                        fired.append((name, meth, str(e)))
++                except TypeError as e:
++                    fired.append((name, meth, "not replaced: " + str(e)))
++    check("T6 sentinels raise after begin", not fired, {"problems": fired}, R)
++
++
++def t7(a, R):
++    """T7: a shortened CER training through the final-render wrapper (exit 0 checked by the launcher): both reports
++    written, rows unchanged from birth to the end (no sentinel fired), the final renders saved, one evaluation series."""
++    run = a.run
++    ok_files = all(os.path.exists(os.path.join(run, "model", f)) for f in ["cer_begin.json", "cer_gates.json"])
++    rec = json.load(open(os.path.join(run, "final", "iteration_%d" % a.t7_iter, "render_record.json")))
++    begin = json.load(open(os.path.join(run, "model", "cer_begin.json")))
++    gates = json.load(open(os.path.join(run, "model", "cer_gates.json")))
++    frozen = begin["rows_after_birth"] == gates["rows_at_end"]
++    evals = [l for l in open(a.t7_metrics) if l.strip()]
++    check("T7 integration", ok_files and frozen and rec["n_frames"] == 300 and len(evals) == a.t7_iter // 500,
++          {"files": ok_files, "rows_frozen": frozen, "frames": rec["n_frames"], "evaluations": len(evals),
++           "mean_psnr": rec["mean_psnr_float"], "gates": gates}, R)
++
++
++def main():
++    """Parse arguments, run the requested tests, write results.json, exit non-zero on failure."""
++    ap = ArgumentParser()
++    ap.add_argument("--run", required=True)
++    ap.add_argument("--tree", required=True)
++    ap.add_argument("--cer_scene", required=True)
++    ap.add_argument("--pinned", default="")
++    ap.add_argument("--out", required=True)
++    ap.add_argument("--tests", default="T0,T1,T2,T2b,T3,T4,T5,T6")
++    ap.add_argument("--t7_iter", type=int, default=0)
++    ap.add_argument("--t7_metrics", default="")
++    a = ap.parse_args()
++    os.makedirs(a.out, exist_ok=True)
++    tests = a.tests.split(",")
++    R = []
++    try:
++        base = t0_t1(a, R) if {"T0", "T1", "T2"} & set(tests) else None
++        if "T2" in tests:
++            t2(a, base, R)
++        for name, fn in [("T2b", t_birth), ("T3", t3), ("T4", t4), ("FORECAST", forecast), ("T5", t5), ("T6", t6), ("T7", t7)]:
++            if name in tests:
++                fn(a, R)
++    except Exception as e:  # a crash is a failure of the test that was running
++        import traceback
++        traceback.print_exc()
++        R.append({"test": "crash", "pass": False, "detail": repr(e)})
++    json.dump(R, open(os.path.join(a.out, "results.json"), "w"), indent=1)
++    sys.exit(0 if R and all(r["pass"] for r in R) else 1)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/train.py b/train.py
+index a2434b4..0e3fb01 100644
+--- a/train.py
++++ b/train.py
+@@ -24,6 +24,7 @@ from utils.loss_utils import l1_loss, ssim, structural_ssim, \
+ from gaussian_renderer import render_background, render_foreground, render_mask, render_rawall3pc
+ from scene import GaussianModel, GaussianModel_dynamic, Scene2gs_mixed
+ from scene.gaussian_model import GaussianModelTransient
++from scene import cer
+ from utils.general_utils import safe_state
+ from utils.eval_utils import run_evaluation, final_test_dump, save_train_debug_viz
+ from tqdm import tqdm
+@@ -287,6 +288,7 @@ def scene_reconstruction(optimization_params, hypernetwork_config, pipeline_conf
+         if stage == "coarse" and stage not in checkpoint:
+             print("start from fine stage, skip coarse stage.")
+             return
++        assert not scene.cer_scene, "CER runs are one uninterrupted job"
+         if stage in checkpoint:
+             (model_params, first_iter) = torch.load(checkpoint)
+             foreground_gaussians.restore(model_params, optimization_params)
+@@ -991,6 +993,13 @@ def scene_reconstruction(optimization_params, hypernetwork_config, pipeline_conf
+                                            transient_gaussian,
+                                            pipeline_config, optimization_params, expname, stage, best_psnr)
+ 
++        if stage == "fine" and scene.cer_scene and iteration == optimization_params.densify_until_iter:
++            cer.begin(foreground_gaussians, background_gaussians, transient_gaussian, scene, pipeline_config,
++                      optimization_params, iteration)
++
++    if stage == "fine" and scene.cer_scene:
++        cer.gates(foreground_gaussians, background_gaussians, transient_gaussian, scene, pipeline_config)
++
+     # ---- Post-Training Evaluation (Fine Stage Only) ----
+     if stage == "fine":
+         final_test_dump(test_cams, foreground_gaussians, background_gaussians, transient_gaussian,
+diff --git a/utils/cer_gate.py b/utils/cer_gate.py
+new file mode 100644
+index 0000000..1d1e8bd
+--- /dev/null
++++ b/utils/cer_gate.py
+@@ -0,0 +1,43 @@
++#
++# Complementary Episode Residuals (CER): the opacity gate applied at every foreground/background render site.
++# Spec: research-wiki/operations/cer-multi4d-spec-2026-09-30.md (ADAGS repository), section 2.1.
++#
++import re
++
++import torch
++
++ARMED = False  # set by scene/cer.py begin(); once armed, a model without CER state may not be rendered
++_PATH = re.compile(r"cam(\d\d)/images/(\d{4})\.png$")
++
++
++def parse(path):
++    """(camera, frame) from .../camNN/images/FFFF.png; raises on anything else."""
++    m = _PATH.search(path or "")
++    assert m, "CER cannot read camera and frame from %r" % (path,)
++    return int(m.group(1)), int(m.group(2))
++
++
++def frame(cam):
++    """The integer frame of a camera, parsed once and cached on the camera object."""
++    if not hasattr(cam, "cer_frame"):
++        cam.cer_frame = parse(cam.image_path)[1]
++    return cam.cer_frame
++
++
++def factor(pc, cam):
++    """[N, 1] float32 factor of one bank: memory rows (1) off and residual rows (2) on inside the gap."""
++    assert hasattr(pc, "cer_labels"), "CER is armed but this model carries no CER state"
++    n = float(pc.cer_clock[0] <= frame(cam) <= pc.cer_clock[1])
++    f = torch.ones((pc.cer_labels.shape[0], 1), device="cuda")
++    f[pc.cer_labels == 1] = 1 - pc.cer_q * n
++    f[pc.cer_labels == 2] = pc.cer_q * n
++    return f
++
++
++def apply(pc, cam, opacity):
++    """The activated opacity, multiplied by the CER factor once CER is armed."""
++    if not ARMED:
++        return opacity
++    f = factor(pc, cam)
++    assert f.shape == opacity.shape, "CER labels %s vs opacity %s" % (tuple(f.shape), tuple(opacity.shape))
++    return opacity * f

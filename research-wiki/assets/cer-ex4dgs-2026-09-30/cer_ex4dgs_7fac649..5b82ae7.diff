@@ -1,0 +1,876 @@
+diff --git a/arguments/__init__.py b/arguments/__init__.py
+index a1da9cc..bc368ba 100644
+--- a/arguments/__init__.py
++++ b/arguments/__init__.py
+@@ -73,6 +73,7 @@ class ModelParams(ParamGroup):
+         self.end_timestamp = -1
+         self.near = 0.2
+         self.far = 300.0
++        self.cer_scene = ""
+         super().__init__(parser, "Loading Parameters", sentinel)
+ 
+     def extract(self, args):
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 1fef386..8f7dead 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -62,6 +62,8 @@ def render(viewpoint_camera, pc, pipe, bg_color : torch.Tensor, timestamp=None,
+     means3D = pc.get_xyz_at_t(timestamp, mode=mode, training=training)
+     means2D = screenspace_points
+     opacity = pc.get_opacity_at_t(timestamp, mode=mode, training=training)
++    if pc.cer_clock is not None:
++        opacity = opacity * pc.get_cer_factor(timestamp)
+     
+     flow = torch.zeros_like(means3D, requires_grad=True) + 0
+     try:
+diff --git a/scene/__init__.py b/scene/__init__.py
+index dca044b..8f15995 100644
+--- a/scene/__init__.py
++++ b/scene/__init__.py
+@@ -167,8 +167,10 @@ class Scene:
+             if os.path.exists(os.path.join(self.model_path, "chkpnt{}.pth".format(self.loaded_iter))) and not opt is None:
+                 model_args = torch.load(os.path.join(self.model_path, "chkpnt{}.pth".format(self.loaded_iter)))
+                 self.gaussians.restore(model_args[0], opt)
++                assert not getattr(args, "cer_scene", "") or gaussians.cer_clock is not None, "a CER model's checkpoint holds no CER state"
+                 self.set_sampling_len(gaussians.duration)
+             else:
++                assert not getattr(args, "cer_scene", ""), "a CER model must be loaded from its checkpoint"
+                 gaussians.duration = args.duration
+                 self.gaussians.load_ply(os.path.join(self.model_path,
+                                                             "point_cloud",
+diff --git a/scene/c_gaussian_model.py b/scene/c_gaussian_model.py
+index 5cf7dfb..1d57b3b 100644
+--- a/scene/c_gaussian_model.py
++++ b/scene/c_gaussian_model.py
+@@ -96,6 +96,10 @@ class CGaussianModel:
+         self.motion_error_denom = torch.empty(0).cuda()
+         
+         self.interp_type = interp_type
++        self._cer_static = None
++        self._cer_dynamic = None
++        self.cer_clock = None
++        self.cer_q = 1.0
+         # set interpolations
+         if interp_type == "linear":
+             self.motion_degree = 1 # points
+@@ -215,7 +219,7 @@ class CGaussianModel:
+         return self.quat_interpolator(self._rotation_motion, t_idx, delta_t)
+         
+     def capture(self):
+-        return (
++        state = (
+             self.active_sh_degree,
+             self._xyz,
+             self._features_dc,
+@@ -258,8 +262,12 @@ class CGaussianModel:
+             self.motion_xyz_ssim_error_accum,
+             self.motion_error_denom,
+         )
++        return state if self.cer_clock is None else state + (self.get_cer_state(),)
+     
+     def restore(self, model_args, training_args):
++        if len(model_args) == 41:
++            self.set_cer_state(model_args[40])
++            model_args = model_args[:40]
+         (self.active_sh_degree, 
+         self._xyz, 
+         self._features_dc, 
+@@ -374,6 +382,25 @@ class CGaussianModel:
+         return torch.cat([self.get_opacity, 
+                           self.get_motion_opacity_at_t(t, training=training)], dim=0).contiguous()
+     
++    def get_cer_factor(self, t):
++        """CER opacity factor [N, 1]: memory rows (1) off and residual rows (2) on inside the gap."""
++        assert self._cer_static.shape[0] == self._xyz.shape[0] and self._cer_dynamic.shape[0] == self._xyz_motion.shape[0]
++        n = float(self.cer_clock[0] <= t <= self.cer_clock[1])
++        labels = torch.cat([self._cer_static, self._cer_dynamic])
++        factor = torch.ones((labels.shape[0], 1), device="cuda")
++        factor[labels == 1] = 1 - self.cer_q * n
++        factor[labels == 2] = self.cer_q * n
++        return factor
++
++    def get_cer_state(self):
++        """CER labels, clock and strength, as stored in checkpoints."""
++        return {"static": self._cer_static, "dynamic": self._cer_dynamic, "clock": self.cer_clock, "q": self.cer_q}
++
++    def set_cer_state(self, state):
++        """Restore the CER state written by get_cer_state."""
++        self._cer_static, self._cer_dynamic = state["static"].cuda(), state["dynamic"].cuda()
++        self.cer_clock, self.cer_q = tuple(state["clock"]), state["q"]
++
+     def get_covariance_at_t(self, t, scaling_modifier = 1, mode=0):
+         # pad not required here
+         return self.covariance_activation(self.get_scaling(mode=mode), scaling_modifier, self.get_rotation_at_t(t, mode=mode)).contiguous()
+@@ -738,6 +765,8 @@ class CGaussianModel:
+         self.error_denom = self.error_denom[vaild_static_mask]
+         self.max_radii2D = self.max_radii2D[vaild_static_mask]
+         self.min_radii2D = self.min_radii2D[vaild_static_mask]
++        if self.cer_clock is not None:
++            self._cer_static = self._cer_static[vaild_static_mask]
+         
+         # dynamic points
+         if vaild_dynamic_mask.shape[0] == 0:
+@@ -761,6 +790,8 @@ class CGaussianModel:
+         self.motion_error_denom = self.motion_error_denom[vaild_dynamic_mask]
+         self.motion_max_radii2D = self.motion_max_radii2D[vaild_dynamic_mask]
+         self.motion_min_radii2D = self.motion_min_radii2D[vaild_dynamic_mask]
++        if self.cer_clock is not None:
++            self._cer_dynamic = self._cer_dynamic[vaild_dynamic_mask]
+ 
+     def cat_tensors_to_optimizer(self, tensors_dict):
+         optimizable_tensors = {}
+diff --git a/scene/cer.py b/scene/cer.py
+new file mode 100644
+index 0000000..494a194
+--- /dev/null
++++ b/scene/cer.py
+@@ -0,0 +1,171 @@
++#
++# Complementary Episode Residuals (CER) for Ex4DGS.
++# Spec: research-wiki/operations/cer-ex4dgs-spec-2026-09-30.md (ADAGS repository).
++#
++# A memory cohort (rows that paint the target before it leaves) is switched off inside the
++# gap [A, B]; a residual cohort (verbatim copies, in their own bank, of the rows that paint the gap
++# region) exists only inside it. Both are set once, at the end of iteration densify_until_iter.
++#
++import json
++import os
++
++import numpy as np
++import torch
++
++from gaussian_renderer import render
++
++
++def event(scene_dir):
++    """Clock (A, B) and target part ids from the canonical scene's event_spec.json."""
++    spec = json.load(open(os.path.join(scene_dir, "event_spec.json")))
++    ids = [p["id"] for o in spec["objects"] if o.get("role") == "target" for p in o["parts"]]
++    return spec["clock"]["A"], spec["clock"]["B"], sorted(set(ids))
++
++
++def cam_number(cam):
++    """Camera number from the camNN directory of the camera's image path."""
++    return int(os.path.basename(os.path.dirname(cam.image_path))[3:])
++
++
++def train_views(scene, frames):
++    """Training cameras (never cam00) whose timestamp is in `frames`."""
++    frames = set(frames)
++    views = [c for c in scene.train_cameras[1.0] if int(c.timestamp) in frames]
++    assert all(cam_number(c) != 0 for c in views)
++    return views
++
++
++def target_mask(scene_dir, ids, cam_no, frame):
++    """[H, W] float mask of the target's front-most pixels in camera cam_no at frame."""
++    ident = np.load(os.path.join(scene_dir, "gt", "identity", "cam%02d.npz" % cam_no))["f%04d" % frame]
++    return torch.from_numpy(np.isin(ident, ids)).float().cuda()
++
++
++def mass(pc, pipe, dataset, views):
++    """Per-row contribution mass sum(alpha*T) inside each view's mask and over all pixels.
++
++    `views` yields (camera, [H, W] mask). Uses the colour gradient of a ones-colour render,
++    via autograd.grad, so no parameter .grad is touched. Returns float64 [N], [N].
++    """
++    inside = total = 0
++    bg = torch.zeros(3, device="cuda")
++    for cam, m in views:
++        colours = torch.ones((pc._xyz.shape[0] + pc._xyz_motion.shape[0], 3), device="cuda", requires_grad=True)
++        img = render(cam, pc, pipe, bg, override_color=colours, near=dataset.near, far=dataset.far)["render"]
++        assert img.shape[1:] == m.shape
++        g = torch.autograd.grad((img[0] * m).sum() + img[1].sum(), colours)[0].double()
++        inside, total = inside + g[:, 0], total + g[:, 1]
++    return inside, total
++
++
++def _region(scene, dataset, frames, mask_frame=None):
++    """(camera, target mask) for training views at `frames`; mask taken at mask_frame if given."""
++    A, B, ids = event(dataset.cer_scene)
++    for cam in train_views(scene, frames):
++        t = int(cam.timestamp) if mask_frame is None else mask_frame
++        yield cam, target_mask(dataset.cer_scene, ids, cam_number(cam), t)
++
++
++def begin(gaussians, scene, pipe, dataset):
++    """Label the memory cohort and append the residual cohort; writes cer_begin.json."""
++    g = gaussians
++    A, B, ids = event(dataset.cer_scene)
++    cams = scene.train_cameras[1.0]
++    check_finite(g, range(dataset.duration))  # verbatim copies inherit their donors' opacity
++    assert g.duration == dataset.duration + g.time_shift + 1  # expand_duration is a no-op: K cannot change
++    assert dataset.time_pad_type == 0  # integer frame timestamps, no mirrored cameras
++    assert all(os.path.realpath(c.image_path) == os.path.realpath(os.path.join(
++        dataset.cer_scene, "frames", "cam%02d" % cam_number(c), "%04d.png" % c.timestamp)) for c in cams)  # masks match images
++    assert all(scene.samplelist[i] for i, c in enumerate(cams) if 0 <= c.timestamp < dataset.duration)  # gap frames are trained
++    assert max(c.timestamp for c in cams) < scene.sample_len - g.interval  # window-end promotion can no longer fire
++    n_s = g._xyz.shape[0]
++    inside, total = mass(g, pipe, dataset, _region(scene, dataset, range(0, A)))
++    memory = (total > 0) & (inside >= 0.5 * total)
++    labels = memory.to(torch.uint8)
++    g._cer_static, g._cer_dynamic = labels[:n_s], labels[n_s:]
++    g.cer_clock, g.cer_q = (A, B), 1.0
++    # donors: rows that paint the gap region during the gap once the memory cohort is off
++    g_in, g_tot = mass(g, pipe, dataset, _region(scene, dataset, range(A, B + 1), mask_frame=A - 1))
++    donors = ((g_tot > 0) & (g_in >= 0.5 * g_tot)).nonzero().squeeze(1)
++    ds, dd = donors[donors < n_s], donors[donors >= n_s] - n_s  # bank split with the pre-birth static count
++    birth(g, ds, dd, A)
++
++    report = {"A": A, "B": B, "target_ids": ids,
++              "memory_rows_static": int(memory[:n_s].sum()), "memory_rows_dynamic": int(memory[n_s:].sum()),
++              "memory_share_pregap": (inside[memory].sum() / inside.sum()).item(),
++              "residual_rows": ds.shape[0] + dd.shape[0],
++              "residual_rows_static": ds.shape[0], "residual_rows_dynamic": dd.shape[0],
++              "donor_share_gap_region": (g_in[donors].sum() / g_in.sum()).item(),
++              "donor_share_gap_region_static": (g_in[:n_s][ds].sum() / g_in.sum()).item(),
++              "donor_share_gap_region_dynamic": (g_in[n_s:][dd].sum() / g_in.sum()).item(),
++              "donors_static": ds.tolist(), "donors_dynamic": dd.tolist()}
++    json.dump(report, open(os.path.join(dataset.model_path, "cer_begin.json"), "w"), indent=1)
++
++
++STATIC = [("xyz", "_xyz"), ("f_dc", "_features_dc"), ("f_rest", "_features_rest"), ("opacity", "_opacity"),
++          ("scaling", "_scaling"), ("rotation", "_rotation"), ("xyz_disp", "_xyz_disp")]
++DYNAMIC = [("motion_xyz", "_xyz_motion"), ("motion_f_dc", "_features_dc_motion"), ("motion_f_rest", "_features_rest_motion"),
++           ("motion_scaling", "_scaling_motion"), ("motion_opacity", "_opacity_motion"),
++           ("motion_opacity_center", "_opacity_duration_center"), ("motion_opacity_var", "_opacity_duration_var"),
++           ("motion_rotation", "_rotation_motion")]
++BUFFERS = [("xyz_gradient_accum", 0), ("denom", 0), ("xyz_error_accum", 0), ("xyz_ssim_error_accum", 0), ("error_denom", 0),
++           ("xyz_error_min", 1000), ("xyz_error_min_timestamp", None), ("max_radii2D", 0), ("min_radii2D", 1000),
++           ("motion_xyz_gradient_accum", 0), ("motion_denom", 0), ("motion_xyz_error_mean", 0),
++           ("motion_xyz_ssim_error_accum", 0), ("motion_error_denom", 0), ("motion_xyz_error_min", 1000),
++           ("motion_xyz_error_min_timestamp", None), ("motion_max_radii2D", 0), ("motion_min_radii2D", 1000)]
++
++
++def birth(g, ds, dd, A):
++    """Append residual rows: verbatim copies of static donors ds into the static bank and of dynamic donors dd
++    (bank-local indices) into the dynamic bank, labelled 2; new buffers zero, error-min 1000, timestamps A."""
++    with torch.no_grad():
++        new = {grp: getattr(g, attr)[ds] for grp, attr in STATIC}
++        new.update({grp: getattr(g, attr)[dd] for grp, attr in DYNAMIC})
++    opt = g.cat_tensors_to_optimizer(new)
++    for grp, attr in STATIC + DYNAMIC:
++        setattr(g, attr, opt[grp])
++    for name, fill in BUFFERS:
++        old = getattr(g, name)
++        k = ds.shape[0] if not name.startswith("motion_") else dd.shape[0]
++        setattr(g, name, torch.cat([old, old.new_full((k,) + old.shape[1:], A if fill is None else fill)]))
++    g._cer_static = torch.cat([g._cer_static, torch.full((ds.shape[0],), 2, dtype=torch.uint8, device="cuda")])
++    g._cer_dynamic = torch.cat([g._cer_dynamic, torch.full((dd.shape[0],), 2, dtype=torch.uint8, device="cuda")])
++
++
++def check_finite(g, frames):
++    """Assert every evaluated opacity is finite on `frames`: a NaN times a 0 factor renders at alpha 0.99."""
++    for t in frames:
++        assert torch.isfinite(g.get_opacity_at_t(t)).all(), "non-finite opacity at frame %d" % t
++
++
++def gates(gaussians, scene, pipe, dataset):
++    """Contribution gates of spec section 6 on the final model; writes cer_gates.json."""
++    g = gaussians
++    A, B = g.cer_clock
++    check_finite(g, range(dataset.duration))
++    lab = torch.cat([g._cer_static, g._cer_dynamic]).long()
++    n_s = g._cer_static.shape[0]
++
++    def share(frames, mask_frame=None):
++        """Per-cohort mass inside the target/gap region over `frames`, and per-cohort total mass."""
++        inside, total = mass(g, pipe, dataset, _region(scene, dataset, frames, mask_frame))
++        return ({c: inside[lab == c].sum().item() for c in (0, 1, 2)},
++                {c: total[lab == c].sum().item() for c in (0, 1, 2)}, inside)
++
++    pre_in, pre_tot, pre_rows = share(range(0, A))
++    gap_in, gap_tot, gap_rows = share(range(A, B + 1), mask_frame=A - 1)
++    ret_in, ret_tot, _ = share(range(B + 1, B + 31))
++    frac = lambda d, c: d[c] / max(sum(d.values()), 1e-30)
++    out = {"memory_share_pregap": frac(pre_in, 1), "memory_share_return": frac(ret_in, 1),
++           "memory_mass_gap": gap_tot[1], "residual_share_gap": frac(gap_in, 2),
++           "residual_mass_outside_gap": pre_tot[2] + ret_tot[2],
++           "memory_rows_static": int((g._cer_static == 1).sum()), "memory_rows_dynamic": int((g._cer_dynamic == 1).sum()),
++           "memory_mass_pregap_static": pre_rows[:n_s][lab[:n_s] == 1].sum().item(),
++           "memory_mass_pregap_dynamic": pre_rows[n_s:][lab[n_s:] == 1].sum().item(),
++           "residual_rows_static": int((g._cer_static == 2).sum()), "residual_rows_dynamic": int((g._cer_dynamic == 2).sum()),
++           "residual_mass_gap_region_static": gap_rows[:n_s][lab[:n_s] == 2].sum().item(),
++           "residual_mass_gap_region_dynamic": gap_rows[n_s:][lab[n_s:] == 2].sum().item()}
++    out["pass"] = (out["memory_share_pregap"] >= 0.5 and out["memory_share_return"] >= 0.5
++                   and out["memory_mass_gap"] == 0.0 and out["residual_share_gap"] >= 0.2
++                   and out["residual_mass_outside_gap"] == 0.0)
++    json.dump(out, open(os.path.join(dataset.model_path, "cer_gates.json"), "w"), indent=1)
+diff --git a/test_cer.py b/test_cer.py
+new file mode 100644
+index 0000000..025f027
+--- /dev/null
++++ b/test_cer.py
+@@ -0,0 +1,536 @@
++"""Tests for Complementary Episode Residuals (CER), written before the CER code.
++
++Spec: research-wiki/operations/cer-ex4dgs-spec-2026-09-30.md (ADAGS repository), section 7.
++Run from the root of this worktree on one GPU node, e.g.
++
++    python test_cer.py --run <base run>/model --tree <ex4dgs tree> --cer_scene <canonical scene> \
++        --pinned <unmodified ex4dgs checkout> --out <scratch dir> --tests T0,T1,T2,T3,T4,T5,T6
++
++`--run` is a wave-1 base model directory (upstream checkpoints). Nothing is written into it,
++into the tree or into the pinned checkout; every output goes to `--out`. Exits non-zero if any
++requested test fails. T7 (integration) reads the output of a separate shortened CER training.
++"""
++import hashlib
++import json
++import os
++import shutil
++import subprocess
++import sys
++from argparse import ArgumentParser
++
++import numpy as np
++import torch
++
++ITER = 30000
++GAP_PROBE = [0, 59, 60, 74, 89, 90, 299]
++
++# Loads a model exactly as render.py does and dumps the sha256 of every cam00 render.
++# Executed in a subprocess whose working directory is the code tree under test.
++DUMP = r'''
++import hashlib, json, sys, torch
++from argparse import ArgumentParser
++from arguments import ModelParams, PipelineParams, OptimizationParams, get_combined_args
++from scene import Scene
++from scene.c_gaussian_model import CGaussianModel as GaussianModel
++from gaussian_renderer import render
++model_dir, tree, it, out = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4]
++sys.argv = ["x", "--model_path", model_dir, "--source_path", tree]
++parser = ArgumentParser()
++lp, op, pp = ModelParams(parser, sentinel=True), OptimizationParams(parser), PipelineParams(parser)
++args = get_combined_args(parser)
++d, o, p = lp.extract(args), op.extract(args), pp.extract(args)
++with torch.no_grad():
++    g = GaussianModel(d.sh_degree, d.duration, d.time_interval, d.time_pad, interp_type=d.interp_type, time_pad_type=d.time_pad_type)
++    scene = Scene(d, g, load_iteration=it, shuffle=False, opt=o)
++    bg = torch.tensor([1, 1, 1], dtype=torch.float32, device="cuda")
++    digests = {}
++    for cam in scene.test_cameras[1.0]:
++        img = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++        digests[int(cam.timestamp)] = hashlib.sha256(img.cpu().numpy().tobytes()).hexdigest()
++json.dump(digests, open(out, "w"))
++'''
++
++
++def dump(tree_root, model_dir, tree, out):
++    """Run DUMP with `tree_root` as the code under test; return {frame: sha256}."""
++    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
++    subprocess.run([sys.executable, "-c", DUMP, model_dir, tree, str(ITER), out], cwd=tree_root, env=env, check=True)
++    return {int(k): v for k, v in json.load(open(out)).items()}
++
++
++def load(model_dir, tree, it=ITER):
++    """Load a model in this process exactly as render.py does (checkpoint restore, else ply)."""
++    from arguments import ModelParams, PipelineParams, OptimizationParams, get_combined_args
++    from scene import Scene
++    from scene.c_gaussian_model import CGaussianModel as GaussianModel
++    argv, sys.argv = sys.argv, ["x", "--model_path", model_dir, "--source_path", tree]
++    parser = ArgumentParser()
++    lp, op, pp = ModelParams(parser, sentinel=True), OptimizationParams(parser), PipelineParams(parser)
++    args = get_combined_args(parser)
++    sys.argv = argv
++    d, o, p = lp.extract(args), op.extract(args), pp.extract(args)
++    g = GaussianModel(d.sh_degree, d.duration, d.time_interval, d.time_pad, interp_type=d.interp_type, time_pad_type=d.time_pad_type)
++    scene = Scene(d, g, load_iteration=it, shuffle=False, opt=o)
++    return d, o, p, g, scene
++
++
++def digest(g, scene, d, p, frames=None):
++    """sha256 of the cam00 renders (white background, as render.py) at `frames` (default all)."""
++    from gaussian_renderer import render
++    bg = torch.tensor([1, 1, 1], dtype=torch.float32, device="cuda")
++    out = {}
++    with torch.no_grad():
++        for cam in scene.test_cameras[1.0]:
++            if frames is None or int(cam.timestamp) in frames:
++                img = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++                out[int(cam.timestamp)] = hashlib.sha256(img.cpu().numpy().tobytes()).hexdigest()
++    return out
++
++
++def copy_model(src, dst):
++    """Copy cfg_args and the 30,000 checkpoint into a scratch model directory."""
++    os.makedirs(dst, exist_ok=True)
++    for f in ["cfg_args", "chkpnt%d.pth" % ITER]:
++        shutil.copy2(os.path.join(src, f), os.path.join(dst, f))
++    return dst
++
++
++def begun(a, q):
++    """Load the scratch copy with the CER code and start CER on it, with strength q."""
++    from scene import cer
++    d, o, p, g, scene = load(a.model, a.tree)
++    d.cer_scene, d.model_path = a.cer_scene, a.model
++    cer.begin(g, scene, p, d)
++    g.cer_q = q
++    return d, o, p, g, scene
++
++
++def check(name, ok, detail, results):
++    """Record one criterion."""
++    results.append({"test": name, "pass": bool(ok), "detail": detail})
++    print(("PASS " if ok else "FAIL ") + name + ": " + json.dumps(detail, default=str), flush=True)
++
++
++def t0_t1(a, R):
++    """T0: unmodified checkout renders twice identically. T1: this tree with CER off matches it."""
++    base = dump(a.pinned, a.model, a.tree, os.path.join(a.out, "t0_a.json"))
++    again = dump(a.pinned, a.model, a.tree, os.path.join(a.out, "t0_b.json"))
++    check("T0 pinned render repeatable", base == again and len(base) == 300, {"frames": len(base)}, R)
++    ours = dump(os.path.dirname(os.path.abspath(__file__)), a.model, a.tree, os.path.join(a.out, "t1.json"))
++    check("T1 CER off == unmodified", ours == base, {"differing": [f for f in base if ours.get(f) != base[f]][:10]}, R)
++    return base
++
++
++def t2_t3(a, base, R):
++    """T2: q = 0 renders equal the unmodified ones. T3: exact factors, renders and gradients at q = 1."""
++    from gaussian_renderer import render
++    d, o, p, g, scene = begun(a, 0.0)
++    A, B = g.cer_clock
++    got = digest(g, scene, d, p)
++    k_s, k_d = int((g._cer_static == 2).sum()), int((g._cer_dynamic == 2).sum())
++    check("T2 q=0 == unmodified", got == base and k_s > 0 and k_d > 0,
++          {"differing": [f for f in base if got.get(f) != base[f]][:10], "residual_rows_static": k_s, "residual_rows_dynamic": k_d}, R)
++    for bank, lab in [("static", g._cer_static), ("dynamic", g._cer_dynamic)]:
++        if not bool((lab == 1).any()):  # force one memory row so both banks are exercised
++            lab[0] = 1
++            print("T3: forced one memory row in the %s bank" % bank)
++    g.cer_q = 1.0
++    lab = torch.cat([g._cer_static, g._cer_dynamic]).long()
++    bad = []
++    for t in range(300):
++        f = g.get_cer_factor(t).squeeze(1)
++        inside = A <= t <= B
++        want = {0: 1.0, 1: 0.0 if inside else 1.0, 2: 1.0 if inside else 0.0}
++        for c, v in want.items():
++            if not bool((f[lab == c] == v).all()):
++                bad.append((t, c))
++    check("T3 exact factors, both banks", not bad and bool((lab[:g._xyz.shape[0]] == 1).any())
++          and bool((lab[g._xyz.shape[0]:] == 1).any()), {"bad": bad[:10]}, R)
++    got = digest(g, scene, d, p)
++    outside = [f for f in base if not (A <= f <= B) and got[f] != base[f]]
++    same_in = [f for f in base if A <= f <= B and got[f] == base[f]]
++    check("T3 q=1 renders", not outside and not same_in, {"outside_differ": outside[:10], "gap_unchanged": same_in}, R)
++    from scene import cer
++    banks = [("_cer_static", ["_xyz", "_features_dc", "_features_rest", "_opacity", "_scaling", "_rotation", "_xyz_disp"]),
++             ("_cer_dynamic", ["_xyz_motion", "_features_dc_motion", "_features_rest_motion", "_scaling_motion",
++                               "_opacity_motion", "_opacity_duration_center", "_opacity_duration_var", "_rotation_motion"])]
++
++    def cohort_grad(frame, cohort):
++        """Per parameter: does any row of `cohort` get a non-zero rendering gradient at `frame` (None: no .grad)."""
++        cam = cer.train_views(scene, [frame])[0]
++        g.optimizer.zero_grad(set_to_none=True)
++        render(cam, g, p, torch.rand(3, device="cuda"), near=d.near, far=d.far)["render"].sum().backward()
++        out = {}
++        for lab_name, names in banks:
++            lab_b = getattr(g, lab_name)
++            for n in names:
++                gr = getattr(g, n).grad
++                if gr is not None and n == "_opacity_duration_var":
++                    gr = gr.nan_to_num()  # as train.py:246-248 does before every step
++                out[n] = None if gr is None else bool((gr[lab_b == cohort] != 0).any())
++        g.optimizer.zero_grad(set_to_none=True)
++        return out
++
++    probes = [((A + B) // 2, 1), (A - 1, 2), (B + 1, 2)]
++    leaks = {f: [n for n, v in cohort_grad(f, c).items() if v is not False] for f, c in probes}
++    g.cer_q = 0.0  # positive control: ungated, the memory rows do receive gradient at the gap frame
++    control = cohort_grad((A + B) // 2, 1)
++    g.cer_q = 1.0
++    check("T3 zero rendering gradient to the switched-off cohort",
++          not any(leaks.values()) and (control["_opacity"] or control["_opacity_motion"]),
++          {"leaks_or_missing_grad": leaks, "control_q0_memory_gets_gradient": control}, R)
++
++
++def t4(a, R):
++    """T4: the mass instrument is exact alpha*T, and the cohorts are non-vacuous."""
++    from scene import cer
++    from gaussian_renderer import render
++    d, o, p, g, scene = begun(a, 0.0)
++    A, B, ids = cer.event(a.cer_scene)
++    for cam in cer.train_views(scene, range(300)):  # camera/frame mapping of every view used
++        t, c = int(cam.timestamp), cer.cam_number(cam)
++        real = os.path.realpath(cam.image_path)
++        if c == 0 or real != os.path.realpath(os.path.join(a.cer_scene, "frames", "cam%02d" % c, "%04d.png" % t)):
++            check("T4 view mapping", False, {"image": cam.image_path, "real": real}, R)
++            return
++    check("T4 view mapping", True, {}, R)
++    worst_cons, worst_split = 0.0, 0.0
++    g.cer_q = 1.0
++    views = cer.train_views(scene, range(0, A, 7))
++    for cam in views:
++        m = cer.target_mask(a.cer_scene, ids, cer.cam_number(cam), int(cam.timestamp))
++        inside, total = cer.mass(g, p, d, [(cam, m)])
++        comp, total2 = cer.mass(g, p, d, [(cam, 1 - m)])
++        with torch.no_grad():
++            ones = torch.ones((g.get_xyz_at_t(0).shape[0], 3), device="cuda")
++            img = render(cam, g, p, torch.zeros(3, device="cuda"), override_color=ones, near=d.near, far=d.far)["render"]
++        worst_cons = max(worst_cons, abs(total.sum().item() - img[1].double().sum().item()) / img[1].double().sum().item())
++        worst_split = max(worst_split, ((inside + comp - total).abs().sum() / total.sum()).item())
++    check("T4 conservation", worst_cons < 1e-4, {"max_rel": worst_cons, "views": len(views)}, R)
++    check("T4 mask split", worst_split < 1e-5, {"max_rel": worst_split}, R)
++    begin = json.load(open(os.path.join(a.model, "cer_begin.json")))
++    check("T4 memory share pre-gap (ungated) >= 0.5", begin["memory_share_pregap"] >= 0.5, begin, R)
++    lab = torch.cat([g._cer_static, g._cer_dynamic]).long()
++    windows = {"pre": range(0, A), "gap": range(A, B + 1), "ret": range(B + 1, B + 31)}
++    tot = {}
++    for w, frames in windows.items():
++        vm = [(cam, torch.ones((cam.image_height, cam.image_width), device="cuda")) for cam in cer.train_views(scene, frames)]
++        _, total = cer.mass(g, p, d, vm)
++        tot[w] = {c: total[lab == c].sum().item() for c in (0, 1, 2)}
++    check("T4 exact zeros at q=1", tot["gap"][1] == 0.0 and tot["pre"][2] == 0.0 and tot["ret"][2] == 0.0
++          and tot["gap"][2] > 0.0 and tot["pre"][1] > 0.0, tot, R)
++
++
++def forecast(a, R):
++    """T4-forecast: memory share (ungated) and donor count at CER start, for one base model."""
++    begun(a, 1.0)
++    rep = json.load(open(os.path.join(a.model, "cer_begin.json")))
++    check("T4-forecast (reported; a share below 0.5 forecasts DESIGN_WITHOUT_POWER)", True, rep, R)
++
++
++def t5(a, R):
++    """T5: the checkpoint round trip keeps the CER state and the gated renders; the ply fallback refuses."""
++    from scene import cer
++    d, o, p, g, scene = begun(a, 1.0)
++    before = digest(g, scene, d, p, GAP_PROBE)
++    path = os.path.join(a.out, "t5_ckpt", "chkpnt%d.pth" % ITER)
++    copy_model(a.model, os.path.dirname(path))
++    torch.save((g.capture(), ITER), path)
++    d2, o2, p2, g2, scene2 = load(os.path.dirname(path), a.tree)
++    same = equal_state(g.capture()[:40], g2.capture()[:40])
++    st = (torch.equal(g._cer_static, g2._cer_static) and torch.equal(g._cer_dynamic, g2._cer_dynamic)
++          and g.cer_clock == g2.cer_clock and g.cer_q == g2.cer_q)
++    after = digest(g2, scene2, d2, p2, GAP_PROBE)
++    k = (int((g2._cer_static == 2).sum()), int((g2._cer_dynamic == 2).sum()))
++    check("T5 checkpoint round trip", same and st and after == before and min(k) > 0,
++          {"tensors": same, "cer_state": st, "residual_rows_static_dynamic": k}, R)
++    ply_model = os.path.join(a.out, "t5_ply")
++    os.makedirs(ply_model, exist_ok=True)
++    cfg = open(os.path.join(a.model, "cfg_args")).read().rstrip()
++    open(os.path.join(ply_model, "cfg_args"), "w").write(cfg[:-1] + ", cer_scene=%r)" % a.cer_scene)
++    g.save_ply(os.path.join(ply_model, "point_cloud", "iteration_%d" % ITER, "point_cloud.ply"))
++    check("T5 ply fallback refuses a CER model", refuses(ply_model, a.tree), {}, R)
++    stripped = os.path.join(a.out, "t5_stripped")  # a CER cfg_args beside an upstream (40-tuple) checkpoint
++    copy_model(a.model, stripped)
++    open(os.path.join(stripped, "cfg_args"), "w").write(cfg[:-1] + ", cer_scene=%r)" % a.cer_scene)
++    check("T5 CER directory without CER state refuses", refuses(stripped, a.tree), {}, R)
++
++
++def refuses(model_dir, tree):
++    """True when loading model_dir stops on a CER loader assertion."""
++    try:
++        load(model_dir, tree)
++    except AssertionError as e:
++        return "CER" in str(e)
++    return False
++
++
++def equal_state(x, y):
++    """Recursive exact equality of checkpoint contents (tensors, dicts, sequences, scalars)."""
++    if torch.is_tensor(x):
++        return torch.is_tensor(y) and x.shape == y.shape and torch.equal(x, y)
++    if isinstance(x, dict):
++        return isinstance(y, dict) and x.keys() == y.keys() and all(equal_state(x[k], y[k]) for k in x)
++    if isinstance(x, (list, tuple)):
++        return isinstance(y, (list, tuple)) and len(x) == len(y) and all(equal_state(u, v) for u, v in zip(x, y))
++    return x == y
++
++
++def t6(a, R):
++    """T6: prune_points keeps labels, rows and optimizer state aligned, removing and keeping residual rows in both
++    banks; a non-finite evaluated opacity on a row outside its plateau is caught."""
++    from scene import cer
++    d, o, p, g, scene = begun(a, 1.0)
++    gen = torch.Generator(device="cuda").manual_seed(0)
++    ps = torch.rand(g._xyz.shape[0], generator=gen, device="cuda") < 0.1
++    pd = torch.rand(g._xyz_motion.shape[0], generator=gen, device="cuda") < 0.1
++    for lab, mask in ((g._cer_static, ps), (g._cer_dynamic, pd)):  # deterministic: drop the first residual row, keep the rest
++        res = (lab == 2).nonzero().squeeze(1)
++        mask[res] = False
++        mask[res[0]] = True
++    removed = (int((g._cer_static[ps] == 2).sum()), int((g._cer_dynamic[pd] == 2).sum()))
++    ls, ld = g._cer_static[~ps].clone(), g._cer_dynamic[~pd].clone()
++    state = lambda n: g.optimizer.state[[gr["params"][0] for gr in g.optimizer.param_groups if gr["name"] == n][0]]["exp_avg"]
++    es, ed = state("xyz")[~ps].clone(), state("motion_xyz")[~pd].clone()
++    g.prune_points(ps, pd)
++    lab_ok = torch.equal(g._cer_static, ls) and torch.equal(g._cer_dynamic, ld)
++    lab_ok = lab_ok and torch.equal(state("xyz"), es) and torch.equal(state("motion_xyz"), ed)
++    len_ok = g._cer_static.shape[0] == g._xyz.shape[0] and g._cer_dynamic.shape[0] == g._xyz_motion.shape[0]
++    opt_ok = all(g.optimizer.state[gr["params"][0]]["exp_avg"].shape[0] == gr["params"][0].shape[0]
++                 for gr in g.optimizer.param_groups if gr["params"][0] in g.optimizer.state)
++    kept = (int((ls == 2).sum()), int((ld == 2).sum()))
++    check("T6 prune alignment", lab_ok and len_ok and opt_ok and removed == (1, 1) and min(kept) > 0,
++          {"labels": lab_ok, "lengths": len_ok, "optimizer": opt_ok, "residual_removed_static_dynamic": removed,
++           "residual_kept_static_dynamic": kept}, R)
++    with torch.no_grad():  # a row whose temporal factor is below 1 on some frame, so its variance reaches the opacity
++        b = torch.stack([g.get_opacity_at_t(t)[g._xyz.shape[0]:, 0] / g.get_motion_opacity[:, 0] for t in range(300)])
++        row = int((b < 1).any(0).nonzero()[0])
++        g._opacity_duration_var[row] = float("nan")  # finite logits, non-finite evaluated opacity
++    try:
++        cer.check_finite(g, range(300))
++        caught = False
++    except AssertionError:
++        caught = True
++    check("T6 non-finite evaluated opacity is caught", caught, {"row": row}, R)
++
++
++def snapshot(g):
++    """A deep copy of capture() (it returns live references) and of every optimizer state tensor."""
++    clone = lambda x: x.detach().clone() if torch.is_tensor(x) else x
++    cap = [clone(x) if i != 16 else None for i, x in enumerate(g.capture()[:40])]
++    opt = {gr["name"]: {k: clone(v) for k, v in g.optimizer.state[gr["params"][0]].items()}
++           for gr in g.optimizer.param_groups if gr["params"][0] in g.optimizer.state}
++    return cap, opt
++
++
++def t_birth(a, R):
++    """T2b: begin leaves every existing row's state untouched and appends rows with the A3 values, in both banks."""
++    from scene import cer
++    d, o, p, g, scene = load(a.model, a.tree)
++    d.cer_scene, d.model_path = a.cer_scene, a.model
++    n_s, n_d = g._xyz.shape[0], g._xyz_motion.shape[0]
++    cap, opt = snapshot(g)
++    cer.begin(g, scene, p, d)
++    A = g.cer_clock[0]
++    k_s, k_d = int((g._cer_static == 2).sum()), int((g._cer_dynamic == 2).sum())
++    after = g.capture()
++    static_rows, dynamic_rows = list(range(1, 16)) + [18], list(range(23, 40))  # capture() tuple positions
++    bad = []
++    for i, (x, y) in enumerate(zip(cap, after[:40])):
++        if i in static_rows or i in dynamic_rows:
++            n, k = (n_s, k_s) if i in static_rows else (n_d, k_d)
++            ok = (x.shape[0] == n and y.shape[0] == n + k and y.shape[1:] == x.shape[1:] and y.dtype == x.dtype
++                  and y.device == x.device and torch.equal(y[:n], x))
++        elif i == 16:
++            continue  # optimizer state: checked below
++        else:
++            ok = equal_state(x, y)
++        if not ok:
++            bad.append(i)
++    for name, fill in cer.BUFFERS:  # the new rows' bookkeeping values
++        n = n_d if name.startswith("motion_") else n_s
++        if not bool((getattr(g, name)[n:] == (A if fill is None else fill)).all()):
++            bad.append(("buffer fill", name))
++    if not (bool((g._cer_static[:n_s] != 2).all()) and bool((g._cer_static[n_s:] == 2).all())
++            and bool((g._cer_dynamic[:n_d] != 2).all()) and bool((g._cer_dynamic[n_d:] == 2).all())):
++        bad.append("residual labels not exactly the appended rows")
++    for gr in g.optimizer.param_groups:
++        n, k = (n_d, k_d) if gr["name"].startswith("motion_") else (n_s, k_s)
++        attr = dict(cer.STATIC + cer.DYNAMIC)[gr["name"]]
++        if getattr(g, attr) is not gr["params"][0]:
++            bad.append(("attribute is not the optimizer's parameter", gr["name"]))
++        if gr["name"] not in opt:
++            continue
++        st = g.optimizer.state[gr["params"][0]]
++        for m in ("exp_avg", "exp_avg_sq"):
++            old, new = opt[gr["name"]][m], st[m]
++            if not (new.shape[0] == n + k and torch.equal(new[:n], old) and bool((new[n:] == 0).all())):
++                bad.append((gr["name"], m))
++        if not equal_state(opt[gr["name"]].get("step"), st.get("step")):
++            bad.append((gr["name"], "step"))
++    check("T2b birth state", not bad and k_s > 0 and k_d > 0 and len(opt) == 15,
++          {"residual_rows_static": k_s, "residual_rows_dynamic": k_d, "groups": len(opt), "bad": bad[:10]}, R)
++
++
++def t2c(a, R):
++    """T2c: every residual copy is its donor (parameters and evaluated per-row inputs), for begin()'s own donors and for
++    begin() driven to static-only, dynamic-only and mixed donor sets across the bank boundary; swap render reported."""
++    from scene import cer
++    from gaussian_renderer import render
++    d, o, p, g, scene = load(a.model, a.tree)
++    d.cer_scene, d.model_path = a.cer_scene, a.model
++    n_s, n_d = g._xyz.shape[0], g._xyz_motion.shape[0]
++    cer.begin(g, scene, p, d)
++    rep = json.load(open(os.path.join(a.model, "cer_begin.json")))
++    A, B = g.cer_clock
++    ds = torch.tensor(rep["donors_static"], device="cuda", dtype=torch.long)
++    dd = torch.tensor(rep["donors_dynamic"], device="cuda", dtype=torch.long)
++    bad = copies_are_donors(g, ds, dd, n_s, n_d, [A, (A + B) // 2, B])
++    check("T2c copies are their donors (begin)", not bad and ds.shape[0] > 0 and dd.shape[0] > 0,
++          {"bad": bad[:10], "static": ds.shape[0], "dynamic": dd.shape[0]}, R)
++    # diagnostic on the same model: copies on with donors' logits at -inf, against copies off (relabelled memory) with donors on
++    cam = [c for c in scene.test_cameras[1.0] if int(c.timestamp) == (A + B) // 2][0]
++    bg = torch.tensor([1, 1, 1], dtype=torch.float32, device="cuda")
++    with torch.no_grad():
++        saved_s, saved_d = g._opacity.data.clone(), g._opacity_motion.data.clone()
++        g._opacity.data[ds] = -float("inf")
++        g._opacity_motion.data[dd] = -float("inf")
++        swap = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++        g._opacity.data.copy_(saved_s)
++        g._opacity_motion.data.copy_(saved_d)
++        res_s, res_d = g._cer_static == 2, g._cer_dynamic == 2
++        g._cer_static[res_s], g._cer_dynamic[res_d] = 1, 1
++        plain = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++        g._cer_static[res_s], g._cer_dynamic[res_d] = 2, 2
++    diff = (swap - plain).abs()
++    check("T2c diagnostic: swap render (reported, not a criterion)", True,
++          {"differing_values": int((diff > 0).sum()), "max_abs_diff": float(diff.max())}, R)
++    real = cer.mass
++    for name, pick in (("static-only", lambda n_s, n: [0, n_s - 2, n_s - 1]), ("dynamic-only", lambda n_s, n: [n_s, n_s + 1, n - 1]),
++                       ("mixed", lambda n_s, n: [n_s - 1, n_s])):
++        d, o, p, g, scene = load(a.model, a.tree)
++        d.cer_scene, d.model_path = a.cer_scene, a.model
++        n_s, n_d = g._xyz.shape[0], g._xyz_motion.shape[0]
++        chosen = pick(n_s, n_s + n_d)
++        calls = []
++
++        def driven(*args, chosen=chosen):
++            """The real mass for memory; for donors, mass exactly on the chosen concatenated rows."""
++            calls.append(1)
++            if len(calls) == 1:
++                return real(*args)
++            x = torch.zeros(n_s + n_d, dtype=torch.float64, device="cuda")
++            x[chosen] = 1.0
++            return x, x.clone()
++        cer.mass = driven
++        try:
++            cer.begin(g, scene, p, d)
++        finally:
++            cer.mass = real
++        rep = json.load(open(os.path.join(a.model, "cer_begin.json")))
++        ds = torch.tensor(rep["donors_static"], device="cuda", dtype=torch.long)
++        dd = torch.tensor(rep["donors_dynamic"], device="cuda", dtype=torch.long)
++        want_s = [c for c in chosen if c < n_s]
++        want_d = [c - n_s for c in chosen if c >= n_s]
++        split_ok = ds.tolist() == want_s and dd.tolist() == want_d
++        bad = copies_are_donors(g, ds, dd, n_s, n_d, [A, (A + B) // 2, B])
++        cam = [c for c in scene.test_cameras[1.0] if int(c.timestamp) == A][0]
++        with torch.no_grad():  # one gated render: label and buffer lengths are consistent
++            render(cam, g, p, bg, near=d.near, far=d.far)
++        check("T2c begin() with %s donors" % name, split_ok and not bad,
++              {"chosen": chosen, "static": ds.tolist(), "dynamic": dd.tolist(), "bad": bad[:10]}, R)
++
++
++def copies_are_donors(g, ds, dd, n_s, n_d, frames):
++    """Mismatches between residual copies and their donors (pre-birth bank sizes n_s, n_d): the copies must be exactly
++    the appended rows; then parameters, then evaluated per-row inputs on `frames`."""
++    cs = (g._cer_static == 2).nonzero().squeeze(1)
++    cd = (g._cer_dynamic == 2).nonzero().squeeze(1)
++    if not (torch.equal(cs, torch.arange(n_s, n_s + ds.shape[0], device="cuda"))
++            and torch.equal(cd, torch.arange(n_d, n_d + dd.shape[0], device="cuda"))):
++        return [("copies are not the appended rows", cs.shape[0], ds.shape[0], cd.shape[0], dd.shape[0])]
++    bad = []
++    for n in ("_xyz", "_xyz_disp", "_features_dc", "_features_rest", "_scaling", "_rotation", "_opacity"):
++        if not torch.equal(getattr(g, n)[cs], getattr(g, n)[ds]):
++            bad.append(n)
++    for n in ("_xyz_motion", "_features_dc_motion", "_features_rest_motion", "_scaling_motion", "_opacity_motion",
++              "_opacity_duration_center", "_opacity_duration_var", "_rotation_motion"):
++        if not torch.equal(getattr(g, n)[cd], getattr(g, n)[dd]):
++            bad.append(n)
++    n_s_now = g._xyz.shape[0]
++    copy_idx, donor_idx = torch.cat([cs, n_s_now + cd]), torch.cat([ds, n_s_now + dd])
++    with torch.no_grad():
++        for t in frames:
++            for name, x in (("xyz", g.get_xyz_at_t(t)), ("rotation", g.get_rotation_at_t(t)), ("scaling", g.get_scaling()),
++                            ("features", g.get_features()), ("opacity", g.get_opacity_at_t(t))):
++                if not torch.equal(x[copy_idx], x[donor_idx]):
++                    bad.append((t, name))
++    return bad
++
++
++def t7(a, R):
++    """T7: a shortened CER training ran begin, wrote its gates, and render.py evaluated it gated."""
++    from gaussian_renderer import render
++    from PIL import Image
++    run = a.model  # the model dir of the shortened CER training
++    it = a.t7_iter
++    ok_files = all(os.path.exists(os.path.join(run, f)) for f in ["cer_begin.json", "cer_gates.json"])
++    d, o, p, g, scene = load(run, a.tree, it)
++    nan = bool(g._xyz.isnan().any() or g._xyz_motion.isnan().any())
++    A, B = g.cer_clock
++    cam = [c for c in scene.test_cameras[1.0] if int(c.timestamp) == (A + B) // 2][0]
++    bg = torch.tensor([1, 1, 1], dtype=torch.float32, device="cuda")
++    with torch.no_grad():
++        img = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++        png = np.asarray(Image.open(os.path.join(run, "test", "itrs_%d" % it, "renders", cam.image_name)))
++        mine = (img.clamp(0, 1) * 255 + 0.5).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy()
++        eq = int(np.abs(mine.astype(int) - png[..., :3].astype(int)).max())
++        g.cer_q = 0.0
++        off = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++    check("T7 integration", ok_files and not nan and eq <= 1 and not torch.equal(off, img),
++          {"files": ok_files, "nan": nan, "render_py_max_diff_255": eq, "gap_frame": int(cam.timestamp)}, R)
++
++
++def main():
++    """Parse arguments, run the requested tests, write results.json, exit non-zero on failure."""
++    ap = ArgumentParser()
++    ap.add_argument("--run", required=True)
++    ap.add_argument("--tree", required=True)
++    ap.add_argument("--cer_scene", required=True)
++    ap.add_argument("--pinned", default="")
++    ap.add_argument("--out", required=True)
++    ap.add_argument("--tests", default="T0,T1,T2,T2b,T2c,T3,T4,T5,T6")
++    ap.add_argument("--t7_iter", type=int, default=17200)
++    a = ap.parse_args()
++    os.makedirs(a.out, exist_ok=True)
++    tests = a.tests.split(",")
++    a.model = a.run if tests == ["T7"] else copy_model(a.run, os.path.join(a.out, "model"))
++    R = []
++    try:
++        base = t0_t1(a, R) if {"T0", "T1", "T2", "T3"} & set(tests) else None
++        if {"T2", "T3"} & set(tests):
++            t2_t3(a, base, R)
++        if "T2b" in tests:
++            t_birth(a, R)
++        if "T2c" in tests:
++            t2c(a, R)
++        if "T4" in tests:
++            t4(a, R)
++        if "FORECAST" in tests:
++            forecast(a, R)
++        if "T5" in tests:
++            t5(a, R)
++        if "T6" in tests:
++            t6(a, R)
++        if "T7" in tests:
++            t7(a, R)
++    except Exception as e:  # a crash is a failure of the test that was running
++        import traceback
++        traceback.print_exc()
++        R.append({"test": "crash", "pass": False, "detail": repr(e)})
++    json.dump(R, open(os.path.join(a.out, "results.json"), "w"), indent=1)
++    sys.exit(0 if R and all(r["pass"] for r in R) else 1)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/train.py b/train.py
+index 716461c..c61cdc1 100644
+--- a/train.py
++++ b/train.py
+@@ -23,7 +23,7 @@ from PIL import Image
+ import joblib
+ 
+ from gaussian_renderer import render, network_gui
+-from scene import Scene, getmodel
++from scene import Scene, getmodel, cer
+ from utils.image_utils import psnr
+ from utils.loss_utils import l1_loss, ssim
+ from utils.general_utils import safe_state, PILtoTorch
+@@ -60,7 +60,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
+     with open(os.path.join(args.model_path, "cfg_args"), 'w') as cfg_log_f:
+         cfg_log_f.write(str(Namespace(**vars(args))))
+ 
++    assert not dataset.cer_scene or opt.densify_until_iter < opt.iterations, "CER begins at densify_until_iter"
+     if checkpoint:
++        assert not dataset.cer_scene, "CER runs are one uninterrupted job"
+         (model_params, first_iter) = torch.load(checkpoint)
+         gaussians.restore(model_params, opt)
+ 
+@@ -281,6 +283,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
+                                                              static_vis_filter, scene.cameras_extent, percentile=opt.extract_percentile, max_dur=sample_len)
+                 mark_extract = False
+ 
++        if dataset.cer_scene and iteration == opt.densify_until_iter:
++            cer.begin(gaussians, scene, pipe, dataset)
++
++    if dataset.cer_scene:
++        cer.gates(gaussians, scene, pipe, dataset)
++
+ 
+ def prepare_output_and_logger(args):    
+     if not args.model_path:

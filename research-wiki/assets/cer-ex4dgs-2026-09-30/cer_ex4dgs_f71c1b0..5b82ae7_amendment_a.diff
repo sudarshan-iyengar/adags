@@ -1,0 +1,397 @@
+diff --git a/scene/cer.py b/scene/cer.py
+index b584834..494a194 100644
+--- a/scene/cer.py
++++ b/scene/cer.py
+@@ -3,8 +3,8 @@
+ # Spec: research-wiki/operations/cer-ex4dgs-spec-2026-09-30.md (ADAGS repository).
+ #
+ # A memory cohort (rows that paint the target before it leaves) is switched off inside the
+-# gap [A, B]; a residual cohort (static copies of the rows that paint the gap region) exists
+-# only inside it. Both are set once, at the end of iteration densify_until_iter.
++# gap [A, B]; a residual cohort (verbatim copies, in their own bank, of the rows that paint the gap
++# region) exists only inside it. Both are set once, at the end of iteration densify_until_iter.
+ #
+ import json
+ import os
+@@ -13,7 +13,6 @@ import numpy as np
+ import torch
+ 
+ from gaussian_renderer import render
+-from utils.general_utils import inverse_sigmoid
+ 
+ 
+ def event(scene_dir):
+@@ -72,6 +71,8 @@ def begin(gaussians, scene, pipe, dataset):
+     g = gaussians
+     A, B, ids = event(dataset.cer_scene)
+     cams = scene.train_cameras[1.0]
++    check_finite(g, range(dataset.duration))  # verbatim copies inherit their donors' opacity
++    assert g.duration == dataset.duration + g.time_shift + 1  # expand_duration is a no-op: K cannot change
+     assert dataset.time_pad_type == 0  # integer frame timestamps, no mirrored cameras
+     assert all(os.path.realpath(c.image_path) == os.path.realpath(os.path.join(
+         dataset.cer_scene, "frames", "cam%02d" % cam_number(c), "%04d.png" % c.timestamp)) for c in cams)  # masks match images
+@@ -86,41 +87,51 @@ def begin(gaussians, scene, pipe, dataset):
+     # donors: rows that paint the gap region during the gap once the memory cohort is off
+     g_in, g_tot = mass(g, pipe, dataset, _region(scene, dataset, range(A, B + 1), mask_frame=A - 1))
+     donors = ((g_tot > 0) & (g_in >= 0.5 * g_tot)).nonzero().squeeze(1)
+-
+-    t_m = (A + B) // 2
+-    with torch.no_grad():
+-        feats = g.get_features()[donors]
+-        new = {"xyz": g.get_xyz_at_t(t_m)[donors],
+-               "f_dc": feats[:, :1].contiguous(),
+-               "f_rest": feats[:, 1:].contiguous(),
+-               "opacity": inverse_sigmoid(g.get_opacity_at_t(t_m)[donors].clamp(1e-6, 1 - 1e-6)),
+-               "scaling": torch.cat([g._scaling, g._scaling_motion])[donors],
+-               "rotation": g.get_rotation_at_t(t_m)[donors],
+-               "xyz_disp": torch.zeros((donors.shape[0], 3), device="cuda")}
+-    opt = g.cat_tensors_to_optimizer(new)
+-    g._xyz, g._features_dc, g._features_rest = opt["xyz"], opt["f_dc"], opt["f_rest"]
+-    g._opacity, g._scaling, g._rotation, g._xyz_disp = opt["opacity"], opt["scaling"], opt["rotation"], opt["xyz_disp"]
+-    k = donors.shape[0]
+-    z = torch.zeros((k, 1), device="cuda")
+-    g.xyz_gradient_accum = torch.cat([g.xyz_gradient_accum, z])
+-    g.denom = torch.cat([g.denom, z])
+-    g.xyz_error_accum = torch.cat([g.xyz_error_accum, z])
+-    g.xyz_ssim_error_accum = torch.cat([g.xyz_ssim_error_accum, z])
+-    g.error_denom = torch.cat([g.error_denom, z])
+-    g.xyz_error_min = torch.cat([g.xyz_error_min, z + 1000])
+-    g.xyz_error_min_timestamp = torch.cat([g.xyz_error_min_timestamp, z + A])
+-    g.max_radii2D = torch.cat([g.max_radii2D, z[:, 0]])
+-    g.min_radii2D = torch.cat([g.min_radii2D, z[:, 0] + 1000])
+-
+-    g._cer_static = torch.cat([g._cer_static, torch.full((k,), 2, dtype=torch.uint8, device="cuda")])
++    ds, dd = donors[donors < n_s], donors[donors >= n_s] - n_s  # bank split with the pre-birth static count
++    birth(g, ds, dd, A)
+ 
+     report = {"A": A, "B": B, "target_ids": ids,
+               "memory_rows_static": int(memory[:n_s].sum()), "memory_rows_dynamic": int(memory[n_s:].sum()),
+               "memory_share_pregap": (inside[memory].sum() / inside.sum()).item(),
+-              "residual_rows": k, "donor_share_gap_region": (g_in[donors].sum() / g_in.sum()).item()}
++              "residual_rows": ds.shape[0] + dd.shape[0],
++              "residual_rows_static": ds.shape[0], "residual_rows_dynamic": dd.shape[0],
++              "donor_share_gap_region": (g_in[donors].sum() / g_in.sum()).item(),
++              "donor_share_gap_region_static": (g_in[:n_s][ds].sum() / g_in.sum()).item(),
++              "donor_share_gap_region_dynamic": (g_in[n_s:][dd].sum() / g_in.sum()).item(),
++              "donors_static": ds.tolist(), "donors_dynamic": dd.tolist()}
+     json.dump(report, open(os.path.join(dataset.model_path, "cer_begin.json"), "w"), indent=1)
+ 
+ 
++STATIC = [("xyz", "_xyz"), ("f_dc", "_features_dc"), ("f_rest", "_features_rest"), ("opacity", "_opacity"),
++          ("scaling", "_scaling"), ("rotation", "_rotation"), ("xyz_disp", "_xyz_disp")]
++DYNAMIC = [("motion_xyz", "_xyz_motion"), ("motion_f_dc", "_features_dc_motion"), ("motion_f_rest", "_features_rest_motion"),
++           ("motion_scaling", "_scaling_motion"), ("motion_opacity", "_opacity_motion"),
++           ("motion_opacity_center", "_opacity_duration_center"), ("motion_opacity_var", "_opacity_duration_var"),
++           ("motion_rotation", "_rotation_motion")]
++BUFFERS = [("xyz_gradient_accum", 0), ("denom", 0), ("xyz_error_accum", 0), ("xyz_ssim_error_accum", 0), ("error_denom", 0),
++           ("xyz_error_min", 1000), ("xyz_error_min_timestamp", None), ("max_radii2D", 0), ("min_radii2D", 1000),
++           ("motion_xyz_gradient_accum", 0), ("motion_denom", 0), ("motion_xyz_error_mean", 0),
++           ("motion_xyz_ssim_error_accum", 0), ("motion_error_denom", 0), ("motion_xyz_error_min", 1000),
++           ("motion_xyz_error_min_timestamp", None), ("motion_max_radii2D", 0), ("motion_min_radii2D", 1000)]
++
++
++def birth(g, ds, dd, A):
++    """Append residual rows: verbatim copies of static donors ds into the static bank and of dynamic donors dd
++    (bank-local indices) into the dynamic bank, labelled 2; new buffers zero, error-min 1000, timestamps A."""
++    with torch.no_grad():
++        new = {grp: getattr(g, attr)[ds] for grp, attr in STATIC}
++        new.update({grp: getattr(g, attr)[dd] for grp, attr in DYNAMIC})
++    opt = g.cat_tensors_to_optimizer(new)
++    for grp, attr in STATIC + DYNAMIC:
++        setattr(g, attr, opt[grp])
++    for name, fill in BUFFERS:
++        old = getattr(g, name)
++        k = ds.shape[0] if not name.startswith("motion_") else dd.shape[0]
++        setattr(g, name, torch.cat([old, old.new_full((k,) + old.shape[1:], A if fill is None else fill)]))
++    g._cer_static = torch.cat([g._cer_static, torch.full((ds.shape[0],), 2, dtype=torch.uint8, device="cuda")])
++    g._cer_dynamic = torch.cat([g._cer_dynamic, torch.full((dd.shape[0],), 2, dtype=torch.uint8, device="cuda")])
++
++
+ def check_finite(g, frames):
+     """Assert every evaluated opacity is finite on `frames`: a NaN times a 0 factor renders at alpha 0.99."""
+     for t in frames:
+@@ -142,7 +153,7 @@ def gates(gaussians, scene, pipe, dataset):
+                 {c: total[lab == c].sum().item() for c in (0, 1, 2)}, inside)
+ 
+     pre_in, pre_tot, pre_rows = share(range(0, A))
+-    gap_in, gap_tot, _ = share(range(A, B + 1), mask_frame=A - 1)
++    gap_in, gap_tot, gap_rows = share(range(A, B + 1), mask_frame=A - 1)
+     ret_in, ret_tot, _ = share(range(B + 1, B + 31))
+     frac = lambda d, c: d[c] / max(sum(d.values()), 1e-30)
+     out = {"memory_share_pregap": frac(pre_in, 1), "memory_share_return": frac(ret_in, 1),
+@@ -150,7 +161,10 @@ def gates(gaussians, scene, pipe, dataset):
+            "residual_mass_outside_gap": pre_tot[2] + ret_tot[2],
+            "memory_rows_static": int((g._cer_static == 1).sum()), "memory_rows_dynamic": int((g._cer_dynamic == 1).sum()),
+            "memory_mass_pregap_static": pre_rows[:n_s][lab[:n_s] == 1].sum().item(),
+-           "memory_mass_pregap_dynamic": pre_rows[n_s:][lab[n_s:] == 1].sum().item()}
++           "memory_mass_pregap_dynamic": pre_rows[n_s:][lab[n_s:] == 1].sum().item(),
++           "residual_rows_static": int((g._cer_static == 2).sum()), "residual_rows_dynamic": int((g._cer_dynamic == 2).sum()),
++           "residual_mass_gap_region_static": gap_rows[:n_s][lab[:n_s] == 2].sum().item(),
++           "residual_mass_gap_region_dynamic": gap_rows[n_s:][lab[n_s:] == 2].sum().item()}
+     out["pass"] = (out["memory_share_pregap"] >= 0.5 and out["memory_share_return"] >= 0.5
+                    and out["memory_mass_gap"] == 0.0 and out["residual_share_gap"] >= 0.2
+                    and out["residual_mass_outside_gap"] == 0.0)
+diff --git a/test_cer.py b/test_cer.py
+index dff6d63..025f027 100644
+--- a/test_cer.py
++++ b/test_cer.py
+@@ -127,8 +127,9 @@ def t2_t3(a, base, R):
+     d, o, p, g, scene = begun(a, 0.0)
+     A, B = g.cer_clock
+     got = digest(g, scene, d, p)
+-    check("T2 q=0 == unmodified", got == base and int((g._cer_static == 2).sum()) > 0, {"differing": [f for f in base if got.get(f) != base[f]][:10],
+-                                               "residual_rows": int((g._cer_static == 2).sum())}, R)
++    k_s, k_d = int((g._cer_static == 2).sum()), int((g._cer_dynamic == 2).sum())
++    check("T2 q=0 == unmodified", got == base and k_s > 0 and k_d > 0,
++          {"differing": [f for f in base if got.get(f) != base[f]][:10], "residual_rows_static": k_s, "residual_rows_dynamic": k_d}, R)
+     for bank, lab in [("static", g._cer_static), ("dynamic", g._cer_dynamic)]:
+         if not bool((lab == 1).any()):  # force one memory row so both banks are exercised
+             lab[0] = 1
+@@ -240,7 +241,9 @@ def t5(a, R):
+     st = (torch.equal(g._cer_static, g2._cer_static) and torch.equal(g._cer_dynamic, g2._cer_dynamic)
+           and g.cer_clock == g2.cer_clock and g.cer_q == g2.cer_q)
+     after = digest(g2, scene2, d2, p2, GAP_PROBE)
+-    check("T5 checkpoint round trip", same and st and after == before, {"tensors": same, "cer_state": st}, R)
++    k = (int((g2._cer_static == 2).sum()), int((g2._cer_dynamic == 2).sum()))
++    check("T5 checkpoint round trip", same and st and after == before and min(k) > 0,
++          {"tensors": same, "cer_state": st, "residual_rows_static_dynamic": k}, R)
+     ply_model = os.path.join(a.out, "t5_ply")
+     os.makedirs(ply_model, exist_ok=True)
+     cfg = open(os.path.join(a.model, "cfg_args")).read().rstrip()
+@@ -274,11 +277,18 @@ def equal_state(x, y):
+ 
+ 
+ def t6(a, R):
+-    """T6: prune_points keeps labels, rows and optimizer state aligned."""
++    """T6: prune_points keeps labels, rows and optimizer state aligned, removing and keeping residual rows in both
++    banks; a non-finite evaluated opacity on a row outside its plateau is caught."""
++    from scene import cer
+     d, o, p, g, scene = begun(a, 1.0)
+     gen = torch.Generator(device="cuda").manual_seed(0)
+     ps = torch.rand(g._xyz.shape[0], generator=gen, device="cuda") < 0.1
+     pd = torch.rand(g._xyz_motion.shape[0], generator=gen, device="cuda") < 0.1
++    for lab, mask in ((g._cer_static, ps), (g._cer_dynamic, pd)):  # deterministic: drop the first residual row, keep the rest
++        res = (lab == 2).nonzero().squeeze(1)
++        mask[res] = False
++        mask[res[0]] = True
++    removed = (int((g._cer_static[ps] == 2).sum()), int((g._cer_dynamic[pd] == 2).sum()))
+     ls, ld = g._cer_static[~ps].clone(), g._cer_dynamic[~pd].clone()
+     state = lambda n: g.optimizer.state[[gr["params"][0] for gr in g.optimizer.param_groups if gr["name"] == n][0]]["exp_avg"]
+     es, ed = state("xyz")[~ps].clone(), state("motion_xyz")[~pd].clone()
+@@ -288,52 +298,174 @@ def t6(a, R):
+     len_ok = g._cer_static.shape[0] == g._xyz.shape[0] and g._cer_dynamic.shape[0] == g._xyz_motion.shape[0]
+     opt_ok = all(g.optimizer.state[gr["params"][0]]["exp_avg"].shape[0] == gr["params"][0].shape[0]
+                  for gr in g.optimizer.param_groups if gr["params"][0] in g.optimizer.state)
+-    check("T6 prune alignment", lab_ok and len_ok and opt_ok, {"labels": lab_ok, "lengths": len_ok, "optimizer": opt_ok}, R)
+-    from scene import cer
+-    with torch.no_grad():
+-        g._opacity_duration_var[0] = float("nan")  # finite logits, non-finite evaluated opacity
++    kept = (int((ls == 2).sum()), int((ld == 2).sum()))
++    check("T6 prune alignment", lab_ok and len_ok and opt_ok and removed == (1, 1) and min(kept) > 0,
++          {"labels": lab_ok, "lengths": len_ok, "optimizer": opt_ok, "residual_removed_static_dynamic": removed,
++           "residual_kept_static_dynamic": kept}, R)
++    with torch.no_grad():  # a row whose temporal factor is below 1 on some frame, so its variance reaches the opacity
++        b = torch.stack([g.get_opacity_at_t(t)[g._xyz.shape[0]:, 0] / g.get_motion_opacity[:, 0] for t in range(300)])
++        row = int((b < 1).any(0).nonzero()[0])
++        g._opacity_duration_var[row] = float("nan")  # finite logits, non-finite evaluated opacity
+     try:
+         cer.check_finite(g, range(300))
+         caught = False
+     except AssertionError:
+         caught = True
+-    check("T6 non-finite evaluated opacity is caught", caught, {}, R)
++    check("T6 non-finite evaluated opacity is caught", caught, {"row": row}, R)
++
++
++def snapshot(g):
++    """A deep copy of capture() (it returns live references) and of every optimizer state tensor."""
++    clone = lambda x: x.detach().clone() if torch.is_tensor(x) else x
++    cap = [clone(x) if i != 16 else None for i, x in enumerate(g.capture()[:40])]
++    opt = {gr["name"]: {k: clone(v) for k, v in g.optimizer.state[gr["params"][0]].items()}
++           for gr in g.optimizer.param_groups if gr["params"][0] in g.optimizer.state}
++    return cap, opt
+ 
+ 
+ def t_birth(a, R):
+-    """T2b: begin leaves every existing row's state untouched and appends consistent new static rows."""
++    """T2b: begin leaves every existing row's state untouched and appends rows with the A3 values, in both banks."""
+     from scene import cer
+     d, o, p, g, scene = load(a.model, a.tree)
+     d.cer_scene, d.model_path = a.cer_scene, a.model
+-    n_s = g._xyz.shape[0]
+-    before = g.capture()
+-    moments = {gr["name"]: {m: g.optimizer.state[gr["params"][0]][m].clone() for m in ("exp_avg", "exp_avg_sq")}
+-               for gr in g.optimizer.param_groups if gr["params"][0] in g.optimizer.state}
++    n_s, n_d = g._xyz.shape[0], g._xyz_motion.shape[0]
++    cap, opt = snapshot(g)
+     cer.begin(g, scene, p, d)
+-    k = int((g._cer_static == 2).sum())
++    A = g.cer_clock[0]
++    k_s, k_d = int((g._cer_static == 2).sum()), int((g._cer_dynamic == 2).sum())
+     after = g.capture()
++    static_rows, dynamic_rows = list(range(1, 16)) + [18], list(range(23, 40))  # capture() tuple positions
+     bad = []
+-    for i, (x, y) in enumerate(zip(before[:40], after[:40])):
+-        if isinstance(x, dict):
++    for i, (x, y) in enumerate(zip(cap, after[:40])):
++        if i in static_rows or i in dynamic_rows:
++            n, k = (n_s, k_s) if i in static_rows else (n_d, k_d)
++            ok = (x.shape[0] == n and y.shape[0] == n + k and y.shape[1:] == x.shape[1:] and y.dtype == x.dtype
++                  and y.device == x.device and torch.equal(y[:n], x))
++        elif i == 16:
+             continue  # optimizer state: checked below
+-        if torch.is_tensor(x) and x.dim() > 0 and x.shape[0] == n_s and y.shape[0] == n_s + k:
+-            ok = torch.equal(y[:n_s], x)  # a static per-row tensor, extended by k rows
+         else:
+-            ok = equal_state(x, y)  # dynamic per-row tensors and metadata: unchanged
++            ok = equal_state(x, y)
+         if not ok:
+             bad.append(i)
++    for name, fill in cer.BUFFERS:  # the new rows' bookkeeping values
++        n = n_d if name.startswith("motion_") else n_s
++        if not bool((getattr(g, name)[n:] == (A if fill is None else fill)).all()):
++            bad.append(("buffer fill", name))
++    if not (bool((g._cer_static[:n_s] != 2).all()) and bool((g._cer_static[n_s:] == 2).all())
++            and bool((g._cer_dynamic[:n_d] != 2).all()) and bool((g._cer_dynamic[n_d:] == 2).all())):
++        bad.append("residual labels not exactly the appended rows")
+     for gr in g.optimizer.param_groups:
+-        if gr["name"] not in moments:
++        n, k = (n_d, k_d) if gr["name"].startswith("motion_") else (n_s, k_s)
++        attr = dict(cer.STATIC + cer.DYNAMIC)[gr["name"]]
++        if getattr(g, attr) is not gr["params"][0]:
++            bad.append(("attribute is not the optimizer's parameter", gr["name"]))
++        if gr["name"] not in opt:
+             continue
++        st = g.optimizer.state[gr["params"][0]]
+         for m in ("exp_avg", "exp_avg_sq"):
+-            old, new = moments[gr["name"]][m], g.optimizer.state[gr["params"][0]][m]
+-            if gr["name"].startswith("motion_"):
+-                ok = torch.equal(new, old)
+-            else:
+-                ok = new.shape[0] == n_s + k and torch.equal(new[:n_s], old) and bool((new[n_s:] == 0).all())
+-            if not ok:
++            old, new = opt[gr["name"]][m], st[m]
++            if not (new.shape[0] == n + k and torch.equal(new[:n], old) and bool((new[n:] == 0).all())):
+                 bad.append((gr["name"], m))
+-    check("T2b birth state", not bad and k > 0 and len(moments) == 15, {"residual_rows": k, "groups": len(moments), "bad": bad[:10]}, R)
++        if not equal_state(opt[gr["name"]].get("step"), st.get("step")):
++            bad.append((gr["name"], "step"))
++    check("T2b birth state", not bad and k_s > 0 and k_d > 0 and len(opt) == 15,
++          {"residual_rows_static": k_s, "residual_rows_dynamic": k_d, "groups": len(opt), "bad": bad[:10]}, R)
++
++
++def t2c(a, R):
++    """T2c: every residual copy is its donor (parameters and evaluated per-row inputs), for begin()'s own donors and for
++    begin() driven to static-only, dynamic-only and mixed donor sets across the bank boundary; swap render reported."""
++    from scene import cer
++    from gaussian_renderer import render
++    d, o, p, g, scene = load(a.model, a.tree)
++    d.cer_scene, d.model_path = a.cer_scene, a.model
++    n_s, n_d = g._xyz.shape[0], g._xyz_motion.shape[0]
++    cer.begin(g, scene, p, d)
++    rep = json.load(open(os.path.join(a.model, "cer_begin.json")))
++    A, B = g.cer_clock
++    ds = torch.tensor(rep["donors_static"], device="cuda", dtype=torch.long)
++    dd = torch.tensor(rep["donors_dynamic"], device="cuda", dtype=torch.long)
++    bad = copies_are_donors(g, ds, dd, n_s, n_d, [A, (A + B) // 2, B])
++    check("T2c copies are their donors (begin)", not bad and ds.shape[0] > 0 and dd.shape[0] > 0,
++          {"bad": bad[:10], "static": ds.shape[0], "dynamic": dd.shape[0]}, R)
++    # diagnostic on the same model: copies on with donors' logits at -inf, against copies off (relabelled memory) with donors on
++    cam = [c for c in scene.test_cameras[1.0] if int(c.timestamp) == (A + B) // 2][0]
++    bg = torch.tensor([1, 1, 1], dtype=torch.float32, device="cuda")
++    with torch.no_grad():
++        saved_s, saved_d = g._opacity.data.clone(), g._opacity_motion.data.clone()
++        g._opacity.data[ds] = -float("inf")
++        g._opacity_motion.data[dd] = -float("inf")
++        swap = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++        g._opacity.data.copy_(saved_s)
++        g._opacity_motion.data.copy_(saved_d)
++        res_s, res_d = g._cer_static == 2, g._cer_dynamic == 2
++        g._cer_static[res_s], g._cer_dynamic[res_d] = 1, 1
++        plain = render(cam, g, p, bg, near=d.near, far=d.far)["render"]
++        g._cer_static[res_s], g._cer_dynamic[res_d] = 2, 2
++    diff = (swap - plain).abs()
++    check("T2c diagnostic: swap render (reported, not a criterion)", True,
++          {"differing_values": int((diff > 0).sum()), "max_abs_diff": float(diff.max())}, R)
++    real = cer.mass
++    for name, pick in (("static-only", lambda n_s, n: [0, n_s - 2, n_s - 1]), ("dynamic-only", lambda n_s, n: [n_s, n_s + 1, n - 1]),
++                       ("mixed", lambda n_s, n: [n_s - 1, n_s])):
++        d, o, p, g, scene = load(a.model, a.tree)
++        d.cer_scene, d.model_path = a.cer_scene, a.model
++        n_s, n_d = g._xyz.shape[0], g._xyz_motion.shape[0]
++        chosen = pick(n_s, n_s + n_d)
++        calls = []
++
++        def driven(*args, chosen=chosen):
++            """The real mass for memory; for donors, mass exactly on the chosen concatenated rows."""
++            calls.append(1)
++            if len(calls) == 1:
++                return real(*args)
++            x = torch.zeros(n_s + n_d, dtype=torch.float64, device="cuda")
++            x[chosen] = 1.0
++            return x, x.clone()
++        cer.mass = driven
++        try:
++            cer.begin(g, scene, p, d)
++        finally:
++            cer.mass = real
++        rep = json.load(open(os.path.join(a.model, "cer_begin.json")))
++        ds = torch.tensor(rep["donors_static"], device="cuda", dtype=torch.long)
++        dd = torch.tensor(rep["donors_dynamic"], device="cuda", dtype=torch.long)
++        want_s = [c for c in chosen if c < n_s]
++        want_d = [c - n_s for c in chosen if c >= n_s]
++        split_ok = ds.tolist() == want_s and dd.tolist() == want_d
++        bad = copies_are_donors(g, ds, dd, n_s, n_d, [A, (A + B) // 2, B])
++        cam = [c for c in scene.test_cameras[1.0] if int(c.timestamp) == A][0]
++        with torch.no_grad():  # one gated render: label and buffer lengths are consistent
++            render(cam, g, p, bg, near=d.near, far=d.far)
++        check("T2c begin() with %s donors" % name, split_ok and not bad,
++              {"chosen": chosen, "static": ds.tolist(), "dynamic": dd.tolist(), "bad": bad[:10]}, R)
++
++
++def copies_are_donors(g, ds, dd, n_s, n_d, frames):
++    """Mismatches between residual copies and their donors (pre-birth bank sizes n_s, n_d): the copies must be exactly
++    the appended rows; then parameters, then evaluated per-row inputs on `frames`."""
++    cs = (g._cer_static == 2).nonzero().squeeze(1)
++    cd = (g._cer_dynamic == 2).nonzero().squeeze(1)
++    if not (torch.equal(cs, torch.arange(n_s, n_s + ds.shape[0], device="cuda"))
++            and torch.equal(cd, torch.arange(n_d, n_d + dd.shape[0], device="cuda"))):
++        return [("copies are not the appended rows", cs.shape[0], ds.shape[0], cd.shape[0], dd.shape[0])]
++    bad = []
++    for n in ("_xyz", "_xyz_disp", "_features_dc", "_features_rest", "_scaling", "_rotation", "_opacity"):
++        if not torch.equal(getattr(g, n)[cs], getattr(g, n)[ds]):
++            bad.append(n)
++    for n in ("_xyz_motion", "_features_dc_motion", "_features_rest_motion", "_scaling_motion", "_opacity_motion",
++              "_opacity_duration_center", "_opacity_duration_var", "_rotation_motion"):
++        if not torch.equal(getattr(g, n)[cd], getattr(g, n)[dd]):
++            bad.append(n)
++    n_s_now = g._xyz.shape[0]
++    copy_idx, donor_idx = torch.cat([cs, n_s_now + cd]), torch.cat([ds, n_s_now + dd])
++    with torch.no_grad():
++        for t in frames:
++            for name, x in (("xyz", g.get_xyz_at_t(t)), ("rotation", g.get_rotation_at_t(t)), ("scaling", g.get_scaling()),
++                            ("features", g.get_features()), ("opacity", g.get_opacity_at_t(t))):
++                if not torch.equal(x[copy_idx], x[donor_idx]):
++                    bad.append((t, name))
++    return bad
+ 
+ 
+ def t7(a, R):
+@@ -367,7 +499,7 @@ def main():
+     ap.add_argument("--cer_scene", required=True)
+     ap.add_argument("--pinned", default="")
+     ap.add_argument("--out", required=True)
+-    ap.add_argument("--tests", default="T0,T1,T2,T2b,T3,T4,T5,T6")
++    ap.add_argument("--tests", default="T0,T1,T2,T2b,T2c,T3,T4,T5,T6")
+     ap.add_argument("--t7_iter", type=int, default=17200)
+     a = ap.parse_args()
+     os.makedirs(a.out, exist_ok=True)
+@@ -380,6 +512,8 @@ def main():
+             t2_t3(a, base, R)
+         if "T2b" in tests:
+             t_birth(a, R)
++        if "T2c" in tests:
++            t2c(a, R)
+         if "T4" in tests:
+             t4(a, R)
+         if "FORECAST" in tests:
