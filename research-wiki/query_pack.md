@@ -1,5 +1,17 @@
 # Query Pack
 
+## 2026-10-25 BLOCK — moving vs view-dependent inside 3D foundation models: three detectors, three failure modes; certification trades DAVIS for zero-motion FP (Outcome C)
+
+Full record: [[operations/vdm-moving-vs-view-dependent-probe-2026-10-25]] (+ idea-stage log E1–E29).
+(1) Controls that change one thing (FROZEN repeated image / N3V SAME-INSTANT cameras / FIXED camera) expose
+what DAVIS cannot: VGGT4D = distinctiveness prior (frozen input reproduces its map; DAVIS-16 stage-1 JM frozen
+52.2 vs matched-window real 53.1); Easi3R = fires on pure viewpoint change (30–60 % of objects at one instant);
+Dyna3 best-match passes both, detects motion weakly. (2) VGGT4D's captured Q/K are POST-RoPE — invert RoPE before
+comparing tokens at different positions. (3) Glass looks like background inside VGGT (keys, confidence, depth
+consistency); DUSt3R/MonST3R confidence ranks glass vs rest at 0.68/0.71. (4) Corresponded-disagreement
+certification of VGGT4D clusters meets zero-motion bars (static FP <= 1.4 %, N3V hands 2.3 % vs 69 %) but loses
+13 JM on DAVIS-16 val and 4 JM on the untouched reserved DAVIS-17 split: not SOTA.
+
 ## 2026-09-21 BLOCK — two papers, not one: a dependable workshop paper from the EL-GS record, and an object-permanence paper whose CVPR attempt is gated on physical events that may not exist
 
 Full record: [[operations/two-paper-plan-2026-09-21]] (consolidated),

@@ -298,3 +298,23 @@ comparisons that had silently excluded flame prefix 3 now state the
 seven-prefix range and that prefix separately. Membership, T1 and
 operational figures come from stage-1 records and job logs and were not
 checkable by that pass.
+
+## 9. Storage location of the stage-2 cells (appended 2026-10-17)
+
+The trained cells `runs/realdata/absfix2/{cut_roasted_beef,flame_steak,sear_steak}/cells`
+were MOVED off Leonardo on 2026-10-17 to free work quota (98.7 % full). They now live at
+`/apollo/users/sri/proj_adags/runs/from_leonardo/realdata/absfix2/<scene>/cells`. Each cell's
+`test` entry was a symlink into `/leonardo_scratch/large/userexternal/siyengar/proj_adags/stage2_val/`;
+those renders were copied with links followed, so on Apollo `test/` is a real directory.
+The scratch originals were left in place (subject to scratch cleaning).
+
+Checks before removal: sha256 of all 70,892 cell files and 100,884 linked render files on
+Leonardo (Slurm jobs 60760827, 60762487); rclone copy exit 0 with zero errors; an rclone
+listing and size pass with 171,776 matching files and none missing, extra or differing; and a
+full read-back of every Apollo file, hashed locally and compared with the Leonardo manifests:
+171,776 files, 277,828,901,494 bytes, 0 missing, 0 extra, 0 hash mismatches. Manifests and
+logs: `D:\adags-archive\leonardo\manifests\absfix2_cells_2026-10-17\` and
+`.../from_leonardo/realdata/absfix2/_manifests_2026-10-17/` on Apollo; Leonardo keeps them under
+`agent-control/archive/` with a `cells_MOVED_TO_APOLLO.txt` pointer in each scene directory.
+Freed on Leonardo: 161.5 GiB. `analysis_stage2/` (the table of record) stayed on Leonardo
+and is unchanged.

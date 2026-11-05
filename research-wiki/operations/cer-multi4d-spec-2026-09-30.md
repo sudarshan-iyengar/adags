@@ -280,3 +280,114 @@ Transient gating, foreground or transient donors, a reload path for CER models, 
 - **Launcher:** builds both extensions before training starts (a build problem fails at t = 0) and records the
   `forward.cu` hash.
 - Residual gate primary threshold 0.20 frozen (plan log 2026-10-01); 0.10 / 0.20 / 0.30 reported descriptively.
+
+## 14. Gate amendment (2026-10-01, rev 2; the principal's decisions (a), (b), (c); appended, before any real CER run)
+
+Applies the plan-log entry "2026-10-01 (later): principal's decisions on the contribution gates and on Multi4D". It
+supersedes §6's "residual share of the gap region ≥ 0.20 in the gap" and the last bullet of §13 **as preconditions**.
+Everything else in rev 2 and §13 stands. The companion is the Ex4DGS spec §13. Its 13.2 (descriptive residual share),
+13.3 (no code change, the old `pass` field) and 13.4 (how a scene that fails the preconditions enters the rules)
+apply here with the Multi4D fields and design below. Rev 1 is preserved verbatim in
+[`assets/cer-gates-amendment-2026-10-01/review_prompt.md`](../assets/cer-gates-amendment-2026-10-01/review_prompt.md),
+with both reviews beside it.
+
+**14.1 What the Multi4D arm is.** CER-Multi4D is a **memory-gate arm**: the exact memory gate on the persistent
+foreground and background banks. Whatever Multi4D itself learns paints the gap.
+
+- **Residual copies.** The background residual copies are still born by the unchanged code (§4.2; forecast 6, 0 and
+  1 donors on the three same-pose scenes).
+- **What paints the gap is reported by bank:** residual copies, transient rows, ordinary persistent rows.
+- **What may be said.** The measured contributions are reported as they are, residual copies included. What is
+  restricted is a causal claim that the residual copies or the transient bank cause the gap improvement.
+- **Name in reports:** "memory gate on Multi4D".
+
+**14.2 Preconditions on Multi4D, complete list** (proposed reading of decision (b), for the principal's
+confirmation), read from `cer_gates.json`:
+
+| precondition | field | rule |
+|---|---|---|
+| memory active before the gap | `memory_share_pregap` | ≥ 0.50 |
+| memory active after the return | `memory_share_return` | ≥ 0.50 |
+| memory suppressed inside the gap | `memory_mass_gap` | exactly 0.0 |
+| residual zero outside the gap | `residual_mass_outside_gap` | exactly 0.0 |
+
+**The reading of (b), stated.** Decision (b) speaks of a Multi4D "gap-content gate that counts residual or transient
+rows". Decision (a) lists the preconditions that stay with no Multi4D exception. This rev reads (b)'s gate as
+**descriptive**: the share of the gap region painted by residual or transient rows, reported with the 0.10 / 0.20 /
+0.30 table (14.3), never a precondition. Both reviewers recommend this reading.
+
+- **What such a precondition would guard.** The four rows above already assert that the memory gate acted, exactly,
+  on rows that carry the target. A fifth row would test only which rows paint the gap at the end of training: ordinary
+  persistent rows painting it would fail it. That is a property of the result's makeup, not of whether the mechanism
+  was exercised.
+- **What it would cost.** The values seen disagree. The forecast on full-schedule base models, at birth, is 0.88–0.96
+  transient. The shortened smoke run (`cer_t7_m4d_r4`, lift at 4,000, CER start 4,500, end 5,000; not evidence) shows
+  0.025 at the end (residual 0.024, transient 0.0009), with foreground 0.45 and background 0.55 at birth. A
+  precondition at 0.20 could therefore make all three same-pose scenes design-without-power although the memory gate
+  acted exactly.
+- **If the principal meant a precondition.** The row "residual + transient share of the gap region ≥ 0.20" goes back
+  into this table with these values stated, and (a)'s list is read as Ex4DGS-only.
+
+**14.3 Descriptive.** Per run, and per scene as the mean of the three runs with minimum and maximum (as Ex4DGS 13.2):
+
+- **The residual share** (`residual_share_gap`): the residual copies' share of the gap content, with the 0.10 / 0.20
+  / 0.30 table.
+- **The gap-content share** (`residual_share_gap + transient_share_gap_region`), with the same table. Both terms have
+  the same denominator, the gap-region mass of every row in all three banks (`scene/cer.py:204-206`, `:211`, `:213`).
+- **The transient share and the ordinary-persistent share**, as plain values. The ordinary-persistent share is one
+  minus the gap-content share, which holds only because `memory_mass_gap` is exactly 0 (a precondition).
+- **A zero gap-region mass** has no share. Multi4D does not clamp: `gates()` raises on division by zero, so such a run
+  stops (a CER failure, Ex4DGS 13.5).
+
+**14.4 Confirmatory design and how the reducer reads it (plan §4b as amended 2026-09-30; the 13.4 policy applies once
+accepted).**
+
+- **Manifest.** Nine CER-Multi4D runs, three on each same-pose scene (bottle, carton, mug; run ids
+  `ars_w1_<scene>_m4dcer_rep<r>`), against the nine wave-1 Multi4D base runs 1–3 on the same scenes. Moved-return and
+  pass-through CER-Multi4D runs (§4b, "only if the queue allows") are descriptive and never block the reducer.
+- **Rule 1.** Model pooled over the three layouts, 9 against 9, with arm and layout fixed effects. Endpoints: the gap
+  window and the return window; Holm over these 2, always 2. The same-pose condition passes under plan §4 rule 1's
+  three clauses:
+  - the gap improvement is Holm-significant;
+  - the one-sided 95% lower bound on the return window exceeds −0.25 dB;
+  - the mean gap improvement is positive in each layout.
+
+  The Multi4D verdict is that condition's PASS, FAIL or DESIGN_WITHOUT_POWER.
+- **Rule 3.** Do-no-harm applies with the same −0.2 dB one-sided bound on the whole frame and the ordinary region,
+  pooled over the three same-pose scenes.
+- **Rule 2.** Not applied. The benchmark comparison is CER on Ex4DGS against STG and Multi4D; the Multi4D arm is a
+  substrate replication.
+- **Readings.** Multi4D's final iteration 20,000, scored as the base runs are.
+
+**14.5 Exploratory work (decision (c)).** Transient donors, gating the transient bank, and any other Multi4D variant
+start only after this confirmatory design is frozen, meaning after the principal accepts this amendment. Their run
+ids, the ledger and every report label them exploratory. They are never pooled with the confirmatory runs.
+
+**14.6 No substrate code change; the scoring path.**
+
+- **The fields exist.** The Multi4D `cer_gates.json` at `00357aa` stores every field in 14.2 and 14.3.
+- **The `pass` field** (`:216-218`) applies the superseded rule. It is handled as on Ex4DGS (13.3): integrity check,
+  reported as `pass_superseded_rule`, never branched on.
+- **The scorer** (outside the substrate) has a method `multi4d_cer` (installed 2026-10-01), which requires:
+  - commit `00357aa` on branch `cer`;
+  - no untracked or modified files before and after the job;
+  - the full schedule (no `EXTRA`);
+  - `cer_scene` equal to the scored scene;
+  - exactly the 40 fine evaluations 500…20,000 in `debug_metrics.json`;
+  - the existing Multi4D final-render checks.
+
+  It copies `cer_begin.json` and `cer_gates.json` into the score. The scoring worker lists the nine confirmatory runs.
+  The pin moves with any later commit.
+
+**14.7 Changes from rev 1**
+
+| change | source |
+|---|---|
+| 14.1: residual contributions may be reported; only causal claims are restricted | Sol 4 |
+| 14.2: the gap-content row read as descriptive, the reading stated with what a precondition would guard and cost; "0.20 is the threshold of the gate it replaces" removed | Fable 1; Sol 1 |
+| 14.3: thresholds only on the residual and gap-content shares; the ordinary share's condition; zero denominator | Fable 11; Sol (missing) |
+| 14.4: own manifest of 9 + 9, optional runs never block; Holm over 2; rule 3 applied; rule 2 not applied | Sol 3; Fable 10 |
+| 14.6: the scoring path stated | Fable 6 |
+
+**Accepted by the principal (plan log, "2026-10-01 evening: principal's decisions on the reducer, the statistics, the base
+runs and Multi4D").** The proposals marked above as not frozen are frozen as written.

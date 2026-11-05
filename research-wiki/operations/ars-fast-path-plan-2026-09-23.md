@@ -1205,3 +1205,830 @@ donors; gap content = whatever paints the gap region during the gap.
 
 Not yet done (open items in [cer-handoff-2026-10-01](cer-handoff-2026-10-01.md)): writing (a) and (b) into both CER specs,
 the code that reports instead of gating, and the reducer.
+
+### 2026-10-01 afternoon: gate amendment written and reviewed; Multi4D scoring, the reducer and both submission scripts ready (nothing submitted)
+
+Glossary: memory gate = the memory cohort switched off inside the gap; residual copies = gap-only copies of the donors;
+gap content = whatever paints the gap region during the gap; design-without-power = a scene or rule whose preconditions
+fail, reported, never dropped.
+
+1. **The gate amendment** is appended to both specs: [Ex4DGS §13](cer-ex4dgs-spec-2026-09-30.md),
+   [Multi4D §14](cer-multi4d-spec-2026-09-30.md).
+   - Rev 1 went alone to both reviewers. Fable 5.1: ready after fixes (13 findings). GPT-6.1 Sol: material defect.
+     Rev 2 absorbs every finding. Reviews, prompt and rev 1 text are in `assets/cer-gates-amendment-2026-10-01/`.
+   - **No substrate code change.** Both `cer_gates.json` already store every field the amended rules need. The old
+     `pass` field (which still requires a residual share of 0.20) is never read; the reducer recomputes the verdict and
+     uses the old field only as an integrity check. The Ex4DGS runs therefore go on the reviewed commit 5b82ae7, and the
+     scorer pin is unchanged.
+2. **New fact about Multi4D, from the shortened smoke run** (integration test, not evidence; `cer_t7_m4d_r4`):
+   - the transient bank paints 0.001 of the gap region at CER start and 0.0009 at the end;
+   - the gap region is painted by the persistent foreground (0.45) and background (0.55) rows at start;
+   - the residual copies carry 0.024 at the end.
+
+   The forecast on full-schedule base models said 0.88–0.96 transient. The smoke schedule gives the transient bank 500
+   iterations after the lift, against 6,000 in a real run, so the two may not disagree on real runs; that is not
+   measured. It bears directly on decision (b).
+3. **Two proposals wait for the principal** (amendment rev 2, marked as not frozen):
+   - **The Multi4D gap-content gate:** read as descriptive, not a precondition. Both reviewers recommend this; a
+     precondition at 0.20 would make every Multi4D scene design-without-power if the smoke value holds.
+   - **How a scene that fails the preconditions enters the proof (Ex4DGS 13.4).** No gate changes a denominator, the
+     Holm family (always 6; 2 on Multi4D) or a threshold. An event type with such a scene is design-without-power. Do-no-
+     harm is certified only on all nine scenes. Rule 2 stays out of 9.
+4. **Multi4D scoring installed on Leonardo:** method `multi4d_cer` in `ars_score.py` and 9 worker rows (three same-pose
+   scenes × 3). Previous versions are kept as `*.pre_m4dcer.py`.
+   - The method accepts only commit 00357aa on `cer`, with the worktree clean before and after, the full schedule, the
+     scored scene as `cer_scene`, and exactly 40 fine evaluations.
+   - Checks run there: the smoke run is refused; a doctored fake run reaches the evaluator; six negative variants are
+     each refused; the base path is unchanged.
+5. **Reducer** `agent-control/ars/cer_reduce.py`, sha256 `4abbc88a…`. It refuses partial or non-finite inputs and an
+   inconsistent stored `pass`. It needs an explicit base-run choice (originals or the `lrdn0066` replacements; still
+   open) and a reference to the plan-log entry recording the principal's acceptance of the policy.
+   - **Statistical reading, written down here before any CER output exists:**
+     - alpha 0.05, one-sided tests;
+     - the gap window is a superiority test, the return window a non-inferiority test at −0.25 dB;
+     - the six-test Holm family contains both;
+     - the return clause uses the unadjusted 95% bound, as frozen;
+     - rule 1 uses arm + layout fixed effects (18 runs per event type); rule 3 uses arm + scene fixed effects.
+   - It also reports per-layout differences with Welch intervals on every endpoint, and the residual-share (and on
+     Multi4D the gap-content) table at 0.10 / 0.20 / 0.30.
+   - Tests: 10 pass locally and on Leonardo; three deliberate mutations are each caught. Code review by Sol (one
+     reviewer) is running.
+6. **Submission scripts** `agent-control/ars/submit_cer_ex4dgs.sh` (27 runs, 02:00 walltime) and `submit_cer_multi4d.sh`
+   (9 runs, 03:40). Each runs a fail-closed preflight and passes its dry run; neither has submitted anything.
+   - Ex4DGS preflight: commit, clean worktree, scorer pin, `lrdn0066` excluded, run ids free, inputs present.
+   - Multi4D additionally refuses until the design is recorded frozen, and checks for built extensions and no
+     stale build lock.
+   - The Multi4D launcher differs from the base launcher only in the declared CER points.
+7. **Code review of the scoring, reducer and submission work** (one reviewer, GPT-6.1 Sol; three rounds; records in
+   `assets/cer-gates-amendment-2026-10-01/code_review_*`). Rounds 1 and 2 each returned a material defect. Every
+   confirmed finding is fixed, tested and installed on Leonardo:
+   - **CER failures** are declared to the reducer explicitly (job id and reason) and make their scene
+     design-without-power; any other missing score still refuses.
+   - **Replacements** must be infrastructure-classified records. Labels and underlying run directories must be
+     distinct, and each score's method and scene must match the plan.
+   - **Final-render record (Multi4D):** the scorer reconciles it against Multi4D's own iteration-20,000 evaluation and
+     its 300 per-frame values, instead of trusting its discrepancy field.
+   - **Launchers:** both now require the reviewed commit and a clean worktree at job start, checked before anything is
+     created; the submission scripts export the pin. The Multi4D script also forces the smoke overrides empty and
+     checks the recorded census pass.
+   - **Inputs:** the preflights check the window package, at least 19 identity files and 300 held-out frames.
+   - **Tests and checks:** 12 reducer tests; seven deliberate mutations caught. On Leonardo: the launchers refuse a
+     wrong or empty pin with no run directory created; the scorer refuses inconsistent, NaN or edited render records.
+   - **Not adopted:** immutable code snapshots. The worktrees change only by a manual pull, which the hand-off forbids
+     while a job runs; the pin closes the queue window. The round-3 fixes were not sent back for a fourth round.
+   - **Left to the principal** (Sol): the statistical reading. The return bound is unadjusted as frozen, not Holm;
+     rule 3 is blocked by scene; Multi4D run 1 is the benchmark as frozen.
+
+### 2026-10-01 evening: principal's decisions on the reducer, the statistics, the base runs and Multi4D (recorded before any CER run is submitted)
+
+1. **Reducer policy accepted:** Ex4DGS spec §13.4–13.5 and Multi4D spec §14, rev 2.
+   - No gate changes a count, the Holm family or a threshold.
+   - A scene is design-without-power if any of its three CER runs fails the checks, and so is its event type.
+   - Do-no-harm is certified only on all scenes of the design.
+   - Benchmark counts stay out of 9.
+   - CER failures are declared explicitly; replacements are infrastructure-only.
+
+   The Multi4D gap-content share (residual + transient) is therefore descriptive, not a precondition (§14.2 reading
+   confirmed).
+2. **Statistical reading:**
+   - alpha 0.05, one-sided tests;
+   - gap window: superiority test, Holm over the six endpoints (two on Multi4D);
+   - return window: the unadjusted one-sided 95% lower bound must exceed −0.25 dB, as frozen; its Holm-adjusted p is
+     reported descriptively;
+   - do-no-harm: arm + scene fixed effects, pooled; the one-sided 95% lower bound must exceed −0.2 dB on the whole
+     frame and on the ordinary region;
+   - benchmark: Multi4D run 1, as frozen; the mean of its three runs is reported descriptively.
+3. **Ex4DGS base runs for the proof:** the replacements for the five runs trained on `lrdn0066`. Every base run trained
+   on `lrdn0066` is replaced, matching the CER arm's node exclusion; no other run is replaced. Rules 1 and 3 are also
+   reported with the original runs as a sensitivity analysis.
+4. **Multi4D:** the confirmatory design (§14 rev 2) is accepted and frozen by this entry.
+5. **Go:** submit the 27 Ex4DGS CER runs; the 9 confirmatory Multi4D CER runs may also be submitted.
+
+**Submitted, 2026-10-01 ~16:55 (after the entry above).** Every job id is in `agent-control/ars/ledger.txt` and `jids/`.
+
+- **CER on Ex4DGS, confirmatory:** 27 runs, 59107748–59107774 (`ars_w1_cer_<scene>_rep<r>`), commit 5b82ae7, walltime
+  2:00, `lrdn0066` excluded, launcher pinned to the commit at job start.
+- **CER on Multi4D, confirmatory (memory-gate arm):** 9 runs, 59107775–59107783 (`ars_w1_m4dcer_<scene>_rep<r>`), commit
+  00357aa, walltime 3:40, same exclusions and pin.
+
+All 36 were pending (Priority) at submission. The scoring workers score each run as it completes. They pick up the
+Multi4D CER rows at their next resubmission.
+
+**The reducer now also reports rules 1 and 3 with the original `lrdn0066` base runs** (`sensitivity_original_base`;
+the replacements are the runs of record). sha256 `55d9a1b4…`; 13 tests pass on Leonardo.
+
+**2026-10-01 21:32, principal's request:** the 9 Multi4D CER jobs (59107775–59107783) were cancelled while still pending.
+None had started and none had created a run directory; each cancellation is a ledger line. They were resubmitted
+unchanged under the job names `…_r2`, as 59122506–59122516, with the same run ids, commit, walltime and exclusion.
+`submit_cer_multi4d.sh` gained `SUFFIX`; with it set, the script requires every replaced job to have been cancelled
+before it started. The resubmission's priority is 132,631, against about 133,038 for the cancelled jobs; that is the
+age lost.
+
+### 2026-10-02 afternoon: CER training and scoring done; principal's decision on the Ex4DGS alignment check
+
+- **Training:** all 27 Ex4DGS CER runs completed, exit 0, 54–63 min each, between 03:54 and 10:36. All 9 Multi4D CER runs
+  (`_r2`) completed, 2:36–2:47 each.
+- **Preconditions:** from the gate files, read before any score was opened. They hold on all 18 same-pose and
+  pass-through Ex4DGS runs. All 9 moved-return runs fail "memory active after the return" (memory share 0.000–0.002):
+  the target returns at a new pose. Under 13.4 the three moved-return scenes and the moved-return event type are
+  design-without-power.
+- **Scoring:** the scoring workers were stopped from 2026-10-01 21:34 to 2026-10-02 11:27 at the principal's request.
+  Scored: Ex4DGS CER 26 of 27, Multi4D CER 9 of 9.
+- **The one refusal:** carton moved-return run 3 failed the Ex4DGS alignment check on gap frames 76 and 77. The
+  discrepancy against the correct frame was 0.0253 / 0.0250 dB; against frames ±1 it was 0.85 / 1.25 and 0.70 / 1.04 dB.
+  Both the absolute 0.025 dB test and the 1 dB relative rule missed: the scene barely changes between mid-gap frames.
+- **Principal's decision (before any CER score was opened):** the relative rule becomes a ratio. A frame outside the
+  rounding-corrected tolerance passes when its discrepancy is at least 10 times smaller than that of every frozen frame
+  within ±2. This replaces the 1 dB margin of 2026-09-28 for all Ex4DGS scoring.
+  - Runs scored earlier are unaffected: they passed the absolute test, or the 1 dB margin, which the ratio also
+    passes in every recorded case, since the neighbour ratio was at least 30 times.
+  - The refused run and the two dense-start runs refused on the same check (wave 2, bottle same-pose runs 2 and 3) are
+    rescored under it.
+
+**Multi4D reading (memory gate on Multi4D, confirmatory, same-pose; 9 CER runs against the 9 wave-1 Multi4D base runs):
+PASS.** Reducer `cer_reduce.py` sha256 `ea2565c6…`; output `agent-control/ars/checks/wave1/cer_reduce_multi4d.json`,
+sha256 `b0ca8cee82b59d615a17a3828778c156eca047ec1328313a2f97926f66898023`.
+
+- **Gap window:** CER − base +4.25 dB (se 0.84, one-sided 95% lower bound +2.78; Holm-adjusted p 1.7e-4 over the 2
+  endpoints).
+- **Return window:** −0.01 dB (lower bound −0.18 > −0.25, non-inferior).
+- **Gap gain per layout:** bottle +4.79, carton +4.00, mug +3.97; positive in each.
+- **Do-no-harm:** whole frame +0.03 (bound −0.03); ordinary region −0.02 (bound −0.14); PASS.
+- **Rule 4:** every run meets the preconditions. Memory share is 0.91–0.95 before the gap and after the return; the
+  exact zeros hold.
+- **Descriptive:**
+  - the bottle layout's gap difference has a wide Welch interval (−5.7, +15.3), so its runs vary a lot; carton and mug
+    lie within +3.2 to +4.8;
+  - the return-window differences per layout run from −0.22 to +0.15, every interval spanning 0;
+  - the gap content is the transient bank (0.23–0.30 of the gap region) and the residual copies (0.0001–0.0017).
+- **Reducer defect found on this first real run:** writing the output failed on a numpy boolean (the return bound).
+  Fixed: the bound is cast to float, and the tests now check the JSON output. The failed attempt wrote nothing.
+
+### 2026-10-02 evening: the CER proof reading on Ex4DGS (wave 1)
+
+- **Inputs:**
+  - all 27 Ex4DGS CER scores. The last, carton moved-return run 3, was scored under the ratio rule (frames 76/77 passed
+    at ratios 33 and 28) by job 59227700 on a compute node in the debug QOS: the login-node workers were CPU-starved,
+    one got 20 s of CPU in 27 min;
+  - the 27 Ex4DGS base runs, with the five `lrdn0066` runs replaced, as the runs of record;
+  - STG seed 0 and Multi4D run 1 as the benchmarks.
+- **Tool and output:** reducer `cer_reduce.py` sha256 `ea2565c6…`, scorer `54c21928…`. Output
+  `agent-control/ars/checks/wave1/cer_reduce_ex4dgs.json`, sha256
+  `d479db1c44bdb0d0d86d84041b1249ec3d447b576a9b294cc997949236a16b54`.
+
+**Rule 1 (causal): PASS.**
+
+| event type | verdict | gap window: CER − base (lower bound, Holm p) | return window (lower bound) | gap gain per layout (bottle / carton / mug) |
+|---|---|---|---|---|
+| same-pose | PASS | +9.99 dB (+8.80, 1.7e-9) | +0.71 (+0.37) | +13.1 / +7.6 / +9.2 |
+| pass-through | PASS | +2.52 dB (+1.77, 9.4e-5) | +0.62 (+0.27) | +4.5 / +0.8 / +2.4 |
+| moved return | DESIGN_WITHOUT_POWER (memory after the return = 0 on all 9 runs) | descriptive only | descriptive only | +5.2 / +1.6 / +3.4 |
+
+**Sensitivity, with the original `lrdn0066` base runs:** rule 1 is still PASS. Same-pose +9.89 dB, pass-through
++2.62 dB; return windows +0.78 and +0.62.
+
+**Rule 3 (do-no-harm): DESIGN_WITHOUT_POWER**, because the moved-return scenes fail the preconditions. On the remaining 6
+scenes, descriptively:
+
+- **Ordinary region:** −0.09 dB, lower bound −0.22.
+- **Whole frame:** −2.41 dB, lower bound −4.73 (−0.83 / −3.63 with the original base runs).
+- **What drives the whole-frame number:** single runs whose static background collapses, the Ex4DGS defect recorded on
+  2026-09-29. The static-background PSNR falls to 23–34 dB against 39–44 dB in their siblings.
+  - On the same-pose and pass-through scenes this hits 6 of 18 CER runs: bottle same-pose run 1, all three mug
+    same-pose runs, carton pass-through run 2, mug pass-through run 2.
+  - It hits 3 of 18 base runs: carton same-pose run 3 of the replacement set, mug same-pose runs 2 and 3.
+  - Not interpreted; not examined visually yet.
+
+**Rule 2 (benchmarks, descriptive): benchmark proof FAILS.**
+
+- **Counts:** CER Pareto-dominates STG on 0 of 9 scenes and Multi4D run 1 on 0 of 9 (3 design-without-power). It
+  dominates the Ex4DGS base mean on 6 of 9.
+- **Gap window:** STG is above CER on every scene. Multi4D is below CER on the same-pose scenes (bottle 22.9 against
+  39.7) and above it on the moved-return scenes.
+- **Return window:** CER is below both benchmarks on every scene (for example bottle same-pose 23.9 against STG 33.3
+  and Multi4D 34.7). That is inherited from the Ex4DGS base (23.1 there).
+- This is the outcome plan §4's "honest risk" named before any run: causal proof passes, benchmark proof fails, so the
+  paper stays a benchmark plus a diagnostic.
+
+**Descriptive:** the residual share of the gap content is ≥ 0.10 on 18 of 27 runs, ≥ 0.20 on 2, ≥ 0.30 on 0.
+
+### 2026-10-06: visual check of the CER renders, and the Ex4DGS static-background collapse investigation (step 1)
+
+**Montages** from the existing renders (principal's request; looking material, never a score) are in
+`research-wiki/assets/cer-wave1-montages-2026-10-06/`, with the script that made them. They cover the six same-pose and
+pass-through scenes:
+
+- every Ex4DGS base and CER run at the mid-gap frame;
+- STG, Multi4D, Ex4DGS and Ex4DGS+CER side by side before the gap, mid-gap and at the return, with zoomed crops from the
+  scenes' own masks and each tile's window PSNR.
+
+Observations, descriptive:
+
+- **The collapse looks the same as on 2026-09-29:** dark window panes become grey cloud-like blobs, and sometimes the
+  poster fades.
+- **The return-window shortfall of both Ex4DGS arms against STG and Multi4D is already there before the gap.** On the
+  pre-gap target window, Ex4DGS is about 9 dB below STG and Multi4D (mug same-pose 26.1 / 26.8 against 35.5 / 35.0).
+  Ex4DGS renders the target texture worse throughout; CER does not change that.
+- **On pass-through scenes, the object crossing the gap is smeared by both Ex4DGS arms**, which bounds CER's
+  pass-through gain.
+
+**Inventory of the collapse:** 21 of 65 Ex4DGS runs on record have a static-background PSNR more than 3 dB below the
+best run on the same scene. Base 9/27, CER 8/27, `lrdn0066` replacements 2/5, dense-start 1/3, node test 1/3. It
+happens on many nodes, worst on mug same-pose. Severity ranges from 3 to 20 dB. Script
+`agent-control/ars/cer/collapse_inventory.py`.
+
+**Step 1: 30k against 40k** (jobs 59505486/87/685, debug QOS; script `agent-control/ars/cer/collapse_ckpt.py`).
+
+- **Method:** pinned Ex4DGS 7fac649, from scratch copies; held-out camera, frames 0 / 75 / 150 / 299,
+  static-background PSNR. The 21 collapsed runs plus 8 healthy controls.
+- **Results:**
+  - 18 of 21 collapsed runs are healthy at 30,000 (39–44 dB) and collapse between 30,000 and 40,000.
+  - 3 are already collapsed at 30,000 (bottle same-pose CER run 1: 24 dB; mug same-pose base run 2 and CER run 1:
+    29–30 dB) and drop a further ~2 dB by 40,000.
+  - The 8 controls stay at about 43 dB.
+- **What this establishes:**
+  - CER does not cause the collapse. Before 30,000 the CER runs are plain Ex4DGS, and after 30,000 base and CER
+    collapse at similar rates.
+  - The usual onset is the final phase, after densification ends, when only optimisation and the per-epoch pruning (at
+    34,201 and 39,901) run.
+
+**Steps 2 and 3 of the collapse investigation (jobs 59506005, 59506599; scripts `agent-control/ars/cer/collapse_step2.py`
+and `collapse_step3.py`; outputs `cer/collapse/step2.json`, `step3.json`; descriptive, no training).**
+
+- **The collapsed region R:** cam00 at frame 150, static-background pixels whose error grew by more than 0.05 between
+  the 30k and 40k renders. Healthy controls use the union of their collapsed siblings' regions on the same scene.
+- **Step 2, pruning certain at 30k:**
+  - Rows already certain to be pruned at 30k (`min_radii2D < 5` or `xyz_error_min_timestamp < 0`) paint 0.1–3% of R
+    in every run, collapsed or control. One run reaches 12%, on a 198-px region.
+  - So rows certain to be pruned at 30k are not the cause.
+  - Not covered: `min_radii2D` is a running minimum, so rows that cross 5 px after 30k are not visible to this test.
+- **Step 3, what paints R at 30k and at 40k (base runs; the pinned code cannot load a CER 40k checkpoint):**
+  - **Collapsed runs:** the dynamic-bank share of R falls sharply. Values: 0.85→0.33, 0.64→0.24, 0.63→0.30, 0.51→0.29,
+    0.67→0.44, 0.43→0.22, 0.83→0.64. The static rows that remain collapse to a single depth (q10 = q50 = q90, e.g.
+    18.413), so one large static Gaussian behind the window now paints most of R.
+  - **Healthy controls:** the dynamic share is unchanged: 0.72→0.72, 0.20→0.20, 0.72→0.75, 0.23→0.22.
+  - **Depths:** the dynamic rows that remain sit at the same depths at 30k and 40k, so this is not forward drift.
+- **Reading, not yet proven:** in the collapsed runs, the dynamic-bank rows that drew the window for the held-out camera
+  vanish between 30k and 40k, and a single large static Gaussian shows through (the grey "cloud").
+  - The likeliest remover is the per-epoch `prune_small` at 34,201 / 39,901. Its running-minimum radius can fall below
+    5 px after 30k, for example because dynamic positions keep a learning rate that is never decayed.
+  - The checkpoints cannot show it, because rows have no identity across 30k→40k.
+  - Base and CER run the same pruning, consistent with their similar collapse rates.
+- **Noted, not changed:** upstream `prune_invisible` computes a `logical_or` for the dynamic mask and discards the
+  result (dead code, c_gaussian_model.py:1078-1081).
+
+### 2026-10-06 afternoon: principal's decisions: a one-model STG comparison, and an instrumented collapse probe (recorded before either runs)
+
+**1. One-model STG (descriptive, an addition after the frozen STG result was seen).** It never replaces the frozen
+6 × 50-frame benchmark of record, and every report labels it as added after the fact.
+
+- **Design:** one STG model for all 300 frames, trained once on one tuning scene: bottle same-pose (ARS-L1-A0).
+- **Unchanged:**
+  - STG pinned code 427abfc and its published "full" configuration; `duration` 300 instead of 50;
+  - schedules exactly as published: position learning rate decays over 30,000, densification until 9,000;
+  - one continuous run to 150,000 iterations, saving models at 25k, 50k, 100k and 150k.
+- **Two technical deviations, both lossless:**
+  - **`--gtisint8 1`** (STG's own option): the training images stay on the GPU as 8-bit. The default float32 copy of
+    20 cameras × 300 frames would need about 99 GB against the A100's 64 GB. The source frames are 8-bit PNGs, so
+    nothing is lost.
+  - **A separate staging view:** a fresh `colmap_0` whose `sparse/0` is a real directory, so STG's merged-points file
+    (`points3D_total300.ply`) is not written into the shared wave-1 staging.
+- **Iteration-count rule, frozen here before any checkpoint is scored:**
+  - Each checkpoint is rendered for cam00 and scored with the common evaluator on the gap and return windows.
+  - The frozen count N* is the smallest checkpoint whose next checkpoint improves neither window by more than 0.2 dB.
+    If it is still improving at 150k, N* = 150k and that is stated.
+  - N* is then used unchanged on the other scenes.
+  - The tuning scene's own numbers are reported as tuning-scene numbers.
+- **First step:** a debug-queue check of speed and GPU memory at 300 frames, before the long run is committed.
+
+**2. Instrumented collapse probe (Ex4DGS, mug same-pose, 3 runs).**
+
+- **Code:** pinned 7fac649, unmodified, with the same config and tree as the wave-1 base runs. A runtime wrapper (like
+  `m4d_final_render.py`) runs Ex4DGS's own `train.py`.
+- **What the wrapper records** on the held-out camera at frame 150:
+  - **every 500 iterations from 29,000 to 40,000:** static-background PSNR, and the window region's contribution
+    mass by bank;
+  - **at every pruning call after 30,000** (`prune_invisible` and `prune_small` separately): the share of that mass
+    carried by the rows the call removes, by bank.
+- **The window region:** the union of the collapsed regions of the five collapsed mug same-pose runs (base runs 2 and 3,
+  CER runs 1–3), frozen as a file before the probe runs.
+- **What it may change:** the extra renders consume no random numbers and touch no parameter gradient. They add GPU
+  work, so the runs' nondeterministic outcome may differ from an unprobed run; that is acceptable for a diagnostic.
+- **Labels:** exploratory diagnostic runs, outside the proof (`runs/ex4dgs_probe/`).
+
+**Submitted, 2026-10-06 afternoon (after the entry above; every job id is in the ledger).**
+
+- **One-model STG.**
+  - **Speed check (59512893, debug, stopped at its 30-minute cap by design):**
+    - merging the 300-frame starting points and loading took about 11 minutes;
+    - training ran at about 12.5 iterations per second;
+    - GPU memory peaked at 27.6 GB of 64 GB (steady 26.8 GB) with `--gtisint8 1`; host memory 52 GB.
+  - **The STG checkout carries the same two modified files as the frozen wave-1 STG runs** (the project's seed patch in
+    `general_utils.py` and a one-line `test.py` change), so the code matches wave 1.
+  - **Long run:** 59516063, ARS-L1-A0, 150k iterations, walltime 5:00. Then 59516065 renders and scores the 25k / 50k
+    / 100k / 150k checkpoints (`agent-control/ars/cer/score_stg300.py`: STG's own cam00 ground truth equal to the frozen
+    frame on every pixel, then the common evaluator with no segmenting).
+- **Collapse probe.**
+  - **Smoke 1 (59512895):** the wrapper recorded its checks, but no pruning pass fell in 10k–12k.
+  - **Smoke 2 (59516073):** FAILED. With the probe started at 3k, frame 150 was outside Ex4DGS's growing training
+    window, and Ex4DGS's own position lookup refused it. The probe now records such checks as skipped.
+  - **Smoke 3 (59516581):** passed. Both pruning hooks fired at 8,600 with their share of W measured (`prune_invisible`
+    104 rows / 0.000; `prune_small` 25,384 rows, 23,018 of them dynamic / 0.011).
+  - **Probe runs:** 59517846–48 (`runs/ex4dgs_probe/probe_ARS-L3-A0_rep1..3`).
+
+### 2026-10-06 evening: Multi4D+CER montages and what each Multi4D bank paints (descriptive, looking material, never a score)
+
+**Material** (principal's request), in `research-wiki/assets/cer-wave1-montages-2026-10-06/`, with the scripts that made it:
+
+- `m4d_methods_<scene>.jpg`: STG, Multi4D, Multi4D+CER, Ex4DGS, Ex4DGS+CER on the three same-pose scenes at frames 57, 63, 75,
+  87 and 92. The tiles carry the window PSNR / SSIM / LPIPS from the verified scores. Multi-run arms show the run closest
+  to the arm's mean gap PSNR.
+- `m4d_runs_<scene>.jpg`: all 3 Multi4D base and all 3 Multi4D+CER runs at gap frames 63, 75 and 87, with error maps.
+- `m4d_banks_<scene>.jpg`: cam00 renders of the persistent banks alone and of the transient bank alone, at frames 57 and 75.
+  - Made by `agent-control/ars/cer/cer_m4d_banks.py`: jobs 59520175, 59520180 and 59520588, debug QOS, CER worktree 00357aa
+    read-only (clean before and after). The montage jobs were 59520589 and 59520854.
+  - A saved CER model refuses Multi4D's reload by design. The script loads the point clouds from scratch links without
+    `cer_state.pt`, re-attaches the saved labels, clock and strength, and arms the gate.
+  - **Faithfulness:** the full re-render reproduces each run's saved final cam00 render with 0 differing 8-bit values,
+    on all 5 frames of all 18 runs, gap frames included.
+
+**Observations, descriptive:**
+
+- **Base Multi4D never removes the target.** Its persistent banks alone still render the whole object at mid-gap, in every run.
+  - The transient bank paints a target-shaped patch of background colour over the object: alone, its alpha is
+    0.88–0.99 inside the ghost mask at frames 63, 75 and 87, against 0.09–0.46 on the target at frame 57.
+  - The base ghost is whatever this patch fails to cover.
+  - The worst case is bottle run 1: the cap and label show through, and its gap PSNR is 22.9 dB against 30.7 for runs 2
+    and 3. Bottle's wide Welch interval comes from that run.
+- **With CER, the persistent banks alone render background in the gap.** The object is gone, and the ordinary persistent
+  rows paint what was behind it, slightly blurred where the object stood. Residual copies are negligible (≤ 0.002).
+- **The transient patch persists after CER, at a lower alpha** (0.20–0.64 in the ghost mask), as scattered fragments.
+  These fragments are now the main remaining gap error:
+  - bottle CER runs 2 and 3 show tilted, streaky smears (32.1 and 32.6 dB);
+  - carton and mug CER runs show speckle only (34.3–35.5 dB).
+- **Before the gap (frame 57), the persistent banks alone render the target exactly as the full render does,** in every run.
+  This is consistent with the census and with the memory share of 0.91–0.95.
+- **Gap window, mug, representative runs:** STG 43.2, Ex4DGS+CER 37.7, Multi4D+CER 35.3, Multi4D 31.4, Ex4DGS 28.1 dB.
+  **Return window:** the Multi4D arms (34.7–34.8) are at or above STG (33.8), and both Ex4DGS arms are about 9 dB lower
+  (25.6–26.4).
+
+**Collapse probe result (59517846–48, mug same-pose, 3 runs, 43–44 min each; exploratory diagnostic).**
+
+- **Pruning calls after 30k:** 30,820 and 36,820 in these runs. The epoch boundaries differ from the 34,201 / 39,901
+  quoted earlier.
+  - `prune_small` removes 15,115–16,326 dynamic rows at 30,820 (about 35% of the dynamic bank) and about 3,000 at
+    36,820.
+  - The rows removed carry only 0.2–0.5% of the window region's mass, in every run. `prune_invisible` removes ≤ 17 rows,
+    carrying 0.000.
+- **Two runs stay healthy:** static background 43.7 dB at 40k, with the dynamic share of W rising slightly (0.50→0.55,
+  0.33→0.41).
+- **Run 3 collapses:**
+  - the static background is 43.96 dB at 30k and 43.77 at 30.5k;
+  - then it declines steadily over the remaining iterations, from 43.12 at 31k through 40.65 at 32k and 37.45 at 34k to
+    36.24 at 40k;
+  - no step coincides with either pruning call (37.74 just before the one at 36,820, and 37.66 just after);
+  - the dynamic share of W falls slowly, 0.55→0.47.
+- **Reading:**
+  - **The pruning hypothesis is refuted:** the collapse is not caused by pruning removing the rows that paint the
+    window.
+  - **It forms gradually through optimisation after densification stops at 30k:** the existing rows that paint the
+    window for the held-out camera degrade step by step, with nothing added to compensate.
+  - It occurred in 1 of 3 probed runs here, against 5 of 6 among the earlier runs of this scene. Small numbers; the
+    probe's extra GPU work also changes each run's nondeterministic path.
+- **Not yet known:** which parameter of those rows drifts (opacity, scale, position, colour). That needs the rows' parameters recorded through
+  30k–40k with an alignment across the two pruning calls.
+
+### 2026-10-06 evening: principal's decisions after the substrate debate (recorded before the probe runs)
+
+Debate record: `assets/cer-wave1-montages-2026-10-06/substrate_debate_2026-10-06.md` (Claude Opus 5.5 vs Fable 5.1, two rounds,
+consensus: Multi4D the headline substrate, Ex4DGS+CER the replication).
+
+1. **STG (principal):** STG trains six independent 50-frame models. That is a protocol that does not scale to long
+   scenes, and the principal judges it not a meaningful comparison for a persistent-memory method. How STG enters the
+   paper is to be settled in the writing; the frozen benchmark rule 2 and its result stay on the record unchanged.
+2. **Schedule probe on Multi4D+CER: approved.** Exploratory, never evidence, never pooled with the confirmatory runs.
+   - **Design:** 3 runs on bottle same-pose (ARS-L1-A0). Branch `cer` at 00357aa, unchanged, with one change: fine
+     iterations 20,000 → 30,000, by command line (`--iterations 30000`). Gate still at fine 16,000.
+   - **Checked before submission:** `position_lr_max_steps` stays 20,000, so the schedule up to the gate is identical to
+     the confirmatory runs. Every densify, prune, lift and opacity-reset call is gated below 16,000 (or 10,000), so the
+     CER sentinels cannot fire after 20,000. From 20,000 to 30,000 the position learning rate sits at its floor and no
+     row can be added.
+   - **Renders:** cam00 at 20,000 and 30,000 within each run (`RENDER_AT="20000 30000"`).
+   - **Run ids:** `runs/multi4d_cer/probe30k_ARS-L1-A0_m4dcer_rep{1,2,3}`.
+   - **Reading:** at 30,000, the ghost-region PSNR at frames 63/75/87 pooled, for the persistent banks alone
+     (`cer_m4d_banks.py`) and for the full render. Also the full-render gap and return windows with the common
+     evaluator at 20,000 and 30,000.
+   - **Decision rule, frozen here (asymmetric, after the debate):**
+     - **≥ 40 dB persistent-alone in 2 of 3 runs:** the gap deficit was training time. Next is a confirmatory longer
+       schedule with a matched longer base.
+     - **Otherwise:** unresolved between capacity (no rows can be added after 16,000) and the learning-rate floor. This
+       reading does NOT establish "capacity". The early-gate port is the route that addresses both.
+     - **Anchor:** STG's bottle gap is 44.85 dB, the confirmatory Multi4D+CER bottle gap is 32.9 dB, and Multi4D's
+       ordinary static background is 44.4 dB.
+3. **Early-gate code: approved for writing and review, not for submission.**
+   - **Pipeline:** Opus orchestrates and writes the plan; Codex (gpt-6.1-sol) reviews the plan to consensus; a Sonnet 5.5
+     agent writes the code; Codex reviews the code (scientific, engineering, tensor shapes, CUDA), iterated until the
+     orchestrator is satisfied.
+   - **Isolation:** a separate branch and worktree, never touching `cer` or `repo/multi4d-cer`. A separate torch
+     extensions directory, so no running job's compiled extension is ever rebuilt.
+   - **Submission:** the principal reviews the code and approves any training submission.
+
+**One-model STG on the tuning scene (bottle same-pose): checkpoint scores and the frozen iteration count.**
+
+- **Runs:** training 59516063 completed (3:17, exit 0). Evaluation 59536343: the first evaluation (59516065) failed
+  because `lpips` is missing in the STG environment, and the scorer now runs in the ARS scoring environment; a mistaken
+  resubmission (59536312) was cancelled while pending.
+- **Scores:** `agent-control/ars/scores/stg300/ARS-L1-A0_stg300_<N>.json`. STG's own cam00 ground truth equals the
+  frozen frames on every pixel, at every checkpoint.
+
+| iteration | gap | return | pre-gap target | whole frame |
+|---|---|---|---|---|
+| 25,000 | 25.05 | 28.74 | 31.34 | 39.11 |
+| 50,000 | 26.25 | 33.25 | 33.63 | 40.65 |
+| 100,000 | 29.65 | 33.88 | 35.03 | 41.67 |
+| 150,000 | 31.01 | 34.81 | 35.01 | 41.95 |
+
+- **Rule applied as frozen:**
+  - every step improves at least one window by more than 0.2 dB (+1.20 / +4.51, +3.40 / +0.63, +1.36 / +0.93);
+  - so **N* = 150,000**, with both windows **still improving at the last checkpoint**;
+  - this is the count for the other scenes unless the principal amends it before they run.
+- **Descriptive comparison on this scene (tuning-scene numbers), gap / return:**
+  - one-model STG 31.0 / 34.8;
+  - frozen 6 × 50 STG 44.9 / 33.3;
+  - Multi4D+CER 32.9 / 34.7;
+  - Ex4DGS+CER 39.7 / 23.9.
+- **Reading:** the 50-frame segmentation accounts for most of STG's gap advantage on this scene; as one model it is
+  about 14 dB lower on the gap and 1.5 dB higher on the return.
+
+**Principal's decision (2026-10-06 evening):** run the other eight wave-1 scenes as one-model STG at 150,000 iterations,
+as frozen. The bottle run is not extended. Each run saves only the 150k model, which is rendered and scored as on the
+tuning scene. The result stays descriptive, beside the frozen 6 × 50 STG benchmark of record.
+
+### 2026-10-06 late evening: early-gate CER on Multi4D written, reviewed and tested; nothing submitted for training
+
+The full record is in [cer-multi4d-early-gate-plan-2026-10-06](cer-multi4d-early-gate-plan-2026-10-06.md): plan rev 4
+(sections 1–9) and the implementation record (section 10).
+
+- **Plan.** Three Codex plan rounds reached consensus. Rev 1 had proposed periodic relabelling; it was dropped for
+  memory labels chosen once at begin and inherited.
+- **Code.** Branch `cer-early`, code unchanged since `96e92ee`, tests at `7b30ef8`. Five Codex code-review rounds; every
+  finding was fixed except the two escalated below.
+- **GPU tests (not evidence):** E0–E9 all PASS on Leonardo. Two integration runs on the shortened schedule exited 0.
+- **Escalated:** the inherited hybrid `clamped` buffer defect, which corrupts transient clamp flags in every Multi4D run,
+  and the unwritten `max_contrib` buffer.
+- **Forecast F1** is answered structurally: under the real schedule the transient bank has 1 row at fine 3,000.
+- **Waiting for the principal:** code review, the frozen confirmatory design (9 runs, ≈ 27 GPU-h), the scorer method, and
+  "submit".
+
+### 2026-10-06 night: schedule probe read (exploratory, never evidence)
+
+**Runs.**
+
+- Bottle same-pose, Multi4D+CER `cer@00357aa`, fine iterations 30,000 by command line, gate at 16,000.
+- Training jobs 59534383–85, 3:28–3:35 each; readouts 59536782/87/90.
+- The 30k re-renders reproduce each run's saved render exactly.
+- Outputs: `agent-control/ars/cer/probe30k/rep*/readout.json`.
+
+**Window PSNR (dB) from the common evaluator, 20,000 → 30,000 within each run:**
+
+| run | gap | return | whole frame |
+|---|---|---|---|
+| 1 | 37.52 → 40.93 | 34.75 → 34.84 | 43.79 → 43.91 |
+| 2 | 35.25 → 40.32 | 34.70 → 34.93 | 43.61 → 43.83 |
+| 3 | 37.11 → 40.90 | 34.87 → 34.97 | 43.64 → 43.78 |
+
+**Ghost region, frames 63/75/87 pooled, at 30,000:**
+
+| run | full render | persistent banks alone |
+|---|---|---|
+| 1 | 40.85 | 38.25 |
+| 2 | 40.28 | 38.83 |
+| 3 | 40.89 | 39.72 |
+
+**The frozen rule's reading:** persistent-alone reaches 40 dB in 0 of 3 runs. That means "unresolved between capacity (no
+rows after 16,000) and the learning-rate floor"; it does not establish capacity. The early-gate code (written today, not
+submitted) is the route that addresses both.
+
+**Descriptive:**
+
+- **Training longer helps the gap within every run** by +3.4 / +5.1 / +3.8 dB, with the return and whole frame unchanged
+  or slightly better.
+- **The transient bank now helps.** At 30,000 the full render is above persistent-alone, the reverse of carton at 20,000.
+- **The 30k numbers break the equal-budget rule** (spec §2.2). Any confirmatory use needs a matched 30k base.
+- **Not explained:** the probe runs' 20,000-iteration gap (37.5 / 35.3 / 37.1, mean 36.6) is above the confirmatory bottle
+  CER runs' (34.1 / 32.1 / 32.6, mean 32.9).
+  - The code, config and schedule are identical up to 20,000, except that iteration 20,000 takes an optimizer step in
+    the probe and not in the confirmatory runs.
+  - Possible explanations, untested: run-to-run variance on this scene (the bottle base runs ranged 22.9–30.7), and the
+    uninitialised `max_contrib` buffer.
+  - The within-run 20k → 30k comparison is the valid reading.
+
+### 2026-10-07: principal's decisions on the early gate (recorded before any early-gate confirmatory run is submitted)
+
+1. **The confirmatory design of [cer-multi4d-early-gate-plan-2026-10-06](cer-multi4d-early-gate-plan-2026-10-06.md)
+   section 6 is approved and frozen by this entry.**
+   - **Runs:** the early arm (`cer-early@7b30ef8`, code unchanged since 96e92ee; `cer_begin_iter = 3000`; published
+     schedule; freeze at 16,000; final iteration 20,000), 3 runs on each same-pose scene (bottle, carton, mug).
+   - **Comparison:** against the nine wave-1 Multi4D base runs 1–3.
+   - **Rule 1 as in spec §14.4:**
+     - gap improvement Holm-significant over 2 endpoints;
+     - return window one-sided 95% lower bound > −0.25 dB;
+     - mean gap gain positive in every layout.
+   - **Rule 3:** do-no-harm on the whole frame and the ordinary region, lower bound > −0.2 dB, pooled.
+   - **Rule 4 (preconditions, from `cer_gates.json`):**
+     - memory share ≥ 0.50 before the gap and after the return;
+     - exact zeros;
+     - `frozen == true`;
+     - begin 3,000 with 0 lifts before it.
+   - **Descriptive:**
+     - against the 16k arm (memory gate on Multi4D, 2026-10-02) and the 30k probe;
+     - the transient share;
+     - drift;
+     - persistent-alone renders.
+   - **Statistical reading:** as recorded on 2026-10-01 evening.
+   - **Cost:** ≈ 27 GPU-h.
+2. **Submit the nine runs.**
+3. **The `cer-early` commits may be pushed.** The substrate repository's only remote is the Leonardo repository, where
+   `cer-early` already stands at 7b30ef8 (fast-forwarded by bundle during testing).
+
+**Prepared for the submission:**
+
+- **Scorer:** `ars_score.py` method `multi4d_cer_early`, pinned to 7b30ef8 and begin 3,000. It requires:
+  - a clean `cer-early` tree, unchanged `cer` and pinned trees;
+  - begin 3,000 as passed and as resolved in `cfg_args`;
+  - exactly 40 fine evaluations;
+  - an early begin with 0 lifts, `frozen` true, and the drift report present.
+
+  The diff is `D:/adags-cer/agent/ars_score_m4dearly.diff`; the previous version is kept as `ars_score.pre_m4dearly.py`.
+- **Submission script:** `submit_cer_multi4d_early.sh`, fail-closed preflight, walltime 3:50.
+
+**Submitted, 2026-10-07 00:39 (after the entry above).** Every job ID is in `agent-control/ars/ledger.txt` and `jids/`.
+
+- **Runs:** early-gate CER on Multi4D, confirmatory, 9 runs, 59556516–59556525
+  (`runs/multi4d_cer_early/ars_w1_<scene>_m4dearly_rep<r>`).
+- **Settings:** commit `cer-early@7b30ef8`, begin 3,000, published schedule, walltime 3:50, `lrdn0066` excluded. The
+  launcher is pinned to the commit and to the clean trees at job start.
+- **Queue:** all pending (Priority) at submission.
+- **Preflight passed:**
+  - the early, `cer` and pinned trees at their pins and clean;
+  - the scorer pinned to the same commit and begin;
+  - the extensions built; the run IDs free.
+- **Before submission:** the scorer method was installed on Leonardo (sha256 `f88f7687…`). As a negative test it refused
+  the shortened integration run `e9_smoke96` and wrote no score.
+- **The push:** the substrate repository's only remote is the Leonardo repository, where `cer-early` stands at
+  7b30ef8, so nothing was left to push.
+
+### 2026-10-07 early morning: reducer extended to the early gate (installed on Leonardo only as a candidate)
+
+- **Change.** `cer_reduce.py` gained `--substrate multi4d_early`: the 9 early-arm runs against the 9 Multi4D base runs,
+  with rules 1, 3 and 4 exactly as on Multi4D.
+  - Rule 4 adds the frozen early preconditions: gates mode early, begin_iter 3000, frozen true; begin mode early;
+    lifts_before_begin 0 (non-bool ints).
+  - Descriptive only: the early arm against the 16k arm (loaded apart from the confirmatory inputs), and the drift
+    shares. Neither part ever refuses or decides anything.
+- **Hardened during review, all substrates.**
+  - Confirmatory PSNRs and gate fields are type- and range-checked: no booleans; shares in [0, 1] ± 1e-6; masses ≥ 0;
+    PSNR 0–1000 dB.
+  - A design-without-power subset contrast and the Ex4DGS sensitivity re-run report "unavailable" instead of blocking.
+  - Output is strict JSON. Only a verdict's own evidence must be finite; other non-finite values are replaced by None
+    and their paths listed.
+- **Tests:** 17 pass locally (14 originally; the test runner now reseeds per test).
+- **Compatibility.** The candidate (sha256 `3d6b8a95…`) reproduces both readings of record,
+  `checks/wave1/cer_reduce_multi4d.json` and `cer_reduce_ex4dgs.json`, with 0 differences on the real scores. It is at
+  `agent-control/ars/cer/cer_reduce_m4dearly_candidate.py`.
+- **Review.** Codex rounds 1–7 each returned MATERIAL DEFECT, and every finding was fixed. Records are in
+  `assets/cer-early-gate-2026-10-06/reducer_review_*`.
+- **Open.** Round 8 could not run: the Codex usage limit resets at 05:45. The candidate replaces `cer_reduce.py` on
+  Leonardo only after that review. The previous reducer stays in place, and local masters are kept as
+  `*.pre_m4dearly.py`.
+
+**One-model STG, all nine scenes at 150k (descriptive; evaluations 59545509–31 all COMPLETED; scores in
+`agent-control/ars/scores/stg300/`).** Gap / return windows, dB:
+
+| scene | one-model STG | STG 6 × 50 (frozen) | Ex4DGS+CER (mean of 3) | Multi4D run 1 |
+|---|---|---|---|---|
+| bottle same-pose (tuning) | 31.01 / 34.81 | 44.85 / 33.26 | 39.67 / 23.92 | 22.92 / 34.68 |
+| carton same-pose | 34.16 / 37.12 | 47.61 / 36.92 | 35.86 / 33.15 | 30.29 / 36.81 |
+| mug same-pose | 34.91 / 35.44 | 43.15 / 33.77 | 37.59 / 26.49 | 31.67 / 34.90 |
+| bottle moved | 47.10 / 34.26 | 46.56 / 33.07 | 41.02 / 19.91 | 43.09 / 30.72 |
+| carton moved | 50.33 / 37.50 | 47.04 / 37.88 | 37.56 / 24.09 | 40.77 / 35.74 |
+| mug moved | 45.85 / 34.84 | 43.01 / 34.12 | 39.60 / 20.35 | 41.73 / 32.71 |
+| bottle pass-through | 23.86 / 35.84 | 33.49 / 33.13 | 27.47 / 24.97 | 25.84 / 34.60 |
+| carton pass-through | 21.08 / 37.40 | 26.99 / 36.77 | 20.68 / 32.58 | 22.06 / 37.43 |
+| mug pass-through | 25.59 / 36.09 | 29.52 / 33.47 | 25.10 / 26.99 | 25.60 / 34.51 |
+
+**Descriptive reading:**
+
+- **Same-pose:** as one model, STG's gap falls 8–14 dB, below Ex4DGS+CER on all three scenes.
+- **Pass-through:** it falls 4–10 dB, below Ex4DGS+CER on bottle, and about level on carton and mug.
+- **Moved return:** it rises by 0.5–3 dB.
+- **Return window:** one-model STG is at or above the 6 × 50 model on 7 of 9 scenes, and above Ex4DGS+CER everywhere.
+- **Not computed yet:** the per-scene Pareto counts against Ex4DGS+CER and Multi4D+CER.
+
+### 2026-10-07: principal's decisions: Multi4D+CER becomes the primary substrate for the comparisons; it is extended to the moved-return and pass-through scenes, and one-model STG gets replicates (recorded before any of these runs)
+
+1. **Multi4D+CER on the six moved-return and pass-through scenes, 3 runs each (18 runs).**
+   - **Unchanged setup:** commit 00357aa, the published schedule, CER from fine 16,000, final iteration 20,000, against
+     the existing wave-1 Multi4D base runs 1–3 of each scene.
+   - **The same-pose confirmatory reading of 2026-10-02 stands unchanged**, with its Holm family of 2. It is not
+     re-read with the new scenes.
+   - **The new scenes get their own reading, frozen here:**
+     - per event type (moved return, pass-through): the same model (arm + layout fixed effects, 9 v 9) and the same
+       three clauses as plan §4 rule 1;
+     - Holm over these 4 new endpoints (2 event types × gap / return);
+     - preconditions as in Multi4D spec §14.2, applied per scene as in Ex4DGS 13.4 (a moved-return scene may be
+       design-without-power if the memory rows do not follow the target);
+     - do-no-harm over the scenes that meet the preconditions, reported descriptively only, since the full-design
+       certificate was the same-pose one.
+2. **One-model STG replicates:** two more runs on each same-pose scene (6 runs). Same frozen 150k, same seed 0, so they
+   differ only by GPU nondeterminism, like every other arm's repeated trainings. Run ids `ars_w1_<scene>_stg300_rep2/3`.
+   The 150k models are scored as before. They stay descriptive.
+
+**Submitted, 2026-10-07 ~10:06 (after the entry above; every job id is in the ledger).**
+
+- **Multi4D+CER moved-return and pass-through runs:** 59590875–59590931 (18 runs; `submit_cer_multi4d.sh` with
+  `SCENES` for the six scenes; the preflight passed; walltime 3:40).
+- **One-model STG replicates:** 59590932/34/36/38/40/42, each followed by its scoring job (…33/35/37/39/41/43).
+- **Scoring workers:** A18 and B18 (59590945/46), with the worker list extended by the 18 new Multi4D+CER rows. The
+  previous versions are kept as `*.pre_m4dext.*`, and a diff confirms only those rows and the `SCENES` override changed.
+- **Observed, not mine:** another session is running and scoring Multi4D "early-gate" runs (method
+  `multi4d_cer_early`) from its own worktree, `repo/multi4d-cer-early` (branch `cer-early`, 7b30ef8). It does not touch
+  `repo/multi4d-cer` (still 00357aa, clean), so this work and that work do not interfere. Its jobs were left alone.
+
+### 2026-10-07 morning: early-gate reading (confirmatory, design frozen 2026-10-07)
+
+**Training.** All 9 runs completed between 01:12 and 05:05, each 2:34–2:41 with exit 0 and trees unchanged.
+Preconditions, read from the gate files before any score was opened:
+
+- memory share 0.905–0.956 before the gap and after the return;
+- memory mass in the gap and residual mass outside it exactly 0;
+- begin 3,000 with 0 lifts before it; frozen true;
+- **transient share of the gap region 0.000–0.042**, against 0.18–0.32 in the 16k arm;
+- gap-only copies 0.06–0.33 of the gap region.
+
+**Scoring.**
+
+- The first 9 jobs (59590448–59590804) failed before scoring: the folder `scores/wave1/multi4d_cer_early` did not exist,
+  so the claim could not be taken. This was recorded in the ledger.
+- The folder was created and the runs rescored as `_r2`; all 9 were scored.
+
+**Reducer.**
+
+- Codex round 8 returned SOUND WITH QUALIFICATIONS. The reducer was then installed: `agent-control/ars/cer_reduce.py`
+  sha256 `3d6b8a95…`, with the previous one kept as `cer_reduce.pre_m4dearly.py`. Its 17 tests pass on Leonardo.
+- **Retained compatibility report** (`agent-control/ars/cer/reduce_compat_2026-10-07/report.json`, copied to
+  `assets/cer-early-gate-2026-10-06/reducer_compat_report_2026-10-07.json`, with its script): the installed command line
+  reproduces both readings of record with 0 differences and identical input hashes.
+
+**Output:** `checks/wave1/cer_reduce_multi4d_early.json`, sha256 `dffc2001179182e594bbf5ced1e51e870e6b68bbaa3ffd4a156fedb985f22bb6`.
+
+**Rule 1 (causal, early gate against base Multi4D): FAIL, on clause (b) only.**
+
+| clause | value | met |
+|---|---|---|
+| (a) gap superiority | +9.24 dB (se 1.14, lower bound +7.24, Holm p < 1e-6) | yes |
+| (b) return non-inferiority | −0.10 dB, one-sided 95% lower bound −0.32 against the frozen −0.25 | **no** |
+| (c) gap gain positive in every layout | bottle +13.4, carton +6.7, mug +7.6 dB | yes |
+
+**Rule 3 (do-no-harm): PASS.** Whole frame +0.06 (lower bound −0.002); ordinary region +0.02 (lower bound −0.13).
+
+**Rule 4:** OK on all three scenes.
+
+**Per scene, window PSNR (dB), mean of 3 runs:**
+
+| scene | gap: early / base / 16k arm | return: early / base / 16k arm |
+|---|---|---|
+| bottle | 41.54 / 28.14 / 32.93 | 34.57 / 34.69 / 34.73 |
+| carton | 37.17 / 30.46 / 34.45 | 36.98 / 37.08 / 37.24 |
+| mug | 38.93 / 31.33 / 35.30 | 34.66 / 34.74 / 34.52 |
+
+**Descriptive, never a verdict:**
+
+- **Early minus the 16k arm,** pooled: gap +4.99 dB (lower bound +3.71), return −0.09 (lower bound −0.31), whole frame
+  +0.03.
+- **Run-to-run spread is small:** the early arm's runs lie within 0.6 dB of each other in the gap on every scene.
+- **STG's gap**, for reference, is 44.85 / 47.61 / 43.15 dB.
+- **The return-clause miss,** stated without reinterpreting the rule: the point estimate (−0.10 dB) lies inside
+  Multi4D's 0.34 dB fixed-seed floor, but n = 3 per layout does not bound it above −0.25. The 16k arm's return, by the
+  same rule on the same base runs, was −0.01 dB with a lower bound of −0.18.
+
+### 2026-10-16: why the early gate's return window reads −0.10 dB (descriptive diagnostics, no training)
+
+Asked by the principal: identify the cause, model first. Jobs 60724773 and 60724911 (debug QOS), renders and gate files only.
+Outputs are in `agent-control/ars/cer/return_diag/`; the scripts are `target_edge_interior.py` and `interior_by_bank.py`.
+
+1. **It is not a return defect; the return is the best of the three arms.**
+   - The early arm scores the same at every time the object is present: pre-gap 30–57, return 92–99, 100–109 and
+     230–259 (bottle 34.57 throughout).
+   - Its offset against base is the same before the gap (−0.10 / −0.18 / −0.21) as long after it (−0.18 / −0.20 / −0.24).
+   - At the first return frames 90–91, which lie outside the scored return window, the early arm is +4.9 / +5.4 / +6.1 dB
+     above base. It has no ramp; base starts at 26–29 dB at frame 90, the 16k arm at 32–37.
+2. **The deficit is in the object's interior, not its edges.**
+   - Interior (mask eroded 4 px), early minus base: −0.19 / −0.29 / −0.15 dB.
+   - Edge ring: −0.01 / −0.01 / −0.16 dB. The mug alone loses at the edge too.
+   - The colour bias is about 0.001 and negligible.
+3. **Two sources, by bank** (bank-alone renders at pre-gap frames 40 and 57; all 18 re-renders reproduce the saved
+   renders exactly).
+   - **(a) Transient detail is absent in the early arm.**
+     - In base runs the transient bank covers the object interior with alpha 0.05–0.10 (bottle), 0.12–0.23 (carton)
+       and 0.07–0.52 (mug).
+     - It adds detail in some runs: carton +0.31; mug +0.60 and +0.27 dB. On the bottle it hurts in all three runs
+       (−1.68 / −0.11 / −0.28).
+     - In the early arm it covers 0.000–0.053 and adds nothing.
+     - This follows the foreground memory rows at fine 3,000: bottle 0–20, carton 229–288, mug 72–129. The transient
+       bank is seeded by lifting foreground rows, and the early gate forbids lifting labelled rows (D4). That is
+       consistent with the lift exclusion cutting off the transient detail path. **Not proven:** the lift lineage is not
+       tracked.
+   - **(b) The persistent banks themselves are slightly worse in the early arm** on bottle and carton: persistent-alone
+     interior −0.28 / −0.16 dB against base's persistent banks. On the mug they are better (+0.20).
+     - Cause unestablished. Candidates are the gated rows' diluted densification statistics (D7) and fewer gradient
+       views for memory rows over 17,000 iterations.
+     - The 16k arm's object quality was about equal to base's (pre-gap +0.08 / +0.09 / −0.36).
+
+
+### 2026-10-16 evening: new lane, failure-mode discovery (plan only; nothing trained)
+
+- **Why.** The principal asked for a plan to find a specific failure of the SOTA methods in a deliberately chosen
+  setting (few cameras or one moving camera, where hidden surfaces must be remembered), with stop rules and a
+  fight-for-it step, instead of choosing directions by elimination.
+- **Record:** [failure-mode-discovery-plan-2026-10-16](failure-mode-discovery-plan-2026-10-16.md) (rev 2, after a
+  Codex gpt-6.1-sol review that returned MATERIAL DEFECT on rev 1; all points folded in).
+- **Measured today (CPU, exact, static background of the suite):** with 19-21 training cameras the "remembered"
+  class is empty or near-empty, at 6 cameras about 0.002-0.004 %, at 3 cameras 0.05-0.10 % on the camera line and
+  about 1 % on a probe arc; most remembered pixels are seen again later. The first frame after the object returns
+  is 3-11 dB below the steady return in STG, Multi4D and Ex4DGS (45 local score files), but the fixture switches the
+  object's existence on in one frame, so its real-footage relevance is open.
+- **Dates:** hypothesis list closes 23 Oct; evidence checkpoint 24 Oct; hard stop 28 Oct ("no admissible CVPR claim"
+  is an allowed outcome). About 85 GPU-h, all waiting for the principal's approval. The early-gate memory-gate lane
+  is not touched.
+
+### 2026-10-16 evening: the two sources of the early arm's object deficit, tested (exploratory; no training of an arm)
+
+Brief from the principal (2026-10-16): (A) plan, review, implement and test a fix for the missing transient detail (memory rows
+lift donors again, their transient copies gated as memory); prepare, not submit, a comparison. (B) Measure whether memory rows
+are densified less in the early arm before any densification change. The record is
+[cer-multi4d-early-tr-plan-2026-10-16](cer-multi4d-early-tr-plan-2026-10-16.md) (plan rev 5, sections 1–13; implementation,
+tests and premise check, section 14). Reviews: `assets/cer-early-tr-2026-10-16/`. Every job id below is in the ledger.
+
+**Task A, the fix (transient copies of memory rows gated as memory).**
+
+- **Plan:** five revisions; Codex rounds 1–4 each MATERIAL DEFECT (6, 3, 3, 2 findings), all fixed; round 5 (21:31) PLAN READY.
+  The implementation went ahead during the Codex usage-limit wait (17:00–21:28), after round 4 had found nothing in task A.
+  Code review round 1 (same call): READY WITH FIXES (the new launcher's exit-code order, F9's tree check; both fixed).
+- **Code:** branch `cer-early-tr`, code at `5afa119` (tests to `b5254ee`), flag `cer_transient_gate` (0 = the early arm, shown
+  bit-identical by F0). GPU tests: F0–F4, F6–F8 PASS; F9 integration PASS; F5/F5c gate clauses PASS (exact zeros for every
+  witness in all nine parameter groups) with positive-control failures: one part explained by the escalated `clamped` buffer
+  (they vanish with the static set out of view), and 10 rows with entirely zero training-build gradient, cause not
+  established and not isolated from the code by a paired control (attribution unresolved).
+- **The premise is weakened (Codex: QUALIFIED).** On the early trajectory the lift exclusion met few labelled candidates: 0–45
+  candidate occurrences per run over 139 selections (bottle 0/0/0, carton 45/12/16, mug 1/0/6). This is low exposure, not a
+  bound on the fix's effect (a restored pool also changes the random draw and later training). In base runs the transient rows
+  that paint the object interior before the gap are mostly centred in time inside the gap (mug 0.83–1.00, bottle 0.52–0.99 at
+  frame 57, carton 0.10–1.00 of their mass), and 0.43–1.00 of that mass is from rows with some contribution in the gap region:
+  consistent with time tails of gap rows, not shown to be an occluder or to cause the PSNR difference. The 2026-10-16 entry's
+  "most likely mechanism" (the lift exclusion) is unestablished.
+- **Recommendation:** defer the comparison (≈ 26 GPU-h), as a prioritisation. Nothing was submitted for training.
+
+**Task B, densification of memory rows (bottle same-pose, one run each, exploratory diagnostics).**
+
+- **Probe:** `agent-control/ars/densify_probe.py` (runpy around `cer-early@7b30ef8` `train.py`), its test (17 checks PASS, jobs
+  60728104/60728741/60728898/60729394), reader `densify_read.py`. Runs: early arm 60729395 (2:49), shadow base 60729396 (2:32;
+  CER off, the memory rule applied at fine 3,000 without arming the gate). Output
+  `agent-control/ars/cer/densify_probe/densify_read_bottle_r1.json`.
+- **Background memory rows (3,349 of the early arm's 3,388 memory rows at 3,000), steps 3,100–15,900, early / shadow:** mean average gradient 1.011×
+  (median 1.026×); clone selections 5 / 5; split 0 / 0; rows at 16,000 2,652 / 2,667 (0.994×); visibility count per window
+  99.6 / 99.6. Increments that carry no gradient for a gated row (every view of the batch that saw the row was a gap view) are
+  1.8% of the count, not ≈ 10%; deleting them raises the average by 1.9% and changes no selection.
+- **Other background rows:** gradient 1.02×; clones 213 / 208; splits 668 / 850 (0.79×).
+- **Foreground memory rows:** 39 (early) / 93 (shadow) at 3,000. In the early arm they appear in only 2 densification windows
+  (3,100 and 3,200), with mean average gradient about 1.1e-7, and are gone by 3,300; the shadow base has them in all 69
+  windows (mean 1.4e-4), splits 54 of them and keeps 18 to 16,000. A small cohort (39 of 3,388 memory rows in the early arm).
+- **Reading (corrected after Codex round 5):** background memory rows are densified about as often in the early arm as in the
+  shadow base (similar gradient, clone 5/5, split 0/0, rows 0.99×). The early arm's foreground memory rows vanish within
+  300 iterations of begin (2 windows against 69, so the gradient ratio compares unequal windows); why they vanish (pruning
+  after near-zero gradient, or something else) is not shown. The deletion
+  sensitivity removes only all-zero increments; the gradient a gated row misses in mixed batches (one gap view, one non-gap
+  view; gradients summed before the norm, `train.py:855`) is not measured. So the diluted-statistics candidate is small for
+  background memory rows; the early loss of the foreground memory rows and the mixed-batch loss are open, and the image impact of either is not
+  measured. No densification change is proposed yet. Unverified: one run per arm, one scene; the two runs already differ at
+  fine 3,000 by GPU nondeterminism.
+
+**Cost.** Task B 5.9 GPU-h (probe tests 0.5, runs 5.4). Task A tests 3.3 GPU-h (F9 1.1 on lprod). Premise check 0.05 GPU-h.
+
+**For the principal.** (1) Whether to drop the fix (recommended) or still run the comparison. (2) An observation with unresolved attribution: some transient rows get no training-build gradient although they render,
+and transient gradients differ between fresh processes. (3) Where the object deficit comes from remains open: the transient part is consistent with gap rows' time tails; for the
+persistent part (bottle −0.28, carton −0.16, mug +0.20 dB) the candidates left are the early loss of the foreground memory
+rows and the gradient missed in mixed batches; neither is measured against image quality.
+
+- **2026-10-16 late, revision 4 of that plan (its section 12, principal's decision):** the few-camera claim is about
+  methods published for few cameras (4C4D at its published cameras 1, 10, 13, 20; GC-4DGS; Multi4D's own low-view
+  setting), with Multi4D's dense setting, Ex4DGS and STG as labelled reference rows; first GPU block about 66 GPU-h,
+  not yet approved or submitted.
+
+- **2026-10-17 ~00:00, failure-mode discovery lane:** the principal approved revision 4's first GPU block (about 66 GPU-h),
+  with environments and trees on scratch, after a short Codex check of its sections 12-13 (record: that page, section 14).
+
+- 2026-10-19: failure-mode discovery, sections 24-25: real footage confirms Multi4D monocular ghosting (3/3); the
+  kill-argument FAILs the broad claim; Spacetime Gaussians leaves no real-footage ghost at 20 cameras, so the claim
+  narrows to monocular/low-view static-background methods, real-data-first (`failure-mode-discovery-plan-2026-10-16.md`
+  section 25).

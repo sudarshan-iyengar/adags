@@ -444,3 +444,127 @@ lifecycle changes, no ply persistence of CER state, no new CLI beyond `cer_scene
 | gates 3 and 5 labelled guards; after-return failure on same-pose explained | Fable F13 |
 | pruning retained, deviation from Sol's round-1 text stated | Sol (missing) |
 | **after the code reviews:** `begin` asserts `time_pad_type == 0` and that training images are the canonical scene's; no cam00 view; finite evaluated opacity on every frame (`check_finite`); a CER directory whose checkpoint lacks CER state refuses to load; `densify_until_iter < iterations` asserted; the launcher renders the config's final iteration and re-records provenance at render time; the scorer checks both | Sol code review, Fable code review (M1, m1–m9) |
+
+## 13. Gate amendment (2026-10-01, rev 2; the principal's decision (a); appended, before any real CER run)
+
+Applies the plan-log entry "2026-10-01 (later): principal's decisions on the contribution gates and on Multi4D", item
+(a). It supersedes, **as preconditions**:
+
+- §6 row 4 ("residual active inside the gap ≥ 0.20, evidence");
+- §11 item 4;
+- amendment (a) §A5's "gate thresholds unchanged (residual 0.20 frozen)";
+- the plan-log freeze of 2026-10-01, item 1.
+
+Everything else in this spec and in amendment (a) stands. The Multi4D spec §14 is the companion.
+
+**Revision history.** Rev 1 of this section is preserved verbatim in
+[`assets/cer-gates-amendment-2026-10-01/review_prompt.md`](../assets/cer-gates-amendment-2026-10-01/review_prompt.md).
+It was reviewed by Fable 5.1 (ready after fixes, 13 findings) and GPT-6.1 Sol (high; material defect, 4 defects
+and 3 missing items); both reviews are in the same folder. Rev 2 absorbs every finding. 13.6 lists the changes.
+**Two points are proposals for the principal, not yet frozen:** 13.4 (how a scene that fails the preconditions
+enters rules 1–3) and the Multi4D reading in §14.2.
+
+**13.1 Preconditions (plan §4 rule 4) on Ex4DGS, complete list.** A CER run meets the preconditions when all four hold,
+read from its `cer_gates.json`:
+
+| precondition | field | rule |
+|---|---|---|
+| memory active before the gap | `memory_share_pregap` | ≥ 0.50 |
+| memory active after the return | `memory_share_return` | ≥ 0.50 |
+| memory suppressed inside the gap | `memory_mass_gap` | exactly 0.0 |
+| residual zero outside the gap | `residual_mass_outside_gap` | exactly 0.0 |
+
+**Input rule.** The reducer refuses to run when any of these fields, or `residual_share_gap` or `pass`, is missing or
+not a finite number.
+
+**13.2 The residual share is descriptive.** `residual_share_gap` is the residual copies' share of the gap-region mass
+over the gap window (training cameras, final model). The memory rows carry exactly zero there, so the share splits
+the gap content between the residual copies and the ordinary rows. It decides nothing about scoring.
+
+- **Narrower than the plan log's wording.** The plan log calls this "attribution between the memory gate and the
+  residual copies". A mass share cannot split anything with the memory gate, whose mass in the gap is zero. It says
+  which rows paint the gap. It does not attribute the gap improvement causally; that needs the memory-gate-only
+  ablation (wave 2, §10).
+- **Per run and per scene.** The reducer reports each run's share and, per scene, the mean of its three runs' shares
+  with their minimum and maximum. The denominators are not stored, so a pooled ratio is not available.
+- **Thresholds, descriptive.** At 0.10, 0.20 and 0.30 the reducer reports how many runs and how many scene means lie
+  at or above each value.
+- **Zero denominator.** Ex4DGS clamps a zero gap-region mass to a share of 0 (`scene/cer.py:158`), so a share of 0
+  is reported as "0 (zero residual mass or zero gap-region mass)".
+- **Stated with it.** The shortened smoke runs (integration tests, not evidence) already showed shares 0.10 and 0.09
+  with the rev-2 snapshot birth, and 0.06 with amendment (a).
+
+**13.3 No substrate code change; the plan-log item is discharged by the reducer.** The plan log and the hand-off
+listed "the code that reports instead of gating" as the next step. This amendment decides not to change `gates()`.
+
+- **The fields exist.** `cer_gates.json` written by commit `5b82ae7` already stores every field in 13.1 and 13.2
+  (`scene/cer.py:159-167`).
+- **The `pass` field.** It still applies the superseded rule, requiring `residual_share_gap ≥ 0.2`
+  (`scene/cer.py:168-170`), so it will read `false` on most runs.
+- **Who reads it.** Nothing acts on it. The scorer copies the whole file under `run_checks.cer_gates` and gates
+  nothing on it. The scoring worker and the run reports never open it. The launchers only print it to the job log.
+- **What the reducer does with it.** It recomputes the verdict from the four fields. It asserts, as an integrity
+  check, that the stored `pass` equals the superseded formula recomputed from the file's own fields. That shows only
+  that the file is internally consistent, not where it came from; provenance is the scorer's job (commit, clean
+  worktree, run directory). It never branches on that field and reports it as `pass_superseded_rule`.
+- **Its tests.** They include a record with `pass: false` that meets every precondition and must be scored.
+- **Why.** This keeps the reviewed commit `5b82ae7` and the scorer pin. The 27 CER runs are submitted on `5b82ae7`.
+
+**13.4 How the reducer applies the preconditions (proposal for the principal's decision; not frozen until accepted).**
+Rule 4 says only that a failure "is reported as DESIGN_WITHOUT_POWER for that scene, never dropped". The readings
+below are new analysis policy. They follow one principle, proposed by both reviewers: **no gate changes a
+denominator, the correction for multiple testing, or a threshold.** A result that needs a scene that failed the
+preconditions is reported as not established, and every subset estimate stays descriptive.
+
+1. **Per scene, all three runs.** A scene meets the preconditions when all three of its CER runs do. Otherwise it is
+   DESIGN_WITHOUT_POWER, with the failing fields. A run whose gate never acted would otherwise enter the pooled model
+   as a number from a mechanism that was not exercised. Majority and mean-share readings were considered and
+   rejected.
+2. **Rule 1, per event type.** An event type whose three scenes all meet the preconditions is evaluated exactly as
+   frozen. If any of its scenes is DESIGN_WITHOUT_POWER:
+   - the event type is DESIGN_WITHOUT_POWER, neither passed nor failed;
+   - its estimates on the remaining layouts are reported descriptively.
+3. **Rule 1, the multiple-testing correction.** The Holm family is always the six planned endpoints. An endpoint of
+   a DESIGN_WITHOUT_POWER event type enters it as never rejected (p = 1), so no gate relaxes the correction. Its
+   subset p-value is reported descriptively.
+4. **Rule 1, the overall verdict.**
+   - PASS when the event types that can be scored meet "at least 2 of 3, one of them same-pose" on their own.
+   - FAIL when rule 1 could not be met even if every event type that cannot be scored passed.
+   - DESIGN_WITHOUT_POWER otherwise, for example when the same-pose event type cannot be scored.
+5. **Rule 2 (descriptive).** The denominator stays 9. A scene that fails the preconditions counts as no domination
+   and is reported as "x of 9 (y DESIGN_WITHOUT_POWER)". The "≥ 6 of 9, one of each event type" clause is unchanged.
+6. **Rule 3.** The pooled bound is certified only on all nine scenes. If any scene fails the preconditions, do-no-harm
+   is DESIGN_WITHOUT_POWER and the bound on the remaining scenes is reported descriptively.
+7. **Never dropped.** Every scene's numbers, both arms, appear in the output whatever its status.
+
+**13.5 Inputs, failed runs, and the base-run choice.**
+
+- **Manifest.** The reducer reads an explicit list:
+  - the 27 planned CER run ids;
+  - the base run ids the principal designates for the proof;
+  - the STG and Multi4D benchmark runs.
+
+  Every planned CER run must resolve to exactly one score, or to one declared replacement (below); otherwise the
+  reducer refuses to run.
+- **Infrastructure failure.** A run that ends without a training exit code 0 for a cause outside CER (node, file
+  system, Slurm, walltime) is resubmitted under a new run id. The ledger records the new run as the planned run's
+  replacement, the original stays on the record, and the manifest names the replacement.
+- **CER failure.** A run that stops on a CER assertion (non-finite opacity, a per-bank length, a lifecycle
+  precondition in `begin`) is not replaced. Its scene is DESIGN_WITHOUT_POWER with the reason "CER run failed". The
+  reducer takes such failures only as explicit, ledger-declared records (`--failures`, each with its job id and
+  reason); any other missing score makes it refuse.
+- **Base-run choice, not decided here.** Which Ex4DGS base runs enter the proof is still open from 2026-09-29: the
+  frozen originals, or the replacements for the runs trained on `lrdn0066`. The reducer takes that choice as an
+  explicit argument with no default and records the run list in its output.
+
+**13.6 Changes from rev 1**
+
+| change | source |
+|---|---|
+| 13.2: "attribution" narrowed and the departure named; per-scene aggregation (mean, min, max); zero-denominator wording | Fable 8, 13; Sol (missing) |
+| 13.3: the plan-log item discharged by the reducer, stated; the old `pass` field checked for integrity, renamed in the output, never branched on, and tested with a `pass: false` record | Fable 7, 12; Sol (suspected) |
+| 13.4: marked as new policy for the principal; no denominator, Holm family or threshold changes; per-event-type and overall verdicts; rule 2 called descriptive; rule 3 not certified on a reduced population | Sol 2; Fable 2, 3, 4, 9 |
+| 13.5: manifest; infrastructure failure versus CER failure; refusal on missing or non-finite fields | Fable 5; Sol (missing) |
+
+**Accepted by the principal (plan log, "2026-10-01 evening: principal's decisions on the reducer, the statistics, the base
+runs and Multi4D").** The proposals marked above as not frozen are frozen as written.

@@ -67,3 +67,14 @@ evidence) and motivates event-level evaluation.
 
 - https://arxiv.org/abs/2511.16112
 - https://arxiv.org/html/2511.16112
+
+## Addendum (2026-10-02, append-only): the grouped-motion half
+
+The page above records the error-correction mechanism but under-describes the grouped motion, which matters
+for any "few motion models" proposal. Per §4.2 (Eq. 5), as read by Fable 5.1 and GPT-6.1 Sol on 2026-10-02:
+x(t) = x_G(t) + R_G(t)·x + t·d — group-level keyframed position/rotation (CHip + Slerp, Ex4DGS's own
+interpolation), each member a pose relative to its group plus a per-splat linear displacement d. Groups are
+connected components of a graph over spatially overlapping splats with coherent learned displacements
+(threshold τ_d), formed during Ex4DGS's progressive stage and frozen in stage two; the group count is automatic;
+evaluated on N3V and Technicolor. It therefore occupies "shared keyframed group motion with canonical members,
+discovered in training, on Ex4DGS". Context: research-wiki/operations/rigid-body-motion-dynamic-gs-literature-2026-10-02.md §8.
