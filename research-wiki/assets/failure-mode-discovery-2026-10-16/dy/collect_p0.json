@@ -1,0 +1,449 @@
+{
+ "p0_apple_r1": {
+  "n": 532,
+  "mpsnr": 19.4159,
+  "mssim": 0.8079,
+  "mlpips": 0.3373,
+  "cam1": {
+   "mpsnr": 19.3835,
+   "mssim": 0.6824,
+   "mlpips": 0.3685
+  },
+  "cam2": {
+   "mpsnr": 19.4374,
+   "mssim": 0.891,
+   "mlpips": 0.3167
+  },
+  "prims": {
+   "static": 323542,
+   "static_active": 323017,
+   "dynamic": 32257,
+   "dynamic_active": 31467
+  }
+ },
+ "p0_apple_r2": {
+  "n": 532,
+  "mpsnr": 19.4248,
+  "mssim": 0.8074,
+  "mlpips": 0.3396,
+  "cam1": {
+   "mpsnr": 19.3903,
+   "mssim": 0.6815,
+   "mlpips": 0.3701
+  },
+  "cam2": {
+   "mpsnr": 19.4477,
+   "mssim": 0.8908,
+   "mlpips": 0.3194
+  },
+  "prims": {
+   "static": 324211,
+   "static_active": 323623,
+   "dynamic": 32736,
+   "dynamic_active": 32083
+  }
+ },
+ "p0_apple_r3": {
+  "n": 532,
+  "mpsnr": 19.4194,
+  "mssim": 0.8075,
+  "mlpips": 0.341,
+  "cam1": {
+   "mpsnr": 19.3883,
+   "mssim": 0.6816,
+   "mlpips": 0.3732
+  },
+  "cam2": {
+   "mpsnr": 19.44,
+   "mssim": 0.891,
+   "mlpips": 0.3197
+  },
+  "prims": {
+   "static": 322785,
+   "static_active": 322144,
+   "dynamic": 32564,
+   "dynamic_active": 31781
+  }
+ },
+ "p0_block_r1": {
+  "n": 667,
+  "mpsnr": 18.1433,
+  "mssim": 0.6811,
+  "mlpips": 0.3205,
+  "cam1": {
+   "mpsnr": 18.178,
+   "mssim": 0.6793,
+   "mlpips": 0.3145
+  },
+  "cam2": {
+   "mpsnr": 18.0956,
+   "mssim": 0.6837,
+   "mlpips": 0.3287
+  },
+  "prims": {
+   "static": 168881,
+   "static_active": 167772,
+   "dynamic": 200735,
+   "dynamic_active": 199178
+  }
+ },
+ "p0_block_r2": {
+  "n": 667,
+  "mpsnr": 18.1416,
+  "mssim": 0.6764,
+  "mlpips": 0.3186,
+  "cam1": {
+   "mpsnr": 18.2093,
+   "mssim": 0.6746,
+   "mlpips": 0.3111
+  },
+  "cam2": {
+   "mpsnr": 18.0485,
+   "mssim": 0.6788,
+   "mlpips": 0.3289
+  },
+  "prims": {
+   "static": 168094,
+   "static_active": 167034,
+   "dynamic": 202518,
+   "dynamic_active": 200974
+  }
+ },
+ "p0_block_r3": {
+  "n": 667,
+  "mpsnr": 18.2304,
+  "mssim": 0.6791,
+  "mlpips": 0.3189,
+  "cam1": {
+   "mpsnr": 18.1898,
+   "mssim": 0.6748,
+   "mlpips": 0.3117
+  },
+  "cam2": {
+   "mpsnr": 18.2862,
+   "mssim": 0.685,
+   "mlpips": 0.3287
+  },
+  "prims": {
+   "static": 168500,
+   "static_active": 167340,
+   "dynamic": 201825,
+   "dynamic_active": 200302
+  }
+ },
+ "p0_paper-windmill_r1": {
+  "n": 419,
+  "mpsnr": 22.4464,
+  "mssim": 0.7486,
+  "mlpips": 0.1544,
+  "cam1": {
+   "mpsnr": 22.9565,
+   "mssim": 0.7752,
+   "mlpips": 0.1414
+  },
+  "cam2": {
+   "mpsnr": 21.8878,
+   "mssim": 0.7195,
+   "mlpips": 0.1687
+  },
+  "prims": {
+   "static": 627345,
+   "static_active": 626279,
+   "dynamic": 19407,
+   "dynamic_active": 18605
+  }
+ },
+ "p0_paper-windmill_r2": {
+  "n": 419,
+  "mpsnr": 22.4212,
+  "mssim": 0.749,
+  "mlpips": 0.1548,
+  "cam1": {
+   "mpsnr": 22.9315,
+   "mssim": 0.7738,
+   "mlpips": 0.1418
+  },
+  "cam2": {
+   "mpsnr": 21.8623,
+   "mssim": 0.7218,
+   "mlpips": 0.1691
+  },
+  "prims": {
+   "static": 627961,
+   "static_active": 626837,
+   "dynamic": 19520,
+   "dynamic_active": 18742
+  }
+ },
+ "p0_paper-windmill_r3": {
+  "n": 419,
+  "mpsnr": 22.3958,
+  "mssim": 0.7494,
+  "mlpips": 0.1532,
+  "cam1": {
+   "mpsnr": 22.9188,
+   "mssim": 0.7753,
+   "mlpips": 0.1403
+  },
+  "cam2": {
+   "mpsnr": 21.8232,
+   "mssim": 0.721,
+   "mlpips": 0.1674
+  },
+  "prims": {
+   "static": 626711,
+   "static_active": 625627,
+   "dynamic": 19025,
+   "dynamic_active": 18405
+  }
+ },
+ "p0_space-out_r1": {
+  "n": 681,
+  "mpsnr": 20.5579,
+  "mssim": 0.6654,
+  "mlpips": 0.2566,
+  "cam1": {
+   "mpsnr": 20.0792,
+   "mssim": 0.6586,
+   "mlpips": 0.2656
+  },
+  "cam2": {
+   "mpsnr": 21.0241,
+   "mssim": 0.6721,
+   "mlpips": 0.2479
+  },
+  "prims": {
+   "static": 160809,
+   "static_active": 160188,
+   "dynamic": 96745,
+   "dynamic_active": 96093
+  }
+ },
+ "p0_space-out_r2": {
+  "n": 681,
+  "mpsnr": 20.5458,
+  "mssim": 0.6649,
+  "mlpips": 0.2542,
+  "cam1": {
+   "mpsnr": 20.0214,
+   "mssim": 0.6574,
+   "mlpips": 0.2623
+  },
+  "cam2": {
+   "mpsnr": 21.0566,
+   "mssim": 0.6721,
+   "mlpips": 0.2462
+  },
+  "prims": {
+   "static": 161922,
+   "static_active": 161256,
+   "dynamic": 95850,
+   "dynamic_active": 95189
+  }
+ },
+ "p0_space-out_r3": {
+  "n": 681,
+  "mpsnr": 20.5645,
+  "mssim": 0.6659,
+  "mlpips": 0.2549,
+  "cam1": {
+   "mpsnr": 20.0743,
+   "mssim": 0.6595,
+   "mlpips": 0.2626
+  },
+  "cam2": {
+   "mpsnr": 21.0419,
+   "mssim": 0.6722,
+   "mlpips": 0.2474
+  },
+  "prims": {
+   "static": 161612,
+   "static_active": 160950,
+   "dynamic": 95583,
+   "dynamic_active": 94920
+  }
+ },
+ "p0_spin_r1": {
+  "n": 722,
+  "mpsnr": 21.3049,
+  "mssim": 0.7548,
+  "mlpips": 0.1831,
+  "cam1": {
+   "mpsnr": 20.7691,
+   "mssim": 0.7575,
+   "mlpips": 0.2164
+  },
+  "cam2": {
+   "mpsnr": 21.862,
+   "mssim": 0.752,
+   "mlpips": 0.1484
+  },
+  "prims": {
+   "static": 344705,
+   "static_active": 344154,
+   "dynamic": 57925,
+   "dynamic_active": 57721
+  }
+ },
+ "p0_spin_r2": {
+  "n": 722,
+  "mpsnr": 21.2996,
+  "mssim": 0.7528,
+  "mlpips": 0.1878,
+  "cam1": {
+   "mpsnr": 20.8399,
+   "mssim": 0.7563,
+   "mlpips": 0.2222
+  },
+  "cam2": {
+   "mpsnr": 21.7775,
+   "mssim": 0.7491,
+   "mlpips": 0.1521
+  },
+  "prims": {
+   "static": 346407,
+   "static_active": 345717,
+   "dynamic": 58661,
+   "dynamic_active": 58473
+  }
+ },
+ "p0_spin_r3": {
+  "n": 722,
+  "mpsnr": 21.3465,
+  "mssim": 0.7533,
+  "mlpips": 0.1842,
+  "cam1": {
+   "mpsnr": 20.8212,
+   "mssim": 0.7549,
+   "mlpips": 0.2159
+  },
+  "cam2": {
+   "mpsnr": 21.8926,
+   "mssim": 0.7517,
+   "mlpips": 0.1513
+  },
+  "prims": {
+   "static": 348654,
+   "static_active": 347805,
+   "dynamic": 58425,
+   "dynamic_active": 58221
+  }
+ },
+ "p0_teddy_r1": {
+  "n": 688,
+  "mpsnr": 15.5461,
+  "mssim": 0.6223,
+  "mlpips": 0.3552,
+  "cam1": {
+   "mpsnr": 14.9957,
+   "mssim": 0.6599,
+   "mlpips": 0.3709
+  },
+  "cam2": {
+   "mpsnr": 16.4302,
+   "mssim": 0.5618,
+   "mlpips": 0.3299
+  },
+  "prims": {
+   "static": 205604,
+   "static_active": 204481,
+   "dynamic": 182803,
+   "dynamic_active": 182026
+  }
+ },
+ "p0_teddy_r2": {
+  "n": 688,
+  "mpsnr": 15.5974,
+  "mssim": 0.6233,
+  "mlpips": 0.3565,
+  "cam1": {
+   "mpsnr": 15.0589,
+   "mssim": 0.6614,
+   "mlpips": 0.3714
+  },
+  "cam2": {
+   "mpsnr": 16.4623,
+   "mssim": 0.5621,
+   "mlpips": 0.3325
+  },
+  "prims": {
+   "static": 206047,
+   "static_active": 204991,
+   "dynamic": 184084,
+   "dynamic_active": 183430
+  }
+ },
+ "p0_teddy_r3": {
+  "n": 688,
+  "mpsnr": 15.5816,
+  "mssim": 0.6237,
+  "mlpips": 0.3558,
+  "cam1": {
+   "mpsnr": 15.0021,
+   "mssim": 0.6606,
+   "mlpips": 0.3716
+  },
+  "cam2": {
+   "mpsnr": 16.5124,
+   "mssim": 0.5644,
+   "mlpips": 0.3305
+  },
+  "prims": {
+   "static": 204929,
+   "static_active": 203911,
+   "dynamic": 184490,
+   "dynamic_active": 183729
+  }
+ },
+ "p0_wheel_r1": {
+  "n": 219,
+  "mpsnr": 18.1228,
+  "mssim": 0.6824,
+  "mlpips": 0.23,
+  "cam1": {
+   "mpsnr": 18.1228,
+   "mssim": 0.6824,
+   "mlpips": 0.23
+  },
+  "prims": {
+   "static": 377379,
+   "static_active": 376135,
+   "dynamic": 131523,
+   "dynamic_active": 129894
+  }
+ },
+ "p0_wheel_r2": {
+  "n": 219,
+  "mpsnr": 18.1821,
+  "mssim": 0.6842,
+  "mlpips": 0.2277,
+  "cam1": {
+   "mpsnr": 18.1821,
+   "mssim": 0.6842,
+   "mlpips": 0.2277
+  },
+  "prims": {
+   "static": 378252,
+   "static_active": 376913,
+   "dynamic": 130058,
+   "dynamic_active": 128364
+  }
+ },
+ "p0_wheel_r3": {
+  "n": 219,
+  "mpsnr": 18.0233,
+  "mssim": 0.6768,
+  "mlpips": 0.2303,
+  "cam1": {
+   "mpsnr": 18.0233,
+   "mssim": 0.6768,
+   "mlpips": 0.2303
+  },
+  "prims": {
+   "static": 379228,
+   "static_active": 377924,
+   "dynamic": 130377,
+   "dynamic_active": 128815
+  }
+ }
+}

@@ -1,0 +1,70 @@
+{
+ "reducer": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer_reduce.py",
+ "reducer_sha256": "3d6b8a95c246fb8c6f0ff2be381b004108a2a1ae24f4237be4d5040afdd0240f",
+ "this_script_sha256": "04be1fba0ee679a08367112acd5aacd40598d5294e5781f247ea58e4bc5cbab3",
+ "python": "3.11.7",
+ "numpy": "2.3.5",
+ "scipy": "1.17.1",
+ "host": "login05.leonardo.local",
+ "comparison": "recursive; floats within 1e-12 relative (max(1,|a|)); others exact incl. type",
+ "excluded_fields": [
+  "tool",
+  "tool_sha256",
+  "policy_record",
+  "nonfinite_descriptive_replaced"
+ ],
+ "cases": {
+  "multi4d": {
+   "command": [
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/envs/adags/bin/python",
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer_reduce.py",
+    "--scores",
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/scores/wave1",
+    "--substrate",
+    "multi4d",
+    "--policy_record",
+    "plan log 2026-10-01 evening",
+    "--out",
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer/reduce_compat_2026-10-07/outputs/multi4d_new.json"
+   ],
+   "exit_code": 0,
+   "stdout": "rule 1 (causal): PASS; {'same-pose': 'PASS'}\nrule 3 (do-no-harm): PASS\nrule 4: {'ARS-L1-A0': 'OK', 'ARS-L2-A0': 'OK', 'ARS-L3-A0': 'OK'}\nwrote /leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer/reduce_compat_2026-10-07/outputs/multi4d_new.json sha256=236a2ec2c736b59d5c68a40d23470829b6a9fe2b31d0e811fb32979edb76fc77\n",
+   "stderr_tail": "",
+   "record": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/checks/wave1/cer_reduce_multi4d.json",
+   "record_sha256": "b0ca8cee82b59d615a17a3828778c156eca047ec1328313a2f97926f66898023",
+   "output": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer/reduce_compat_2026-10-07/outputs/multi4d_new.json",
+   "output_sha256": "236a2ec2c736b59d5c68a40d23470829b6a9fe2b31d0e811fb32979edb76fc77",
+   "nonfinite_descriptive_replaced": [],
+   "inputs_sha256_identical": true,
+   "n_differences": 0,
+   "differences": []
+  },
+  "ex4dgs": {
+   "command": [
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/envs/adags/bin/python",
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer_reduce.py",
+    "--scores",
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/scores/wave1",
+    "--substrate",
+    "ex4dgs",
+    "--ex4dgs_base",
+    "replacement",
+    "--policy_record",
+    "plan log 2026-10-01 evening",
+    "--out",
+    "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer/reduce_compat_2026-10-07/outputs/ex4dgs_new.json"
+   ],
+   "exit_code": 0,
+   "stdout": "rule 1 (causal): PASS; {'same-pose': 'PASS', 'moved': 'DESIGN_WITHOUT_POWER', 'pass-through': 'PASS'}\nrule 3 (do-no-harm): DESIGN_WITHOUT_POWER\nrule 2 (benchmarks, descriptive): {'stg': '0 of 9', 'multi4d_run1': '0 of 9', 'ex4dgs_base_mean': '6 of 9', 'multi4d_mean3_descriptive': '0 of 9'}; proof False\nrule 4: {'ARS-L1-A0': 'OK', 'ARS-L2-A0': 'OK', 'ARS-L3-A0': 'OK', 'ARS-L1-R2': 'DESIGN_WITHOUT_POWER', 'ARS-L2-R2': 'DESIGN_WITHOUT_POWER', 'ARS-L3-R2': 'DESIGN_WITHOUT_POWER', 'ARS-L1-G1': 'OK', 'ARS-L2-G1': 'OK', 'ARS-L3-G1': 'OK'}\nwrote /leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer/reduce_compat_2026-10-07/outputs/ex4dgs_new.json sha256=d95ead1b6ce6de21acf8c297f1f846f8c7825883d30ec487d8cfce19b6bb1a53\n",
+   "stderr_tail": "",
+   "record": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/checks/wave1/cer_reduce_ex4dgs.json",
+   "record_sha256": "d479db1c44bdb0d0d86d84041b1249ec3d447b576a9b294cc997949236a16b54",
+   "output": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/agent-control/ars/cer/reduce_compat_2026-10-07/outputs/ex4dgs_new.json",
+   "output_sha256": "d95ead1b6ce6de21acf8c297f1f846f8c7825883d30ec487d8cfce19b6bb1a53",
+   "nonfinite_descriptive_replaced": [],
+   "inputs_sha256_identical": true,
+   "n_differences": 0,
+   "differences": []
+  }
+ }
+}

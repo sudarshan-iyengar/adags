@@ -1,0 +1,9 @@
+ arguments/__init__.py         |    3 +
+ gaussian_renderer/__init__.py |    1 +
+ scene/__init__.py             |   11 +-
+ scene/cer.py                  |  120 +++-
+ scene/gaussian_model.py       |   39 +-
+ test_cer_early_tr.py          | 1576 +++++++++++++++++++++++++++++++++++++++++
+ train.py                      |    6 +-
+ utils/cer_gate.py             |    8 +
+ 8 files changed, 1723 insertions(+), 41 deletions(-)

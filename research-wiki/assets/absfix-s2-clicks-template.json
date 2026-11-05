@@ -1,0 +1,167 @@
+{
+ "_instructions": "S2 (SAM2) seed clicks for spec v2.0.0 section 13.1. For each scene and each training camera give TWO clicks in FULL-FRAME pixel coordinates [x, y] (raster 1352x1014), read off the click-packet sheets research-wiki/assets/absfix-<scene>-clickpacket-f50.jpg and -f92.jpg (grid every 50 px; the tile's crop origin is printed in the tile and listed in absfix-<scene>-clickpacket-origins.json). f50 seeds the propagation 50->109, f92 seeds 92->99. Place the click on the bottle body from the RAW frame only; do not use the cyan DEVA bbox as the rule (it is the construction mask). No retries once recorded.",
+ "flame_steak": {
+  "cam01": {
+   "f50": null,
+   "f92": null
+  },
+  "cam02": {
+   "f50": null,
+   "f92": null
+  },
+  "cam03": {
+   "f50": null,
+   "f92": null
+  },
+  "cam04": {
+   "f50": null,
+   "f92": null
+  },
+  "cam05": {
+   "f50": null,
+   "f92": null
+  },
+  "cam06": {
+   "f50": null,
+   "f92": null
+  },
+  "cam07": {
+   "f50": null,
+   "f92": null
+  },
+  "cam08": {
+   "f50": null,
+   "f92": null
+  },
+  "cam09": {
+   "f50": null,
+   "f92": null
+  },
+  "cam10": {
+   "f50": null,
+   "f92": null
+  },
+  "cam11": {
+   "f50": null,
+   "f92": null
+  },
+  "cam12": {
+   "f50": null,
+   "f92": null
+  },
+  "cam13": {
+   "f50": null,
+   "f92": null
+  },
+  "cam14": {
+   "f50": null,
+   "f92": null
+  },
+  "cam15": {
+   "f50": null,
+   "f92": null
+  },
+  "cam16": {
+   "f50": null,
+   "f92": null
+  },
+  "cam17": {
+   "f50": null,
+   "f92": null
+  },
+  "cam18": {
+   "f50": null,
+   "f92": null
+  },
+  "cam19": {
+   "f50": null,
+   "f92": null
+  },
+  "cam20": {
+   "f50": null,
+   "f92": null
+  }
+ },
+ "sear_steak": {
+  "cam01": {
+   "f50": null,
+   "f92": null
+  },
+  "cam02": {
+   "f50": null,
+   "f92": null
+  },
+  "cam03": {
+   "f50": null,
+   "f92": null
+  },
+  "cam04": {
+   "f50": null,
+   "f92": null
+  },
+  "cam05": {
+   "f50": null,
+   "f92": null
+  },
+  "cam06": {
+   "f50": null,
+   "f92": null
+  },
+  "cam07": {
+   "f50": null,
+   "f92": null
+  },
+  "cam08": {
+   "f50": null,
+   "f92": null
+  },
+  "cam09": {
+   "f50": null,
+   "f92": null
+  },
+  "cam10": {
+   "f50": null,
+   "f92": null
+  },
+  "cam11": {
+   "f50": null,
+   "f92": null
+  },
+  "cam12": {
+   "f50": null,
+   "f92": null
+  },
+  "cam13": {
+   "f50": null,
+   "f92": null
+  },
+  "cam14": {
+   "f50": null,
+   "f92": null
+  },
+  "cam15": {
+   "f50": null,
+   "f92": null
+  },
+  "cam16": {
+   "f50": null,
+   "f92": null
+  },
+  "cam17": {
+   "f50": null,
+   "f92": null
+  },
+  "cam18": {
+   "f50": null,
+   "f92": null
+  },
+  "cam19": {
+   "f50": null,
+   "f92": null
+  },
+  "cam20": {
+   "f50": null,
+   "f92": null
+  }
+ }
+}

@@ -1,0 +1,182 @@
+{
+ "mosca/apple/1": {
+  "frames": 212,
+  "share_band": 0.1056,
+  "share_bandfast": 0.1056,
+  "share_dynamic": 0.1502,
+  "area_band": 0.0445,
+  "area_bandfast": 0.0445,
+  "area_dynamic": 0.0811
+ },
+ "mosca/apple/2": {
+  "frames": 320,
+  "share_band": 0.1198,
+  "share_bandfast": 0.1198,
+  "share_dynamic": 0.076,
+  "area_band": 0.0476,
+  "area_bandfast": 0.0476,
+  "area_dynamic": 0.0593
+ },
+ "mosca/block/1": {
+  "frames": 386,
+  "share_band": 0.1931,
+  "share_bandfast": 0.1414,
+  "share_dynamic": 0.6426,
+  "area_band": 0.0733,
+  "area_bandfast": 0.0447,
+  "area_dynamic": 0.3028
+ },
+ "mosca/block/2": {
+  "frames": 281,
+  "share_band": 0.1661,
+  "share_bandfast": 0.0921,
+  "share_dynamic": 0.4066,
+  "area_band": 0.0589,
+  "area_bandfast": 0.0343,
+  "area_dynamic": 0.2357
+ },
+ "mosca/paper-windmill/1": {
+  "frames": 219,
+  "share_band": 0.157,
+  "share_bandfast": 0.157,
+  "share_dynamic": 0.2485,
+  "area_band": 0.0268,
+  "area_bandfast": 0.0268,
+  "area_dynamic": 0.0377
+ },
+ "mosca/paper-windmill/2": {
+  "frames": 200,
+  "share_band": 0.1231,
+  "share_bandfast": 0.1231,
+  "share_dynamic": 0.1908,
+  "area_band": 0.0237,
+  "area_bandfast": 0.0237,
+  "area_dynamic": 0.0342
+ },
+ "mosca/space-out/1": {
+  "frames": 336,
+  "share_band": 0.2477,
+  "share_bandfast": 0.0588,
+  "share_dynamic": 0.3635,
+  "area_band": 0.092,
+  "area_bandfast": 0.0177,
+  "area_dynamic": 0.2072
+ },
+ "mosca/space-out/2": {
+  "frames": 345,
+  "share_band": 0.2344,
+  "share_bandfast": 0.1457,
+  "share_dynamic": 0.3994,
+  "area_band": 0.0803,
+  "area_bandfast": 0.0382,
+  "area_dynamic": 0.197
+ },
+ "mosca/spin/1": {
+  "frames": 368,
+  "share_band": 0.1625,
+  "share_bandfast": 0.0599,
+  "share_dynamic": 0.3182,
+  "area_band": 0.0607,
+  "area_bandfast": 0.0118,
+  "area_dynamic": 0.2011
+ },
+ "mosca/spin/2": {
+  "frames": 354,
+  "share_band": 0.1818,
+  "share_bandfast": 0.0233,
+  "share_dynamic": 0.3273,
+  "area_band": 0.0554,
+  "area_bandfast": 0.0048,
+  "area_dynamic": 0.1863
+ },
+ "mosca/teddy/1": {
+  "frames": 424,
+  "share_band": 0.2628,
+  "share_bandfast": 0.1652,
+  "share_dynamic": 0.8145,
+  "area_band": 0.1383,
+  "area_bandfast": 0.0726,
+  "area_dynamic": 0.867
+ },
+ "mosca/teddy/2": {
+  "frames": 264,
+  "share_band": 0.2106,
+  "share_bandfast": 0.1222,
+  "share_dynamic": 0.7355,
+  "area_band": 0.118,
+  "area_bandfast": 0.0513,
+  "area_dynamic": 0.6889
+ },
+ "mosca/wheel/1": {
+  "frames": 219,
+  "share_band": 0.2788,
+  "share_bandfast": 0.2309,
+  "share_dynamic": 0.3248,
+  "area_band": 0.1264,
+  "area_bandfast": 0.1024,
+  "area_dynamic": 0.2066
+ },
+ "som/apple/1": {
+  "frames": 212,
+  "share_band": 0.0413,
+  "share_bandfast": 0.0413,
+  "share_dynamic": 0.1497,
+  "area_band": 0.0218,
+  "area_bandfast": 0.0218,
+  "area_dynamic": 0.0811
+ },
+ "som/apple/2": {
+  "frames": 320,
+  "share_band": 0.0335,
+  "share_bandfast": 0.0335,
+  "share_dynamic": 0.0614,
+  "area_band": 0.0203,
+  "area_bandfast": 0.0203,
+  "area_dynamic": 0.0593
+ },
+ "som/block/1": {
+  "frames": 386,
+  "share_band": 0.081,
+  "share_bandfast": 0.0505,
+  "share_dynamic": 0.462,
+  "area_band": 0.0375,
+  "area_bandfast": 0.0222,
+  "area_dynamic": 0.3028
+ },
+ "som/block/2": {
+  "frames": 281,
+  "share_band": 0.0733,
+  "share_bandfast": 0.0498,
+  "share_dynamic": 0.4456,
+  "area_band": 0.0294,
+  "area_bandfast": 0.0168,
+  "area_dynamic": 0.2357
+ },
+ "som/paper-windmill/1": {
+  "frames": 219,
+  "share_band": 0.0717,
+  "share_bandfast": 0.0717,
+  "share_dynamic": 0.2533,
+  "area_band": 0.0139,
+  "area_bandfast": 0.0139,
+  "area_dynamic": 0.0377
+ },
+ "som/paper-windmill/2": {
+  "frames": 200,
+  "share_band": 0.046,
+  "share_bandfast": 0.046,
+  "share_dynamic": 0.1842,
+  "area_band": 0.0119,
+  "area_bandfast": 0.0119,
+  "area_dynamic": 0.0342
+ },
+ "som/spin/1": {
+  "frames": 368,
+  "share_band": 0.0715,
+  "share_bandfast": 0.0192,
+  "share_dynamic": 0.5564,
+  "area_band": 0.03,
+  "area_bandfast": 0.0058,
+  "area_dynamic": 0.2011
+ }
+}

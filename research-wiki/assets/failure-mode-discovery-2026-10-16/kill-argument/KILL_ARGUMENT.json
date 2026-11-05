@@ -1,0 +1,62 @@
+{
+ "audit_skill": "kill-argument",
+ "verdict": "FAIL",
+ "reason_code": "unresolved_critical",
+ "summary": "Ghosting measured; missing-capability inference and broad real-data claim not supported",
+ "reviewer_model": "gpt-6.1-sol",
+ "reviewer_reasoning": "high",
+ "generated_at": "2026-10-19",
+ "details": {
+  "attack_memo": "Reject. The paper\u2019s central inference\u2014\u201cobserved absence is not represented,\u201d requiring a new presence gate\u2014lacks the experiment that would establish an unmet representational problem. [Spacetime Gaussians \u00a74.1, Eqs. 6\u20137](https://arxiv.org/html/2312.16812v2) already gives primitives temporal opacity explicitly to model emerging and vanishing content. More directly, [RetimeGS \u00a73.2, Eqs. 3\u20135](https://arxiv.org/html/2603.13783v1) supplies short-tailed temporal boundaries and extends static primitives\u2019 support only until motion occurs. The proposed capability already exists.\n\nThe decisive evidence in `research-wiki/assets/failure-mode-discovery-2026-10-16/kill_dossier.md` \u00a723 actually exposes this inferential failure: the \u201c3D-4DGS conversion off\u201d row retains deficits of \u221213.3/\u221211.0/\u221211.7 dB despite containing no static Gaussians. The dossier attributes these ghosts to temporal-opacity tails. That establishes failure of the tested kernel and optimization; it does not establish that dynamic splatting lacks a notion of existence. The densification intervention (\u00a720) and seed-point deletion (\u00a724) never replace that temporal model, so neither tests the claimed missing mechanism.\n\nNo table evaluates RetimeGS or another short-tailed temporal-boundary alternative under the same absence protocol, and the opening contribution statement explicitly marks the presence-gate fix \u201cNOT YET BUILT.\u201d Consequently, neither the benchmark nor the proposed fix demonstrates anything beyond exposing selected implementations to an event class that existing temporal-support designs already address architecturally. The missing comparison severs the paper\u2019s essential link from measured ghosting to a novel diagnosis and necessary remedy.",
+  "decomposed_points": [
+   {
+    "id": "P_1",
+    "label": "temporal existence already representable",
+    "verdict": "partially_answered",
+    "severity_if_unresolved": "critical"
+   },
+   {
+    "id": "P_2",
+    "label": "conversion-off contradicts causal story",
+    "verdict": "still_unresolved",
+    "severity_if_unresolved": "critical"
+   },
+   {
+    "id": "P_3",
+    "label": "interventions do not test the mechanism",
+    "verdict": "partially_answered",
+    "severity_if_unresolved": "major"
+   },
+   {
+    "id": "P_4",
+    "label": "no matched temporal-opacity comparison",
+    "verdict": "still_unresolved",
+    "severity_if_unresolved": "critical"
+   },
+   {
+    "id": "P_5",
+    "label": "fix not built",
+    "verdict": "partially_answered",
+    "severity_if_unresolved": "critical"
+   },
+   {
+    "id": "P_6",
+    "label": "benchmark shows only selected implementation failures",
+    "verdict": "partially_answered",
+    "severity_if_unresolved": "major"
+   },
+   {
+    "id": "P_7",
+    "label": "synthetic-only insufficient; must be demonstrable on real data (principal)",
+    "verdict": "still_unresolved",
+    "severity_if_unresolved": "critical"
+   }
+  ],
+  "counts": {
+   "answered_by_current_text": 0,
+   "partially_answered": 4,
+   "still_unresolved": 3
+  },
+  "note": "P_7 added and adjudicated in the main session at the principal's request; P_1-P_6 by the fresh Codex adjudicator"
+ }
+}

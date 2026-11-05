@@ -1,0 +1,854 @@
+{
+ "som_monoreal_cut_roasted_beef_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 10828,
+    "ghost": 15.32,
+    "ring": 32.82,
+    "ghost_minus_ring": -17.49,
+    "obj": 30.33,
+    "closer_to_object": 0.757,
+    "pre_obj": 29.69,
+    "ring_px_mean": 14154
+   },
+   "cam05": {
+    "mask_px_mean": 12350,
+    "ghost": 15.2,
+    "ring": 29.79,
+    "ghost_minus_ring": -14.59,
+    "obj": 27.01,
+    "closer_to_object": 0.707,
+    "pre_obj": 26.54,
+    "ring_px_mean": 13494
+   },
+   "cam17": {
+    "mask_px_mean": 8085,
+    "ghost": 15.65,
+    "ring": 33.03,
+    "ghost_minus_ring": -17.38,
+    "obj": 30.88,
+    "closer_to_object": 0.716,
+    "pre_obj": 30.14,
+    "ring_px_mean": 12476
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 25.17,
+    "pre_gap_40_57": 24.64,
+    "gap_60_89": 25.31
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 24.13,
+    "pre_gap_40_57": 23.7,
+    "gap_60_89": 24.22
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 27.59,
+    "pre_gap_40_57": 27.02,
+    "gap_60_89": 27.38
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 41.44,
+    "truth_change": 14.97,
+    "pre_noise": 44.74,
+    "closer_to_own_object": 0.959
+   },
+   "cam05": {
+    "render_change": 33.9,
+    "truth_change": 14.75,
+    "pre_noise": 38.06,
+    "closer_to_own_object": 0.929
+   },
+   "cam17": {
+    "render_change": 56.63,
+    "truth_change": 15.31,
+    "pre_noise": 55.43,
+    "closer_to_own_object": 0.992
+   }
+  }
+ },
+ "som_monoreal_flame_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6967,
+    "ghost": 12.75,
+    "ring": 32.71,
+    "ghost_minus_ring": -19.96,
+    "obj": 29.37,
+    "closer_to_object": 0.972,
+    "pre_obj": 29.24,
+    "ring_px_mean": 13545
+   },
+   "cam05": {
+    "mask_px_mean": 8004,
+    "ghost": 12.66,
+    "ring": 33.31,
+    "ghost_minus_ring": -20.65,
+    "obj": 29.04,
+    "closer_to_object": 0.988,
+    "pre_obj": 28.94,
+    "ring_px_mean": 12602
+   },
+   "cam17": {
+    "mask_px_mean": 6207,
+    "ghost": 12.59,
+    "ring": 32.79,
+    "ghost_minus_ring": -20.19,
+    "obj": 27.92,
+    "closer_to_object": 0.986,
+    "pre_obj": 27.85,
+    "ring_px_mean": 12746
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 25.62,
+    "pre_gap_40_57": 26.13,
+    "gap_60_89": 25.27
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 24.61,
+    "pre_gap_40_57": 24.94,
+    "gap_60_89": 24.36
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 26.84,
+    "pre_gap_40_57": 26.94,
+    "gap_60_89": 26.55
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 89.2,
+    "truth_change": 12.31,
+    "pre_noise": 151.5,
+    "closer_to_own_object": 1.0
+   },
+   "cam05": {
+    "render_change": 91.94,
+    "truth_change": 12.17,
+    "pre_noise": 89.93,
+    "closer_to_own_object": 1.0
+   },
+   "cam17": {
+    "render_change": 77.26,
+    "truth_change": 11.77,
+    "pre_noise": 150.38,
+    "closer_to_own_object": 1.0
+   }
+  }
+ },
+ "som_monoreal_sear_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6887,
+    "ghost": 12.4,
+    "ring": 33.44,
+    "ghost_minus_ring": -21.04,
+    "obj": 29.44,
+    "closer_to_object": 0.977,
+    "pre_obj": 29.35,
+    "ring_px_mean": 13395
+   },
+   "cam05": {
+    "mask_px_mean": 8097,
+    "ghost": 12.51,
+    "ring": 34.06,
+    "ghost_minus_ring": -21.55,
+    "obj": 28.18,
+    "closer_to_object": 0.981,
+    "pre_obj": 28.19,
+    "ring_px_mean": 12701
+   },
+   "cam17": {
+    "mask_px_mean": 6362,
+    "ghost": 12.58,
+    "ring": 31.56,
+    "ghost_minus_ring": -18.97,
+    "obj": 27.91,
+    "closer_to_object": 0.987,
+    "pre_obj": 27.95,
+    "ring_px_mean": 12740
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 26.63,
+    "pre_gap_40_57": 26.7,
+    "gap_60_89": 26.44
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 25.69,
+    "pre_gap_40_57": 25.82,
+    "gap_60_89": 25.51
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 27.74,
+    "pre_gap_40_57": 27.75,
+    "gap_60_89": 27.48
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 116.61,
+    "truth_change": 12.08,
+    "pre_noise": 104.31,
+    "closer_to_own_object": 1.0
+   },
+   "cam05": {
+    "render_change": 100.94,
+    "truth_change": 12.06,
+    "pre_noise": 151.3,
+    "closer_to_own_object": 1.0
+   },
+   "cam17": {
+    "render_change": 150.31,
+    "truth_change": 11.78,
+    "pre_noise": 150.31,
+    "closer_to_own_object": 1.0
+   }
+  }
+ },
+ "mosca_monoreal_cut_roasted_beef_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 10828,
+    "ghost": 16.78,
+    "ring": 24.18,
+    "ghost_minus_ring": -7.4,
+    "obj": 15.68,
+    "closer_to_object": 0.471,
+    "pre_obj": 15.91,
+    "ring_px_mean": 14154
+   },
+   "cam05": {
+    "mask_px_mean": 12350,
+    "ghost": 15.65,
+    "ring": 21.52,
+    "ghost_minus_ring": -5.88,
+    "obj": 15.02,
+    "closer_to_object": 0.47,
+    "pre_obj": 15.65,
+    "ring_px_mean": 13494
+   },
+   "cam17": {
+    "mask_px_mean": 8085,
+    "ghost": 18.39,
+    "ring": 26.45,
+    "ghost_minus_ring": -8.07,
+    "obj": 15.97,
+    "closer_to_object": 0.421,
+    "pre_obj": 16.37,
+    "ring_px_mean": 12476
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 22.83,
+    "pre_gap_40_57": 21.19,
+    "gap_60_89": 23.62
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 22.37,
+    "pre_gap_40_57": 20.63,
+    "gap_60_89": 23.1
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 23.51,
+    "pre_gap_40_57": 21.19,
+    "gap_60_89": 23.83
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 19.7,
+    "truth_change": 14.97,
+    "pre_noise": 26.51,
+    "closer_to_own_object": 0.594
+   },
+   "cam05": {
+    "render_change": 18.75,
+    "truth_change": 14.75,
+    "pre_noise": 27.01,
+    "closer_to_own_object": 0.59
+   },
+   "cam17": {
+    "render_change": 18.75,
+    "truth_change": 15.31,
+    "pre_noise": 25.47,
+    "closer_to_own_object": 0.533
+   }
+  }
+ },
+ "mosca_monoreal_flame_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6967,
+    "ghost": 14.02,
+    "ring": 19.79,
+    "ghost_minus_ring": -5.77,
+    "obj": 14.65,
+    "closer_to_object": 0.454,
+    "pre_obj": 15.69,
+    "ring_px_mean": 13545
+   },
+   "cam05": {
+    "mask_px_mean": 8004,
+    "ghost": 15.0,
+    "ring": 18.87,
+    "ghost_minus_ring": -3.86,
+    "obj": 14.1,
+    "closer_to_object": 0.387,
+    "pre_obj": 14.6,
+    "ring_px_mean": 12602
+   },
+   "cam17": {
+    "mask_px_mean": 6207,
+    "ghost": 14.64,
+    "ring": 19.7,
+    "ghost_minus_ring": -5.06,
+    "obj": 14.92,
+    "closer_to_object": 0.48,
+    "pre_obj": 14.71,
+    "ring_px_mean": 12746
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 23.36,
+    "pre_gap_40_57": 22.74,
+    "gap_60_89": 23.67
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 23.49,
+    "pre_gap_40_57": 22.74,
+    "gap_60_89": 23.86
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 22.46,
+    "pre_gap_40_57": 20.45,
+    "gap_60_89": 22.52
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 18.14,
+    "truth_change": 12.31,
+    "pre_noise": 24.11,
+    "closer_to_own_object": 0.634
+   },
+   "cam05": {
+    "render_change": 18.67,
+    "truth_change": 12.17,
+    "pre_noise": 24.53,
+    "closer_to_own_object": 0.601
+   },
+   "cam17": {
+    "render_change": 17.85,
+    "truth_change": 11.77,
+    "pre_noise": 21.63,
+    "closer_to_own_object": 0.671
+   }
+  }
+ },
+ "mosca_monoreal_sear_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6887,
+    "ghost": 14.51,
+    "ring": 20.88,
+    "ghost_minus_ring": -6.37,
+    "obj": 14.98,
+    "closer_to_object": 0.47,
+    "pre_obj": 13.87,
+    "ring_px_mean": 13395
+   },
+   "cam05": {
+    "mask_px_mean": 8097,
+    "ghost": 15.74,
+    "ring": 18.44,
+    "ghost_minus_ring": -2.7,
+    "obj": 13.16,
+    "closer_to_object": 0.321,
+    "pre_obj": 12.86,
+    "ring_px_mean": 12701
+   },
+   "cam17": {
+    "mask_px_mean": 6362,
+    "ghost": 15.53,
+    "ring": 20.56,
+    "ghost_minus_ring": -5.03,
+    "obj": 15.07,
+    "closer_to_object": 0.488,
+    "pre_obj": 14.95,
+    "ring_px_mean": 12740
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 23.16,
+    "pre_gap_40_57": 22.03,
+    "gap_60_89": 23.67
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 22.8,
+    "pre_gap_40_57": 21.77,
+    "gap_60_89": 23.27
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 22.68,
+    "pre_gap_40_57": 21.14,
+    "gap_60_89": 22.39
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 18.15,
+    "truth_change": 12.08,
+    "pre_noise": 21.46,
+    "closer_to_own_object": 0.64
+   },
+   "cam05": {
+    "render_change": 20.93,
+    "truth_change": 12.06,
+    "pre_noise": 22.13,
+    "closer_to_own_object": 0.708
+   },
+   "cam17": {
+    "render_change": 18.75,
+    "truth_change": 11.78,
+    "pre_noise": 21.84,
+    "closer_to_own_object": 0.692
+   }
+  }
+ },
+ "moscaNA_monoreal_cut_roasted_beef_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 10828,
+    "ghost": 15.16,
+    "ring": 18.57,
+    "ghost_minus_ring": -3.41,
+    "obj": 14.76,
+    "closer_to_object": 0.456,
+    "pre_obj": 14.52,
+    "ring_px_mean": 14154
+   },
+   "cam05": {
+    "mask_px_mean": 12350,
+    "ghost": 15.59,
+    "ring": 17.2,
+    "ghost_minus_ring": -1.61,
+    "obj": 13.71,
+    "closer_to_object": 0.428,
+    "pre_obj": 13.64,
+    "ring_px_mean": 13494
+   },
+   "cam17": {
+    "mask_px_mean": 8085,
+    "ghost": 16.27,
+    "ring": 18.63,
+    "ghost_minus_ring": -2.36,
+    "obj": 15.37,
+    "closer_to_object": 0.445,
+    "pre_obj": 14.5,
+    "ring_px_mean": 12476
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 17.46,
+    "pre_gap_40_57": 17.25,
+    "gap_60_89": 17.54
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 17.7,
+    "pre_gap_40_57": 17.47,
+    "gap_60_89": 17.77
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 16.38,
+    "pre_gap_40_57": 16.3,
+    "gap_60_89": 16.42
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 18.37,
+    "truth_change": 14.97,
+    "pre_noise": 26.95,
+    "closer_to_own_object": 0.659
+   },
+   "cam05": {
+    "render_change": 18.24,
+    "truth_change": 14.75,
+    "pre_noise": 26.51,
+    "closer_to_own_object": 0.662
+   },
+   "cam17": {
+    "render_change": 20.29,
+    "truth_change": 15.31,
+    "pre_noise": 27.78,
+    "closer_to_own_object": 0.666
+   }
+  }
+ },
+ "moscaNA_monoreal_flame_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6967,
+    "ghost": 14.6,
+    "ring": 18.52,
+    "ghost_minus_ring": -3.92,
+    "obj": 14.46,
+    "closer_to_object": 0.371,
+    "pre_obj": 14.72,
+    "ring_px_mean": 13545
+   },
+   "cam05": {
+    "mask_px_mean": 8004,
+    "ghost": 14.98,
+    "ring": 17.93,
+    "ghost_minus_ring": -2.96,
+    "obj": 14.08,
+    "closer_to_object": 0.367,
+    "pre_obj": 14.03,
+    "ring_px_mean": 12602
+   },
+   "cam17": {
+    "mask_px_mean": 6207,
+    "ghost": 15.07,
+    "ring": 15.43,
+    "ghost_minus_ring": -0.36,
+    "obj": 14.45,
+    "closer_to_object": 0.374,
+    "pre_obj": 14.32,
+    "ring_px_mean": 12746
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 21.71,
+    "pre_gap_40_57": 20.95,
+    "gap_60_89": 22.11
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 22.41,
+    "pre_gap_40_57": 21.4,
+    "gap_60_89": 22.91
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 19.89,
+    "pre_gap_40_57": 19.22,
+    "gap_60_89": 20.03
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 18.82,
+    "truth_change": 12.31,
+    "pre_noise": 25.72,
+    "closer_to_own_object": 0.654
+   },
+   "cam05": {
+    "render_change": 19.13,
+    "truth_change": 12.17,
+    "pre_noise": 25.59,
+    "closer_to_own_object": 0.665
+   },
+   "cam17": {
+    "render_change": 18.68,
+    "truth_change": 11.77,
+    "pre_noise": 23.79,
+    "closer_to_own_object": 0.679
+   }
+  }
+ },
+ "moscaNA_monoreal_sear_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6887,
+    "ghost": 15.67,
+    "ring": 17.1,
+    "ghost_minus_ring": -1.42,
+    "obj": 13.82,
+    "closer_to_object": 0.317,
+    "pre_obj": 13.52,
+    "ring_px_mean": 13395
+   },
+   "cam05": {
+    "mask_px_mean": 8097,
+    "ghost": 16.24,
+    "ring": 15.97,
+    "ghost_minus_ring": 0.27,
+    "obj": 13.25,
+    "closer_to_object": 0.276,
+    "pre_obj": 12.91,
+    "ring_px_mean": 12701
+   },
+   "cam17": {
+    "mask_px_mean": 6362,
+    "ghost": 15.51,
+    "ring": 13.75,
+    "ghost_minus_ring": 1.76,
+    "obj": 13.33,
+    "closer_to_object": 0.309,
+    "pre_obj": 13.66,
+    "ring_px_mean": 12740
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 19.95,
+    "pre_gap_40_57": 19.58,
+    "gap_60_89": 19.94
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 19.98,
+    "pre_gap_40_57": 19.65,
+    "gap_60_89": 20.06
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 18.99,
+    "pre_gap_40_57": 18.65,
+    "gap_60_89": 18.81
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 19.3,
+    "truth_change": 12.08,
+    "pre_noise": 22.21,
+    "closer_to_own_object": 0.657
+   },
+   "cam05": {
+    "render_change": 20.42,
+    "truth_change": 12.06,
+    "pre_noise": 22.89,
+    "closer_to_own_object": 0.642
+   },
+   "cam17": {
+    "render_change": 17.49,
+    "truth_change": 11.78,
+    "pre_noise": 20.54,
+    "closer_to_own_object": 0.566
+   }
+  }
+ },
+ "m4d_monoreal_cut_roasted_beef_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 10828,
+    "ghost": 15.83,
+    "ring": 32.08,
+    "ghost_minus_ring": -16.24,
+    "obj": 28.41,
+    "closer_to_object": 0.699,
+    "pre_obj": 29.0,
+    "ring_px_mean": 14154
+   },
+   "cam05": {
+    "mask_px_mean": 12350,
+    "ghost": 15.86,
+    "ring": 30.03,
+    "ghost_minus_ring": -14.17,
+    "obj": 26.99,
+    "closer_to_object": 0.729,
+    "pre_obj": 27.92,
+    "ring_px_mean": 13494
+   },
+   "cam17": {
+    "mask_px_mean": 8085,
+    "ghost": 15.94,
+    "ring": 32.48,
+    "ghost_minus_ring": -16.54,
+    "obj": 29.06,
+    "closer_to_object": 0.718,
+    "pre_obj": 29.55,
+    "ring_px_mean": 12476
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 26.83,
+    "pre_gap_40_57": 26.47,
+    "gap_60_89": 26.68
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 26.07,
+    "pre_gap_40_57": 25.85,
+    "gap_60_89": 25.89
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 28.23,
+    "pre_gap_40_57": 27.85,
+    "gap_60_89": 27.99
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 34.57,
+    "truth_change": 14.97,
+    "pre_noise": 47.48,
+    "closer_to_own_object": 0.895
+   },
+   "cam05": {
+    "render_change": 34.23,
+    "truth_change": 14.75,
+    "pre_noise": 46.42,
+    "closer_to_own_object": 0.912
+   },
+   "cam17": {
+    "render_change": 36.4,
+    "truth_change": 15.31,
+    "pre_noise": 46.23,
+    "closer_to_own_object": 0.851
+   }
+  }
+ },
+ "m4d_monoreal_flame_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6967,
+    "ghost": 12.67,
+    "ring": 30.03,
+    "ghost_minus_ring": -17.36,
+    "obj": 29.66,
+    "closer_to_object": 0.976,
+    "pre_obj": 29.31,
+    "ring_px_mean": 13545
+   },
+   "cam05": {
+    "mask_px_mean": 8004,
+    "ghost": 12.71,
+    "ring": 29.82,
+    "ghost_minus_ring": -17.11,
+    "obj": 29.01,
+    "closer_to_object": 0.986,
+    "pre_obj": 28.65,
+    "ring_px_mean": 12602
+   },
+   "cam17": {
+    "mask_px_mean": 6207,
+    "ghost": 12.66,
+    "ring": 32.35,
+    "ghost_minus_ring": -19.69,
+    "obj": 27.99,
+    "closer_to_object": 0.983,
+    "pre_obj": 27.23,
+    "ring_px_mean": 12746
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 27.57,
+    "pre_gap_40_57": 27.6,
+    "gap_60_89": 27.19
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 27.08,
+    "pre_gap_40_57": 27.28,
+    "gap_60_89": 26.68
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 28.03,
+    "pre_gap_40_57": 27.65,
+    "gap_60_89": 27.79
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 40.62,
+    "truth_change": 12.31,
+    "pre_noise": 50.87,
+    "closer_to_own_object": 0.997
+   },
+   "cam05": {
+    "render_change": 40.19,
+    "truth_change": 12.17,
+    "pre_noise": 50.35,
+    "closer_to_own_object": 0.998
+   },
+   "cam17": {
+    "render_change": 37.93,
+    "truth_change": 11.77,
+    "pre_noise": 45.28,
+    "closer_to_own_object": 0.998
+   }
+  }
+ },
+ "m4d_monoreal_sear_steak_rep1": {
+  "ghost_ring": {
+   "cam00": {
+    "mask_px_mean": 6887,
+    "ghost": 12.72,
+    "ring": 31.88,
+    "ghost_minus_ring": -19.16,
+    "obj": 26.81,
+    "closer_to_object": 0.945,
+    "pre_obj": 23.42,
+    "ring_px_mean": 13395
+   },
+   "cam05": {
+    "mask_px_mean": 8097,
+    "ghost": 12.87,
+    "ring": 30.59,
+    "ghost_minus_ring": -17.72,
+    "obj": 26.14,
+    "closer_to_object": 0.946,
+    "pre_obj": 22.16,
+    "ring_px_mean": 12701
+   },
+   "cam17": {
+    "mask_px_mean": 6362,
+    "ghost": 12.61,
+    "ring": 33.04,
+    "ghost_minus_ring": -20.43,
+    "obj": 28.15,
+    "closer_to_object": 0.989,
+    "pre_obj": 26.84,
+    "ring_px_mean": 12740
+   }
+  },
+  "wholeframe": {
+   "cam00": {
+    "wholeframe_psnr_40_99": 29.33,
+    "pre_gap_40_57": 29.21,
+    "gap_60_89": 29.05
+   },
+   "cam05": {
+    "wholeframe_psnr_40_99": 28.74,
+    "pre_gap_40_57": 28.61,
+    "gap_60_89": 28.35
+   },
+   "cam17": {
+    "wholeframe_psnr_40_99": 29.87,
+    "pre_gap_40_57": 29.91,
+    "gap_60_89": 29.47
+   }
+  },
+  "persist": {
+   "cam00": {
+    "render_change": 28.97,
+    "truth_change": 12.08,
+    "pre_noise": 30.62,
+    "closer_to_own_object": 0.991
+   },
+   "cam05": {
+    "render_change": 27.45,
+    "truth_change": 12.06,
+    "pre_noise": 29.55,
+    "closer_to_own_object": 0.99
+   },
+   "cam17": {
+    "render_change": 35.98,
+    "truth_change": 11.78,
+    "pre_noise": 37.45,
+    "closer_to_own_object": 0.998
+   }
+  }
+ }
+}

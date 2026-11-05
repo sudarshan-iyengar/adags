@@ -1,0 +1,123 @@
+{
+ "scene": "cut_roasted_beef",
+ "frames": [
+  10,
+  20,
+  30,
+  40,
+  49
+ ],
+ "dynamic_frac": 0.2408,
+ "methods": {
+  "host": {
+   "psnr_own": null,
+   "psnr_lanczos": 31.706,
+   "psnr_bicubic": 31.889,
+   "psnr_bilinear": 32.244,
+   "psnr_area": 31.881,
+   "regions": {
+    "whole": {
+     "raw": 31.706,
+     "cc_frame": 33.005,
+     "cc_camera": 33.001
+    },
+    "dynamic": {
+     "raw": 30.427,
+     "cc_frame": 31.402,
+     "cc_camera": 31.431
+    },
+    "static": {
+     "raw": 32.225,
+     "cc_frame": 33.693,
+     "cc_camera": 33.696
+    },
+    "tools": {
+     "raw": 19.387,
+     "cc_frame": 19.518,
+     "cc_camera": 19.797
+    },
+    "hands": {
+     "raw": 30.684,
+     "cc_frame": 30.833,
+     "cc_camera": 30.868
+    }
+   },
+   "per_frame": [
+    31.812,
+    31.639,
+    31.813,
+    31.713,
+    31.553
+   ],
+   "camera_colour_fit": [
+    [
+     1.0106,
+     -0.0045
+    ],
+    [
+     1.0368,
+     -0.0015
+    ],
+    [
+     1.0471,
+     -0.0001
+    ]
+   ]
+  },
+  "layer": {
+   "psnr_own": null,
+   "psnr_lanczos": 31.938,
+   "psnr_bicubic": 32.123,
+   "psnr_bilinear": 32.47,
+   "psnr_area": 32.11,
+   "regions": {
+    "whole": {
+     "raw": 31.938,
+     "cc_frame": 33.27,
+     "cc_camera": 33.268
+    },
+    "dynamic": {
+     "raw": 31.048,
+     "cc_frame": 32.088,
+     "cc_camera": 32.107
+    },
+    "static": {
+     "raw": 32.283,
+     "cc_frame": 33.747,
+     "cc_camera": 33.748
+    },
+    "tools": {
+     "raw": 20.302,
+     "cc_frame": 20.496,
+     "cc_camera": 21.107
+    },
+    "hands": {
+     "raw": 33.58,
+     "cc_frame": 33.821,
+     "cc_camera": 33.98
+    }
+   },
+   "per_frame": [
+    32.031,
+    31.891,
+    32.04,
+    31.95,
+    31.778
+   ],
+   "camera_colour_fit": [
+    [
+     1.0115,
+     -0.0054
+    ],
+    [
+     1.038,
+     -0.0024
+    ],
+    [
+     1.0478,
+     -0.0007
+    ]
+   ]
+  }
+ }
+}

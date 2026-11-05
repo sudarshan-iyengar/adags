@@ -1,0 +1,361 @@
+# CER on Multi4D, early gate with a gated transient copy path: plan (rev 2, 2026-10-16, exploratory)
+
+Status: **rev 2, for review.** Codex round 1 returned MATERIAL DEFECT (6 confirmed findings); rev 1 and the review are in
+[assets/cer-early-tr-2026-10-16/](../assets/cer-early-tr-2026-10-16/), the dispositions in section 10. Nothing is written or run. Exploratory (spec §14.5, principal decision (c)): every run id,
+ledger line and report says so, and nothing here is pooled with a confirmatory run.
+
+- **Pipeline (the principal's requirement, as for the early gate):** Opus writes this plan; Codex (gpt-6.1-sol, xhigh)
+  reviews it until there is consensus; a Sonnet 5.5 agent writes the tests first, then the code; Codex reviews the code
+  (scientific, engineering, tensor shapes, CUDA) until the orchestrator is satisfied; GPU tests on Leonardo (debug QOS).
+- **Not approved:** any training submission. The comparison design (section 8) is prepared for the principal.
+- **Base:** branch `cer-early` at `7b30ef8` (code unchanged since `96e92ee`), plan
+  [cer-multi4d-early-gate-plan-2026-10-06](cer-multi4d-early-gate-plan-2026-10-06.md) rev 4 and its section 10.
+
+References use these prefixes, all at `7b30ef8` (local worktree `D:/adags-cer/multi4d-early`):
+
+| prefix | file |
+|---|---|
+| `T:` | `train.py` |
+| `GM:` | `scene/gaussian_model.py` |
+| `R:` | `gaussian_renderer/__init__.py` |
+| `C:` | `scene/cer.py` |
+| `G:` | `utils/cer_gate.py` |
+| `SI:` | `scene/__init__.py` |
+| `F:` / `B:` | `diff_gaussian_rasterization_hybrid/cuda_rasterizer/forward.cu` / `backward.cu` |
+
+## 1. Why
+
+The early gate's confirmatory reading (plan log 2026-10-07 morning) failed only the return non-inferiority clause
+(−0.10 dB, lower bound −0.32 against −0.25). The 2026-10-16 diagnostic (plan log of that date) showed it is not a return
+problem: the early arm renders the object 0.1–0.3 dB worse at every time the object is present, in its interior. One of
+the two sources it found is that **transient detail is missing**:
+
+- In base Multi4D the transient bank covers the object interior with alpha 0.05–0.52 and adds detail in some runs
+  (carton +0.31, mug +0.60 / +0.27 dB; on the bottle it hurts, −1.68 / −0.11 / −0.28).
+- In the early arm it covers 0.000–0.053 and adds nothing.
+- The transient bank is filled by the foreground-to-transient lift (`T:915-938`, `GM:412-481`, every 50 iterations in
+  (3,000, 10,000)), and the early gate makes every labelled foreground row ineligible as a donor (`C:189-200`, plan D4),
+  because the lift copies a row and leaves the donor alive, and an ungated copy would carry the object into the gap.
+- So the most likely mechanism is that the lift exclusion cuts off the transient detail path. **Not proven:** the lift
+  lineage is not tracked in the early arm.
+
+**The change, one factor: memory rows may be lift donors again, and their transient copies are memory rows.**
+
+- A transient copy of a labelled row inherits label 1 and is gated exactly as persistent memory rows are: opacity factor
+  `1 − q·n(t)`, so 0 inside `[A, B]` and 1 outside.
+- Transient labels follow their rows through every transient row-changing operation, as persistent labels do.
+- Everything else stays as on `cer-early`: begin at 3,000, the persistent banks' labelling and inheritance, the residual
+  cohort, the freeze at 16,000, the 20,000 budget.
+
+**Predictions, stated before any code exists (descriptive):**
+
+1. The transient bank covers the object interior pre-gap again (alpha toward base's 0.05–0.52), with label-1 transient
+   rows carrying most of the transient target mass.
+2. Object-interior PSNR, fix minus early, is positive pre-gap and late on carton and mug; on the bottle it is near 0 or
+   negative (base's transient hurt the bottle).
+3. The gap window is unchanged within the early arm's spread (≈ 0.6 dB): transient memory rows are exactly 0 in the gap.
+4. The return window is at or above the early arm's.
+
+## 2. Design decisions
+
+**D1. One new argument, `cer_transient_gate`, default 0.**
+
+- In `ModelParams` beside `cer_begin_iter` (`arguments/__init__.py`), stored on the scene by the scene constructor as
+  `cer_scene` and `cer_begin_iter` are (`SI:36-37`).
+- **0:** the `cer-early@7b30ef8` behaviour in both modes, including the lift exclusion. Every new path is a no-op.
+- **1:** requires early mode. `check_begin_range` (`C:160-179`, called in `training()` before the scene exists, `T:1027`)
+  also asserts `cer_transient_gate ∈ {0, 1}` and `cer_transient_gate == 0 or cer_begin_iter != -1`.
+- **Why an argument and not a new mode value:** flag 0 must reproduce the early arm bit for bit (test F0), so the
+  comparison (section 8) differs by this factor only.
+
+**D2. Lift: labelled rows are eligible again; the copy carries the donor's label.**
+
+- With flag 1, `cer.lift_select` (`C:218-230`) no longer calls `mask_lift_scores`. The donor set is therefore exactly
+  base Multi4D's: `dynamic_score > threshold`, then the same `randperm` subsample (`GM:430-437`). With flag 0 the
+  exclusion stays.
+- `select_fg_to_transient` (`GM:412-481`) gains one line: when the foreground carries `cer_labels`, the returned dict
+  holds `"cer_labels": self.cer_labels[prune_mask]`, computed with the same final boolean mask (after the subsample) as
+  `xyz` (`GM:439`), so copy `k` inherits from the `k`-th selected donor in row order. No RNG is consumed.
+- `add_points_from_dict` (`GM:1456`) passes `data_dict.get("cer_labels")` to `add_points` (`GM:1376`), which passes it
+  to `densification_postfix_nodenom` (`GM:1414`) as a keyword argument defaulting to `None`.
+- **Lineage is now recorded, two ways.** (a) Births: `count_lift` (`C:203-215`) also counts, after begin, the copies made,
+  the labelled copies made, and the labelled rows that were eligible (`dynamic_score > threshold`) at each selection.
+  (b) Survivors: the label-1 transient row count at the freeze (`cer_drift.json`) and at the end (`cer_gates.json`),
+  after clone, split and prune. With D5 every label-1 transient row descends from a labelled donor.
+
+**D3. Transient labels: values {0, 1}; propagation through every transient row-changing operation.**
+
+| operation | rule |
+|---|---|
+| `densification_postfix_nodenom` (`GM:1414`; lift) | `cat(labels, new_cer_labels)`; asserts the new labels are 1-D, length = new rows, before any row is added |
+| `densification_postfix` (`GM:1590`; clone and split children) | `cat(labels, new_cer_labels)`, same assertion |
+| `densify_and_clone` (`GM:1682`) | `labels[selected_pts_mask]` |
+| `densify_and_split` (`GM:1624`) | `labels[selected_pts_mask].repeat(N)`; the same order as every `.repeat(N, 1)` there, so child `k·S + j` inherits from selected parent `j`; the parents go by `prune_points(prune_filter)` (`GM:1677-1679`) |
+| `prune_points` (`GM:1527`) | `labels[~mask]` |
+| `weight_prune` (`GM:1551`), `densify_and_prune` (`GM:1710`) | through `prune_points` and the two densifiers only |
+
+- **The edit acts only if the transient bank has a `cer_labels` attribute** (flag 1, after begin). Otherwise
+  `new_cer_labels` is ignored, and an assertion refuses non-`None` labels with any nonzero value (with flag 0 the lift
+  exclusion makes every lifted label 0).
+- **Invariant, asserted after every `maintain_transient` call while armed with flag 1** (`T:974-979`, as `T:953-954`
+  and `:965-966` do for the persistent banks): `cer_labels` is a 1-D `uint8` cuda tensor of length
+  `get_xyz.shape[0]` with values in {0, 1}. The gate asserts the length at every render (`G:42`).
+- **Not changed:** the transient `cat_tensors_to_optimizer` / `_prune_optimizer` (`GM:1509`, `:1564`; labels are not
+  parameters), the transient densification statistics (`GM:1728`), and the transient `max_radii2D` / `mean_radii2D`
+  bookkeeping.
+- **No RNG consumed by propagation:** indexing and concatenation only.
+
+**D4. Membership stays immutable and inherited (early plan D3).**
+
+- A transient copy of a label-0 row is label 0 forever, even if it later comes to paint the target. Labels change only
+  by inheritance at a row's birth.
+- **The cost is reported, not fixed.** The drift report (`C:291-327`) gains the transient bank with the same fields
+  (rows meeting the memory rule while labelled 0, and label-1 rows no longer meeting it, with their pre-gap target mass
+  shares).
+
+**D5. The transient bank at begin: all label 0 (rev 2; rev 1 labelled it by the memory rule).**
+
+- With flag 1, `begin` gives the transient bank `cer_labels` of zeros (one per row), and `cer_clock` and `cer_q` equal to
+  the persistent banks' (`C:252`); `G:30-33` read all three. Transient labels thereafter arise **only** by inheritance from
+  a labelled lift donor. Never label 2: the residual cohort stays background only (spec §4.2).
+- **Why (Codex round 1):** labelling the pre-existing transient rows at begin would gate rows independently of the lift,
+  an intervention separate from restoring the copy path. At begin the early arm's transient bank holds the one seed row
+  (`SI:95-103`; early plan section 10, "F1 answered"); it stays ungated, exactly as in the early arm.
+- **Reported:** the transient rows' pre-gap target mass and all-pixel gap mass at begin (from the begin mass passes), in
+  `cer_begin.json`, so their size is known.
+
+**D6. The gate at the transient opacity site.**
+
+- `render_rawall3pc` (`R:355`) is the only function that renders the transient bank. `render_background`,
+  `render_foreground` and `render_mask` take no transient bank; `run_evaluation` and `final_test_dump` reach the
+  transient bank only through `render_rawall3pc` (`utils/eval_utils.py:68`, `:177`, `:251`).
+- **One line after `R:423`** (`opacity = pc_transient.get_opacity`, already activated, `[N, 1]`), before the dropout
+  (`R:498-508`): `opacity = cer_gate.apply_transient(pc_transient, viewpoint_camera, opacity)`.
+- **`apply_transient`** (new, in `G:`): returns `opacity` unchanged unless a module flag `TRANSIENT` is set; `begin`
+  sets it with flag 1. When set, it is `apply` (`G:37-43`): it raises on a bank without CER state, asserts the factor
+  shape equals the opacity shape, and multiplies by `factor` (`G:27-34`). Transient labels are never 2, so the factor is
+  `1 − q·n(t)` on memory rows and 1 elsewhere.
+- **NaN guard (Codex round 1).** `check_finite` (`C:134-137`) exists because `min(0.99, NaN)` renders at alpha 0.99
+  (`F:651`), so a NaN opacity times a zero factor is not excluded. With flag 1 it also checks the transient bank's
+  activated opacity, at `begin`, `freeze` and `gates`, as it does the persistent banks.
+- **Exactness with no CUDA change**, transient path under `rot_4d = True` (the reference config):
+  - preprocess multiplies the opacity by the temporal marginal (`F:285`) and stores it in `conic_opacity.w` (`F:427`);
+    a gated row's stored opacity is `0 · marginal = 0`;
+  - the forward skips any splat with `alpha < 1/255` before `T` is touched (`F:651-654`), and so does the backward
+    kernel actually launched (`PerGaussianRenderCUDA`, `B:1373-1375`). So a gated transient row adds nothing to colour,
+    depth, the 4D/3D split outputs or alpha;
+  - every transient parameter's gradient (opacity, features, `xyz`, `t`, `scaling`, `scaling_t`, `rotation`,
+    `rotation_r`) flows only from those per-pixel terms, so it is exactly 0 in a gap frame. The transient bank has no
+    non-rendering loss term (`T:814-828` regularise the foreground and background scales only).
+- **What still acts on a gated transient row in a gap frame (documented, not changed, as early plan D7):**
+  - the hard temporal cull `marginal_t > 0.05` (`F:281-284`) does not read opacity, so the row keeps a radius > 0. It
+    counts as visible: `add_densification_stats_grad` (`GM:1728-1732`) increments its `denom` with zero gradient;
+  - its `max_weights_t` in that frame is 0, so its transient weight-prune score (`max_radii2D`, `T:187-194`) comes only
+    from non-gap frames;
+  - its Adam moments keep moving it.
+
+**D7. Instrument and gates count transient memory rows.**
+
+- `gates()` (`C:330-362`): the cohort sum `cohort(x, c)` (`C:339-341`) adds the transient bank's label-`c` rows when
+  the transient bank carries labels. So:
+  - `memory_share_pregap` and `memory_share_return` count transient memory mass;
+  - `memory_mass_gap` must be exactly 0.0 including transient memory rows (spec §14.2);
+  - `residual_*` are unchanged (no transient row is label 2).
+- **New descriptive fields:** `cer_transient_gate`; `memory_rows.tr`; the memory share before the gap and after the
+  return by bank; the label-1 transient share of the gap region (must be 0); the lift counts of D2.
+- `transient_share_gap_region` stays as it is (all transient rows, now necessarily label 0 inside the gap).
+- `cer_begin.json` gains `cer_transient_gate` and `memory_rows.tr`.
+
+**D8. Persistence.**
+
+- `Scene2gs_mixed.save` (`SI:122-126`) writes `tr_labels` into `cer_state.pt` when the transient bank carries labels
+  (the clock and strength are the persistent banks', already saved).
+  The reload refusal is unchanged.
+- The bank-alone tool `cer_m4d_banks.py` (outside the substrate) gets an exploratory copy `cer_m4d_banks_tr.py` that
+  re-attaches `tr_labels` with the clock and strength, and sets `cer_gate.TRANSIENT` per run (reset before every run, since
+  one job may hold runs of different arms, `cer_m4d_banks.py:119-127`), so its `full` render still reproduces the saved
+  final render.
+
+**D9. Sentinels.** Unchanged: `freeze()` (`C:326`) already replaces the transient bank's lifecycle methods (the
+`LIFECYCLE` list includes `add_points`, `add_points_from_dict`, `densification_postfix_nodenom`, `densify_and_prune`,
+`weight_prune`, `prune_points`). The lift ends at 10,000 and the freeze is at 16,000, so no lift can follow the freeze.
+
+**D10. Unchanged.** The persistent-bank gate and its five sites; the persistent labelling, inheritance and lift-time
+accounting; the residual cohort; the begin-range rule; the freeze; `run_evaluation`; the 20,000 budget; no CUDA change
+(`F:`, `B:` untouched; the instrument kernel is reused).
+
+**Why this is one factor.** The transient copy path is restored to base's (same eligibility, same `randperm` stream given
+the same state), and the only thing added is that copies of memory rows, and their descendants, are themselves memory.
+No transient row present at begin is gated (D5).
+
+## 3. Isolation, git and builds
+
+- **Local:** new branch `cer-early-tr` from `cer-early@7b30ef8`, in a new worktree
+  (`git -C D:/adags-cer/multi4d worktree add D:/adags-cer/multi4d-early-tr -b cer-early-tr 7b30ef8`).
+  `D:/adags-cer/multi4d` (`cer`) and `D:/adags-cer/multi4d-early` (`cer-early`) are not edited.
+- **Leonardo:** a bundle `cer-early..cer-early-tr` fetched into `repo/multi4d` as branch `cer-early-tr`, then
+  `git worktree add $W/repo/multi4d-cer-early-tr cer-early-tr`. Never checked out, edited or pulled: `repo/multi4d`
+  (`c483e82`, detached), `repo/multi4d-cer` (`cer`), `repo/multi4d-cer-early` (`cer-early`).
+- **Extensions:** `TORCH_EXTENSIONS_DIR=$W/build/torch_extensions_multi4d_cer_early_tr`, for both the training build and
+  the instrument build. No CUDA source changes.
+- **Launchers** (local masters in `D:/adags-cer/agent/`, installed in `agent-control/ars/sbatch/`; existing scripts not
+  edited): `train_multi4d_cer_early_tr.sbatch` (a copy of the early launcher: worktree, extensions directory, branch and
+  commit pin; it pins all four trees; it requires `CER_TRANSIENT_GATE` and passes `--cer_transient_gate`; it writes under
+  `runs/multi4d_cer_early_tr`) and `cer_tests_m4d_early_tr.sbatch`.
+- **Scorer:** a method `multi4d_cer_early_tr` in `ars_score.py`, written only if the principal approves the comparison:
+  it pins the reviewed commit and requires `mode == early`, begin 3,000, `frozen`, `cer_transient_gate == 1`, and the
+  full schedule.
+
+## 4. Tests, written before the code
+
+Stand-in model: the bottle same-pose base run 1 at iteration 20,000 (its transient bank is full), loaded as in spec §7.
+Every stochastic test populates nonzero Adam moments first. Where a test needs labelled transient rows that are visible
+in a gap frame, it labels them by an instrument pass at `q = 0` (as E8 does), not by hand-picking indices.
+
+| id | test | pass |
+|---|---|---|
+| F0 | flag 0 is the early arm | `test_cer.py` T0–T6 and `test_cer_early.py` E1–E8 pass on the new tree with flag 0; static: every new path is reached only with flag 1 or a transient bank carrying `cer_labels`; dynamic (two subprocesses, this tree and `cer-early@7b30ef8`): `begin` in early mode gives the same labels, donors and `cer_begin.json` counts, and the E2/E3 lifecycle sequence plus a lift sequence give hash-identical models |
+| F1 | transient propagation exactness | on a deep copy, every row tagged with a unique id in a tensor that clone, split and the lift copy exactly; random labels in {0, 1}; `add_points_from_dict` with a labelled dict, `densify_and_clone` and `densify_and_split` (rot_4d) with forced gradients so both selections are non-empty, `densify_and_prune` with thresholds that remove ≥ 1 row, `prune_points` with a random mask, `weight_prune`: every surviving row's label equals its source's; lengths equal; ≥ 1 row of each label survives each step |
+| F2 | propagation neutral to the model (a regression test; it can pass on the unmodified tree) | the F1 sequence on two deep copies from the same four RNG states, one with transient labels and labelled lift payloads, one without labels and with the labels stripped from the same payloads (model inputs unchanged): parameters, Adam moments, every per-row buffer and all four RNG states bit-identical afterwards |
+| F3 | lift with labels | (a) flag 1, armed: labelled foreground rows above threshold are selected; the selection (donor indices, `randperm` draw) is identical to the unarmed selection from the same RNG state, in both the no-subsample and the subsample (pool > `max_transfer`) cases; the returned `cer_labels` equal `fg.cer_labels` at the selected rows, in `xyz` order; (b) flag 0, armed: the E4 exclusion is unchanged; (c) the copied rows land in the transient bank with those labels |
+| F4 | gate identity at the transient site | at a gap frame, the flag-1 render equals, byte for byte, the same call with the transient gate off after setting the logits of the transient rows whose factor is 0 at that frame to −inf (the cohort chosen per frame, as T3 does, `test_cer.py:257-265`), and that reference differs from the plain render (non-vacuity); at a non-gap frame, the flag-1 render equals the plain render byte for byte; the rasterizer's `forward` is wrapped to capture the transient opacity it receives, which must equal `factor · ungated`; flag 0 or an unarmed gate passes the transient opacity through unchanged; an armed transient gate raises on a transient bank without labels |
+| F5 | training-build gradients, transient | E8's protocol on the training build, in two fresh processes, with E8's controls kept: the non-cancelling `render.sum()` probe, the colour-clamping rule (`test_cer_early.py:380-399`) and, for the pre-gap control, only witnesses visible in that view (`:474-480`; the temporal cull `F:281-285` makes this necessary). Witnesses: label-1 transient rows with positive contribution in a gap view at `q = 0`. At `q = 0`: every witness has nonzero probe gradient in opacity and in its unclamped colour channels; each other group (`xyz`, `f_rest`, `scaling`, `rotation`, `t`, `scaling_t`, `rotation_r`) is nonzero on at least one witness. At `q = 1`, same frame and view: every group is exactly 0 for every witness, while ungated visible transient rows have nonzero opacity gradient. Pre-gap frame at `q = 1`: the pre-visible witnesses nonzero. `add_densification_stats_grad` keeps `denom` and the accumulators finite. A NaN transient opacity on a memory row makes `check_finite` refuse |
+| F6 | instrument and gates | after `begin` with flag 1 and F1's operations, at `q = 1` on the training cameras: transient memory mass before the gap > 0 (witnesses), transient memory mass in the gap exactly 0, `memory_mass_gap` (now with transient rows) exactly 0; the memory share before the gap equals an independent recomputation from the per-bank masses; the drift report's transient fields are correct on a doctored model (E5's position-move doctoring applied to transient rows, expected drift computed first) |
+| F7 | the transient bank at begin | flag 1: after `begin` the transient bank carries `cer_labels` all 0, of its row count, with the persistent banks' clock and strength, and `cer_begin.json` reports its pre-gap target and gap masses; flag 0: the transient bank has no `cer_labels` |
+| F8 | persistence and sentinels | `save` writes `tr_labels` equal to the in-memory labels; the reload refusal stands; after `freeze()` every transient lifecycle method raises |
+| F9 | integration (not evidence) | the real entry point through the final-render wrapper, flag 1, early mode, the E9 shortened schedule (begin 3,000 = merging < phase 3 < densify-until < iterations), on the **carton** same-pose scene (229–288 foreground memory rows at fine 3,000 on the real schedule; the bottle had 0–20): exit 0; the lift counters record, at each selection, the labelled rows eligible (`dynamic_score > threshold`); ≥ 1 lift after begin with ≥ 1 labelled copy (if no labelled row is ever eligible, F9 is reported vacuous for that clause, not passed); transient labels consistent in length; `cer_begin.json`, `cer_drift.json`, `cer_gates.json` written with the new fields; spec §14.2 preconditions with transient rows counted; the label-1 transient share of the gap region exactly 0; the refusal `cer_transient_gate 1` with `cer_begin_iter -1` before training |
+
+- F0 and F2 pass on the unmodified tree; F1 and F3–F9 fail on it.
+- Tests and F9 are not evidence.
+
+## 5. What the code reviewer must check
+
+- **Scientific:** no path lets a memory row, a copy of one, or a descendant of a copy paint a gap frame (lift, clone,
+  split; persistent and transient); the flag-1 lift is base's lift; labels are chosen once, at begin, and only
+  inherited afterwards; flag 0 is the early arm.
+- **Engineering:** labels and rows agree after every transient operation; no RNG in propagation; flag 0 untouched;
+  isolation of worktree and extensions; O_EXCL kept; the launcher passes and records the flag.
+- **Tensor shapes:** transient `cer_labels [N]` uint8 against the factor `[N, 1]` and the opacity `[N, 1]`;
+  `.repeat(N)` against `.repeat(N, 1)`; the lift's labels against `xyz` after the `randperm` subsample (`GM:430-437`);
+  bool masks of the right length; dtype and device.
+- **CUDA:** a zero transient opacity is skipped in the forward and in the launched backward (`F:651-654`,
+  `B:1373-1375`); the gated row's other per-splat outputs (depth, 4D/3D colour, alpha) are untouched by it; the
+  instrument swap is restored in a `finally`; densification statistics stay finite.
+
+## 6. What this does not test or change
+
+- The second source of the deficit (persistent banks slightly worse, section 9).
+- Membership reassignment; the pass-through and moved-return scenes; any schedule constant; the escalated substrate
+  defects (`clamped`, `max_contrib`).
+
+## 7. Risks, stated before the code
+
+- **Transient memory copies may displace persistent memory mass before the gap.** If they then sit outside the gap only
+  partly (they are time-local), the persistent memory rows that remain may be under-trained where the copies painted.
+  The return window and the bank-alone renders read this.
+- **Memory share may change.** It now includes transient memory mass; transient label-0 copies of label-0 rows that come
+  to paint the target lower it. The precondition ≥ 0.50 still applies, as a reported precondition of the exploratory arm.
+- **Gap ghosts from label-0 transient rows.** Unchanged in kind from the early arm; read through the gap window and
+  `transient_share_gap_region`.
+
+## 8. Exploratory comparison design (for the principal; nothing submitted)
+
+- **Runs:** the fix (flag 1, begin 3,000, published schedule, freeze 16,000, 20,000 iterations) ×3 on each same-pose
+  scene (bottle, carton, mug): 9 runs, `runs/multi4d_cer_early_tr/ars_w1_<scene>_m4dearlytr_rep<r>`.
+- **Comparison:** against the 9 existing early-arm runs (`runs/multi4d_cer_early/ars_w1_<scene>_m4dearly_rep<r>`);
+  base Multi4D's 9 runs and the 16k arm as descriptive anchors.
+- **Endpoints (all descriptive; exploratory, no verdict):**
+  1. object-interior PSNR (mask eroded 4 px; `target_edge_interior.py`) pre-gap (frames 30–57) and late (230–259);
+  2. the gap window; 3. the return window and the transition frames 90–91;
+  4. bank-alone interior PSNR and transient interior alpha at frames 40 and 57 (`interior_by_bank.py`, with
+     `cer_m4d_banks_tr.py`).
+- **Model:** arm and layout fixed effects, 9 v 9, as the confirmatory reading; per-layout means with min and max; no
+  Holm family, no rule. The fix's gate files must meet spec §14.2's preconditions with transient rows counted.
+- **Cost:** 9 × ≈ 2.6 GPU-h ≈ 23 GPU-h, plus scoring (≈ 11 CPU-min each) and the diagnostics (two debug jobs, as on
+  2026-10-16), plus the tests: F0–F8 ≈ 1 GPU-h on the debug QOS and F9 ≈ 1 GPU-h. **≈ 26 GPU-h in total.**
+
+## 9. Task B: are memory rows densified less in the early arm? (a measurement, no code change to densification)
+
+**Question.** The persistent banks alone are slightly worse in the early arm on bottle and carton (−0.28 / −0.16 dB
+interior). Two candidate causes: gated rows' densification statistics are diluted by the gap views (early plan D7), and
+memory rows get ~10% fewer gradient views over 17,000 iterations.
+
+**Measurement: a runtime wrapper, no substrate edit.** What it measures is the statistics as they were recorded in each run,
+and one deletion sensitivity; it cannot reconstruct training without gating. `agent-control/ars/densify_probe.py` runs the reviewed
+`train.py` by `runpy` (as `m4d_final_render.py` and `ex4_collapse_probe.py` do) from `repo/multi4d-cer-early`
+(`7b30ef8`, clean), and records, without changing any computation:
+
+- **At every call of `densify(max_grad, extent)`** on the background and the foreground bank (`GM:119-124`), before the
+  original runs, per label group (memory 1, residual 2, other 0): row count; sum and mean of `denom`; mean and quantiles
+  of `xyz_gradient_accum / denom` (NaN as 0, as `GM:120-121` does); the number of rows the clone and the split would
+  select (the same masks as `GM:776-791` and `GM:741-766`, recomputed read-only from the same tensors); the threshold.
+- **The statistics window.** Both persistent `densification_postfix` methods reset `xyz_gradient_accum` and `denom` to
+  zero for every row (`GM:1188-1189`, and the foreground's), so the average a densify step reads covers the iterations
+  since the previous densify step (100 iterations, about 200 views at batch 2).
+- **Per row, the zero-gradient increments in that window (rev 2, Codex round 1).** `denom` counts batches in which a row is
+  visible in any view (`visibility_filter_second = cat(...).any(dim=0)`, `T:593`; the numerator is the norm of the
+  gradient summed over the batch's views, `T:855-860`, `GM:114-117`). For a gated memory row, an increment contributes
+  zero gradient exactly when **every view of the batch in which the row is visible is a gap view**. The wrapper records,
+  for every training render of the iteration (cam00 evaluation renders excluded), the frame and the bank's per-row
+  visibility (`visibility_filter` of `render_background` for the background bank in phase 2; `visibility_filter_fg` /
+  `visibility_filter_bg` of `render_rawall3pc`; `visibility_filter` of `render_foreground`), and at each
+  `add_densification_stats` call it counts per row `zero_inc = update_filter & ~(visible in some non-gap view)`. Two
+  coarser counts are kept beside it: increments in all-gap batches, and increments in mixed batches.
+- **The deletion sensitivity.** `accum / (denom − zero_inc)` is the average with those zero increments deleted (rows with
+  `denom − zero_inc = 0` get 0 and are counted apart); the clone and split counts are also computed under it. It is
+  exact for a gated row and is not a model of an ungated run, whose numerator would differ.
+- **Alignment.** The counters are filtered by every `prune_points`, reset when `densification_postfix` resets the
+  accumulators, and zero-padded for rows appended at the end without it (the residual rows at begin).
+- **Row counts by label group** at every densification step and at the freeze.
+
+**Two runs, both bottle same-pose (ARS-L1-A0), full published schedule, through the probe wrapper:**
+
+1. **Early arm:** `--cer_scene <bottle> --cer_begin_iter 3000`, as the confirmatory runs. Labels come from `begin`.
+2. **Shadow base:** no `cer_scene`, so CER is off and the run is base Multi4D on the `cer-early` tree (T1 and E4
+   showed that the CER-off tree renders and lifts as the pinned tree). At the end of fine iteration 3,000, right where
+   `begin` would run (after `run_evaluation(3000)`, `T:997-1000`), the wrapper computes the same memory rule with
+   `cer.mass` on the ungated model and attaches the labels as `cer_labels` to both persistent banks **without arming the
+   gate** (`cer_gate.ARMED` stays False). The `cer-early` propagation (`GM:653-795`, `:1110-1240`) then carries them
+   through clone, split and prune; E3 showed that carrying labels changes nothing in the model. The gate is not armed,
+   so no render and no lift is affected; `check_labels` and the lift masking run only when armed.
+   - **What differs from a plain base run:** one ungated pre-gap mass pass at 3,000 (the early arm's `begin` runs that
+     pass and a second, gated, gap pass). The passes consume no random numbers (dropout off), but they swap in the
+     instrument kernel; whether they perturb later training through the uninitialised `max_contrib` buffer is not
+     established (early plan section 10, escalation 2), and the two runs' perturbations are not claimed to be equal.
+
+**Readout (descriptive):** per bank and over that bank's own densification window (background 3,100–15,900; foreground
+3,100–9,900, since foreground density control stops at phase 3, `T:948`), with the actual number of records, for memory rows in the early arm against
+memory rows in the shadow base: the mean average gradient (ratio early / shadow), the clone and split selections summed
+over steps (ratio), the memory row count at 16,000 (ratio); and, within the early arm, the undiluted average gradient
+and the selections it would give. "Lower in the early arm" is reported with the ratio; no threshold decides anything.
+Only then is a densification-statistics change proposed (not implemented without the principal).
+
+**Test of the probe first (debug QOS, ≈ 0.2 GPU-h):** on a loaded model (spec §7 loader) with the wrapper installed, and
+with hand-built batches: (a) an all-gap batch, a mixed batch where a row is visible only in the gap view, and a mixed
+batch where it is visible in both, give `zero_inc` 1, 1, 0 for that row; (b) the counters stay aligned through
+`prune_points`, `densification_postfix` and an end append; (c) the recomputed clone and split masks equal the ones the
+original `densify` uses (captured from `densify_and_clone` / `densify_and_split`); (d) the wrapper leaves every model
+tensor bit-identical to an unwrapped copy run through the same calls; (e) a zero corrected denominator gives 0 and is
+counted. The phase-2 standalone background rasterizer (`render_background`) is exercised in (a).
+
+**Cost:** 2 × ≈ 2.7 GPU-h ≈ 5.4 GPU-h, plus the probe test ≈ 0.2 GPU-h (approved budget ≤ 6 GPU-h), lprod QOS, walltime 3:50.
+The shortened-schedule smoke run is dropped: the config fixes `coarse_iterations` 2,000 and `transient_merging_iter` 3,000
+(`arguments/dynerf.py:50`, `:58`; `merge_hparams` overrides the command line), so it would cost ≈ 1 GPU-h. Recorded in
+the ledger as exploratory diagnostics.
+
+## 10. Rev 1 → rev 2 (Codex round 1: MATERIAL DEFECT)
+
+| # | finding | disposition |
+|---|---|---|
+| 1 | the transient gate lacks the NaN guard (`C:134-137`) | accepted: `check_finite` covers the transient bank with flag 1 (D6); F5 tests the refusal |
+| 2 | F4's non-gap reference wrongly removes memory rows | accepted: the cohort is chosen per frame; at a non-gap frame the render must equal the plain render |
+| 3 | F5 drops E8's controls (clamping, probe, pre-visible subset) | accepted: kept; per-witness positives only for opacity and unclamped colour, the other groups on at least one witness |
+| 4 | task B's counterfactual overstated (denom counts OR-visible batches) | accepted: row-level zero-increment count from per-view visibility; called a deletion sensitivity; zero denominators handled |
+| 5 | F2 conflicts with the refusal rule and passes on the unmodified tree | accepted: labels stripped from the control payloads; F2 classed as a regression test |
+| 6 | foreground window ends at 9,900 | accepted: bank-specific windows and record counts |
+| suspected 1 | D5 is a separate intervention | accepted: D5 now labels nothing at begin; the transient masses at begin are reported |
+| suspected 2 | F9's donor guarantee unsupported | accepted: eligible labelled donors recorded; the clause is reported vacuous if none |
+| unverified | "same perturbation" in both task-B runs | withdrawn |
+| missing | transient clock and strength; `TRANSIENT` reset in the bank tool | accepted (D5, D8) |
+| missing | tests of the probe itself | accepted: probe test (a)-(e) before the runs |
+| missing | births vs surviving descendants | accepted: both recorded (D2) |

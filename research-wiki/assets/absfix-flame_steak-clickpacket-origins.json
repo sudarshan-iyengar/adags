@@ -1,0 +1,1608 @@
+{
+ "f50": {
+  "scene": "flame_steak",
+  "frame": 50,
+  "sheet": "absfix-flame_steak-clickpacket-f50.jpg",
+  "sheet_wh": [
+   3430,
+   3680
+  ],
+  "tile_wh": [
+   686,
+   920
+  ],
+  "cols": 5,
+  "rows": 4,
+  "jpeg_quality": 92,
+  "sheet_bytes": 1971402,
+  "raw_images": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/images",
+  "deva_root": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/repo/sa4d/data/dynerf/flame_steak",
+  "build": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/build_id79_60_89",
+  "note": "crop origin is the FULL-FRAME pixel of the tile's top-left image pixel; grid labels are FULL-FRAME coordinates; cyan box is the DEVA bottle bbox",
+  "per_camera": {
+   "cam01": {
+    "ids": [
+     90
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1181,
+     864,
+     1274,
+     1014
+    ],
+    "crop_origin_xy": [
+     1061,
+     744
+    ],
+    "crop_size_wh": [
+     291,
+     270
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     0
+    ]
+   },
+   "cam02": {
+    "ids": [
+     129
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1120,
+     830,
+     1200,
+     1014
+    ],
+    "crop_origin_xy": [
+     1000,
+     710
+    ],
+    "crop_size_wh": [
+     320,
+     304
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     686,
+     0
+    ]
+   },
+   "cam03": {
+    "ids": [
+     105
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1063,
+     807,
+     1133,
+     1014
+    ],
+    "crop_origin_xy": [
+     943,
+     687
+    ],
+    "crop_size_wh": [
+     310,
+     327
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1372,
+     0
+    ]
+   },
+   "cam04": {
+    "ids": [
+     59
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1012,
+     809,
+     1075,
+     1014
+    ],
+    "crop_origin_xy": [
+     892,
+     689
+    ],
+    "crop_size_wh": [
+     303,
+     325
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2058,
+     0
+    ]
+   },
+   "cam05": {
+    "ids": [
+     122
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1001,
+     798,
+     1060,
+     1006
+    ],
+    "crop_origin_xy": [
+     881,
+     678
+    ],
+    "crop_size_wh": [
+     299,
+     336
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2744,
+     0
+    ]
+   },
+   "cam06": {
+    "ids": [
+     172
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     906,
+     769,
+     961,
+     957
+    ],
+    "crop_origin_xy": [
+     786,
+     649
+    ],
+    "crop_size_wh": [
+     295,
+     365
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     920
+    ]
+   },
+   "cam07": {
+    "ids": [
+     132
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     858,
+     748,
+     904,
+     921
+    ],
+    "crop_origin_xy": [
+     738,
+     628
+    ],
+    "crop_size_wh": [
+     286,
+     386
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     686,
+     920
+    ]
+   },
+   "cam08": {
+    "ids": [
+     150
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     826,
+     727,
+     868,
+     887
+    ],
+    "crop_origin_xy": [
+     706,
+     607
+    ],
+    "crop_size_wh": [
+     282,
+     400
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1372,
+     920
+    ]
+   },
+   "cam09": {
+    "ids": [
+     81
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     777,
+     733,
+     822,
+     898
+    ],
+    "crop_origin_xy": [
+     657,
+     613
+    ],
+    "crop_size_wh": [
+     285,
+     401
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2058,
+     920
+    ]
+   },
+   "cam10": {
+    "ids": [
+     132
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     729,
+     725,
+     775,
+     887
+    ],
+    "crop_origin_xy": [
+     609,
+     605
+    ],
+    "crop_size_wh": [
+     286,
+     402
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2744,
+     920
+    ]
+   },
+   "cam11": {
+    "ids": [
+     79
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     765,
+     729,
+     826,
+     951
+    ],
+    "crop_origin_xy": [
+     645,
+     609
+    ],
+    "crop_size_wh": [
+     301,
+     405
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     1840
+    ]
+   },
+   "cam12": {
+    "ids": [
+     71
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     733,
+     665,
+     794,
+     868
+    ],
+    "crop_origin_xy": [
+     613,
+     545
+    ],
+    "crop_size_wh": [
+     301,
+     443
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     686,
+     1840
+    ]
+   },
+   "cam13": {
+    "ids": [
+     59
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1020,
+     665,
+     1086,
+     875
+    ],
+    "crop_origin_xy": [
+     900,
+     545
+    ],
+    "crop_size_wh": [
+     306,
+     450
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1372,
+     1840
+    ]
+   },
+   "cam14": {
+    "ids": [
+     127
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1022,
+     693,
+     1086,
+     911
+    ],
+    "crop_origin_xy": [
+     902,
+     573
+    ],
+    "crop_size_wh": [
+     304,
+     441
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2058,
+     1840
+    ]
+   },
+   "cam15": {
+    "ids": [
+     79
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     963,
+     687,
+     1022,
+     889
+    ],
+    "crop_origin_xy": [
+     843,
+     567
+    ],
+    "crop_size_wh": [
+     299,
+     442
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2744,
+     1840
+    ]
+   },
+   "cam16": {
+    "ids": [
+     135
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     942,
+     644,
+     997,
+     834
+    ],
+    "crop_origin_xy": [
+     822,
+     524
+    ],
+    "crop_size_wh": [
+     295,
+     430
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     2760
+    ]
+   },
+   "cam17": {
+    "ids": [
+     76
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     868,
+     676,
+     917,
+     858
+    ],
+    "crop_origin_xy": [
+     748,
+     556
+    ],
+    "crop_size_wh": [
+     289,
+     422
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     686,
+     2760
+    ]
+   },
+   "cam18": {
+    "ids": [
+     77
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     834,
+     659,
+     883,
+     830
+    ],
+    "crop_origin_xy": [
+     714,
+     539
+    ],
+    "crop_size_wh": [
+     289,
+     411
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1372,
+     2760
+    ]
+   },
+   "cam19": {
+    "ids": [
+     122
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1031,
+     754,
+     1088,
+     946
+    ],
+    "crop_origin_xy": [
+     911,
+     634
+    ],
+    "crop_size_wh": [
+     297,
+     380
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2058,
+     2760
+    ]
+   },
+   "cam20": {
+    "ids": [
+     94
+    ],
+    "frame": 50,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     957,
+     813,
+     1008,
+     997
+    ],
+    "crop_origin_xy": [
+     837,
+     693
+    ],
+    "crop_size_wh": [
+     291,
+     321
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2744,
+     2760
+    ]
+   }
+  }
+ },
+ "f92": {
+  "scene": "flame_steak",
+  "frame": 92,
+  "sheet": "absfix-flame_steak-clickpacket-f92.jpg",
+  "sheet_wh": [
+   3440,
+   3672
+  ],
+  "tile_wh": [
+   688,
+   918
+  ],
+  "cols": 5,
+  "rows": 4,
+  "jpeg_quality": 92,
+  "sheet_bytes": 1979985,
+  "raw_images": "/leonardo_work/EUHPC_D21_034/proj_adags/data/n3v/flame_steak/images",
+  "deva_root": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/repo/sa4d/data/dynerf/flame_steak",
+  "build": "/leonardo_work/EUHPC_D36_068/sri/proj_adags/runs/realdata/absfix2/flame_steak/build_id79_60_89",
+  "note": "crop origin is the FULL-FRAME pixel of the tile's top-left image pixel; grid labels are FULL-FRAME coordinates; cyan box is the DEVA bottle bbox",
+  "per_camera": {
+   "cam01": {
+    "ids": [
+     90
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1181,
+     864,
+     1275,
+     1014
+    ],
+    "crop_origin_xy": [
+     1061,
+     744
+    ],
+    "crop_size_wh": [
+     291,
+     270
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     0
+    ]
+   },
+   "cam02": {
+    "ids": [
+     129
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1120,
+     830,
+     1201,
+     1014
+    ],
+    "crop_origin_xy": [
+     1000,
+     710
+    ],
+    "crop_size_wh": [
+     321,
+     304
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     0
+    ]
+   },
+   "cam03": {
+    "ids": [
+     105
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1063,
+     807,
+     1133,
+     1014
+    ],
+    "crop_origin_xy": [
+     943,
+     687
+    ],
+    "crop_size_wh": [
+     310,
+     327
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     0
+    ]
+   },
+   "cam04": {
+    "ids": [
+     59
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1012,
+     809,
+     1075,
+     1014
+    ],
+    "crop_origin_xy": [
+     892,
+     689
+    ],
+    "crop_size_wh": [
+     303,
+     325
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     0
+    ]
+   },
+   "cam05": {
+    "ids": [
+     122
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1001,
+     798,
+     1060,
+     1007
+    ],
+    "crop_origin_xy": [
+     881,
+     678
+    ],
+    "crop_size_wh": [
+     299,
+     336
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     0,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     0
+    ]
+   },
+   "cam06": {
+    "ids": [
+     172
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     905,
+     768,
+     961,
+     958
+    ],
+    "crop_origin_xy": [
+     785,
+     648
+    ],
+    "crop_size_wh": [
+     296,
+     366
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     918
+    ]
+   },
+   "cam07": {
+    "ids": [
+     132
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     858,
+     748,
+     904,
+     921
+    ],
+    "crop_origin_xy": [
+     738,
+     628
+    ],
+    "crop_size_wh": [
+     286,
+     386
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     918
+    ]
+   },
+   "cam08": {
+    "ids": [
+     150
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     826,
+     727,
+     868,
+     888
+    ],
+    "crop_origin_xy": [
+     706,
+     607
+    ],
+    "crop_size_wh": [
+     282,
+     401
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     918
+    ]
+   },
+   "cam09": {
+    "ids": [
+     81
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     776,
+     732,
+     822,
+     898
+    ],
+    "crop_origin_xy": [
+     656,
+     612
+    ],
+    "crop_size_wh": [
+     286,
+     402
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     918
+    ]
+   },
+   "cam10": {
+    "ids": [
+     132
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     729,
+     724,
+     774,
+     887
+    ],
+    "crop_origin_xy": [
+     609,
+     604
+    ],
+    "crop_size_wh": [
+     285,
+     403
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     1,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     918
+    ]
+   },
+   "cam11": {
+    "ids": [
+     79
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     764,
+     728,
+     826,
+     950
+    ],
+    "crop_origin_xy": [
+     644,
+     608
+    ],
+    "crop_size_wh": [
+     302,
+     406
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     1836
+    ]
+   },
+   "cam12": {
+    "ids": [
+     71
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     732,
+     665,
+     794,
+     869
+    ],
+    "crop_origin_xy": [
+     612,
+     545
+    ],
+    "crop_size_wh": [
+     302,
+     444
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     1836
+    ]
+   },
+   "cam13": {
+    "ids": [
+     59
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1020,
+     665,
+     1087,
+     874
+    ],
+    "crop_origin_xy": [
+     900,
+     545
+    ],
+    "crop_size_wh": [
+     307,
+     449
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     1836
+    ]
+   },
+   "cam14": {
+    "ids": [
+     127
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1023,
+     693,
+     1086,
+     911
+    ],
+    "crop_origin_xy": [
+     903,
+     573
+    ],
+    "crop_size_wh": [
+     303,
+     441
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     1836
+    ]
+   },
+   "cam15": {
+    "ids": [
+     79
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     963,
+     687,
+     1023,
+     890
+    ],
+    "crop_origin_xy": [
+     843,
+     567
+    ],
+    "crop_size_wh": [
+     300,
+     443
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     2,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     1836
+    ]
+   },
+   "cam16": {
+    "ids": [
+     135
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     942,
+     646,
+     997,
+     834
+    ],
+    "crop_origin_xy": [
+     822,
+     526
+    ],
+    "crop_size_wh": [
+     295,
+     428
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     0
+    ],
+    "tile_origin_in_sheet_xy": [
+     0,
+     2754
+    ]
+   },
+   "cam17": {
+    "ids": [
+     76
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     868,
+     676,
+     917,
+     857
+    ],
+    "crop_origin_xy": [
+     748,
+     556
+    ],
+    "crop_size_wh": [
+     289,
+     421
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     1
+    ],
+    "tile_origin_in_sheet_xy": [
+     688,
+     2754
+    ]
+   },
+   "cam18": {
+    "ids": [
+     77
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     834,
+     659,
+     884,
+     830
+    ],
+    "crop_origin_xy": [
+     714,
+     539
+    ],
+    "crop_size_wh": [
+     290,
+     411
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     2
+    ],
+    "tile_origin_in_sheet_xy": [
+     1376,
+     2754
+    ]
+   },
+   "cam19": {
+    "ids": [
+     122
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     1031,
+     754,
+     1087,
+     946
+    ],
+    "crop_origin_xy": [
+     911,
+     634
+    ],
+    "crop_size_wh": [
+     296,
+     380
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     3
+    ],
+    "tile_origin_in_sheet_xy": [
+     2064,
+     2754
+    ]
+   },
+   "cam20": {
+    "ids": [
+     94
+    ],
+    "frame": 92,
+    "raster_wh": [
+     1352,
+     1014
+    ],
+    "bottle_bbox_half_open_xyxy": [
+     957,
+     813,
+     1008,
+     998
+    ],
+    "crop_origin_xy": [
+     837,
+     693
+    ],
+    "crop_size_wh": [
+     291,
+     321
+    ],
+    "pad_px": 120,
+    "scale": 2,
+    "grid_px": 50,
+    "tile_image_offset_in_tile_xy": [
+     46,
+     20
+    ],
+    "tile_rc": [
+     3,
+     4
+    ],
+    "tile_origin_in_sheet_xy": [
+     2752,
+     2754
+    ]
+   }
+  }
+ }
+}

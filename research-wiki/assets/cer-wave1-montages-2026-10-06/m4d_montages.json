@@ -1,0 +1,65 @@
+{
+ "ARS-L1-A0": {
+  "frames": [
+   57,
+   63,
+   75,
+   87,
+   92
+  ],
+  "crop": [
+   865,
+   752,
+   1132,
+   1014
+  ],
+  "representatives": {
+   "multi4d": "ars_w1_ARS-L1-A0_multi4d_rep3",
+   "multi4d_cer": "ars_w1_ARS-L1-A0_m4dcer_rep3",
+   "ex4dgs": "ars_w1_ARS-L1-A0_ex4dgs_rep3",
+   "ex4dgs_cer": "ars_w1_ARS-L1-A0_cer_rep1"
+  }
+ },
+ "ARS-L2-A0": {
+  "frames": [
+   57,
+   63,
+   75,
+   87,
+   92
+  ],
+  "crop": [
+   887,
+   814,
+   1094,
+   1014
+  ],
+  "representatives": {
+   "multi4d": "ars_w1_ARS-L2-A0_multi4d_rep2",
+   "multi4d_cer": "ars_w1_ARS-L2-A0_m4dcer_rep3",
+   "ex4dgs": "ars_w1_ARS-L2-A0_ex4dgs_rep3_repl",
+   "ex4dgs_cer": "ars_w1_ARS-L2-A0_cer_rep1"
+  }
+ },
+ "ARS-L3-A0": {
+  "frames": [
+   57,
+   63,
+   75,
+   87,
+   92
+  ],
+  "crop": [
+   890,
+   826,
+   1075,
+   1012
+  ],
+  "representatives": {
+   "multi4d": "ars_w1_ARS-L3-A0_multi4d_rep3",
+   "multi4d_cer": "ars_w1_ARS-L3-A0_m4dcer_rep2",
+   "ex4dgs": "ars_w1_ARS-L3-A0_ex4dgs_rep2",
+   "ex4dgs_cer": "ars_w1_ARS-L3-A0_cer_rep2"
+  }
+ }
+}

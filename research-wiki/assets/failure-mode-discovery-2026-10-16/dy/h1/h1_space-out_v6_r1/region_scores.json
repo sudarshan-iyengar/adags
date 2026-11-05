@@ -1,0 +1,40 @@
+{
+ "scene": "space-out",
+ "regions_manifest": "manifest_sha256=afd674c2146eaadba326464ee628beaaf292ddddd84a9fc8d89b927cd5ba92a1",
+ "cam1": {
+  "fast_psnr": 16.399942506519995,
+  "fast_psnr_all": 16.060842745198258,
+  "dyn_psnr": 17.306085501524315,
+  "static_psnr": 21.37656039179103,
+  "band_psnr": 15.527813364195849,
+  "band_sse_share": 0.24573972906843267,
+  "blur": 0.20484916520236748,
+  "cov_psnr_pooled": 19.79605103770937,
+  "px": {
+   "fast": 670062,
+   "fasta": 705233,
+   "dyn": 9909602,
+   "stat": 36010380,
+   "band": 4365828,
+   "cov": 47469539
+  }
+ },
+ "cam2": {
+  "fast_psnr": 18.120773521475698,
+  "fast_psnr_all": 17.72983946845159,
+  "dyn_psnr": 17.59942650155338,
+  "static_psnr": 22.663052189017726,
+  "band_psnr": 16.288791438135814,
+  "band_sse_share": 0.23521778631518622,
+  "blur": 0.21461545746369953,
+  "cov_psnr_pooled": 20.953663259363942,
+  "px": {
+   "fast": 3246967,
+   "fasta": 3453193,
+   "dyn": 11183591,
+   "stat": 42298416,
+   "band": 4391335,
+   "cov": 54652948
+  }
+ }
+}

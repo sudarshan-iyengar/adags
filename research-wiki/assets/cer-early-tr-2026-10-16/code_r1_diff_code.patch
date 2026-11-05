@@ -1,0 +1,470 @@
+diff --git a/arguments/__init__.py b/arguments/__init__.py
+index ce5f77f..778e124 100644
+--- a/arguments/__init__.py
++++ b/arguments/__init__.py
+@@ -60,6 +60,9 @@ class ModelParams(ParamGroup):
+         self.cer_scene = ""
+         # -1 = CER begins at densify_until_iter (the legacy arm); otherwise the fine iteration at which it begins.
+         self.cer_begin_iter = -1
++        # 1 (early mode only) = memory rows may be foreground-to-transient lift donors, their transient copies are memory
++        # rows, and the transient bank is gated like the persistent ones; 0 = the early gate unchanged.
++        self.cer_transient_gate = 0
+         super().__init__(parser, "Loading Parameters", sentinel)
+ 
+     def extract(self, args):
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 6baec64..cce6de4 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -421,6 +421,7 @@ def render_rawall3pc(viewpoint_camera, pc_foreground: GaussianModel, pc_backgrou
+     means3D = pc_transient.get_xyz
+     means2D = screenspace_points_transient
+     opacity = pc_transient.get_opacity
++    opacity = cer_gate.apply_transient(pc_transient, viewpoint_camera, opacity)
+ 
+     scales_t = None
+     rotations_r = None
+diff --git a/scene/__init__.py b/scene/__init__.py
+index 17286bc..1ca1fb5 100644
+--- a/scene/__init__.py
++++ b/scene/__init__.py
+@@ -35,6 +35,7 @@ class Scene2gs_mixed:
+         self.gaussians_transient = gaussians_transient
+         self.cer_scene = getattr(args, "cer_scene", "")
+         self.cer_begin_iter = getattr(args, "cer_begin_iter", -1)
++        self.cer_transient_gate = getattr(args, "cer_transient_gate", 0)
+ 
+         if load_iteration:
+             self.loaded_iter = searchForMaxIteration(os.path.join(load_iteration, "point_cloud"))
+@@ -120,10 +121,12 @@ class Scene2gs_mixed:
+         if self.gaussians_transient is not None:
+             self.gaussians_transient.save_ply(os.path.join(point_cloud_path, "point_cloud_transient.ply"))
+         if hasattr(self.gaussians_second, "cer_labels"):
+-            torch.save({"fg_labels": self.gaussians.cer_labels, "bg_labels": self.gaussians_second.cer_labels,
+-                        "clock": self.gaussians_second.cer_clock, "q": self.gaussians_second.cer_q,
+-                        "active_sh_degree_t": self.gaussians_transient.active_sh_degree_t},
+-                       os.path.join(point_cloud_path, "cer_state.pt"))
++            state = {"fg_labels": self.gaussians.cer_labels, "bg_labels": self.gaussians_second.cer_labels,
++                     "clock": self.gaussians_second.cer_clock, "q": self.gaussians_second.cer_q,
++                     "active_sh_degree_t": self.gaussians_transient.active_sh_degree_t}
++            if hasattr(self.gaussians_transient, "cer_labels"):  # the transient gate (cer_transient_gate 1)
++                state["tr_labels"] = self.gaussians_transient.cer_labels
++            torch.save(state, os.path.join(point_cloud_path, "cer_state.pt"))
+ 
+         try:
+             self.gaussians_second.save_deformation(point_cloud_path)
+diff --git a/scene/cer.py b/scene/cer.py
+index 300457b..a203142 100644
+--- a/scene/cer.py
++++ b/scene/cer.py
+@@ -131,9 +131,10 @@ def mass(fg, bg, tr, pipe, views):
+ mass.__wrapped__ = _mass  # the same computation on the training build (T4b's descriptive comparison)
+ 
+ 
+-def check_finite(fg, bg):
+-    """A NaN opacity times a 0 factor renders at alpha 0.99; Multi4D has no NaN prune."""
+-    for m in (fg, bg):
++def check_finite(fg, bg, tr=None):
++    """A NaN opacity times a 0 factor renders at alpha 0.99; Multi4D has no NaN prune. The transient bank is covered too when
++    it is gated (tr given, cer_transient_gate 1)."""
++    for m in (fg, bg) if tr is None else (fg, bg, tr):
+         assert torch.isfinite(torch.sigmoid(m._opacity)).all(), "non-finite opacity"
+ 
+ 
+@@ -179,6 +180,16 @@ def check_begin_range(cer_scene, cer_begin_iter, opt):
+         "is also before it)" % (cer_begin_iter, opt.iterations, opt.densify_until_iter)
+ 
+ 
++def check_transient_gate(dataset):
++    """cer_transient_gate must be 0 or 1, and 1 needs early mode (cer_begin_iter set, with cer_scene). Asserted in training()
++    before the scene is built, whatever the mode."""
++    flag = dataset.cer_transient_gate
++    assert flag in (0, 1), "cer_transient_gate must be 0 or 1, not %r" % (flag,)
++    assert flag == 0 or (dataset.cer_begin_iter != -1 and dataset.cer_scene), \
++        "cer_transient_gate 1 needs early mode: cer_begin_iter set (it is %d) and cer_scene (it is %r)" \
++        % (dataset.cer_begin_iter, dataset.cer_scene)
++
++
+ def check_labels(m):
+     """Label invariant of a persistent bank: a 1-D uint8 cuda tensor with one entry per row."""
+     lab = m.cer_labels
+@@ -186,6 +197,13 @@ def check_labels(m):
+         "CER labels %s %s (cuda %s) against %d rows" % (tuple(lab.shape), lab.dtype, lab.is_cuda, m.get_xyz.shape[0])
+ 
+ 
++def check_transient_labels(m):
++    """Label invariant of the transient bank under the transient gate: that of a persistent bank, with values in {0, 1}
++    (the residual cohort, 2, is background only)."""
++    check_labels(m)
++    assert not bool((m.cer_labels > 1).any()), "a transient row carries a label above 1"
++
++
+ def mask_lift_scores(fg, deformed_state, threshold):
+     """Make labelled foreground rows ineligible as donors of the foreground-to-transient lift: their dynamic score is set
+     to -inf (never above any finite threshold, a negative one included) on a clone of the score, which only the donor
+@@ -200,10 +218,12 @@ def mask_lift_scores(fg, deformed_state, threshold):
+     return excluded
+ 
+ 
+-def count_lift(scene, stage, prune_data, excluded=0, masked=False):
++def count_lift(scene, stage, prune_data, excluded=0, masked=False, eligible=None):
+     """Count one lift selection (a non-empty donor set) by stage, and the labelled candidates a selection excluded.
+     `fine_after_begin` counts the selections made while the gate is armed; `masked_selections` those among them made
+-    with the labelled rows masked out."""
++    with the labelled rows masked out. With the transient gate (`eligible` given: the labelled rows above the threshold at
++    this selection) the labelled rows stay donors, and after begin the copies made, the labelled copies made and the
++    labelled rows eligible are counted too."""
+     lifts = scene.__dict__.setdefault("cer_lifts", {"coarse": 0, "fine": 0, "fine_after_begin": 0, "masked_selections": 0,
+                                                     "labelled_candidates_excluded": 0})
+     lifts["labelled_candidates_excluded"] += excluded
+@@ -213,6 +233,14 @@ def count_lift(scene, stage, prune_data, excluded=0, masked=False):
+             lifts["fine_after_begin"] += 1
+         if masked:
+             lifts["masked_selections"] += 1
++    if eligible is not None and cer_gate.ARMED:
++        for k in ("copies", "labelled_copies", "labelled_eligible"):
++            lifts.setdefault(k, 0)
++        lifts["labelled_eligible"] += eligible
++        if prune_data is not None and prune_data["xyz"].shape[0] > 0:
++            lifts["copies"] += int(prune_data["xyz"].shape[0])
++            if "cer_labels" in prune_data:
++                lifts["labelled_copies"] += int((prune_data["cer_labels"] != 0).sum())
+ 
+ 
+ def lift_select(fg, deformed_state, threshold, select_kwargs, scene, stage):
+@@ -220,13 +248,18 @@ def lift_select(fg, deformed_state, threshold, select_kwargs, scene, stage):
+     run and every legacy run before begin) it is exactly fg.select_fg_to_transient(deformed_state,
+     dynamic_score_threshold=threshold, **select_kwargs). Armed with a labelled foreground bank, labelled rows are first made
+     ineligible (mask_lift_scores asserts, before the selection, that the eligibility set holds no labelled row) and the
+-    selection is counted when the scene runs CER. Returns the donor dict or None."""
+-    masked, excluded = False, 0
++    selection is counted when the scene runs CER. With the transient gate (scene.cer_transient_gate 1) nothing is masked: the
++    donor set is base Multi4D's, each copy carries its donor's label (select_fg_to_transient), and the labelled rows above the
++    threshold are counted. Returns the donor dict or None."""
++    masked, excluded, eligible = False, 0, None
+     if cer_gate.ARMED and hasattr(fg, "cer_labels"):
+-        excluded, masked = mask_lift_scores(fg, deformed_state, threshold), True
++        if getattr(scene, "cer_transient_gate", 0) == 1:
++            eligible = int(((deformed_state["dynamic_score"] > threshold) & (fg.cer_labels != 0)).sum())
++        else:
++            excluded, masked = mask_lift_scores(fg, deformed_state, threshold), True
+     prune_data = fg.select_fg_to_transient(deformed_state, dynamic_score_threshold=threshold, **select_kwargs)
+     if scene.cer_scene:
+-        count_lift(scene, stage, prune_data, excluded, masked)
++        count_lift(scene, stage, prune_data, excluded, masked, eligible)
+     return prune_data
+ 
+ 
+@@ -235,6 +268,8 @@ def begin(fg, bg, tr, scene, pipe, opt, iteration):
+     Legacy mode installs the sentinels here; early mode leaves them to freeze()."""
+     A, B, ids = event(scene.cer_scene)
+     mode = begin_mode(scene)
++    flag = getattr(scene, "cer_transient_gate", 0)
++    assert flag == 0 or mode == "early", "cer_transient_gate %d needs early mode" % flag
+     if mode == "legacy":
+         assert iteration == opt.densify_until_iter and iteration >= getattr(opt, "phase3_start_iter", 10000)
+     else:
+@@ -244,13 +279,16 @@ def begin(fg, bg, tr, scene, pipe, opt, iteration):
+     lifts_before = lifts.get("coarse", 0) + lifts.get("fine", 0)
+     assert mode == "legacy" or lifts_before == 0, \
+         "early begin after %d lift selections: a labelled donor could have been lifted" % lifts_before
+-    check_finite(fg, bg)
++    check_finite(fg, bg, tr if flag else None)
+     report = open(os.path.join(scene.model_path, "cer_begin.json"), "x")  # a NaN restart must not begin twice
+     inside, total = mass(fg, bg, tr, pipe, _region(scene, range(0, A)))
+     memory = [(t > 0) & (i >= 0.5 * t) for i, t in zip(inside[:2], total[:2])]
+     for m, mem in zip((fg, bg), memory):
+         m.cer_labels, m.cer_clock, m.cer_q = mem.to(torch.uint8), (A, B), 1.0
++    if flag:  # the transient bank: every row label 0 (labels arise only by inheritance from a labelled lift donor), never 2
++        tr.cer_labels, tr.cer_clock, tr.cer_q = torch.zeros(tr.get_xyz.shape[0], dtype=torch.uint8, device="cuda"), (A, B), 1.0
+     cer_gate.ARMED = True
++    cer_gate.TRANSIENT = bool(flag)
+     # donors: background rows that paint the gap region during the gap once the memory cohort is off
+     g_in, g_tot = mass(fg, bg, tr, pipe, _region(scene, range(A, B + 1), mask_frame=A - 1))
+     majority = [(t > 0) & (i >= 0.5 * t) for i, t in zip(g_in, g_tot)]
+@@ -273,18 +311,24 @@ def begin(fg, bg, tr, scene, pipe, opt, iteration):
+ 
+     gap = sum(x.sum() for x in g_in).item()
+     share = lambda x: x / gap if gap > 0 else None  # a gap region with no mass is reported, not divided by
+-    json.dump({"A": A, "B": B, "target_ids": ids, "iteration": iteration, "begin_iter": iteration, "mode": mode,
+-               "lifts_before_begin": lifts_before,
+-               "lifts_before_begin_by_stage": {"coarse": lifts.get("coarse", 0), "fine": lifts.get("fine", 0)},
+-               "memory_rows": {"fg": int(memory[0].sum()), "bg": int(memory[1].sum())},
+-               "memory_share_pregap": ((inside[0][memory[0]].sum() + inside[1][memory[1]].sum())
+-                                       / sum(x.sum() for x in inside)).item(),
+-               "residual_rows": k,
+-               "gap_region_share_by_bank": {b: share(g_in[i].sum().item()) for i, b in enumerate(("fg", "bg", "tr"))},
+-               "majority_donor_share_by_bank": {b: share(g_in[i][majority[i]].sum().item())
+-                                                for i, b in enumerate(("fg", "bg", "tr"))},
+-               "rows_after_birth": {"fg": fg.get_xyz.shape[0], "bg": bg.get_xyz.shape[0], "tr": tr.get_xyz.shape[0]}},
+-              report, indent=1)
++    memory_rows = {"fg": int(memory[0].sum()), "bg": int(memory[1].sum())}
++    if flag:
++        memory_rows["tr"] = int((tr.cer_labels == 1).sum())
++    out = {"A": A, "B": B, "target_ids": ids, "iteration": iteration, "begin_iter": iteration, "mode": mode,
++           "cer_transient_gate": flag, "lifts_before_begin": lifts_before,
++           "lifts_before_begin_by_stage": {"coarse": lifts.get("coarse", 0), "fine": lifts.get("fine", 0)},
++           "memory_rows": memory_rows,
++           "memory_share_pregap": ((inside[0][memory[0]].sum() + inside[1][memory[1]].sum())
++                                   / sum(x.sum() for x in inside)).item(),
++           "residual_rows": k,
++           "gap_region_share_by_bank": {b: share(g_in[i].sum().item()) for i, b in enumerate(("fg", "bg", "tr"))},
++           "majority_donor_share_by_bank": {b: share(g_in[i][majority[i]].sum().item())
++                                            for i, b in enumerate(("fg", "bg", "tr"))},
++           "rows_after_birth": {"fg": fg.get_xyz.shape[0], "bg": bg.get_xyz.shape[0], "tr": tr.get_xyz.shape[0]}}
++    if flag:  # the transient rows (all ungated, label 0) at begin: their pre-gap target mass and all-pixel gap mass
++        out["transient_at_begin"] = {"rows": tr.get_xyz.shape[0], "pregap_target_mass": inside[2].sum().item(),
++                                     "gap_all_pixel_mass": g_tot[2].sum().item()}
++    json.dump(out, report, indent=1)
+     report.close()
+ 
+ 
+@@ -295,21 +339,26 @@ def freeze(fg, bg, tr, scene, pipe, opt, iteration):
+     The drift report is one pre-gap mass pass on the current (gated) model: the memory rule of begin (total > 0 and
+     inside >= 0.5 total) is evaluated on every row, and per persistent bank it reports the rows that now meet the rule
+     but are labelled 0 and the rows labelled 1 that no longer meet it, each with its share of the total pre-gap
+-    target mass (inside mass, all three banks). Residual rows are exactly 0 before the gap, so they never meet the rule."""
++    target mass (inside mass, all three banks); with the transient gate (labelled transient bank) the transient bank is
++    reported too, with the same fields. Residual rows are exactly 0 before the gap, so they never meet the rule."""
+     assert begin_mode(scene) == "early", "freeze is for early mode"
+     assert cer_gate.ARMED and hasattr(bg, "cer_labels"), "CER never began"
+     assert iteration == opt.densify_until_iter and iteration < opt.iterations, \
+         "freeze at fine iteration %d, densify_until_iter is %d, iterations %d" % (iteration, opt.densify_until_iter, opt.iterations)
+     A, B = bg.cer_clock
+-    check_finite(fg, bg)
++    tl = hasattr(tr, "cer_labels")  # the transient gate (cer_transient_gate 1)
++    check_finite(fg, bg, tr if tl else None)
+     check_labels(fg)
+     check_labels(bg)
++    if tl:
++        check_transient_labels(tr)
+     report = open(os.path.join(scene.model_path, "cer_drift.json"), "x")
+     inside, total = mass(fg, bg, tr, pipe, _region(scene, range(0, A)))
+     denom = sum(x.sum() for x in inside).item()
+     share = lambda x: x / denom if denom > 0 else None  # a pre-gap target with no mass has no shares
+     per_bank = {}
+-    for name, m, i, t in (("fg", fg, inside[0], total[0]), ("bg", bg, inside[1], total[1])):
++    for name, m, i, t in (("fg", fg, inside[0], total[0]), ("bg", bg, inside[1], total[1])) + (
++            (("tr", tr, inside[2], total[2]),) if tl else ()):
+         meets = (t > 0) & (i >= 0.5 * t)
+         lab = m.cer_labels
+         up, down = meets & (lab == 0), (lab == 1) & ~meets
+@@ -331,14 +380,18 @@ def gates(fg, bg, tr, scene, pipe):
+     """Contribution gates of spec section 6 on the final in-memory model; writes cer_gates.json."""
+     assert cer_gate.ARMED, "CER never began"
+     A, B = bg.cer_clock
+-    check_finite(fg, bg)
++    tl = hasattr(tr, "cer_labels")  # the transient gate (cer_transient_gate 1): transient memory rows count in the cohorts
++    check_finite(fg, bg, tr if tl else None)
+     pre_in, pre_tot = mass(fg, bg, tr, pipe, _region(scene, range(0, A)))
+     gap_in, gap_tot = mass(fg, bg, tr, pipe, _region(scene, range(A, B + 1), mask_frame=A - 1))
+     ret_in, ret_tot = mass(fg, bg, tr, pipe, _region(scene, range(B + 1, B + 31)))
+ 
+     def cohort(x, c):
+-        """Mass of cohort c over the foreground and background banks."""
+-        return (x[0][fg.cer_labels == c].sum() + x[1][bg.cer_labels == c].sum()).item()
++        """Mass of cohort c over the foreground and background banks (and the transient bank when it carries labels)."""
++        s = x[0][fg.cer_labels == c].sum() + x[1][bg.cer_labels == c].sum()
++        if tl:
++            s = s + x[2][tr.cer_labels == c].sum()
++        return s.item()
+ 
+     def whole(x):
+         """Mass of every row of every bank."""
+@@ -355,7 +408,16 @@ def gates(fg, bg, tr, scene, pipe):
+            "residual_mass_outside_gap": cohort(pre_tot, 2) + cohort(ret_tot, 2),
+            "transient_share_gap_region": gap_in[2].sum().item() / whole(gap_in),
+            "memory_rows": {"fg": int((fg.cer_labels == 1).sum()), "bg": int((bg.cer_labels == 1).sum())},
+-           "rows_at_end": {"fg": fg.get_xyz.shape[0], "bg": bg.get_xyz.shape[0], "tr": tr.get_xyz.shape[0]}}
++           "rows_at_end": {"fg": fg.get_xyz.shape[0], "bg": bg.get_xyz.shape[0], "tr": tr.get_xyz.shape[0]},
++           "cer_transient_gate": getattr(scene, "cer_transient_gate", 0)}
++    if tl:  # descriptive: memory by bank (label 1 inside the target), the transient memory in the gap region, the lift counts
++        by_bank = lambda x, den: {b: (x[i][m.cer_labels == 1].sum() / den).item()
++                                  for i, (b, m) in enumerate((("fg", fg), ("bg", bg), ("tr", tr)))}
++        out["memory_rows"]["tr"] = int((tr.cer_labels == 1).sum())
++        out["memory_share_pregap_by_bank"] = by_bank(pre_in, whole(pre_in))
++        out["memory_share_return_by_bank"] = by_bank(ret_in, whole(ret_in))
++        out["memory_transient_share_gap_region"] = (gap_in[2][tr.cer_labels == 1].sum() / whole(gap_in)).item()
++        out["lifts"] = dict(getattr(scene, "cer_lifts", {}))
+     out["pass"] = (out["memory_share_pregap"] >= 0.5 and out["memory_share_return"] >= 0.5
+                    and out["memory_mass_gap"] == 0.0 and out["residual_share_gap"] >= 0.2
+                    and out["residual_mass_outside_gap"] == 0.0)
+diff --git a/scene/gaussian_model.py b/scene/gaussian_model.py
+index 25e5d30..0727bd1 100644
+--- a/scene/gaussian_model.py
++++ b/scene/gaussian_model.py
+@@ -469,7 +469,7 @@ class GaussianModel_dynamic(PersistentBranchMixin, GaussianBranchBase):
+         current_prob = torch.sigmoid(opacity)
+         opacity = inverse_sigmoid(torch.clamp(current_prob + 0.05, max=0.999))
+ 
+-        return {
++        out = {
+             "xyz": xyz,
+             "features_dc": features_dc,
+             "features_rest": features_rest,
+@@ -479,6 +479,9 @@ class GaussianModel_dynamic(PersistentBranchMixin, GaussianBranchBase):
+             "t_ref": t_ref,
+             "velocity": velocity,
+         }
++        if hasattr(self, "cer_labels"):  # CER: copy k carries the label of the k-th selected donor (same mask as xyz)
++            out["cer_labels"] = self.cer_labels[prune_mask]
++        return out
+ 
+     def weight_prune(self, weight_threshold: float, mean_ratio):
+         """
+@@ -1373,7 +1376,8 @@ class GaussianModelTransient(GaussianBranchBase):
+                 self._rotation_r = nn.Parameter(rots_r.requires_grad_(True))
+ 
+ 
+-    def add_points(self, xyz, features_dc, features_rest, scaling, rotation, opacity, t_ref, velocity=None, scaling_t_div=10, velocity_scale=1.0):
++    def add_points(self, xyz, features_dc, features_rest, scaling, rotation, opacity, t_ref, velocity=None, scaling_t_div=10, velocity_scale=1.0,
++                   new_cer_labels=None):
+         num_points = xyz.shape[0]
+         new_t = None
+         new_scaling_t = None
+@@ -1410,9 +1414,15 @@ class GaussianModelTransient(GaussianBranchBase):
+                 features_rest = torch.cat([features_rest, padding], dim=1)
+ 
+         self.densification_postfix_nodenom(xyz, features_dc, features_rest, opacity, scaling, rotation,
+-                                   new_t, new_scaling_t, new_rotation_r)
++                                   new_t, new_scaling_t, new_rotation_r, new_cer_labels=new_cer_labels)
+     def densification_postfix_nodenom(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling,
+-                              new_rotation, new_t, new_scaling_t, new_rotation_r):
++                              new_rotation, new_t, new_scaling_t, new_rotation_r, new_cer_labels=None):
++        if hasattr(self, "cer_labels"):  # checked before any row is added
++            assert new_cer_labels is not None and new_cer_labels.shape == (new_xyz.shape[0],) \
++                and self.cer_labels.shape[0] == self.get_xyz.shape[0], "CER labels do not match the rows being added"
++        else:  # an unlabelled bank takes unlabelled rows only (cer_transient_gate 0: every lifted label is 0)
++            assert new_cer_labels is None or not bool((new_cer_labels != 0).any()), \
++                "labelled rows lifted into a transient bank without CER labels"
+         d = {"xyz": new_xyz,
+              "f_dc": new_features_dc,
+              "f_rest": new_features_rest,
+@@ -1452,6 +1462,8 @@ class GaussianModelTransient(GaussianBranchBase):
+         self.max_radii2D = torch.cat((self.max_radii2D, torch.full((num_new,), 0.1, device="cuda")), dim=0)
+         self.mean_radii2D = torch.cat((self.mean_radii2D, torch.zeros((num_new), device="cuda")), dim=0)
+         self.t_gradient_accum = torch.cat((self.t_gradient_accum, torch.zeros((num_new, 1), device="cuda")), dim=0)
++        if hasattr(self, "cer_labels"):  # new rows carry their donors' (lift) CER labels
++            self.cer_labels = torch.cat([self.cer_labels, new_cer_labels])
+ 
+     def add_points_from_dict(self, data_dict, velocity_scale=1.0):
+         if data_dict is None:
+@@ -1466,6 +1478,7 @@ class GaussianModelTransient(GaussianBranchBase):
+             data_dict["t_ref"],
+             velocity=data_dict.get("velocity", None),
+             velocity_scale=velocity_scale,
++            new_cer_labels=data_dict.get("cer_labels"),
+         )
+ 
+     def training_setup(self, training_args):
+@@ -1547,6 +1560,8 @@ class GaussianModelTransient(GaussianBranchBase):
+             if self.rot_4d:
+                 self._rotation_r = optimizable_tensors['rotation_r']
+             self.t_gradient_accum = self.t_gradient_accum[valid_points_mask]
++        if hasattr(self, "cer_labels"):  # transient CER membership follows its rows through every prune
++            self.cer_labels = self.cer_labels[valid_points_mask]
+ 
+     def weight_prune(self, weight_threshold: float):
+         """
+@@ -1588,7 +1603,11 @@ class GaussianModelTransient(GaussianBranchBase):
+         return optimizable_tensors
+ 
+     def densification_postfix(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling,
+-                              new_rotation, new_t, new_scaling_t, new_rotation_r, new_mean_radii2D, new_max_radii2D):
++                              new_rotation, new_t, new_scaling_t, new_rotation_r, new_mean_radii2D, new_max_radii2D,
++                              new_cer_labels=None):
++        if hasattr(self, "cer_labels"):  # checked before any row is added
++            assert new_cer_labels is not None and new_cer_labels.shape == (new_xyz.shape[0],) \
++                and self.cer_labels.shape[0] == self.get_xyz.shape[0], "CER labels do not match the rows being added"
+         d = {"xyz": new_xyz,
+              "f_dc": new_features_dc,
+              "f_rest": new_features_rest,
+@@ -1620,6 +1639,8 @@ class GaussianModelTransient(GaussianBranchBase):
+         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+         self.max_radii2D = torch.cat([self.max_radii2D, new_max_radii2D], -1)
+         self.mean_radii2D = torch.cat([self.mean_radii2D, new_mean_radii2D], -1)
++        if hasattr(self, "cer_labels"):  # new rows carry their parents' CER labels
++            self.cer_labels = torch.cat([self.cer_labels, new_cer_labels])
+ 
+     def densify_and_split(self, grads, grad_threshold, scene_extent, N=2):
+         n_init_points = self.get_xyz.shape[0]
+@@ -1670,9 +1691,11 @@ class GaussianModelTransient(GaussianBranchBase):
+ 
+         new_max_radii2D = self.max_radii2D[selected_pts_mask].repeat(N)
+         new_mean_radii2D = self.mean_radii2D[selected_pts_mask].repeat(N)
++        new_cer_labels = self.cer_labels[selected_pts_mask].repeat(N) if hasattr(self, "cer_labels") else None
+ 
+         self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation,
+-                                   new_t, new_scaling_t, new_rotation_r, new_mean_radii2D, new_max_radii2D)
++                                   new_t, new_scaling_t, new_rotation_r, new_mean_radii2D, new_max_radii2D,
++                                   new_cer_labels=new_cer_labels)
+ 
+         prune_filter = torch.cat(
+             (selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
+@@ -1703,9 +1726,11 @@ class GaussianModelTransient(GaussianBranchBase):
+ 
+         new_max_radii2D = self.max_radii2D[selected_pts_mask]
+         new_mean_radii2D = self.mean_radii2D[selected_pts_mask]
++        new_cer_labels = self.cer_labels[selected_pts_mask] if hasattr(self, "cer_labels") else None
+ 
+         self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling,
+-                                   new_rotation, new_t, new_scaling_t, new_rotation_r, new_mean_radii2D, new_max_radii2D)
++                                   new_rotation, new_t, new_scaling_t, new_rotation_r, new_mean_radii2D, new_max_radii2D,
++                                   new_cer_labels=new_cer_labels)
+ 
+     def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size, max_grad_t=None):
+         grads = self.xyz_gradient_accum / self.denom
+diff --git a/train.py b/train.py
+index 5267537..302fc57 100644
+--- a/train.py
++++ b/train.py
+@@ -928,7 +928,8 @@ def scene_reconstruction(optimization_params, hypernetwork_config, pipeline_conf
+                 # Dynamic-score threshold for FG→TR donor pre-filter (default 0.05).
+                 _ds_thresh = float(getattr(optimization_params, 'fg_to_tr_dynamic_score_threshold', 0.05))
+                 # CER: lift_select is select_fg_to_transient, except that while the gate is armed a labelled foreground
+-                # row is never a donor (the lift copies rows and leaves the donor alive)
++                # row is never a donor (the lift copies rows and leaves the donor alive); with cer_transient_gate 1 it is a
++                # donor again and its copy carries its label
+                 prune_data = cer.lift_select(
+                     foreground_gaussians, deformed_state, _ds_thresh,
+                     dict(max_transfer=_max_transfer,
+@@ -977,6 +978,8 @@ def scene_reconstruction(optimization_params, hypernetwork_config, pipeline_conf
+                                    viewspace_point_tensor_list_transient,
+                                    fg_to_tr_active, prune_data, weight_prune_fre_transient,
+                                    phase3_start_iter)
++                if cer_gate.ARMED and scene.cer_begin_iter != -1 and scene.cer_transient_gate:
++                    cer.check_transient_labels(transient_gaussian)
+             # ---- Transient Model Optimization ----
+             if iteration < optimization_params.iterations:
+                 transient_gaussian.optimizer.step()
+@@ -1024,6 +1027,7 @@ def scene_reconstruction(optimization_params, hypernetwork_config, pipeline_conf
+ def training(dataset, hypernetwork_config, optimization_params, pipeline_config, saving_iterations,
+              checkpoint_iterations, checkpoint, expname):
+     """Entry-point that prepares data structures and launches the two-stage training."""
++    cer.check_transient_gate(dataset)  # whatever the mode: a transient gate without the early gate is refused here
+     if dataset.cer_begin_iter != -1:  # early CER: refuse an invalid start before anything is created
+         cer.check_begin_range(dataset.cer_scene, dataset.cer_begin_iter, optimization_params)
+     prepare_output_folder(expname)
+diff --git a/utils/cer_gate.py b/utils/cer_gate.py
+index 1d1e8bd..149d3e1 100644
+--- a/utils/cer_gate.py
++++ b/utils/cer_gate.py
+@@ -7,6 +7,7 @@ import re
+ import torch
+ 
+ ARMED = False  # set by scene/cer.py begin(); once armed, a model without CER state may not be rendered
++TRANSIENT = False  # set by begin() with cer_transient_gate 1: the transient bank is gated too
+ _PATH = re.compile(r"cam(\d\d)/images/(\d{4})\.png$")
+ 
+ 
+@@ -41,3 +42,10 @@ def apply(pc, cam, opacity):
+     f = factor(pc, cam)
+     assert f.shape == opacity.shape, "CER labels %s vs opacity %s" % (tuple(f.shape), tuple(opacity.shape))
+     return opacity * f
++
++
++def apply_transient(pc, cam, opacity):
++    """The transient bank's activated opacity: unchanged unless the transient gate is set, else gated as apply gates it."""
++    if not TRANSIENT:
++        return opacity
++    return apply(pc, cam, opacity)

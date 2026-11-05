@@ -1,0 +1,222 @@
+{
+ "h1_space-out_v2_r1": {
+  "n": 681,
+  "mpsnr": 20.5202,
+  "mssim": 0.6648,
+  "mlpips": 0.2568,
+  "cam1": {
+   "mpsnr": 20.0194,
+   "mssim": 0.6589,
+   "mlpips": 0.2634
+  },
+  "cam2": {
+   "mpsnr": 21.0079,
+   "mssim": 0.6706,
+   "mlpips": 0.2503
+  },
+  "prims": {
+   "static": 162394,
+   "static_active": 161634,
+   "dynamic": 102033,
+   "dynamic_active": 101327
+  }
+ },
+ "h1_space-out_v3_r1": {
+  "n": 681,
+  "mpsnr": 20.4123,
+  "mssim": 0.6618,
+  "mlpips": 0.2594,
+  "cam1": {
+   "mpsnr": 19.882,
+   "mssim": 0.6552,
+   "mlpips": 0.2689
+  },
+  "cam2": {
+   "mpsnr": 20.9287,
+   "mssim": 0.6683,
+   "mlpips": 0.2502
+  },
+  "prims": {
+   "static": 163924,
+   "static_active": 163178,
+   "dynamic": 105404,
+   "dynamic_active": 104698
+  }
+ },
+ "h1_space-out_v4_r1": {
+  "n": 681,
+  "mpsnr": 20.5848,
+  "mssim": 0.667,
+  "mlpips": 0.2529,
+  "cam1": {
+   "mpsnr": 20.1161,
+   "mssim": 0.6614,
+   "mlpips": 0.26
+  },
+  "cam2": {
+   "mpsnr": 21.0412,
+   "mssim": 0.6723,
+   "mlpips": 0.246
+  },
+  "prims": {
+   "static": 184438,
+   "static_active": 183589,
+   "dynamic": 121565,
+   "dynamic_active": 120687
+  }
+ },
+ "h1_space-out_v5_r1": {
+  "n": 681,
+  "mpsnr": 20.6132,
+  "mssim": 0.6654,
+  "mlpips": 0.256,
+  "cam1": {
+   "mpsnr": 20.1168,
+   "mssim": 0.6593,
+   "mlpips": 0.2642
+  },
+  "cam2": {
+   "mpsnr": 21.0966,
+   "mssim": 0.6713,
+   "mlpips": 0.248
+  },
+  "prims": {
+   "static": 283772,
+   "static_active": 279307,
+   "dynamic": 144569,
+   "dynamic_active": 140443
+  }
+ },
+ "h1_space-out_v6_r1": {
+  "n": 681,
+  "mpsnr": 20.6034,
+  "mssim": 0.6663,
+  "mlpips": 0.2561,
+  "cam1": {
+   "mpsnr": 20.1099,
+   "mssim": 0.6601,
+   "mlpips": 0.265
+  },
+  "cam2": {
+   "mpsnr": 21.0841,
+   "mssim": 0.6724,
+   "mlpips": 0.2475
+  },
+  "prims": {
+   "static": 160634,
+   "static_active": 160120,
+   "dynamic": 88341,
+   "dynamic_active": 87354
+  }
+ },
+ "h1_teddy_v2_r1": {
+  "n": 688,
+  "mpsnr": 15.5305,
+  "mssim": 0.6211,
+  "mlpips": 0.3527,
+  "cam1": {
+   "mpsnr": 14.9311,
+   "mssim": 0.6598,
+   "mlpips": 0.3686
+  },
+  "cam2": {
+   "mpsnr": 16.4931,
+   "mssim": 0.5589,
+   "mlpips": 0.3271
+  },
+  "prims": {
+   "static": 210473,
+   "static_active": 209317,
+   "dynamic": 180399,
+   "dynamic_active": 179619
+  }
+ },
+ "h1_teddy_v3_r1": {
+  "n": 688,
+  "mpsnr": 15.1758,
+  "mssim": 0.6132,
+  "mlpips": 0.3621,
+  "cam1": {
+   "mpsnr": 14.3598,
+   "mssim": 0.6455,
+   "mlpips": 0.3824
+  },
+  "cam2": {
+   "mpsnr": 16.4865,
+   "mssim": 0.5613,
+   "mlpips": 0.3296
+  },
+  "prims": {
+   "static": 210621,
+   "static_active": 209421,
+   "dynamic": 183144,
+   "dynamic_active": 182406
+  }
+ },
+ "h1_teddy_v4_r1": {
+  "n": 688,
+  "mpsnr": 15.1531,
+  "mssim": 0.613,
+  "mlpips": 0.3625,
+  "cam1": {
+   "mpsnr": 14.3771,
+   "mssim": 0.6453,
+   "mlpips": 0.3819
+  },
+  "cam2": {
+   "mpsnr": 16.3994,
+   "mssim": 0.5611,
+   "mlpips": 0.3313
+  },
+  "prims": {
+   "static": 223232,
+   "static_active": 221974,
+   "dynamic": 209185,
+   "dynamic_active": 208207
+  }
+ },
+ "h1_teddy_v5_r1": {
+  "n": 688,
+  "mpsnr": 15.0833,
+  "mssim": 0.6093,
+  "mlpips": 0.3664,
+  "cam1": {
+   "mpsnr": 14.2559,
+   "mssim": 0.6419,
+   "mlpips": 0.387
+  },
+  "cam2": {
+   "mpsnr": 16.4121,
+   "mssim": 0.557,
+   "mlpips": 0.3334
+  },
+  "prims": {
+   "static": 259924,
+   "static_active": 254265,
+   "dynamic": 210341,
+   "dynamic_active": 207986
+  }
+ },
+ "h1_teddy_v6_r1": {
+  "n": 688,
+  "mpsnr": 15.347,
+  "mssim": 0.6178,
+  "mlpips": 0.3599,
+  "cam1": {
+   "mpsnr": 14.6752,
+   "mssim": 0.6523,
+   "mlpips": 0.3766
+  },
+  "cam2": {
+   "mpsnr": 16.426,
+   "mssim": 0.5623,
+   "mlpips": 0.3332
+  },
+  "prims": {
+   "static": 209206,
+   "static_active": 208169,
+   "dynamic": 173343,
+   "dynamic_active": 172409
+  }
+ }
+}
